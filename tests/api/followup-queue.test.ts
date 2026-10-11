@@ -9,12 +9,15 @@ import { describe, it, expect, vi } from "vitest";
 // A rota importa server-only helpers no topo; mocka-se pra o import não puxar
 // next/headers em ambiente jsdom. O último bloco exercita o GET com os dois mocks.
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+// `cron_jobs` é server-only na VPS: a rota lê as promessas pelo client de serviço.
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 
 import { NextRequest } from "next/server";
 
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { GET, enrollmentToQueueRow } from "@/app/api/v1/ai/followups/queue/route";
 
 const base = {
@@ -90,14 +93,18 @@ describe("GET /api/v1/ai/followups/queue — status da promessa", () => {
       id: "j1", contact_id: "c1", next_run_at: null, payload: {}, cancelled_at: null,
       contacts: { id: "c1", name: "Ana", display_name: null, phone_number: null },
     };
+    const db = bancoFalso({
+      followup_enrollments: [],
+      cron_jobs: [
+        { ...promessa, id: "j1", enabled: false, last_error: "org_nao_operante" },
+        { ...promessa, id: "j2", enabled: false, last_error: null },
+      ],
+    });
     vi.mocked(createClient).mockResolvedValue(
-      bancoFalso({
-        followup_enrollments: [],
-        cron_jobs: [
-          { ...promessa, id: "j1", enabled: false, last_error: "org_nao_operante" },
-          { ...promessa, id: "j2", enabled: false, last_error: null },
-        ],
-      }) as unknown as Awaited<ReturnType<typeof createClient>>,
+      db as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
+    vi.mocked(createAdminClient).mockReturnValue(
+      db as unknown as ReturnType<typeof createAdminClient>,
     );
 
     const res = await GET(new NextRequest("http://localhost/api/v1/ai/followups/queue"));
