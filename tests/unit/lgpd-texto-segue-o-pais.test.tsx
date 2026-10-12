@@ -12,6 +12,22 @@
  * rodando ESTAS mesmas entradas contra o código anterior à mudança (origin/main
  * @ c85293f05). Comparar com eles, e não com uma lista de trechos, é o que
  * prova "byte a byte": um trecho conferido deixa passar o resto do texto.
+ *
+ * Exceção deliberada: `pdf-textos-cpf-da-conversa-e-aviso.txt` foi REGRAVADO
+ * no PR #2355 (issue #2341), que troca no Brasil também o ponteiro "valor no
+ * arquivo de dados" pelo CPF mascarado. Essa linha não é mais a de antes.
+ *
+ * Segunda exceção deliberada: `email.json` foi REGRAVADO pelo doc 103 (resposta
+ * A), que passa a entregar ao titular brasileiro o link do arquivo de dados. A
+ * diferença é só essa: um parágrafo com o link no HTML e, no texto, o link e
+ * "Os dois links expiram" no lugar de "O link expira". O resto segue byte a byte.
+ *
+ * Terceira exceção, e esta NÃO regrava fixture: o doc 110 (resposta 2A) dá ao
+ * `data.json` brasileiro TODAS as mensagens (`messages_completas`) e a lista
+ * das seções no limite (`secoes_no_limite`), como Portugal. `data-*.json`
+ * segue o gravado em c85293f05: o payload brasileiro é comparado a ele SEM
+ * essas duas chaves (`semAsChavesDoDoc110`), o que prova que nenhuma outra
+ * mudou, e um caso à parte cobra que as duas estão lá.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -95,6 +111,7 @@ async function emailPara(perfil: PerfilDoPais, fuso?: string) {
     to: "titular@x.test",
     requestId: "3f2a9c10-0000-4000-8000-000000000001",
     signedUrl: "https://storage.test/report.pdf?token=abc",
+    signedUrlDados: "https://storage.test/data.json?token=abc",
     expiresAt: new Date("2026-10-08T12:00:00.000Z"),
     marca: MARCA,
     perfil,
@@ -153,8 +170,16 @@ async function dataJson(country: string | null, timezone: string, pais?: string 
   return { vazio, cheio };
 }
 
-/** O JSON como o worker o grava (`JSON.stringify(data, null, 2)`), sem o relógio. */
+/**
+ * O PAYLOAD serializado, sem o relógio. Desde o doc 103 o arquivo que o worker
+ * sobe é `copiaDoTitular(data)` (`lgpd-copia-do-titular.test.ts`); estes
+ * fixtures travam o payload de onde saem o PDF e essa cópia.
+ */
 const comoGravado = (p: ExportPayload) => JSON.stringify({ ...p, generated_at: "X" }, null, 2);
+
+/** O payload brasileiro menos as duas chaves que o doc 110 (2A) acrescentou — ver o cabeçalho. */
+const semAsChavesDoDoc110 = ({ messages_completas: _m, secoes_no_limite: _s, ...resto }: ExportPayload) =>
+  resto as ExportPayload;
 
 function textos(no: ReactNode): string[] {
   if (no === null || no === undefined || typeof no === "boolean") return [];
@@ -182,6 +207,9 @@ function pdfDe(
           email: "ana@x.test",
           phone_number: "+5511999998888",
           cpf: "52998224725",
+          // Onde a pergunta de roteiro do tipo `cpf` grava: é de lá que o PDF
+          // lê o valor que imprime mascarado (issue #2341).
+          custom_fields: { cpf: "52998224725" },
           source: "whatsapp",
           created_at: "2026-01-02T03:04:05.000Z",
           is_anonymized: false,
@@ -194,7 +222,7 @@ function pdfDe(
 }
 
 describe("e-mail ao titular", () => {
-  it("Brasil: igual, byte a byte, ao que saía antes do doc 88", async () => {
+  it("Brasil: o de antes do doc 88, byte a byte, mais o link do arquivo de dados (doc 103, A)", async () => {
     expect(JSON.stringify(await emailPara(perfilDoPais("BR")), null, 2)).toBe(fixture("email.json"));
   });
 
@@ -273,10 +301,18 @@ describe("alarme ao encarregado", () => {
 });
 
 describe("data.json e PDF de acesso", () => {
-  it("Brasil: o data.json é o de antes, sem `lei_rotulo` nem `fuso`", async () => {
+  it("Brasil: o data.json é o de antes, sem `lei_rotulo` nem `fuso` — fora as duas chaves do doc 110", async () => {
     const { vazio, cheio } = await dataJson(null, "America/Sao_Paulo");
     expect(comoGravado(vazio)).toBe(fixture("data-vazio.json"));
-    expect(comoGravado(cheio)).toBe(fixture("data-cheio.json"));
+    expect(comoGravado(semAsChavesDoDoc110(cheio))).toBe(fixture("data-cheio.json"));
+    // Doc 110, 2A: as duas chaves que a trava do doc 88 segurava, e só elas.
+    expect(cheio.messages_completas).toEqual([]);
+    expect(cheio.secoes_no_limite).toEqual([]);
+    const gravadas = Object.keys(JSON.parse(fixture("data-cheio.json")));
+    expect(Object.keys(JSON.parse(comoGravado(cheio))).filter((k) => !gravadas.includes(k))).toEqual([
+      "messages_completas",
+      "secoes_no_limite",
+    ]);
     for (const p of [vazio, cheio]) {
       expect(Object.keys(p)).not.toContain("lei_rotulo");
       expect(Object.keys(p)).not.toContain("fuso");
@@ -297,7 +333,7 @@ describe("data.json e PDF de acesso", () => {
     expect(pdfDe(cheio).join("\u0001")).toBe(fixture("pdf-textos.txt"));
   });
 
-  it("Brasil: CPF informado na conversa e aviso de assinatura saem como antes", async () => {
+  it("Brasil: CPF informado na conversa sai mascarado (#2341) e o aviso de assinatura sai como antes", async () => {
     const { cheio } = await dataJson(null, "America/Sao_Paulo");
     const pdf = pdfDe(cheio, { contato: { cpf_informado_na_conversa: true }, unsignedWarning: true });
     expect(pdf.join("\u0001")).toBe(fixture("pdf-textos-cpf-da-conversa-e-aviso.txt"));
@@ -307,7 +343,7 @@ describe("data.json e PDF de acesso", () => {
     // O valor só vem da pergunta de roteiro do tipo `cpf`, validada como CPF.
     const { cheio } = await dataJson("PT", "Europe/Lisbon");
     const pdf = pdfDe(cheio, { contato: { cpf_informado_na_conversa: true } });
-    const i = pdf.indexOf("Informado na conversa (valor no arquivo de dados)");
+    const i = pdf.indexOf("Informado na conversa (***.***.*47-25)");
     expect(pdf.slice(i - 2, i)).toEqual(["CPF", ":"]);
     // O que está guardado na coluna, numa organização portuguesa, é o NIF.
     const guardado = pdfDe(cheio, { contato: { cpf_present: true } });
@@ -328,7 +364,7 @@ describe("data.json e PDF de acesso", () => {
     expect(cheio.lei_citada).toBe("RGPD art. 15.º (Regulamento (UE) 2016/679)");
     expect(cheio.documento_rotulo).toBe("NIF");
     const { cheio: semPais } = await dataJson("BR", "America/Sao_Paulo");
-    expect(comoGravado(semPais)).toBe(fixture("data-cheio.json"));
+    expect(comoGravado(semAsChavesDoDoc110(semPais))).toBe(fixture("data-cheio.json"));
   });
 
   it("o worker lê o país uma vez e passa o mesmo perfil ao coletor e ao e-mail", () => {
