@@ -14,6 +14,7 @@ import { estiloDaReserva, useOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
 import { MenuDoTopo } from "@/components/escale/menu/MenuDoTopo";
 import { ConversasFlutuante } from "@/components/escale/ConversasFlutuante";
 import type { PreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
+import { usaTelaGrande } from "@/lib/escale/usa-tela-grande";
 
 interface AppShellProps {
   sidebarCollapsed: boolean;
@@ -46,6 +47,10 @@ export function AppShell({ sidebarCollapsed, podeAtender, menu = "lateral", chil
   // o `p-6` inteiro é rodapé. Com o painel de chamada na tela, é ele que
   // decide a faixa que o conteúdo perde, e ninguém mais mede isso por fora.
   const ocupacaoDoRodape = useOcupacaoDoRodape();
+  // Decide qual cabeçalho MONTAR na casca nova — nunca os dois ao mesmo tempo
+  // (ver o comentário de `usaTelaGrande`). Sem uso em `menu === "lateral"`:
+  // aquele caminho sempre foi só `<TopBar />`, sem decisão nenhuma por tela.
+  const telaGrande = usaTelaGrande();
   return (
     /*
       `min-h-dvh`, e não `min-h-screen`: `100vh` no celular é a janela com a
@@ -88,13 +93,12 @@ export function AppShell({ sidebarCollapsed, podeAtender, menu = "lateral", chil
       */}
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         {menu === "topo" ? (
-          <>
+          telaGrande ? (
             <MenuDoTopo />
-            {/* No celular a casca nova usa a barra de sempre (gaveta + barra inferior). */}
-            <div className="md:hidden">
-              <TopBar />
-            </div>
-          </>
+          ) : (
+            // No celular a casca nova usa a barra de sempre (gaveta + barra inferior).
+            <TopBar />
+          )
         ) : (
           <TopBar />
         )}
