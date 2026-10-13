@@ -25,11 +25,11 @@ export function PainelMais({
       {grupos.map(({ grupo, secoes }) => (
         <section key={grupo.id} className="min-w-0 space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-primary">{t(grupo.label)}</h2>
-          {secoes.map(({ secao, itens }) => (
-            <div key={secao || "_"} className="space-y-1">
-              {secao ? <p className="text-[11px] text-muted-foreground">{t(secao)}</p> : null}
+          {secoes.map((s) => (
+            <div key={s.secao || "_"} className="space-y-1">
+              {s.secao ? <p className="text-[11px] text-muted-foreground">{t(s.secao)}</p> : null}
               <ul className="space-y-0.5">
-                {itens.map((d) => {
+                {s.itens.map((d) => {
                   const ativo = destinoAtivo(pathnameAtual, d.href);
                   return (
                     <li key={d.href}>
