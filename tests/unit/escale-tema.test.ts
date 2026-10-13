@@ -71,6 +71,17 @@ const PAPEIS = [
   "--color-ai-soft",
   "--color-ai-fg",
   "--color-escale-marca",
+  "--color-neutral-50",
+  "--color-neutral-100",
+  "--color-neutral-200",
+  "--color-neutral-300",
+  "--color-neutral-400",
+  "--color-neutral-500",
+  "--color-neutral-600",
+  "--color-neutral-700",
+  "--color-neutral-800",
+  "--color-neutral-900",
+  "--color-neutral-950",
 ];
 
 describe("tema Escale", () => {

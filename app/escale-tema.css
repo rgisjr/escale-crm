@@ -118,4 +118,17 @@ body:has([data-escale-casca]) {
   --color-ai-fg: #ffb283;
 
   --color-escale-marca: #8fb2ea;
+
+  /* neutros frios (escuro) — mesma direção do claro (-50 claro, -950 escuro) */
+  --color-neutral-50: #eef1fa;
+  --color-neutral-100: #e3e7f5;
+  --color-neutral-200: #c7cce0;
+  --color-neutral-300: #a5abc7;
+  --color-neutral-400: #7d84a2;
+  --color-neutral-500: #5f6680;
+  --color-neutral-600: #474d64;
+  --color-neutral-700: #353b50;
+  --color-neutral-800: #242838;
+  --color-neutral-900: #181b26;
+  --color-neutral-950: #0d0f17;
 }
