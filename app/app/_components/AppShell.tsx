@@ -10,9 +10,16 @@ import { useInboundCallAlerts } from "@/hooks/calls/useInboundCallAlerts";
 import { useCrmAlerts } from "@/hooks/notifications/useCrmAlerts";
 import { useNotifyOpenFromServiceWorker } from "@/lib/notifications/notify_open";
 import { estiloDaReserva, useOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
+// Fork Escale: casca nova (menu no topo + tema), ligada por pessoa.
+import { MenuDoTopo } from "@/components/escale/menu/MenuDoTopo";
+import { ConversasFlutuante } from "@/components/escale/ConversasFlutuante";
+import type { PreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
+import { usaTelaGrande } from "@/lib/escale/usa-tela-grande";
 
 interface AppShellProps {
   sidebarCollapsed: boolean;
+  /** Fork Escale: `"topo"` liga a casca nova (cookie `escale_menu`). Padrão: a lateral do original. */
+  menu?: PreferenciaDeMenu;
   /**
    * A pessoa pode atender (agent+)? Vem do papel resolvido no layout, e não de
    * uma consulta desta casca.
@@ -25,7 +32,7 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-export function AppShell({ sidebarCollapsed, podeAtender, children }: AppShellProps) {
+export function AppShell({ sidebarCollapsed, podeAtender, menu = "lateral", children }: AppShellProps) {
   useInboundMessageAlerts();
   useInboundCallAlerts();
   useCrmAlerts();
@@ -40,6 +47,10 @@ export function AppShell({ sidebarCollapsed, podeAtender, children }: AppShellPr
   // o `p-6` inteiro é rodapé. Com o painel de chamada na tela, é ele que
   // decide a faixa que o conteúdo perde, e ninguém mais mede isso por fora.
   const ocupacaoDoRodape = useOcupacaoDoRodape();
+  // Decide qual cabeçalho MONTAR na casca nova — nunca os dois ao mesmo tempo
+  // (ver o comentário de `usaTelaGrande`). Sem uso em `menu === "lateral"`:
+  // aquele caminho sempre foi só `<TopBar />`, sem decisão nenhuma por tela.
+  const telaGrande = usaTelaGrande();
   return (
     /*
       `min-h-dvh`, e não `min-h-screen`: `100vh` no celular é a janela com a
@@ -51,11 +62,16 @@ export function AppShell({ sidebarCollapsed, podeAtender, children }: AppShellPr
       sumindo. Princípio 2 de `docs/design-system/screen-flow/07-responsive-strategy.md`,
       escrito em abril de 2026 e aplicado em 6 lugares de 33 até aqui.
     */
-    <div className="flex min-h-dvh w-full bg-background">
+    <div
+      className="flex min-h-dvh w-full bg-background"
+      data-escale-casca={menu === "topo" ? "" : undefined}
+    >
       <BarraDeProgressoNavegacao />
-      <div className="hidden md:block">
-        <Sidebar collapsed={sidebarCollapsed} />
-      </div>
+      {menu === "lateral" && (
+        <div className="hidden md:block">
+          <Sidebar collapsed={sidebarCollapsed} />
+        </div>
+      )}
       {/*
         `min-w-0` é o que permite a coluna de conteúdo ENCOLHER. Um flex item
         nasce com `min-width: auto`, ou seja, nunca fica menor que o conteúdo —
@@ -76,7 +92,16 @@ export function AppShell({ sidebarCollapsed, podeAtender, children }: AppShellPr
         cima da lista.
       */}
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <TopBar />
+        {menu === "topo" ? (
+          telaGrande ? (
+            <MenuDoTopo />
+          ) : (
+            // No celular a casca nova usa a barra de sempre (gaveta + barra inferior).
+            <TopBar />
+          )
+        ) : (
+          <TopBar />
+        )}
         {/*
           O RODAPÉ DESCONTA O QUE AS PEÇAS FIXAS OCUPAM (issue #1305).
 
@@ -118,6 +143,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, children }: AppShellPr
         Ela própria se esconde acima de `md` — o mesmo corte em que a barra
         lateral aparece, logo acima.
       */}
+      {menu === "topo" && <ConversasFlutuante reservaDoRodape={ocupacaoDoRodape} />}
       <BarraInferior />
     </div>
   );

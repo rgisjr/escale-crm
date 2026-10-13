@@ -31,6 +31,7 @@ import { listarConexoesCaidas, type ConexaoCaida } from "@/lib/channels/health";
 import { VoiceCallProvider } from "@/components/voice/VoiceCallContext";
 import { ProvedorDaOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
 import { acessoFoiRevogado } from "@/lib/auth/vinculo-revogado";
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
@@ -259,6 +260,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Read sidebar collapsed state SSR to avoid flash.
   const store = await cookies();
   const collapsed = store.get("sidebar_collapsed")?.value === "1";
+  // Fork Escale: casca nova por pessoa (GET /app/escale/menu?usar=topo|lateral).
+  const menu = lerPreferenciaDeMenu(store.get(COOKIE_DO_MENU)?.value);
 
   const impersonating = user.support ? {
     tenantId: user.support.organization_id, tenantName: user.support.name,
@@ -275,6 +278,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <VoiceCallProvider>
         <AppShell
           sidebarCollapsed={collapsed}
+          menu={menu}
           podeAtender={Boolean(activeOrg && roleAtLeast(activeOrg.role, "agent"))}
         >
           {children}

@@ -21,6 +21,7 @@ que o `next/font/google` baixava.
 | `source-serif-4-200-900-latin.woff2` | Source Serif 4 | variável 200–900 | latin | `sourceserif4/v14` |
 | `ibm-plex-sans-300-700-latin.woff2` | IBM Plex Sans | variável, usada em 300–700 | latin | `ibmplexsans/v23` |
 | `jetbrains-mono-100-800-latin.woff2` | JetBrains Mono | variável 100–800 | latin | `jetbrainsmono/v24` |
+| `figtree-300-900-latin.woff2` | Figtree | variável 300–900 | latin | `figtree/v9` (fork Escale: fonte da casca nova) |
 
 ## Como baixar de novo
 

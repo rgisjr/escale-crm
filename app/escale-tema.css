@@ -1,0 +1,134 @@
+/*
+ * TEMA ESCALE IA — a identidade do site escaleia.com aplicada ao app.
+ *
+ * Arquivo do FORK (escale-crm). O tema do original (`globals.css`) fica intacto:
+ * este arquivo só redefine os mesmos tokens, e só dentro da casca nova
+ * (`body:has([data-escale-casca])`, marcador que o AppShell põe quando a pessoa
+ * liga o menu do topo). Sem marcador, a tela é exatamente a do original.
+ *
+ * Especificidade: `body:has([data-escale-casca])` = (0,1,1), acima do `:root`
+ * (0,1,0) do original. A marca escolhida pela organização em Configurações › Marca
+ * (`body:has([data-marca-org])`, mesma especificidade, injetada depois) continua
+ * vencendo — a escolha da empresa manda.
+ *
+ * Azul de ação = #3f5ff0: o #5274ff do site um passo mais escuro, para o texto
+ * branco do botão passar AA (4,5:1). Laranja = cor do que a IA faz (tokens
+ * --color-ai*), usada a partir da Fase 2. Atenção = amarelo, para não se
+ * confundir com a IA. Medido em `tests/unit/escale-tema.test.ts`.
+ */
+
+@font-face {
+  font-family: "Escale Figtree";
+  src: url("./fonts/figtree-300-900-latin.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Escale JetBrains Mono";
+  src: url("./fonts/jetbrains-mono-100-800-latin.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+body:has([data-escale-casca]) {
+  /* fontes: o original usa var(--font-atkinson) e var(--font-mono) */
+  --font-atkinson: "Escale Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Escale JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* superfícies e texto */
+  --color-bg: #f8faff;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f1f4fe;
+  --color-overlay: rgba(43, 46, 59, 0.32);
+  --color-text: #2b2e3b;
+  --color-text-muted: #5f6478;
+  --color-text-subtle: #767b8f;
+  --color-border: #e3e8f8;
+  --color-border-strong: #d2d9f0;
+
+  /* rampa azul (igual nos dois temas, como no original) */
+  --color-accent-50: #f0f3ff;
+  --color-accent-100: #e1e8ff;
+  --color-accent-200: #c6d2ff;
+  --color-accent-300: #a3b5ff;
+  --color-accent-400: #7d97ff;
+  --color-accent-500: #5274ff;
+  --color-accent-600: #3f5ff0;
+  --color-accent-700: #3249cc;
+  --color-accent-800: #2b3ea3;
+  --color-accent-900: #283880;
+  --color-accent-950: #1a2250;
+  --color-accent: var(--color-accent-600);
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: #ecf0fe;
+  --color-accent-hover: var(--color-accent-700);
+
+  /* neutros frios */
+  --color-neutral-50: #f8faff;
+  --color-neutral-100: #f1f4fe;
+  --color-neutral-200: #e3e8f8;
+  --color-neutral-300: #d2d9f0;
+  --color-neutral-400: #a9afc4;
+  --color-neutral-500: #8c90a0;
+  --color-neutral-600: #5f6478;
+  --color-neutral-700: #474b5c;
+  --color-neutral-800: #2f3240;
+  --color-neutral-900: #1f2230;
+  --color-neutral-950: #12141c;
+
+  /* atenção (amarelo) */
+  --color-warning: #a67900;
+  --color-warning-bg: rgba(242, 201, 76, 0.2);
+  --color-warning-fg: #7a5600;
+
+  /* o que a IA faz (laranja da marca) */
+  --color-ai: #ff914c;
+  --color-ai-soft: #fff1e7;
+  --color-ai-fg: #c2560f;
+
+  /* nome da marca quando não há logo */
+  --color-escale-marca: #2965b3;
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --color-bg: #12141c;
+  --color-surface: #181b26;
+  --color-surface-elevated: #202433;
+  --color-overlay: rgba(0, 0, 0, 0.55);
+  --color-text: #e8eaf2;
+  --color-text-muted: #a5aac0;
+  --color-text-subtle: #7d849c;
+  --color-border: #2a2f42;
+  --color-border-strong: #353b52;
+
+  --color-accent: var(--color-accent-400);
+  --color-accent-fg: #12141c;
+  --color-accent-soft: rgba(125, 151, 255, 0.16);
+  --color-accent-hover: var(--color-accent-300);
+
+  --color-warning: #f2c94c;
+  --color-warning-bg: rgba(242, 201, 76, 0.13);
+  --color-warning-fg: #f5d77a;
+
+  --color-ai: #ff9f66;
+  --color-ai-soft: rgba(255, 145, 76, 0.13);
+  --color-ai-fg: #ffb283;
+
+  --color-escale-marca: #8fb2ea;
+
+  /* neutros frios (escuro) — mesma direção do claro (-50 claro, -950 escuro) */
+  --color-neutral-50: #eef1fa;
+  --color-neutral-100: #e3e7f5;
+  --color-neutral-200: #c7cce0;
+  --color-neutral-300: #a5abc7;
+  --color-neutral-400: #7d84a2;
+  --color-neutral-500: #5f6680;
+  --color-neutral-600: #474d64;
+  --color-neutral-700: #353b50;
+  --color-neutral-800: #242838;
+  --color-neutral-900: #181b26;
+  --color-neutral-950: #0d0f17;
+}
