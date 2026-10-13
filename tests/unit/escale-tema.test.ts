@@ -112,4 +112,13 @@ describe("tema Escale", () => {
     expect(urls.length).toBe(2);
     expect(urls.filter((u) => !existsSync(join(RAIZ, "app", u)))).toEqual([]);
   });
+
+  it("a casca põe o marcador do tema só no modo topo, e o layout lê a chave do cookie", () => {
+    const shell = readFileSync(join(RAIZ, "app", "app", "_components", "AppShell.tsx"), "utf8");
+    const layoutApp = readFileSync(join(RAIZ, "app", "app", "layout.tsx"), "utf8");
+    expect(shell).toContain('data-escale-casca={menu === "topo" ? "" : undefined}');
+    expect(shell).toContain("<MenuDoTopo />");
+    expect(layoutApp).toContain("lerPreferenciaDeMenu(store.get(COOKIE_DO_MENU)?.value)");
+    expect(layoutApp).toContain("menu={menu}");
+  });
 });
