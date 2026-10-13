@@ -31,6 +31,8 @@ describe("preferência de menu", () => {
     expect(destinoSeguro("https://evil.com")).toBe("/app");
     expect(destinoSeguro("/apple")).toBe("/app");
     expect(destinoSeguro("/app\\..\\x")).toBe("/app");
+    expect(destinoSeguro("/app/../../../etc/passwd")).toBe("/app");
+    expect(destinoSeguro("/app/contacts/joão..silva")).toBe("/app/contacts/joão..silva");
     expect(destinoSeguro(null)).toBe("/app");
   });
 

@@ -20,8 +20,15 @@ export function lerPreferenciaDeMenu(valor: string | null | undefined): Preferen
 export function destinoSeguro(voltar: string | null): string {
   if (!voltar) return "/app";
   if (voltar.includes("\\") || voltar.startsWith("//")) return "/app";
+  if (temSegmentoDeTravessia(voltar)) return "/app";
   if (voltar === "/app" || voltar.startsWith("/app/") || voltar.startsWith("/app?")) return voltar;
   return "/app";
+}
+
+/** Detecta `..` como segmento de caminho inteiro (não "contém dois pontos"). */
+function temSegmentoDeTravessia(caminho: string): boolean {
+  const semQuery = caminho.split(/[?#]/, 1)[0] ?? caminho;
+  return semQuery.split("/").includes("..");
 }
 
 export function caminhoDaChave(usar: PreferenciaDeMenu, voltar: string): string {
