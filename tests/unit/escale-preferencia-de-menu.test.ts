@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/supabase/cookie-secure", () => ({ cookieSecure: () => false }));
+vi.mock("@/lib/env", () => ({ env: { NEXT_PUBLIC_APP_URL: "https://app.exemplo.com" } }));
 
 import {
   COOKIE_DO_MENU,
@@ -12,7 +13,8 @@ import {
 } from "@/lib/escale/preferencia-de-menu";
 import { GET } from "@/app/app/escale/menu/route";
 
-const req = (qs: string) => new NextRequest(`http://localhost/app/escale/menu?${qs}`);
+// Atrás do proxy, o servidor enxerga o próprio endereço interno (0.0.0.0:3000), não o público.
+const req = (qs: string) => new NextRequest(`http://0.0.0.0:3000/app/escale/menu?${qs}`);
 
 describe("preferência de menu", () => {
   it("o padrão é a lateral, e só 'topo' e 'lateral' são valores válidos", () => {
@@ -44,22 +46,22 @@ describe("preferência de menu", () => {
 });
 
 describe("GET /app/escale/menu", () => {
-  it("usar=topo grava o cookie e volta para a tela de onde veio", () => {
+  it("usar=topo grava o cookie e volta para a tela de onde veio, pelo endereço público", () => {
     const res = GET(req("usar=topo&voltar=%2Fapp%2Finbox"));
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://localhost/app/inbox");
+    expect(res.headers.get("location")).toBe("https://app.exemplo.com/app/inbox");
     expect(res.cookies.get(COOKIE_DO_MENU)?.value).toBe("topo");
   });
 
   it("usar=lateral grava 'lateral'", () => {
     const res = GET(req("usar=lateral"));
     expect(res.cookies.get(COOKIE_DO_MENU)?.value).toBe("lateral");
-    expect(res.headers.get("location")).toBe("http://localhost/app");
+    expect(res.headers.get("location")).toBe("https://app.exemplo.com/app");
   });
 
   it("valor desconhecido não grava nada, e destino de fora cai em /app", () => {
     const res = GET(req("usar=roxo&voltar=%2F%2Fevil.com"));
     expect(res.cookies.get(COOKIE_DO_MENU)).toBeUndefined();
-    expect(res.headers.get("location")).toBe("http://localhost/app");
+    expect(res.headers.get("location")).toBe("https://app.exemplo.com/app");
   });
 });
