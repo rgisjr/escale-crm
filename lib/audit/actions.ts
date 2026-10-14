@@ -916,6 +916,13 @@ export const AUDIT_ACTIONS = [
   // meio dos renames — e "quem trouxe este funil de volta, e quando" é a
   // pergunta que o painel de auditoria só responde filtrando por `action`.
   "pipeline.unarchived",
+  // FORK ESCALE · grupos de funis (migration 9001, Fase 1A). No meio da lista, e
+  // não no fim, onde o original acrescenta os dele: o fim conflita a cada
+  // sincronização.
+  "pipeline_group.created",
+  "pipeline_group.renamed",
+  "pipeline_group.deleted",
+  "pipeline.group_changed",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
