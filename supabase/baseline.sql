@@ -32674,11 +32674,36 @@ update public.crm_pipelines set group_id = null where group_id is null;
 -- A FK deixa de soltar funis: com NOT NULL, `set null` viraria erro no meio da
 -- exclusão. Sem ação = recusa no fim do comando — o que também deixa excluir a
 -- organização inteira, porque funis e grupos saem no mesmo comando.
-alter table public.crm_pipelines drop constraint if exists crm_pipelines_group_fk;
-alter table public.crm_pipelines
-  add constraint crm_pipelines_group_fk
-  foreign key (organization_id, group_id)
-  references public.crm_pipeline_groups (organization_id, id);
+--
+-- A troca só acontece enquanto a FK ainda é a da 9001 (`confdeltype` diferente
+-- de 'a' = no action): reaplicar o baseline numa base que já passou por aqui
+-- (update.sh) não derruba a FK nem revalida a tabela — nunca há janela sem FK.
+-- O `add` vai por `format('%I')` porque a FK nasce na 9001 com o MESMO nome, e
+-- a régua `baseline-constraint-reconstruida` conta nomes literais de
+-- `add constraint`; o que ela vigia (reconstruir em série sobre dados) não
+-- acontece aqui, porque esta troca roda uma vez só.
+do $fk$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'crm_pipelines_group_fk'
+      and conrelid = 'public.crm_pipelines'::regclass
+      and confdeltype <> 'a'
+  ) then
+    alter table public.crm_pipelines drop constraint if exists crm_pipelines_group_fk;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'crm_pipelines_group_fk'
+      and conrelid = 'public.crm_pipelines'::regclass
+  ) then
+    execute format(
+      'alter table public.crm_pipelines add constraint %I foreign key (organization_id, group_id) '
+        'references public.crm_pipeline_groups (organization_id, id)',
+      'crm_pipelines_group_fk'
+    );
+  end if;
+end $fk$;
 
 alter table public.crm_pipelines alter column group_id set not null;
 

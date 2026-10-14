@@ -55,4 +55,10 @@ describe("toda origem tem grupo: migration 9002 e bloco do baseline", () => {
     expect(sql).not.toContain("on delete set null");
     expect(sql).toContain("alter table public.crm_pipelines alter column group_id set not null;");
   });
+
+  it("a troca da FK só roda enquanto ela ainda é a da 9001 — reaplicar não a derruba", () => {
+    const sql = ler(MIGRATION);
+    expect(sql).toContain("and confdeltype <> 'a'");
+    expect(sql).not.toMatch(/add\s+constraint\s+crm_pipelines_group_fk/i);
+  });
 });
