@@ -150,9 +150,15 @@ export function escolherFunilInicial(origens: Origens, lembrado: string | null):
   );
 }
 
-/** O funil aberto no quadro (`/app/pipelines/<id>`), ou `null` fora dele. */
+/**
+ * O funil aberto no quadro (`/app/pipelines/<id>`), ou `null` fora dele. O
+ * quadro de uma visualização mora em `/app/pipelines/visualizacoes/<id>` (Fase
+ * 1C) e não é funil: sem a exceção, o "último funil aberto" viraria a palavra
+ * "visualizacoes".
+ */
 export function funilDoCaminho(pathname: string): string | null {
-  return /^\/app\/pipelines\/([^/?#]+)/.exec(pathname)?.[1] ?? null;
+  const id = /^\/app\/pipelines\/([^/?#]+)/.exec(pathname)?.[1] ?? null;
+  return id === "visualizacoes" ? null : id;
 }
 
 /** Duas letras para o ícone do grupo; palavras de até 2 letras ("de", "da") não contam. */

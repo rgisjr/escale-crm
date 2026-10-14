@@ -140,6 +140,7 @@ describe("funilDoCaminho e iniciais", () => {
   it("lê o funil do endereço do quadro", () => {
     expect(funilDoCaminho("/app/pipelines/abc")).toBe("abc");
     expect(funilDoCaminho("/app/kanban")).toBeNull();
+    expect(funilDoCaminho("/app/pipelines/visualizacoes/v-1")).toBeNull();
   });
 
   it("iniciais pulam palavras curtas", () => {
