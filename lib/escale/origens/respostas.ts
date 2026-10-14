@@ -42,7 +42,7 @@ export async function responderComOrigens(
   supabase: Supabase,
   orgId: string,
   requestId: string,
-  status = 200,
+  status: 200 | 201 = 200,
 ): Promise<Response> {
   const lido = await origensOuFalha(supabase, orgId, requestId);
   return lido.ok ? ok(lido.origens, { status, requestId }) : lido.resposta;
