@@ -6,10 +6,24 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { lerOrigens } from "@/lib/escale/origens/ler-origens";
 import type { Origens } from "@/lib/escale/origens/regras";
 import { lerPreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
+import { lerVisualizacoes } from "@/lib/escale/visualizacoes/ler-visualizacoes";
+import type { Visualizacao } from "@/lib/escale/visualizacoes/regras";
 import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
 import { createClient } from "@/lib/supabase/server";
 
 import { PainelOrigens } from "./PainelOrigens";
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+/** Banco sem a 9003 (ou fora do ar): o painel abre com a seção Visualizações vazia. */
+async function visualizacoesOuNada(supabase: Supabase, orgId: string): Promise<Visualizacao[]> {
+  try {
+    return await lerVisualizacoes(supabase, orgId);
+  } catch (err) {
+    console.error("[escale/visualizacoes] não consegui ler as visualizações; o painel abre sem elas", err);
+    return [];
+  }
+}
 
 /**
  * O PAINEL ORIGENS AO LADO DE NEGÓCIOS (fork Escale, Fase 1A).
@@ -31,9 +45,10 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) return <>{children}</>;
 
+  const supabase = await createClient();
   let origens: Origens;
   try {
-    origens = await lerOrigens(await createClient(), activeOrg.orgId);
+    origens = await lerOrigens(supabase, activeOrg.orgId);
   } catch (err) {
     console.error("[escale/origens] não consegui ler os grupos de funis; o quadro abre sem o painel", err);
     return <>{children}</>;
@@ -43,7 +58,7 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
     <div className="flex items-start gap-4">
       <PainelOrigens
         origens={origens}
-        visualizacoes={[]}
+        visualizacoes={await visualizacoesOuNada(supabase, activeOrg.orgId)}
         podeGerenciar={ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager}
         // Painel/lista recolhidos e grupos ocultos vêm de cookie: o primeiro render já sai certo.
         preferencias={lerPreferenciasDoPainel((nome) => store.get(nome)?.value)}
