@@ -123,6 +123,11 @@ describe("<LoteDaVisualizacao>", () => {
     expect(onLimpar).toHaveBeenCalled();
   });
 
+  it("seleção velha (ids que não estão em nenhum quadro): nada aparece, em vez de '0 origens'", () => {
+    const { container } = render(<LoteDaVisualizacao selecionados={["sumiu-1", "sumiu-2"]} quadros={QUADROS} onLimpar={vi.fn()} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("nada selecionado: nada aparece", () => {
     const { container } = render(<LoteDaVisualizacao selecionados={[]} quadros={QUADROS} onLimpar={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();

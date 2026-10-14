@@ -44,10 +44,14 @@ export async function responderComVisualizacoes(
  * a RLS (o papel mudou entre o `requireRole` e a escrita).
  */
 export function falhaDaGravacao(
-  erro: { code?: string; message?: string },
+  erro: { code?: string; message?: string; details?: string | null },
   t: (texto: string) => string,
   requestId: string,
 ): Response {
+  // O `id` vem do cliente: o POST com um id que já é de outra organização bate na chave primária.
+  if (erro.code === "23505" && `${erro.message ?? ""} ${erro.details ?? ""}`.includes("crm_pipeline_views_pkey")) {
+    return fail("state_conflict", t("Essa visualização já existe."), 409, { requestId });
+  }
   if (erro.code === "23505") return fail("state_conflict", t("Já existe uma visualização com esse nome."), 409, { requestId });
   if (erro.code === "23503") {
     return fail("unprocessable_entity", t("Escolha origens e pessoas desta organização."), 422, { requestId });

@@ -113,6 +113,34 @@ describe("montarGravacao", () => {
   });
 });
 
+/** `ORIGENS` mais um grupo arquivado: arquivar o grupo não arquiva os funis dele. */
+const COM_GRUPO_ARQUIVADO: Origens = {
+  grupos: [...ORIGENS.grupos, { id: "g-velho", name: "Antigo", color: null, icon: "iniciais", is_archived: true }],
+  funis: [
+    ...ORIGENS.funis,
+    { id: "f-pos", name: "Pós-venda", group_id: "g-velho", is_archived: false, is_default: false },
+    { id: "f-solto", name: "Solto", group_id: null, is_archived: false, is_default: false },
+  ],
+};
+
+describe("origem de grupo arquivado não está viva", () => {
+  it("origensVivasDaVisualizacao tira a origem cujo grupo está arquivado e mantém a sem grupo", () => {
+    const v = vis("v1", "Time", ["f-nayara", "f-pos", "f-solto"]);
+    expect(origensVivasDaVisualizacao(v, COM_GRUPO_ARQUIVADO).map((f) => f.id)).toEqual(["f-nayara", "f-solto"]);
+  });
+
+  it("validarOrigensDaVisualizacao recusa origem de grupo arquivado", () => {
+    expect(validarOrigensDaVisualizacao(["f-leads", "f-pos"], COM_GRUPO_ARQUIVADO)).toEqual({
+      ok: false,
+      erro: "Escolha origens ativas desta organização.",
+    });
+    expect(validarOrigensDaVisualizacao(["f-leads", "f-solto"], COM_GRUPO_ARQUIVADO)).toEqual({
+      ok: true,
+      ids: ["f-leads", "f-solto"],
+    });
+  });
+});
+
 describe("origens da visualização e seleção do painel", () => {
   it("as origens vivas, na ordem da visualização, sem arquivada nem apagada", () => {
     const v = vis("v1", "Time", ["f-nayara", "f-morto", "f-apagada", "f-leads"]);

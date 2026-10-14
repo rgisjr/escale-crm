@@ -19,6 +19,7 @@ import type { Origens } from "@/lib/escale/origens/regras";
 import type { Visualizacao } from "@/lib/escale/visualizacoes/regras";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
 import { PainelOrigens } from "@/components/escale/origens/PainelOrigens";
+import { RodapeDaSelecao } from "@/components/escale/visualizacoes/RodapeDaSelecao";
 
 const G_OBRAS = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 const ORIGENS: Origens = {
@@ -289,6 +290,20 @@ describe("<PainelOrigens> — visualizações e seleção (Fase 1C)", () => {
     expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipeline-views/v-time", { origens: ["f-leads"] });
   });
 
+  it("Editar origens: origem de grupo arquivado não entra na contagem nem é gravada", async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: VISUALIZACOES });
+    const comArquivado: Visualizacao[] = [
+      { id: "v-time", name: "Time comercial", acesso: "todos", origens: ["f-nayara", "f-pos", "f-leads"], pessoas: [] },
+    ];
+    const user = renderizar(true, ABERTO, comArquivado);
+    await user.click(screen.getByRole("button", { name: "Mais ações de Time comercial" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Editar origens" }));
+    expect(screen.getByText("2 origens selecionadas · Rascunho")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Salvar origens" }));
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/app/pipelines/visualizacoes/v-time"));
+    expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipeline-views/v-time", { origens: ["f-nayara", "f-leads"] });
+  });
+
   it("Cancelar sai do modo seleção sem gravar", async () => {
     const user = renderizar();
     await user.click(within(secao()).getByRole("button", { name: "Criar visualização" }));
@@ -296,5 +311,20 @@ describe("<PainelOrigens> — visualizações e seleção (Fase 1C)", () => {
     expect(screen.queryByText(/Rascunho/)).toBeNull();
     expect(secao()).toBeInTheDocument();
     expect(apiClient.post).not.toHaveBeenCalled();
+  });
+});
+
+describe("<RodapeDaSelecao>", () => {
+  it("salvando: Cancelar e Salvar ficam desligados, para não cancelar um PATCH em andamento", () => {
+    render(<RodapeDaSelecao quantas={2} editando salvando erro={null} onCancelar={vi.fn()} onSalvar={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Salvar origens" })).toBeDisabled();
+  });
+
+  it("parado: Cancelar funciona", async () => {
+    const onCancelar = vi.fn();
+    render(<RodapeDaSelecao quantas={2} editando salvando={false} erro={null} onCancelar={onCancelar} onSalvar={vi.fn()} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onCancelar).toHaveBeenCalled();
   });
 });

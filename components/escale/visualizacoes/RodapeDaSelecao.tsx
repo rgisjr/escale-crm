@@ -42,7 +42,7 @@ export function RodapeDaSelecao({
         </p>
       )}
       <div className="mt-2 flex justify-end gap-2">
-        <Button type="button" size="sm" variant="ghost" onClick={onCancelar}>
+        <Button type="button" size="sm" variant="ghost" disabled={salvando} onClick={onCancelar}>
           {t("Cancelar")}
         </Button>
         <Button type="button" size="sm" disabled={foraDaFaixa || salvando} onClick={onSalvar}>

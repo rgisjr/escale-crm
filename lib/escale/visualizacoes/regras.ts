@@ -17,7 +17,14 @@ import type { BoardData } from "@/lib/kanban/types";
 import { proximoNaEtapaInteira } from "@/lib/kanban/vizinho-na-etapa";
 import type { Lead } from "@/lib/types/leads";
 
-import type { ArvoreDeOrigens, FunilDaOrigem, GrupoNaArvore, Origens, VereditoDeNome } from "../origens/regras";
+import {
+  funisVivos,
+  type ArvoreDeOrigens,
+  type FunilDaOrigem,
+  type GrupoNaArvore,
+  type Origens,
+  type VereditoDeNome,
+} from "../origens/regras";
 
 /** O mesmo CHECK `crm_pipeline_views_acesso_valido` (migration 9003). */
 export const ACESSOS_DE_VISUALIZACAO = ["todos", "escolhidos"] as const;
@@ -67,7 +74,7 @@ export function validarOrigensDaVisualizacao(
     return { ok: false, erro: "Uma visualização junta de 1 a 20 origens." };
   }
   // `origens` é o que a sessão lê da PRÓPRIA organização: id do vizinho não está aqui.
-  const vivas = new Set(origens.funis.filter((f) => !f.is_archived).map((f) => f.id));
+  const vivas = new Set(funisVivos(origens).map((f) => f.id));
   if (ids.some((id) => !vivas.has(id))) return { ok: false, erro: "Escolha origens ativas desta organização." };
   return { ok: true, ids };
 }
@@ -99,12 +106,15 @@ export function montarGravacao(
   return { ok: true, gravacao: { nome: nome.nome, acesso: pedido.acesso, origens: escolhidas.ids, pessoas } };
 }
 
-/** As origens que o quadro abre: as da visualização, na ordem dela, sem arquivada nem apagada. */
+/**
+ * As origens que o quadro abre: as da visualização, na ordem dela, sem arquivada,
+ * sem apagada e sem a de grupo arquivado (que o painel nem mostra).
+ */
 export function origensVivasDaVisualizacao(v: Pick<Visualizacao, "origens">, origens: Origens): FunilDaOrigem[] {
-  const porId = new Map(origens.funis.map((f) => [f.id, f]));
+  const porId = new Map(funisVivos(origens).map((f) => [f.id, f]));
   return v.origens.flatMap((id) => {
     const funil = porId.get(id);
-    return funil && !funil.is_archived ? [funil] : [];
+    return funil ? [funil] : [];
   });
 }
 

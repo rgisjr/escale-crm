@@ -31,6 +31,8 @@ export function LoteDaVisualizacao({
   if (selecionados.length === 0) return null;
 
   const origens = [...new Set(selecionados.flatMap((id) => origemDe.get(id) ?? []))];
+  // Seleção velha (o card sumiu num refresh em tempo real): sem origem conhecida, não há o que agir.
+  if (origens.length === 0) return null;
   const quadro = origens.length === 1 ? quadros.find((q) => q.pipeline.id === origens[0]) : undefined;
   if (quadro) {
     return (

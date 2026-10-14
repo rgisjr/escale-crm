@@ -9125,6 +9125,7 @@ export const DICIONARIO: Traducoes = {
   "Dê um nome à visualização.": { es: "Dé un nombre a la vista." },
   "O nome da visualização pode ter até 60 caracteres.": { es: "El nombre de la vista puede tener hasta 60 caracteres." },
   "Já existe uma visualização com esse nome.": { es: "Ya existe una vista con ese nombre." },
+  "Essa visualização já existe.": { es: "Esa vista ya existe." },
   "Escolha origens ativas desta organização.": { es: "Elija orígenes activos de esta organización." },
   "Escolha origens e pessoas desta organização.": { es: "Elija orígenes y personas de esta organización." },
   "Só gerente ou administrador muda visualizações.": { es: "Solo un gerente o administrador cambia las vistas." },

@@ -130,6 +130,32 @@ describe("POST /api/v1/pipeline-views", () => {
     expect(db.rpcs).toEqual([]);
   });
 
+  it("id de uma visualização que já existe na organização é 409, sem gravar nem auditar", async () => {
+    const db = banco();
+    const res = await criar({ ...novaValida, id: V_TIME, name: "Outro nome" });
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain("Essa visualização já existe.");
+    expect(db.rpcs).toEqual([]);
+    expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("23505 da chave primária (id de outra organização) também é 'já existe', não 'mesmo nome'", async () => {
+    const db = banco();
+    (db.client as { rpc: unknown }).rpc = async (nome: string, args: unknown) => {
+      db.rpcs.push({ nome, args });
+      return {
+        data: null,
+        error: {
+          code: "23505",
+          message: 'duplicate key value violates unique constraint "crm_pipeline_views_pkey"',
+        },
+      };
+    };
+    const res = await criar(novaValida);
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain("Essa visualização já existe.");
+  });
+
   it("corpo que não é JSON é 400; chave a mais é 422", async () => {
     banco();
     expect((await criar("{quebrado")).status).toBe(400);

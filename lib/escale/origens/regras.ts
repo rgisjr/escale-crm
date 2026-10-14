@@ -138,16 +138,23 @@ export function filtrarArvore(arvore: ArvoreDeOrigens, busca: string): ArvoreDeO
  * visível, e a entrada cai na lista de funis.
  */
 export function escolherFunilInicial(origens: Origens, lembrado: string | null): string | null {
-  const ativos = new Set(origens.grupos.filter((g) => !g.is_archived).map((g) => g.id));
-  const candidatos = origens.funis.filter(
-    (f) => !f.is_archived && (f.group_id === null || ativos.has(f.group_id)),
-  );
+  const candidatos = funisVivos(origens);
   return (
     candidatos.find((f) => f.id === lembrado)?.id ??
     candidatos.find((f) => f.is_default)?.id ??
     candidatos[0]?.id ??
     null
   );
+}
+
+/**
+ * Os funis "vivos": não arquivados e, se têm grupo, com o grupo ativo. Arquivar
+ * um grupo só marca o grupo — os funis dele continuam `is_archived = false`, mas
+ * somem da árvore do painel, então não valem como origem de nada.
+ */
+export function funisVivos(origens: Origens): FunilDaOrigem[] {
+  const ativos = new Set(origens.grupos.filter((g) => !g.is_archived).map((g) => g.id));
+  return origens.funis.filter((f) => !f.is_archived && (f.group_id === null || ativos.has(f.group_id)));
 }
 
 /**

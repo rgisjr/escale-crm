@@ -72,6 +72,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!origens.ok) return origens.resposta;
   if (!visualizacoes.ok) return visualizacoes.resposta;
 
+  // A função do banco é "atualiza ou insere": um id já existente sobrescreveria a visualização.
+  if (visualizacoes.visualizacoes.some((v) => v.id === parsed.data.id)) {
+    return fail("state_conflict", t("Essa visualização já existe."), 409, { requestId });
+  }
+
   const veredito = montarGravacao(parsed.data, origens.origens, visualizacoes.visualizacoes, null);
   if (!veredito.ok) return fail("unprocessable_entity", t(veredito.erro), 422, { requestId });
   const { gravacao } = veredito;
