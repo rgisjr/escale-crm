@@ -5,6 +5,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { lerOrigens } from "@/lib/escale/origens/ler-origens";
 import type { Origens } from "@/lib/escale/origens/regras";
+import { lerPreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
 import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,7 +41,12 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex items-start gap-4">
-      <PainelOrigens origens={origens} podeGerenciar={ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager} />
+      <PainelOrigens
+        origens={origens}
+        podeGerenciar={ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager}
+        // Painel/lista recolhidos e grupos ocultos vêm de cookie: o primeiro render já sai certo.
+        preferencias={lerPreferenciasDoPainel((nome) => store.get(nome)?.value)}
+      />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

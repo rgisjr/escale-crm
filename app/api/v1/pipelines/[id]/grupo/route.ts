@@ -1,12 +1,12 @@
 /**
- * PUT /api/v1/pipelines/[id]/grupo — põe o funil num GRUPO DE FUNIS, ou tira
- * (`group_id: null`). Fork Escale, Fase 1A.
+ * PUT /api/v1/pipelines/[id]/grupo — põe o funil num GRUPO DE FUNIS (fork
+ * Escale, Fases 1A e 1B). Toda origem tem grupo (migration 9002): `group_id` é
+ * obrigatório e precisa ser um grupo ATIVO da organização da sessão.
  *
  * Arquivo NOVO de propósito, e não um campo a mais no PATCH do funil
- * (`../route.ts`): aquele schema é `.strict()` e é do original — mexer nele
- * conflita a cada sincronização. A guarda de organização é dupla: a rota só
- * aceita funil e grupo que estão na leitura da organização da sessão, e o banco
- * recusa a combinação cruzada pela FK composta `crm_pipelines_group_fk`.
+ * (`../route.ts`): aquele schema é `.strict()` e é do original. A guarda de
+ * organização é dupla: a rota só aceita funil e grupo da leitura da organização
+ * da sessão, e o banco recusa a combinação cruzada pela FK composta.
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -26,7 +26,7 @@ interface RouteCtx {
   params: Promise<{ id: string }>;
 }
 
-const corpoSchema = z.object({ group_id: z.string().uuid().nullable() }).strict();
+const corpoSchema = z.object({ group_id: z.string().uuid() }).strict();
 
 export async function PUT(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const supportDenied = await requireSupportWrite();
@@ -56,7 +56,7 @@ export async function PUT(req: NextRequest, ctx: RouteCtx): Promise<Response> {
 
   const funil = antes.origens.funis.find((f) => f.id === funilId);
   if (!funil) return fail("not_found", t("Funil não encontrado."), 404, { requestId });
-  if (para !== null && !antes.origens.grupos.some((g) => g.id === para)) {
+  if (!antes.origens.grupos.some((g) => g.id === para && !g.is_archived)) {
     return fail("not_found", t("Grupo não encontrado."), 404, { requestId });
   }
   // Nada a mudar: sem escrita e sem linha de auditoria que não aconteceu.

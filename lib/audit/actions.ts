@@ -923,6 +923,10 @@ export const AUDIT_ACTIONS = [
   "pipeline_group.renamed",
   "pipeline_group.deleted",
   "pipeline.group_changed",
+  // FORK ESCALE · Fase 1B: customizar, arquivar e desarquivar grupo.
+  "pipeline_group.updated",
+  "pipeline_group.archived",
+  "pipeline_group.unarchived",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
