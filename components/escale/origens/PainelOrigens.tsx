@@ -28,9 +28,11 @@ import {
   visualizacaoDoCaminho,
   type Visualizacao,
 } from "@/lib/escale/visualizacoes/regras";
-import { CaretDown, CaretLeft, CaretRight, CaretUp, MagnifyingGlass, Plus } from "@/lib/ui/icons";
+import { CaretDown, CaretLeft, CaretRight, CaretUp, MagnifyingGlass, Plus, SquaresFour } from "@/lib/ui/icons";
+import { cn } from "@/lib/utils";
 
 import { ArquivadosDoPainel } from "./ArquivadosDoPainel";
+import { CabecalhoDaSecao } from "./CabecalhoDaSecao";
 import { JanelasDeOrigens, type Janela } from "./JanelasDeOrigens";
 import {
   BOTAO_DE_ICONE,
@@ -72,14 +74,14 @@ interface Selecao {
  * Negócios na casca nova, como na Clint. `<` recolhe o painel, `^` recolhe a
  * lista, a seta abre o grupo, o `+` de cima adiciona origem ou grupo, o `+` do
  * grupo cria uma origem dentro dele, e os ⋮ levam às janelas
- * (`JanelasDeOrigens`). Abaixo das origens, a seção Visualizações; o `+` dela e
- * o "Selecionar" dos ⋮ entram no modo seleção. Só md+: no celular o quadro
- * segue como sempre.
+ * (`JanelasDeOrigens`). Abaixo, a seção irmã Visualizações, com o mesmo
+ * cabeçalho em destaque e o seu próprio `^`; o `+` dela e o "Selecionar" dos ⋮
+ * entram no modo seleção. Só md+: no celular o quadro segue como sempre.
  *
  * Origens e visualizações vêm do servidor (`ComOrigens`) e são trocadas pelo que
  * cada mutação devolve; quando o servidor manda novidade, o ajuste acontece
  * durante o render (padrão de `app/app/kanban/_client.tsx`). As preferências
- * (painel, lista, ocultos) também vêm do servidor, de cookie, e cada mudança é
+ * (painel, lista, visualizações, ocultos) também vêm do servidor, de cookie, e cada mudança é
  * gravada pela Server Action — nenhum `useState` lê o navegador.
  */
 export function PainelOrigens({
@@ -114,6 +116,7 @@ export function PainelOrigens({
 
   const [painelAberto, setPainelAberto] = useState(preferencias.painelAberto);
   const [listaAberta, setListaAberta] = useState(preferencias.listaAberta);
+  const [visualizacoesAbertas, setVisualizacoesAbertas] = useState(preferencias.visualizacoesAbertas);
   const [ocultos, setOcultos] = useState<string[]>(preferencias.ocultos);
   const [verOcultos, setVerOcultos] = useState(false);
   const [abertos, setAbertos] = useState<ReadonlySet<string>>(() => {
@@ -160,6 +163,12 @@ export function PainelOrigens({
     const proximo = !listaAberta;
     setListaAberta(proximo);
     void guardarPreferenciaDeOrigens({ nome: "lista", valor: proximo ? "aberta" : "fechada" });
+  }
+
+  function alternarVisualizacoes() {
+    const proximo = !visualizacoesAbertas;
+    setVisualizacoesAbertas(proximo);
+    void guardarPreferenciaDeOrigens({ nome: "visualizacoes", valor: proximo ? "aberta" : "fechada" });
   }
 
   function alternarGrupo(id: string) {
@@ -272,140 +281,145 @@ export function PainelOrigens({
         <CaretLeft size={12} aria-hidden />
       </button>
 
-      <div className="flex items-center gap-1 border-b px-3 py-2">
-        <h2 className="flex-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("Origens")}</h2>
-        {podeGerenciar && !selecao && (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <button type="button" aria-label={t("Adicionar")} className={BOTAO_DE_ICONE}>
-                <Plus size={15} aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setJanela({ tipo: "adicionar-origem", grupoId: null })}>
-                {t("Adicionar origem")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setJanela({ tipo: "adicionar-grupo" })}>
-                {t("Adicionar grupo de origens")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        <button
-          type="button"
-          aria-label={t("Buscar grupo ou funil")}
-          aria-pressed={buscaAberta}
-          onClick={() => {
-            setBuscaAberta((v) => !v);
-            setBusca("");
-          }}
-          className={BOTAO_DE_ICONE}
-        >
-          <MagnifyingGlass size={15} aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label={listaAberta ? t("Recolher a lista de origens") : t("Abrir a lista de origens")}
-          aria-expanded={listaAberta}
-          onClick={alternarLista}
-          className={BOTAO_DE_ICONE}
-        >
-          {listaAberta ? <CaretUp size={14} aria-hidden /> : <CaretDown size={14} aria-hidden />}
-        </button>
-      </div>
-
-      {buscaAberta && (
-        <div className="px-3 pt-2">
-          <Input
-            autoFocus
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder={t("Buscar grupo ou funil")}
-            aria-label={t("Buscar grupo ou funil")}
-            className="h-8"
-          />
-        </div>
-      )}
-
-      {listaAberta && (
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-          <nav aria-label={t("Funis por grupo")}>
-            <ul className="space-y-0.5">
-              {visiveis.map((g) => (
-                <LinhaDoGrupo
-                  key={g.id}
-                  grupo={g}
-                  aberto={buscando || abertos.has(g.id) || novoEm === g.id}
-                  oculto={ocultos.includes(g.id)}
-                  ativo={ativo}
-                  podeGerenciar={podeGerenciar}
-                  criandoAqui={novoEm === g.id}
-                  selecao={noModoSelecao}
-                  onAlternar={() => alternarGrupo(g.id)}
-                  onNovaOrigem={() => setNovoEm(g.id)}
-                  onAcao={(a) => acaoDoGrupo(g.id, a)}
-                  onAcaoDaOrigem={acaoDaOrigem}
-                  onCriada={(novas, id) => {
-                    setOrigens(novas);
-                    setNovoEm(null);
-                    abrirOrigem(id);
-                  }}
-                  onCancelarCriacao={() => setNovoEm(null)}
-                />
-              ))}
-            </ul>
-            {filtrada.semGrupo.length > 0 && (
-              <div className="mt-3 space-y-1">
-                <p className="px-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {t("Sem grupo")}
-                </p>
-                <ul className="space-y-0.5">
-                  {filtrada.semGrupo.map((f) => (
-                    <LinhaDaOrigem
-                      key={f.id}
-                      funil={f}
-                      ativo={ativo}
-                      podeGerenciar={podeGerenciar}
-                      recuo={false}
-                      selecao={noModoSelecao}
-                      onAcao={(a) => acaoDaOrigem(f.id, a)}
-                    />
-                  ))}
-                </ul>
-              </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className={cn(!selecao && "border-b")}>
+          <CabecalhoDaSecao icone={<SquaresFour size={18} />} titulo={t("Origens")}>
+            {podeGerenciar && !selecao && (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" aria-label={t("Adicionar")} className={BOTAO_DE_ICONE}>
+                    <Plus size={15} aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setJanela({ tipo: "adicionar-origem", grupoId: null })}>
+                    {t("Adicionar origem")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setJanela({ tipo: "adicionar-grupo" })}>
+                    {t("Adicionar grupo de origens")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-          </nav>
+            <button
+              type="button"
+              aria-label={t("Buscar grupo ou funil")}
+              aria-pressed={buscaAberta}
+              onClick={() => {
+                setBuscaAberta((v) => !v);
+                setBusca("");
+              }}
+              className={BOTAO_DE_ICONE}
+            >
+              <MagnifyingGlass size={15} aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label={listaAberta ? t("Recolher a lista de origens") : t("Abrir a lista de origens")}
+              aria-expanded={listaAberta}
+              onClick={alternarLista}
+              className={BOTAO_DE_ICONE}
+            >
+              {listaAberta ? <CaretUp size={14} aria-hidden /> : <CaretDown size={14} aria-hidden />}
+            </button>
+          </CabecalhoDaSecao>
 
-          {nadaAchado && <p className="px-2 py-1 text-sm text-muted-foreground">{t("Nada encontrado.")}</p>}
-
-          {quantosOcultos > 0 && (
-            <div className="mt-3 flex items-center justify-between px-2 text-[11px] uppercase tracking-wider text-muted-foreground">
-              <span>
-                {(quantosOcultos === 1 ? t("{n} grupo oculto") : t("{n} grupos ocultos")).replace(
-                  "{n}",
-                  String(quantosOcultos),
-                )}
-              </span>
-              <button type="button" onClick={() => setVerOcultos((v) => !v)} className="font-semibold hover:text-foreground">
-                {verOcultos ? t("Esconder") : t("Mostrar")}
-              </button>
+          {buscaAberta && (
+            <div className="px-3 pb-2">
+              <Input
+                autoFocus
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder={t("Buscar grupo ou funil")}
+                aria-label={t("Buscar grupo ou funil")}
+                className="h-8"
+              />
             </div>
           )}
 
-          {!selecao && (
-            <SecaoVisualizacoes
-              visualizacoes={visualizacoesVisiveis}
-              origens={origens}
-              ativa={visualizacaoAtiva}
-              podeGerenciar={podeGerenciar}
-              onCriar={() => selecionar([], null)}
-              onAcao={acaoDaVisualizacao}
-            />
-          )}
+          {listaAberta && (
+            <div className="px-2 pb-2">
+              <nav aria-label={t("Funis por grupo")}>
+                <ul className="space-y-0.5">
+                  {visiveis.map((g) => (
+                    <LinhaDoGrupo
+                      key={g.id}
+                      grupo={g}
+                      aberto={buscando || abertos.has(g.id) || novoEm === g.id}
+                      oculto={ocultos.includes(g.id)}
+                      ativo={ativo}
+                      podeGerenciar={podeGerenciar}
+                      criandoAqui={novoEm === g.id}
+                      selecao={noModoSelecao}
+                      onAlternar={() => alternarGrupo(g.id)}
+                      onNovaOrigem={() => setNovoEm(g.id)}
+                      onAcao={(a) => acaoDoGrupo(g.id, a)}
+                      onAcaoDaOrigem={acaoDaOrigem}
+                      onCriada={(novas, id) => {
+                        setOrigens(novas);
+                        setNovoEm(null);
+                        abrirOrigem(id);
+                      }}
+                      onCancelarCriacao={() => setNovoEm(null)}
+                    />
+                  ))}
+                </ul>
+                {filtrada.semGrupo.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    <p className="px-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {t("Sem grupo")}
+                    </p>
+                    <ul className="space-y-0.5">
+                      {filtrada.semGrupo.map((f) => (
+                        <LinhaDaOrigem
+                          key={f.id}
+                          funil={f}
+                          ativo={ativo}
+                          podeGerenciar={podeGerenciar}
+                          recuo={false}
+                          selecao={noModoSelecao}
+                          onAcao={(a) => acaoDaOrigem(f.id, a)}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </nav>
 
-          {podeGerenciar && !selecao && <ArquivadosDoPainel arvore={arvore} onOrigens={setOrigens} />}
+              {nadaAchado && <p className="px-2 py-1 text-sm text-muted-foreground">{t("Nada encontrado.")}</p>}
+
+              {quantosOcultos > 0 && (
+                <div className="mt-3 flex items-center justify-between px-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <span>
+                    {(quantosOcultos === 1 ? t("{n} grupo oculto") : t("{n} grupos ocultos")).replace(
+                      "{n}",
+                      String(quantosOcultos),
+                    )}
+                  </span>
+                  <button type="button" onClick={() => setVerOcultos((v) => !v)} className="font-semibold hover:text-foreground">
+                    {verOcultos ? t("Esconder") : t("Mostrar")}
+                  </button>
+                </div>
+              )}
+
+              {podeGerenciar && !selecao && <ArquivadosDoPainel arvore={arvore} onOrigens={setOrigens} />}
+            </div>
+          )}
         </div>
-      )}
+
+        {!selecao && (
+          <SecaoVisualizacoes
+            visualizacoes={visualizacoesVisiveis}
+            origens={origens}
+            ativa={visualizacaoAtiva}
+            aberta={visualizacoesAbertas}
+            podeGerenciar={podeGerenciar}
+            onAlternar={alternarVisualizacoes}
+            onCriar={() => selecionar([], null)}
+            onAcao={acaoDaVisualizacao}
+          />
+        )}
+      </div>
 
       {selecao && (
         <RodapeDaSelecao

@@ -9097,6 +9097,8 @@ export const DICIONARIO: Traducoes = {
   "Visualizações": { es: "Vistas" },
   "Visualização": { es: "Vista" },
   "Criar visualização": { es: "Crear vista" },
+  "Recolher as visualizações": { es: "Contraer las vistas" },
+  "Abrir as visualizações": { es: "Abrir las vistas" },
   "Nenhuma visualização ainda.": { es: "Todavía no hay vistas." },
   "Editar origens": { es: "Editar orígenes" },
   "{n} origem selecionada · Rascunho": { es: "{n} origen seleccionado · Borrador" },
