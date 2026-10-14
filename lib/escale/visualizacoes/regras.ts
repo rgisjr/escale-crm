@@ -13,7 +13,7 @@
  */
 import { normalizar } from "@/lib/catalogo/busca";
 import { midpoint } from "@/lib/kanban/fractional-indexing";
-import type { BoardData, Stage } from "@/lib/kanban/types";
+import type { BoardData } from "@/lib/kanban/types";
 import { proximoNaEtapaInteira } from "@/lib/kanban/vizinho-na-etapa";
 import type { Lead } from "@/lib/types/leads";
 
