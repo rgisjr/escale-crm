@@ -7,14 +7,13 @@ import {
   GOV_PIPELINE,
   GOV_VIEWER,
   countAs,
-  lastLine,
   seedGov,
   sql,
   writeCountAs,
 } from "./gov-helpers";
 
 /**
- * GRUPOS DE FUNIS (fork Escale, migration 9001) — prova contra Postgres real.
+ * GRUPOS DE FUNIS (fork Escale, migrations 9001 e 9002) — prova contra Postgres real.
  *
  * RLS ligada e policy presente não é isolamento (ver o cabeçalho de
  * `rls-completude-varredura.test.ts`): aqui dois tenants reais leem por JWT e
@@ -29,7 +28,6 @@ const FUNIL_B = "e5ca1e00-9001-4000-8000-000000000003";
 const FUNIL_SOLTO = "e5ca1e00-9001-4000-8000-000000000004";
 const GRUPO_A = "e5ca1e00-9001-4000-8000-000000000011";
 const GRUPO_B = "e5ca1e00-9001-4000-8000-000000000012";
-const GRUPO_TEMPORARIO = "e5ca1e00-9001-4000-8000-000000000013";
 
 beforeAll(() => {
   seedGov();
@@ -109,18 +107,14 @@ describe("crm_pipeline_groups — o que o banco recusa", () => {
     ).toThrow(/crm_pipelines_group_fk/);
   });
 
-  it("excluir o grupo solta os funis e não apaga nenhum", () => {
-    const out = sql(`
-      insert into public.crm_pipelines (id, organization_id, name, slug)
-        values ('${FUNIL_SOLTO}', '${GOV_ORG}', 'Funil solto', 'escale-funil-solto')
+  it("excluir grupo que ainda tem funil é recusado (desde a 9002 nenhuma origem fica sem grupo)", () => {
+    sql(`
+      insert into public.crm_pipelines (id, organization_id, name, slug, group_id)
+        values ('${FUNIL_SOLTO}', '${GOV_ORG}', 'Funil solto', 'escale-funil-solto', '${GRUPO_A}')
         on conflict do nothing;
-      insert into public.crm_pipeline_groups (id, organization_id, name)
-        values ('${GRUPO_TEMPORARIO}', '${GOV_ORG}', 'Grupo temporário')
-        on conflict do nothing;
-      update public.crm_pipelines set group_id = '${GRUPO_TEMPORARIO}' where id = '${FUNIL_SOLTO}';
-      delete from public.crm_pipeline_groups where id = '${GRUPO_TEMPORARIO}';
-      select coalesce(group_id::text, 'nulo') from public.crm_pipelines where id = '${FUNIL_SOLTO}';
     `);
-    expect(lastLine(out)).toBe("nulo");
+    expect(() => sql(`delete from public.crm_pipeline_groups where id = '${GRUPO_A}';`)).toThrow(
+      /crm_pipelines_group_fk/,
+    );
   });
 });
