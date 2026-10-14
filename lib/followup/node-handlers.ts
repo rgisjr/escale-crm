@@ -4,7 +4,14 @@ import type { ServiceBoundary } from "@/lib/atendimento/fronteira";
  * `engine.ts` owns the tick/DB orchestration; this file only decides "given
  * this node + these facts, what happens next" so it's testable without Postgres.
  */
-import { NO_REPLY_BRANCH_ID, REPEAT_BODY_BRANCH_ID, REPEAT_DONE_BRANCH_ID, nodeBranches } from "./graph-schema";
+import {
+  CONDITION_FALSE_BRANCH_ID,
+  CONDITION_TRUE_BRANCH_ID,
+  NO_REPLY_BRANCH_ID,
+  REPEAT_BODY_BRANCH_ID,
+  REPEAT_DONE_BRANCH_ID,
+  nodeBranches,
+} from "./graph-schema";
 import type { FlowEdge, FlowNode, ReplySaveTo } from "./graph-schema";
 import { parseReplyCount } from "./parse-count";
 import { clampEspera, esperaPlanejadaDe, type EsperaAdaptativa } from "./timing-plan";
@@ -676,7 +683,18 @@ export function processNode(input: {
         return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
       }
       const result = evaluateCondition(node.config, lead);
-      const edge = selectEdge(edges, node.id, { type: "cond_result", value: result });
+      // A saída Sim/Não tem duas grafias que a tela e a publicação aceitam
+      // (`branchIdForCondition`): a v1 (`cond_result`) e a v2, pelo id do ramo
+      // ('true'/'false'). Procurar só a v1 deixava o fluxo publicado e parado
+      // neste nó. O ramo vem primeiro: `selectEdge` cai no `always` quando não
+      // acha a grafia pedida, e isso não pode esconder a aresta da outra.
+      const ramo = result ? CONDITION_TRUE_BRANCH_ID : CONDITION_FALSE_BRANCH_ID;
+      const temRamo = edges.some(
+        (e) => e.source === node.id && e.condition.type === "branch" && e.condition.branch_id === ramo,
+      );
+      const edge = temRamo
+        ? selectEdge(edges, node.id, { type: "branch", branch_id: ramo })
+        : selectEdge(edges, node.id, { type: "cond_result", value: result });
       if (!edge) return { kind: "fail", error: `condition node "${node.id}" has no matching edge for result ${result}` };
       return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
     }
