@@ -43,6 +43,7 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
     <div className="flex items-start gap-4">
       <PainelOrigens
         origens={origens}
+        visualizacoes={[]}
         podeGerenciar={ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager}
         // Painel/lista recolhidos e grupos ocultos vêm de cookie: o primeiro render já sai certo.
         preferencias={lerPreferenciasDoPainel((nome) => store.get(nome)?.value)}

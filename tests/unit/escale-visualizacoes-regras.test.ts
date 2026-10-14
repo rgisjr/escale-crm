@@ -8,6 +8,7 @@ import {
   alternarNaSelecao,
   cardsDaColuna,
   estadoDoGrupo,
+  filtrarVisualizacoes,
   montarColunas,
   montarGravacao,
   ordenarNaArvore,
@@ -237,5 +238,13 @@ describe("settingsDaVisualizacao", () => {
         quadro("C", [], {}),
       ]),
     ).toEqual({ lost_reasons: ["Preço", { label: "Sumiu", categoria: "Cliente" }] });
+  });
+});
+
+describe("filtrarVisualizacoes", () => {
+  it("a lupa procura no nome sem acento nem caixa; sem termo, devolve todas", () => {
+    const lista = [vis("v1", "Análise"), vis("v2", "Time comercial")];
+    expect(filtrarVisualizacoes(lista, "ANALI").map((v) => v.id)).toEqual(["v1"]);
+    expect(filtrarVisualizacoes(lista, "  ").map((v) => v.id)).toEqual(["v1", "v2"]);
   });
 });

@@ -137,6 +137,12 @@ export function visualizacaoDoCaminho(pathname: string): string | null {
   return /^\/app\/pipelines\/visualizacoes\/([^/?#]+)/.exec(pathname)?.[1] ?? null;
 }
 
+/** A lupa do painel também procura nas visualizações (sem acento, sem caixa). */
+export function filtrarVisualizacoes<V extends Pick<Visualizacao, "name">>(lista: readonly V[], busca: string): V[] {
+  const termo = chave(busca);
+  return termo ? lista.filter((v) => chave(v.name).includes(termo)) : [...lista];
+}
+
 // ── O quadro combinado ──────────────────────────────────────────────────────
 
 export interface ColunaCombinada {
