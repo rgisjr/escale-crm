@@ -9,7 +9,10 @@
 import { NAV_GROUPS, type NavDestination, type NavGroup } from "@/lib/navigation/registry";
 
 export interface ItemDoTopo {
+  /** A tela do registro: decide permissão (`montarMenuDoTopo`) e o "ativo". */
   href: string;
+  /** Para onde o clique leva, quando não é o próprio `href` (Fase 1B). */
+  destino?: string;
   /** Chave em português do dicionário (`t(rotulo)`). */
   rotulo: string;
   contador?: "fila";
@@ -18,7 +21,12 @@ export interface ItemDoTopo {
 }
 
 export const ITENS_DO_TOPO: readonly ItemDoTopo[] = [
-  { href: "/app/kanban", rotulo: "Negócios", ativoEm: ["/app/kanban", "/app/pipelines", "/app/leads"] },
+  {
+    href: "/app/kanban",
+    destino: "/app/escale/negocios",
+    rotulo: "Negócios",
+    ativoEm: ["/app/kanban", "/app/pipelines", "/app/leads"],
+  },
   { href: "/app/inbox", rotulo: "Conversas", contador: "fila", ativoEm: ["/app/inbox"] },
   { href: "/app/contacts", rotulo: "Contatos", ativoEm: ["/app/contacts"] },
   { href: "/app/companies", rotulo: "Empresas", ativoEm: ["/app/companies"] },

@@ -84,7 +84,9 @@ export function MenuDoTopo() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={item.destino ?? item.href}
+              // A entrada de Negócios só redireciona: pré-carregar não adianta nada.
+              prefetch={item.destino ? false : undefined}
               aria-current={ativo ? "page" : undefined}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm transition-colors",
