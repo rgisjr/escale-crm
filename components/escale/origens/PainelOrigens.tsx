@@ -4,64 +4,112 @@ import { useEffect, useMemo, useState } from "react";
 
 import { guardarPreferenciaDeOrigens } from "@/app/actions/escale/origens";
 import {
+  JanelasDaVisualizacao,
+  type JanelaDaVisualizacao,
+} from "@/components/escale/visualizacoes/JanelasDaVisualizacao";
+import { RodapeDaSelecao } from "@/components/escale/visualizacoes/RodapeDaSelecao";
+import { SecaoVisualizacoes, type AcaoDaVisualizacao } from "@/components/escale/visualizacoes/SecaoVisualizacoes";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useAtualizarVisualizacao } from "@/hooks/escale/useVisualizacoes";
 import { useT } from "@/hooks/i18n/useT";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
 import { filtrarArvore, funilDoCaminho, montarOrigens, type Origens } from "@/lib/escale/origens/regras";
+import {
+  alternarNaSelecao,
+  filtrarVisualizacoes,
+  ordenarNaArvore,
+  origensVivasDaVisualizacao,
+  visualizacaoDoCaminho,
+  type Visualizacao,
+} from "@/lib/escale/visualizacoes/regras";
 import { CaretDown, CaretLeft, CaretRight, CaretUp, MagnifyingGlass, Plus } from "@/lib/ui/icons";
 
 import { ArquivadosDoPainel } from "./ArquivadosDoPainel";
 import { JanelasDeOrigens, type Janela } from "./JanelasDeOrigens";
-import { BOTAO_DE_ICONE, LinhaDaOrigem, LinhaDoGrupo, type AcaoDaOrigem, type AcaoDoGrupo } from "./LinhasDoPainel";
+import {
+  BOTAO_DE_ICONE,
+  LinhaDaOrigem,
+  LinhaDoGrupo,
+  type AcaoDaOrigem,
+  type AcaoDoGrupo,
+  type SelecaoNoPainel,
+} from "./LinhasDoPainel";
+import { textoDoErro } from "./texto-do-erro";
 
-const JANELA_DO_GRUPO: Record<Exclude<AcaoDoGrupo, "ocultar">, "config-grupo" | "customizar" | "arquivar-grupo" | "excluir-grupo"> = {
+const JANELA_DO_GRUPO: Record<
+  Exclude<AcaoDoGrupo, "ocultar" | "selecionar">,
+  "config-grupo" | "customizar" | "arquivar-grupo" | "excluir-grupo"
+> = {
   configurar: "config-grupo",
   customizar: "customizar",
   arquivar: "arquivar-grupo",
   excluir: "excluir-grupo",
 };
-const JANELA_DA_ORIGEM: Record<AcaoDaOrigem, "config-origem" | "arquivar-origem" | "excluir-origem"> = {
+const JANELA_DA_ORIGEM: Record<Exclude<AcaoDaOrigem, "selecionar">, "config-origem" | "arquivar-origem" | "excluir-origem"> = {
   configurar: "config-origem",
   arquivar: "arquivar-origem",
   excluir: "excluir-origem",
 };
 
 /**
- * O PAINEL ORIGENS (fork Escale, Fases 1A e 1B): a coluna da esquerda de
+ * O modo seleção (Fase 1C): caixinhas nas origens e o rodapé "Rascunho".
+ * `editando` é a visualização cujas origens estão sendo trocadas; `null` é uma
+ * visualização nova.
+ */
+interface Selecao {
+  editando: string | null;
+  marcadas: ReadonlySet<string>;
+}
+
+/**
+ * O PAINEL ORIGENS (fork Escale, Fases 1A, 1B e 1C): a coluna da esquerda de
  * Negócios na casca nova, como na Clint. `<` recolhe o painel, `^` recolhe a
  * lista, a seta abre o grupo, o `+` de cima adiciona origem ou grupo, o `+` do
  * grupo cria uma origem dentro dele, e os ⋮ levam às janelas
- * (`JanelasDeOrigens`). Só md+: no celular o quadro segue como sempre.
+ * (`JanelasDeOrigens`). Abaixo das origens, a seção Visualizações; o `+` dela e
+ * o "Selecionar" dos ⋮ entram no modo seleção. Só md+: no celular o quadro
+ * segue como sempre.
  *
- * As origens vêm do servidor (`ComOrigens`) e são trocadas pelo que cada
- * mutação devolve; quando o servidor manda novidade, o ajuste acontece durante
- * o render (padrão de `app/app/kanban/_client.tsx`). As preferências (painel,
- * lista, ocultos) também vêm do servidor, de cookie, e cada mudança é gravada
- * pela Server Action — nenhum `useState` lê o navegador.
+ * Origens e visualizações vêm do servidor (`ComOrigens`) e são trocadas pelo que
+ * cada mutação devolve; quando o servidor manda novidade, o ajuste acontece
+ * durante o render (padrão de `app/app/kanban/_client.tsx`). As preferências
+ * (painel, lista, ocultos) também vêm do servidor, de cookie, e cada mudança é
+ * gravada pela Server Action — nenhum `useState` lê o navegador.
  */
 export function PainelOrigens({
   origens: doServidor,
+  visualizacoes: visualizacoesDoServidor,
   podeGerenciar,
   preferencias,
 }: {
   origens: Origens;
+  visualizacoes: Visualizacao[];
   podeGerenciar: boolean;
   preferencias: PreferenciasDoPainel;
 }) {
   const t = useT();
   const router = useRouter();
-  const ativo = funilDoCaminho(usePathname() ?? "");
+  const caminho = usePathname() ?? "";
+  const ativo = funilDoCaminho(caminho);
+  const visualizacaoAtiva = visualizacaoDoCaminho(caminho);
 
   const [origens, setOrigens] = useState<Origens>(doServidor);
   const [ultimoDoServidor, setUltimoDoServidor] = useState<Origens>(doServidor);
   if (doServidor !== ultimoDoServidor) {
     setUltimoDoServidor(doServidor);
     setOrigens(doServidor);
+  }
+  const [visualizacoes, setVisualizacoes] = useState<Visualizacao[]>(visualizacoesDoServidor);
+  const [ultimasDoServidor, setUltimasDoServidor] = useState<Visualizacao[]>(visualizacoesDoServidor);
+  if (visualizacoesDoServidor !== ultimasDoServidor) {
+    setUltimasDoServidor(visualizacoesDoServidor);
+    setVisualizacoes(visualizacoesDoServidor);
   }
 
   const [painelAberto, setPainelAberto] = useState(preferencias.painelAberto);
@@ -76,6 +124,10 @@ export function PainelOrigens({
   const [busca, setBusca] = useState("");
   const [novoEm, setNovoEm] = useState<string | null>(null);
   const [janela, setJanela] = useState<Janela | null>(null);
+  const [selecao, setSelecao] = useState<Selecao | null>(null);
+  const [erroDaSelecao, setErroDaSelecao] = useState<string | null>(null);
+  const [janelaDaVisualizacao, setJanelaDaVisualizacao] = useState<JanelaDaVisualizacao | null>(null);
+  const atualizarVisualizacao = useAtualizarVisualizacao();
 
   // O "Negócios" do menu do topo abre o último funil aberto (`/app/escale/negocios`).
   useEffect(() => {
@@ -88,6 +140,15 @@ export function PainelOrigens({
   const visiveis = verOcultos ? filtrada.grupos : filtrada.grupos.filter((g) => !ocultos.includes(g.id));
   const quantosOcultos = arvore.grupos.filter((g) => ocultos.includes(g.id)).length;
   const nadaAchado = buscando && visiveis.length === 0 && filtrada.semGrupo.length === 0;
+  const visualizacoesVisiveis = filtrarVisualizacoes(visualizacoes, busca);
+
+  const noModoSelecao: SelecaoNoPainel | undefined = selecao
+    ? {
+        marcadas: selecao.marcadas,
+        onAlternar: (ids, marcar) =>
+          setSelecao((atual) => atual && { ...atual, marcadas: alternarNaSelecao(atual.marcadas, ids, marcar) }),
+      }
+    : undefined;
 
   function alternarPainel() {
     const proximo = !painelAberto;
@@ -110,6 +171,16 @@ export function PainelOrigens({
     });
   }
 
+  /** Entra no modo seleção já com `ids` marcadas, abrindo os grupos delas. */
+  function selecionar(ids: string[], editando: string | null) {
+    setErroDaSelecao(null);
+    setSelecao({ editando, marcadas: new Set(ids) });
+    // Sem a lista aberta o modo seleção seria invisível; não grava a preferência.
+    setListaAberta(true);
+    const grupos = origens.funis.filter((f) => ids.includes(f.id)).flatMap((f) => (f.group_id ? [f.group_id] : []));
+    setAbertos((atual) => new Set([...atual, ...grupos]));
+  }
+
   function acaoDoGrupo(id: string, acao: AcaoDoGrupo) {
     if (acao === "ocultar") {
       const proximo = ocultos.includes(id) ? ocultos.filter((o) => o !== id) : [...ocultos, id];
@@ -117,11 +188,59 @@ export function PainelOrigens({
       void guardarPreferenciaDeOrigens({ nome: "ocultos", valor: proximo });
       return;
     }
+    if (acao === "selecionar") {
+      selecionar(arvore.grupos.find((g) => g.id === id)?.funis.map((f) => f.id) ?? [], null);
+      setAbertos((atual) => new Set([...atual, id]));
+      return;
+    }
     setJanela({ tipo: JANELA_DO_GRUPO[acao], id });
+  }
+
+  function acaoDaOrigem(id: string, acao: AcaoDaOrigem) {
+    if (acao === "selecionar") {
+      selecionar([id], null);
+      return;
+    }
+    setJanela({ tipo: JANELA_DA_ORIGEM[acao], id });
+  }
+
+  function acaoDaVisualizacao(id: string, acao: AcaoDaVisualizacao) {
+    if (acao === "editar-origens") {
+      const alvo = visualizacoes.find((v) => v.id === id);
+      if (alvo) selecionar(origensVivasDaVisualizacao(alvo, origens).map((f) => f.id), id);
+      return;
+    }
+    setJanelaDaVisualizacao({ tipo: acao, id });
   }
 
   function abrirOrigem(id: string) {
     router.push(`/app/pipelines/${id}`);
+  }
+
+  function abrirVisualizacao(id: string) {
+    router.push(`/app/pipelines/visualizacoes/${id}`);
+  }
+
+  function salvarSelecao() {
+    if (!selecao) return;
+    // A ordem das colunas é a ordem do painel, não a ordem dos cliques.
+    const ids = ordenarNaArvore(selecao.marcadas, arvore);
+    if (selecao.editando === null) {
+      setJanelaDaVisualizacao({ tipo: "nova", origens: ids });
+      return;
+    }
+    const id = selecao.editando;
+    atualizarVisualizacao.mutate(
+      { id, mudanca: { origens: ids } },
+      {
+        onSuccess: (lista) => {
+          setVisualizacoes(lista);
+          setSelecao(null);
+          abrirVisualizacao(id);
+        },
+        onError: (err) => setErroDaSelecao(textoDoErro(err, t)),
+      },
+    );
   }
 
   if (!painelAberto) {
@@ -155,7 +274,7 @@ export function PainelOrigens({
 
       <div className="flex items-center gap-1 border-b px-3 py-2">
         <h2 className="flex-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("Origens")}</h2>
-        {podeGerenciar && (
+        {podeGerenciar && !selecao && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button type="button" aria-label={t("Adicionar")} className={BOTAO_DE_ICONE}>
@@ -221,10 +340,11 @@ export function PainelOrigens({
                   ativo={ativo}
                   podeGerenciar={podeGerenciar}
                   criandoAqui={novoEm === g.id}
+                  selecao={noModoSelecao}
                   onAlternar={() => alternarGrupo(g.id)}
                   onNovaOrigem={() => setNovoEm(g.id)}
                   onAcao={(a) => acaoDoGrupo(g.id, a)}
-                  onAcaoDaOrigem={(funilId, a) => setJanela({ tipo: JANELA_DA_ORIGEM[a], id: funilId })}
+                  onAcaoDaOrigem={acaoDaOrigem}
                   onCriada={(novas, id) => {
                     setOrigens(novas);
                     setNovoEm(null);
@@ -247,7 +367,8 @@ export function PainelOrigens({
                       ativo={ativo}
                       podeGerenciar={podeGerenciar}
                       recuo={false}
-                      onAcao={(a) => setJanela({ tipo: JANELA_DA_ORIGEM[a], id: f.id })}
+                      selecao={noModoSelecao}
+                      onAcao={(a) => acaoDaOrigem(f.id, a)}
                     />
                   ))}
                 </ul>
@@ -271,8 +392,30 @@ export function PainelOrigens({
             </div>
           )}
 
-          {podeGerenciar && <ArquivadosDoPainel arvore={arvore} onOrigens={setOrigens} />}
+          {!selecao && (
+            <SecaoVisualizacoes
+              visualizacoes={visualizacoesVisiveis}
+              origens={origens}
+              ativa={visualizacaoAtiva}
+              podeGerenciar={podeGerenciar}
+              onCriar={() => selecionar([], null)}
+              onAcao={acaoDaVisualizacao}
+            />
+          )}
+
+          {podeGerenciar && !selecao && <ArquivadosDoPainel arvore={arvore} onOrigens={setOrigens} />}
         </div>
+      )}
+
+      {selecao && (
+        <RodapeDaSelecao
+          quantas={selecao.marcadas.size}
+          editando={selecao.editando !== null}
+          salvando={atualizarVisualizacao.isPending}
+          erro={erroDaSelecao}
+          onCancelar={() => setSelecao(null)}
+          onSalvar={salvarSelecao}
+        />
       )}
 
       {podeGerenciar && (
@@ -282,6 +425,21 @@ export function PainelOrigens({
           onFechar={() => setJanela(null)}
           onOrigens={setOrigens}
           onAbrirOrigem={abrirOrigem}
+        />
+      )}
+      {podeGerenciar && (
+        <JanelasDaVisualizacao
+          janela={janelaDaVisualizacao}
+          visualizacoes={visualizacoes}
+          onFechar={() => setJanelaDaVisualizacao(null)}
+          onVisualizacoes={setVisualizacoes}
+          onCriada={(id) => {
+            setSelecao(null);
+            abrirVisualizacao(id);
+          }}
+          onExcluida={(id) => {
+            if (visualizacaoAtiva === id) router.push("/app/escale/negocios");
+          }}
         />
       )}
     </aside>

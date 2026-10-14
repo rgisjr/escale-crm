@@ -16,8 +16,10 @@ vi.mock("@/lib/api/client", () => ({
 import { guardarPreferenciaDeOrigens } from "@/app/actions/escale/origens";
 import { apiClient } from "@/lib/api/client";
 import type { Origens } from "@/lib/escale/origens/regras";
+import type { Visualizacao } from "@/lib/escale/visualizacoes/regras";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
 import { PainelOrigens } from "@/components/escale/origens/PainelOrigens";
+import { RodapeDaSelecao } from "@/components/escale/visualizacoes/RodapeDaSelecao";
 
 const G_OBRAS = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 const ORIGENS: Origens = {
@@ -35,11 +37,23 @@ const ORIGENS: Origens = {
   ],
 };
 const ABERTO: PreferenciasDoPainel = { painelAberto: true, listaAberta: true, ocultos: [] };
+const VISUALIZACOES: Visualizacao[] = [
+  { id: "v-time", name: "Time comercial", acesso: "todos", origens: ["f-nayara", "f-morto", "f-leads"], pessoas: [] },
+];
 
-function renderizar(podeGerenciar = true, preferencias: PreferenciasDoPainel = ABERTO) {
+function renderizar(
+  podeGerenciar = true,
+  preferencias: PreferenciasDoPainel = ABERTO,
+  visualizacoes: Visualizacao[] = VISUALIZACOES,
+) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}>
-      <PainelOrigens origens={ORIGENS} podeGerenciar={podeGerenciar} preferencias={preferencias} />
+      <PainelOrigens
+        origens={ORIGENS}
+        visualizacoes={visualizacoes}
+        podeGerenciar={podeGerenciar}
+        preferencias={preferencias}
+      />
     </QueryClientProvider>,
   );
   return userEvent.setup({ pointerEventsCheck: 0 });
@@ -127,19 +141,19 @@ describe("<PainelOrigens> — + e ⋮ (gerente)", () => {
     expect(apiClient.put).toHaveBeenCalledWith("/api/v1/pipelines/f-nova/grupo", { group_id: G_OBRAS });
   });
 
-  it("⋮ do grupo tem os itens da Clint, com Selecionar origens desligado", async () => {
+  it("⋮ do grupo tem os itens da Clint, todos ligados", async () => {
     const user = renderizar();
     await user.click(screen.getByRole("button", { name: "Mais ações de INSS de obras" }));
     const itens = (await screen.findAllByRole("menuitem")).map((i) => i.textContent);
     expect(itens).toEqual([
       "Configurações",
-      "Selecionar origensEm breve",
+      "Selecionar origens",
       "Customizar",
       "Ocultar da minha barra lateral",
       "Arquivar",
       "Excluir",
     ]);
-    expect(screen.getByRole("menuitem", { name: /Selecionar origens/ })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Selecionar origens" })).not.toHaveAttribute("aria-disabled");
   });
 
   it("Ocultar esconde o grupo só para quem clicou, e dá para mostrar de novo", async () => {
@@ -156,7 +170,7 @@ describe("<PainelOrigens> — + e ⋮ (gerente)", () => {
     const user = renderizar();
     await user.click(screen.getByRole("button", { name: "Mais ações de Leads INSS WhatsApp" }));
     const itens = (await screen.findAllByRole("menuitem")).map((i) => i.textContent);
-    expect(itens).toEqual(["Configurações", "Selecionar origemEm breve", "Arquivar", "Excluir"]);
+    expect(itens).toEqual(["Configurações", "Selecionar origem", "Arquivar", "Excluir"]);
     await user.click(screen.getByRole("menuitem", { name: "Configurações" }));
     expect(await screen.findByRole("dialog", { name: "Configurações da origem" })).toBeInTheDocument();
   });
@@ -180,5 +194,137 @@ describe("<PainelOrigens> — sem gerente", () => {
     expect(screen.queryByRole("button", { name: /^Mais ações de/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Nova origem em/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Arquivados/ })).toBeNull();
+  });
+});
+
+describe("<PainelOrigens> — visualizações e seleção (Fase 1C)", () => {
+  const secao = () => screen.getByRole("region", { name: "Visualizações" });
+
+  it("a seção lista as visualizações com quantas origens vivas cada uma junta", () => {
+    renderizar();
+    expect(within(secao()).getByRole("link", { name: /Time comercial/ })).toHaveAttribute(
+      "href",
+      "/app/pipelines/visualizacoes/v-time",
+    );
+    expect(within(secao()).getByText("2 origens")).toBeInTheDocument();
+  });
+
+  it("uma visualização com uma só origem viva diz \"1 origem\"; a arquivada não conta", () => {
+    renderizar(true, ABERTO, [
+      { id: "v-um", name: "Só uma", acesso: "todos", origens: ["f-leads", "f-morto"], pessoas: [] },
+    ]);
+    expect(within(secao()).getByText("1 origem")).toBeInTheDocument();
+  });
+
+  it("sem visualizações, a seção mostra o vazio e o + continua para o gerente", () => {
+    renderizar(true, ABERTO, []);
+    expect(within(secao()).getByText("Nenhuma visualização ainda.")).toBeInTheDocument();
+    expect(within(secao()).getByRole("button", { name: "Criar visualização" })).toBeInTheDocument();
+  });
+
+  it("quem não é gerente vê as visualizações, sem + e sem ⋮", () => {
+    renderizar(false);
+    expect(within(secao()).getByRole("link", { name: /Time comercial/ })).toBeInTheDocument();
+    expect(within(secao()).queryByRole("button")).toBeNull();
+  });
+
+  it("a lupa também procura nas visualizações", async () => {
+    const user = renderizar();
+    await user.click(screen.getByRole("button", { name: "Buscar grupo ou funil" }));
+    await user.type(screen.getByRole("textbox", { name: "Buscar grupo ou funil" }), "nayara");
+    expect(within(secao()).queryByRole("link", { name: /Time comercial/ })).toBeNull();
+    expect(within(secao()).getByText("Nenhuma visualização ainda.")).toBeInTheDocument();
+  });
+
+  it("Selecionar origens do ⋮ do grupo marca as origens dele e mostra o rascunho", async () => {
+    const user = renderizar();
+    await user.click(screen.getByRole("button", { name: "Mais ações de Credenciados" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Selecionar origens" }));
+    expect(screen.getByRole("checkbox", { name: "Funil Nayara" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Turma 12" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Selecionar Credenciados" })).toBeChecked();
+    expect(screen.getByText("2 origens selecionadas · Rascunho")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Visualizações" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Nova origem em Credenciados" })).toBeNull();
+  });
+
+  it("Selecionar origem do ⋮ da origem marca só ela", async () => {
+    const user = renderizar();
+    await user.click(screen.getByRole("button", { name: "Mais ações de Leads INSS WhatsApp" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Selecionar origem" }));
+    expect(screen.getByRole("checkbox", { name: "Leads INSS WhatsApp" })).toBeChecked();
+    expect(screen.getByText("1 origem selecionada · Rascunho")).toBeInTheDocument();
+  });
+
+  it("Criar visualização: marca pelo grupo e pela origem, salva e abre o quadro novo", async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: VISUALIZACOES });
+    const user = renderizar();
+    await user.click(within(secao()).getByRole("button", { name: "Criar visualização" }));
+    expect(screen.getByText("0 origens selecionadas · Rascunho")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar como visualização" })).toBeDisabled();
+    await user.click(screen.getByRole("checkbox", { name: "Selecionar Credenciados" }));
+    await user.click(screen.getByRole("checkbox", { name: "Leads INSS WhatsApp" }));
+    await user.click(screen.getByRole("button", { name: "Salvar como visualização" }));
+    const janela = await screen.findByRole("dialog", { name: "Nova visualização" });
+    await user.type(within(janela).getByRole("textbox", { name: "Nome da visualização" }), "Todos INSS");
+    await user.click(within(janela).getByRole("button", { name: "Criar visualização" }));
+    await vi.waitFor(() =>
+      expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/app\/pipelines\/visualizacoes\/[0-9a-f-]{36}$/)),
+    );
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/pipeline-views",
+      expect.objectContaining({ name: "Todos INSS", acesso: "todos", origens: ["f-nayara", "f-turma", "f-leads"], pessoas: [] }),
+    );
+    expect(screen.queryByText(/Rascunho/)).toBeNull();
+  });
+
+  it("Editar origens: a seleção vem com as origens vivas da visualização e grava só as origens", async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: VISUALIZACOES });
+    const user = renderizar();
+    await user.click(screen.getByRole("button", { name: "Mais ações de Time comercial" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Editar origens" }));
+    expect(screen.getByText("2 origens selecionadas · Rascunho")).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "Funil Nayara" }));
+    await user.click(screen.getByRole("button", { name: "Salvar origens" }));
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/app/pipelines/visualizacoes/v-time"));
+    expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipeline-views/v-time", { origens: ["f-leads"] });
+  });
+
+  it("Editar origens: origem de grupo arquivado não entra na contagem nem é gravada", async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: VISUALIZACOES });
+    const comArquivado: Visualizacao[] = [
+      { id: "v-time", name: "Time comercial", acesso: "todos", origens: ["f-nayara", "f-pos", "f-leads"], pessoas: [] },
+    ];
+    const user = renderizar(true, ABERTO, comArquivado);
+    await user.click(screen.getByRole("button", { name: "Mais ações de Time comercial" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Editar origens" }));
+    expect(screen.getByText("2 origens selecionadas · Rascunho")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Salvar origens" }));
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/app/pipelines/visualizacoes/v-time"));
+    expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipeline-views/v-time", { origens: ["f-nayara", "f-leads"] });
+  });
+
+  it("Cancelar sai do modo seleção sem gravar", async () => {
+    const user = renderizar();
+    await user.click(within(secao()).getByRole("button", { name: "Criar visualização" }));
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByText(/Rascunho/)).toBeNull();
+    expect(secao()).toBeInTheDocument();
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+});
+
+describe("<RodapeDaSelecao>", () => {
+  it("salvando: Cancelar e Salvar ficam desligados, para não cancelar um PATCH em andamento", () => {
+    render(<RodapeDaSelecao quantas={2} editando salvando erro={null} onCancelar={vi.fn()} onSalvar={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Salvar origens" })).toBeDisabled();
+  });
+
+  it("parado: Cancelar funciona", async () => {
+    const onCancelar = vi.fn();
+    render(<RodapeDaSelecao quantas={2} editando salvando={false} erro={null} onCancelar={onCancelar} onSalvar={vi.fn()} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onCancelar).toHaveBeenCalled();
   });
 });

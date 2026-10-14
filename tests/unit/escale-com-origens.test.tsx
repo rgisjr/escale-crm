@@ -19,10 +19,12 @@ vi.mock("@/lib/auth/server", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({})) }));
 vi.mock("@/lib/escale/origens/ler-origens", () => ({ lerOrigens: vi.fn() }));
+vi.mock("@/lib/escale/visualizacoes/ler-visualizacoes", () => ({ lerVisualizacoes: vi.fn() }));
 vi.mock("@/lib/api/client", () => ({ apiClient: {} }));
 vi.mock("@/app/actions/escale/origens", () => ({ guardarPreferenciaDeOrigens: vi.fn(async () => undefined) }));
 
 import { lerOrigens } from "@/lib/escale/origens/ler-origens";
+import { lerVisualizacoes } from "@/lib/escale/visualizacoes/ler-visualizacoes";
 import { ComOrigens } from "@/components/escale/origens/ComOrigens";
 
 const G = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
@@ -39,6 +41,10 @@ beforeEach(() => {
     grupos: [{ id: G, name: "INSS de obras", color: null, icon: "iniciais", is_archived: false }],
     funis: [{ id: "f-leads", name: "Leads INSS WhatsApp", group_id: G, is_archived: false, is_default: true }],
   });
+  vi.mocked(lerVisualizacoes).mockReset();
+  vi.mocked(lerVisualizacoes).mockResolvedValue([
+    { id: "v-1", name: "Time comercial", acesso: "todos", origens: ["f-leads"], pessoas: [] },
+  ]);
 });
 
 describe("<ComOrigens>", () => {
@@ -87,5 +93,22 @@ describe("<ComOrigens>", () => {
     mostrar(await ComOrigens({ children: <p>o quadro</p> }));
     expect(screen.getByRole("complementary", { name: "Origens" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adicionar" })).toBeNull();
+  });
+
+  it("as visualizações chegam na seção do painel, lidas da organização ativa", async () => {
+    mostrar(await ComOrigens({ children: <p>o quadro</p> }));
+    expect(screen.getByRole("link", { name: /Time comercial/ })).toHaveAttribute(
+      "href",
+      "/app/pipelines/visualizacoes/v-1",
+    );
+    expect(lerVisualizacoes).toHaveBeenCalledWith(expect.anything(), "org-1");
+  });
+
+  it("banco sem a migration 9003 (ou fora do ar): o painel abre com a seção vazia", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(lerVisualizacoes).mockRejectedValue(new Error('relation "crm_pipeline_views" does not exist'));
+    mostrar(await ComOrigens({ children: <p>o quadro</p> }));
+    expect(screen.getByRole("complementary", { name: "Origens" })).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma visualização ainda.")).toBeInTheDocument();
   });
 });
