@@ -25,9 +25,9 @@ export type AcaoDaOrigem = "configurar" | "arquivar" | "excluir";
 export const BOTAO_DE_ICONE =
   "grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent-soft hover:text-foreground";
 /** Os botões de gerente aparecem ao passar o mouse ou ao chegar pelo teclado, como na Clint. */
-const SO_NO_FOCO = "flex items-center opacity-0 transition-opacity focus-within:opacity-100";
+export const SO_NO_FOCO = "flex items-center opacity-0 transition-opacity focus-within:opacity-100";
 
-function Tres({ rotulo }: { rotulo: string }) {
+export function Tres({ rotulo }: { rotulo: string }) {
   return (
     <DropdownMenuTrigger asChild>
       <button type="button" aria-label={rotulo} className={BOTAO_DE_ICONE}>
