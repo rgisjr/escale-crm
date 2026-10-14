@@ -1,5 +1,5 @@
 /**
- * POST /api/v1/pipeline-groups — cria um GRUPO DE FUNIS (fork Escale, Fase 1A).
+ * GET/POST /api/v1/pipeline-groups — lê as origens / cria um GRUPO DE FUNIS (fork Escale, Fases 1A e 1B).
  *
  * Auth: sessão por cookie, papel manager+ (o mesmo de criar funil). A
  * `organization_id` sai da sessão, nunca do corpo. Responde com as origens
@@ -21,6 +21,18 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const corpoSchema = z.object({ name: z.string().max(200) }).strict();
+
+/**
+ * GET — as origens inteiras da organização da sessão. Qualquer papel: ver o
+ * painel é de todos; só escrever é de gerente. As janelas usam isto para reler
+ * depois de uma escrita feita por uma rota do original (`/api/v1/pipelines…`).
+ */
+export async function GET(): Promise<Response> {
+  const requestId = randomUUID();
+  const authz = await requireRole("viewer", { requestId, resource: "crm_pipeline_groups" });
+  if (!authz.ok) return authz.response;
+  return responderComOrigens(await createClient(), authz.org.orgId, requestId);
+}
 
 export async function POST(req: NextRequest): Promise<Response> {
   const supportDenied = await requireSupportWrite();
