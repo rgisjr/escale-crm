@@ -130,7 +130,7 @@ describe("<PainelDeFiltros>", () => {
     expect(screen.queryByRole("checkbox", { name: "Não lidas" })).not.toBeInTheDocument();
   });
 
-  it("Tags: as três caixas do card viram opções; com duas escolhidas, aparece o E/OU", async () => {
+  it("Tags: as três caixas do card viram opções, e marcar uma grava a tag", async () => {
     const { onMudar, u } = painel({ status: ["open"] });
     await abrir(u, /^Tags/);
     expect(screen.getByRole("checkbox", { name: /quente/ })).toBeInTheDocument();

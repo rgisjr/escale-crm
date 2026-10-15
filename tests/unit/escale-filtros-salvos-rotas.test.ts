@@ -255,6 +255,23 @@ describe("PATCH /api/v1/filtros-salvos/:id", () => {
     expect((await mudar("nao-e-uuid", { nome: "x" })).status).toBe(404);
     expect(db.escritas).toEqual([]);
   });
+
+  it("o alvo não se troca: origem, visualizacao, pipeline_id e view_id no corpo são 422, sem gravar nem auditar", async () => {
+    const db = banco();
+    const tentativas = [
+      { origem: F1 },
+      { visualizacao: V1 },
+      { pipeline_id: F1 },
+      { view_id: V1 },
+      { nome: "Quentes", origem: F_VIZINHO },
+      { nome: "Quentes", view_id: V1 },
+    ];
+    for (const corpo of tentativas) {
+      expect((await mudar(S_QUENTES, corpo)).status, JSON.stringify(corpo)).toBe(422);
+    }
+    expect(db.escritas).toEqual([]);
+    expect(audit).not.toHaveBeenCalled();
+  });
 });
 
 describe("DELETE /api/v1/filtros-salvos/:id", () => {

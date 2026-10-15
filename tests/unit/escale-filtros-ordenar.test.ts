@@ -51,7 +51,7 @@ describe("comparadorDaOrdem", () => {
     expect(ordenar(leads, [{ campo: "negocio.valor", direcao: "asc" }])).toEqual(["d", "a", "c", "b"]);
   });
 
-  it("nome do contato de A a Z, respeitando acento e caixa", () => {
+  it("nome do contato de A a Z, ignorando acento e caixa", () => {
     const leads = [
       negocio("bruno", {}, { contato_nome: "Bruno" }),
       negocio("agata", {}, { contato_nome: "Ágata" }),
