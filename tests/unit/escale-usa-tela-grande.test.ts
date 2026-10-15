@@ -1,5 +1,5 @@
 /**
- * `usaTelaGrande` É O QUE DECIDE MONTAR SÓ UM CABEÇALHO NA CASCA NOVA.
+ * `useTelaGrande` É O QUE DECIDE MONTAR SÓ UM CABEÇALHO NA CASCA NOVA.
  *
  * Antes deste hook, `AppShell.tsx` montava `MenuDoTopo` E `TopBar` ao mesmo
  * tempo quando `menu === "topo"`, escondendo um dos dois só com CSS
@@ -17,7 +17,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { usaTelaGrande } from "@/lib/escale/usa-tela-grande";
+import { useTelaGrande } from "@/lib/escale/usa-tela-grande";
 
 type OuvinteDeMudanca = (evento: { matches: boolean }) => void;
 
@@ -47,22 +47,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("usaTelaGrande", () => {
+describe("useTelaGrande", () => {
   it("devolve true quando a media query de 768px já bate no primeiro render", () => {
     stubMatchMedia(true);
-    const { result } = renderHook(() => usaTelaGrande());
+    const { result } = renderHook(() => useTelaGrande());
     expect(result.current).toBe(true);
   });
 
   it("devolve false quando a tela é estreita", () => {
     stubMatchMedia(false);
-    const { result } = renderHook(() => usaTelaGrande());
+    const { result } = renderHook(() => useTelaGrande());
     expect(result.current).toBe(false);
   });
 
   it("acompanha a mudança de largura depois de montado (resize/rotação)", () => {
     const { dispararMudanca } = stubMatchMedia(false);
-    const { result } = renderHook(() => usaTelaGrande());
+    const { result } = renderHook(() => useTelaGrande());
     expect(result.current).toBe(false);
 
     act(() => dispararMudanca(true));
@@ -70,5 +70,17 @@ describe("usaTelaGrande", () => {
 
     act(() => dispararMudanca(false));
     expect(result.current).toBe(false);
+  });
+
+  it("sem matchMedia (jsdom) trata a tela como celular, sem quebrar", () => {
+    const original = window.matchMedia;
+    // @ts-expect-error simulando ambiente sem matchMedia
+    window.matchMedia = undefined;
+    try {
+      const { result } = renderHook(() => useTelaGrande());
+      expect(result.current).toBe(false);
+    } finally {
+      window.matchMedia = original;
+    }
   });
 });

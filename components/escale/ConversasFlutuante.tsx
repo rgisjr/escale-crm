@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ContadorDaFila } from "@/components/shell/ContadorDaFila";
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { ChatCircle } from "@/lib/ui/icons";
 
 interface ConversaResumo {
@@ -91,7 +92,7 @@ export function ConversasFlutuante({ reservaDoRodape }: { reservaDoRodape: numbe
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">
-                          {c.contacts?.display_name || c.contacts?.name || t("Sem nome")}
+                          {rotuloDoContato(c.contacts, t)}
                         </span>
                         <span className="block truncate text-sm text-muted-foreground">
                           {c.last_message_preview || t("Sem mensagem")}

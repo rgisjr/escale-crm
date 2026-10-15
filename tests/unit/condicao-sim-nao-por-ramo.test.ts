@@ -48,7 +48,7 @@ function grafo(saidas: "ramo" | "v1") {
 const enrollment = { id: "e1", current_node_id: "etapa", steps_taken: 1 } as unknown as EnrollmentRow;
 
 function lead(stage: string): LeadFacts {
-  return { lead_stage: stage, tags: [], contact_name: "Cliente", custom_fields: {} } as LeadFacts;
+  return { lead_stage: stage, tags: [], steps_taken: 1, last_outcome: null, contact_name: "Cliente", custom_fields: {} };
 }
 
 function rodaCondicao(saidas: "ramo" | "v1", stage: string) {
