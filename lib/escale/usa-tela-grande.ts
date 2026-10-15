@@ -24,13 +24,24 @@ import { useSyncExternalStore } from "react";
  */
 const CONSULTA_TELA_GRANDE = "(min-width: 768px)";
 
+/**
+ * Sem `matchMedia` (jsdom dos testes que montam o `AppShell` de verdade, como
+ * `rodape-ocupado-durante-a-chamada`), a tela é tratada como celular — o mesmo
+ * que o servidor responde — em vez de quebrar a casca inteira.
+ */
+function temMatchMedia(): boolean {
+  return typeof window.matchMedia === "function";
+}
+
 function inscrever(ouvinte: () => void): () => void {
+  if (!temMatchMedia()) return () => {};
   const mediaQuery = window.matchMedia(CONSULTA_TELA_GRANDE);
   mediaQuery.addEventListener("change", ouvinte);
   return () => mediaQuery.removeEventListener("change", ouvinte);
 }
 
 function lerSnapshotDoCliente(): boolean {
+  if (!temMatchMedia()) return false;
   return window.matchMedia(CONSULTA_TELA_GRANDE).matches;
 }
 

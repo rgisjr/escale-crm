@@ -71,4 +71,16 @@ describe("useTelaGrande", () => {
     act(() => dispararMudanca(false));
     expect(result.current).toBe(false);
   });
+
+  it("sem matchMedia (jsdom) trata a tela como celular, sem quebrar", () => {
+    const original = window.matchMedia;
+    // @ts-expect-error simulando ambiente sem matchMedia
+    window.matchMedia = undefined;
+    try {
+      const { result } = renderHook(() => useTelaGrande());
+      expect(result.current).toBe(false);
+    } finally {
+      window.matchMedia = original;
+    }
+  });
 });
