@@ -1,4 +1,4 @@
--- manifest: **Filtros salvos do quadro de negócios (fork Escale, Fase 1D).** Tabela nova `crm_filtros_salvos`: cada pessoa salva os filtros de UMA origem (`pipeline_id`) ou de UMA visualização (`view_id`), com nome (único por pessoa e alvo, sem olhar caixa), os critérios (`criterios`, jsonb validado pela rota) e `compartilhado`. RLS: quem criou vê e escreve, e só grava em origem/visualização que ENXERGA (o WITH CHECK confere o alvo sob a RLS de quem grava, porque o navegador também chega ao PostgREST); o filtro compartilhado é visto por quem enxerga a origem ou a visualização, porque a policy consulta `crm_pipelines`/`crm_pipeline_views` com a sessão de quem olha (nenhuma permissão copiada). FKs compostas com `on delete cascade` para a origem, a visualização e `user_organizations`. Trigger `trg_crm_filtros_salvos_limite` (função `fn_crm_filtros_salvos_limite`, security invoker): no máximo 20 filtros por pessoa em cada origem ou visualização, contados nas linhas cruas e serializados por advisory lock (vale para o INSERT e para o UPDATE que muda o alvo). Função `fn_escale_atividades_concluidas` (security invoker): quantas tarefas concluídas cada negócio tem, para o filtro e a ordenação do quadro.
+-- manifest: **Filtros salvos do quadro de negócios (fork Escale, Fase 1D).** Tabela nova `crm_filtros_salvos`: cada pessoa salva os filtros de UMA origem (`pipeline_id`) ou de UMA visualização (`view_id`), com nome (único por pessoa e alvo, sem olhar caixa), os critérios (`criterios`, jsonb validado pela rota) e `compartilhado`. RLS: quem criou vê e escreve (escrever exige ser membro da organização com papel `viewer` ou acima, via `fn_role_at_least` — a cerca de RBAC da 0150 recusa policy ALL só de tenancy), e só grava em origem/visualização que ENXERGA (o WITH CHECK confere o alvo sob a RLS de quem grava, porque o navegador também chega ao PostgREST); o filtro compartilhado é visto por quem enxerga a origem ou a visualização, porque a policy consulta `crm_pipelines`/`crm_pipeline_views` com a sessão de quem olha (nenhuma permissão copiada). FKs compostas com `on delete cascade` para a origem, a visualização e `user_organizations`. Trigger `trg_crm_filtros_salvos_limite` (função `fn_crm_filtros_salvos_limite`, security invoker): no máximo 20 filtros por pessoa em cada origem ou visualização, contados nas linhas cruas e serializados por advisory lock (vale para o INSERT e para o UPDATE que muda o alvo). Função `fn_escale_atividades_concluidas` (security invoker): quantas tarefas concluídas cada negócio tem, para o filtro e a ordenação do quadro.
 -- 9004: filtros salvos do quadro e contagem de atividades concluídas (fork Escale).
 
 create table if not exists public.crm_filtros_salvos (
@@ -55,18 +55,26 @@ create policy crm_filtros_salvos_select on public.crm_filtros_salvos
                       or exists (select 1 from public.crm_pipeline_views v where v.id = crm_filtros_salvos.view_id)))))
   );
 
--- Quem escreve: só quem criou, dentro da própria organização. Qualquer papel
--- salva os seus filtros (decisão de 15/10); o suporte somente leitura para nas
--- travas support_write_* (chamada no fim deste arquivo).
+-- Quem escreve: só quem criou, dentro da própria organização. Qualquer membro
+-- (viewer ou acima) salva os seus filtros (decisão de 15/10), e é isso que o
+-- fn_role_at_least(organization_id, 'viewer') diz, no USING e no WITH CHECK: a
+-- régua de papel fica explícita, como pede a cerca de RBAC da 0150 (policy ALL
+-- só de tenancy não entra). O suporte somente leitura para nas travas
+-- support_write_* (chamada no fim deste arquivo).
 -- USING só olha o dono: quem perdeu a visibilidade do alvo ainda apaga o que é
 -- seu. O WITH CHECK (todo INSERT e todo UPDATE) exige, além disso, que o alvo
 -- seja VISÍVEL para quem grava, sob a RLS dele: o navegador fala com o
 -- PostgREST sem passar pela rota, e sem isso um membro plantaria um filtro
 -- compartilhado numa origem/visualização que ele não enxerga (ex.: 'escolhidos').
 create policy crm_filtros_salvos_dono_write on public.crm_filtros_salvos
-  using ((organization_id in (select public.fn_user_org_ids())) and user_id = auth.uid())
+  using (
+    (organization_id in (select public.fn_user_org_ids())
+     and public.fn_role_at_least(organization_id, 'viewer'))
+    and user_id = auth.uid()
+  )
   with check (
-    (organization_id in (select public.fn_user_org_ids()))
+    (organization_id in (select public.fn_user_org_ids())
+     and public.fn_role_at_least(organization_id, 'viewer'))
     and user_id = auth.uid()
     and (crm_filtros_salvos.pipeline_id is null
          or exists (select 1 from public.crm_pipelines p where p.id = crm_filtros_salvos.pipeline_id))

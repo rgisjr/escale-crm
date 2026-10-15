@@ -54,9 +54,12 @@ describe("filtros salvos: migration 9004 e bloco do baseline", () => {
     const sql = ler(MIGRATION);
     const policy = sql.slice(sql.indexOf("create policy crm_filtros_salvos_dono_write"), sql.indexOf("revoke all on public.crm_filtros_salvos from anon;"));
     const [using, withCheck] = policy.split("with check (");
-    expect(using).toContain("using ((organization_id in (select public.fn_user_org_ids())) and user_id = auth.uid())");
+    const usingCompacto = using.replace(/\s+/g, " ");
+    expect(usingCompacto).toContain("organization_id in (select public.fn_user_org_ids())");
+    expect(usingCompacto).toContain("and user_id = auth.uid()");
     expect(using).not.toContain("crm_pipelines");
     const compacto = (withCheck ?? "").replace(/\s+/g, " ");
+    expect(compacto).toContain("organization_id in (select public.fn_user_org_ids())");
     expect(compacto).toContain("user_id = auth.uid()");
     expect(compacto).toContain(
       "crm_filtros_salvos.pipeline_id is null or exists (select 1 from public.crm_pipelines p where p.id = crm_filtros_salvos.pipeline_id)",
@@ -64,6 +67,14 @@ describe("filtros salvos: migration 9004 e bloco do baseline", () => {
     expect(compacto).toContain(
       "crm_filtros_salvos.view_id is null or exists (select 1 from public.crm_pipeline_views v where v.id = crm_filtros_salvos.view_id)",
     );
+  });
+
+  it("escrever exige papel (viewer ou acima) no USING e no WITH CHECK — cerca de RBAC da 0150", () => {
+    const sql = ler(MIGRATION);
+    const policy = sql.slice(sql.indexOf("create policy crm_filtros_salvos_dono_write"), sql.indexOf("revoke all on public.crm_filtros_salvos from anon;"));
+    const [using, withCheck] = policy.split("with check (");
+    expect(using).toContain("public.fn_role_at_least(organization_id, 'viewer')");
+    expect(withCheck ?? "").toContain("public.fn_role_at_least(organization_id, 'viewer')");
   });
 
   it("o limite de 20 mora no banco: trigger invoker com advisory lock, search_path fixo e fechado a anon", () => {
