@@ -50,6 +50,39 @@ describe("filtros salvos: migration 9004 e bloco do baseline", () => {
     expect(sql).toContain("revoke all on public.crm_filtros_salvos from anon;");
   });
 
+  it("escrever exige o alvo VISÍVEL sob a RLS de quem grava; o USING segue só do dono", () => {
+    const sql = ler(MIGRATION);
+    const policy = sql.slice(sql.indexOf("create policy crm_filtros_salvos_dono_write"), sql.indexOf("revoke all on public.crm_filtros_salvos from anon;"));
+    const [using, withCheck] = policy.split("with check (");
+    expect(using).toContain("using ((organization_id in (select public.fn_user_org_ids())) and user_id = auth.uid())");
+    expect(using).not.toContain("crm_pipelines");
+    const compacto = (withCheck ?? "").replace(/\s+/g, " ");
+    expect(compacto).toContain("user_id = auth.uid()");
+    expect(compacto).toContain(
+      "crm_filtros_salvos.pipeline_id is null or exists (select 1 from public.crm_pipelines p where p.id = crm_filtros_salvos.pipeline_id)",
+    );
+    expect(compacto).toContain(
+      "crm_filtros_salvos.view_id is null or exists (select 1 from public.crm_pipeline_views v where v.id = crm_filtros_salvos.view_id)",
+    );
+  });
+
+  it("o limite de 20 mora no banco: trigger invoker com advisory lock, search_path fixo e fechado a anon", () => {
+    const sql = ler(MIGRATION);
+    const funcao = sql.slice(sql.indexOf("create or replace function public.fn_crm_filtros_salvos_limite()"), sql.indexOf("revoke all on function public.fn_crm_filtros_salvos_limite()"));
+    expect(funcao).toContain("language plpgsql");
+    expect(funcao).toContain("security invoker");
+    expect(funcao).not.toContain("security definer");
+    expect(funcao).toContain("set search_path = public, pg_temp");
+    expect(funcao).toContain("pg_advisory_xact_lock(");
+    expect(funcao).toContain("if v_total >= 20 then");
+    expect(funcao).toContain("errcode = 'check_violation', constraint = 'crm_filtros_salvos_limite'");
+    expect(sql).toContain("revoke all on function public.fn_crm_filtros_salvos_limite() from public, anon;");
+    expect(sql).toContain("drop trigger if exists trg_crm_filtros_salvos_limite on public.crm_filtros_salvos;");
+    expect(sql).toMatch(/create trigger trg_crm_filtros_salvos_limite\s+before insert or update of [^\n]+ on public\.crm_filtros_salvos\s+for each row execute function public\.fn_crm_filtros_salvos_limite\(\);/);
+    expect(sql).toContain("comment on function public.fn_crm_filtros_salvos_limite() is");
+    expect(sql.split("\n")[0]).toContain("trg_crm_filtros_salvos_limite");
+  });
+
   it("um alvo só, e as FKs compostas apagam junto sem cruzar organização", () => {
     const sql = ler(MIGRATION);
     expect(sql).toContain("check ((pipeline_id is null) <> (view_id is null))");

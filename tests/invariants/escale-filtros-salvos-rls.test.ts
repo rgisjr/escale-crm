@@ -40,6 +40,9 @@ const P_TEMP = "e5ca1e00-9004-4000-8000-000000000053";
 const F_NA_P_TEMP = "e5ca1e00-9004-4000-8000-000000000054";
 const U_TEMP = "e5ca1e00-9004-4000-8000-000000000055";
 const F_DO_U_TEMP = "e5ca1e00-9004-4000-8000-000000000056";
+const F_TEMP_REAPONTAR = "e5ca1e00-9004-4000-8000-000000000044";
+const P_LIMITE = "e5ca1e00-9004-4000-8000-000000000061";
+const P_OUTRO = "e5ca1e00-9004-4000-8000-000000000062";
 const T_FEITA_1 = "e5ca1e00-9004-4000-8000-000000000031";
 const T_FEITA_2 = "e5ca1e00-9004-4000-8000-000000000032";
 const T_ABERTA = "e5ca1e00-9004-4000-8000-000000000033";
@@ -187,6 +190,155 @@ describe("crm_filtros_salvos — quem escreve", () => {
     expect(
       writeCountAs(GOV_VIEWER, `insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome) values ('${GOV_ORG}', '${GOV_VIEWER}', '${GOV_PIPELINE}', 'Do viewer')`),
     ).toBe(1);
+  });
+});
+
+describe("crm_filtros_salvos — o alvo precisa ser visível para quem grava (WITH CHECK)", () => {
+  const nomeUnico = (rotulo: string) => `${rotulo} ${Date.now()}`;
+
+  it("quem não vê a visualização 'escolhidos' não grava filtro nela, nem pessoal nem compartilhado", () => {
+    // Controle: a visualização existe e a Ana a vê; o viewer não.
+    expect(countAs(GOV_AGENT_A, `select count(*) from public.crm_pipeline_views where id = '${V_ESCOLHIDOS}';`)).toBe(1);
+    expect(countAs(GOV_VIEWER, `select count(*) from public.crm_pipeline_views where id = '${V_ESCOLHIDOS}';`)).toBe(0);
+    for (const compartilhado of ["false", "true"]) {
+      expect(
+        writeCountAs(
+          GOV_VIEWER,
+          `insert into public.crm_filtros_salvos (organization_id, user_id, view_id, nome, compartilhado)
+             values ('${GOV_ORG}', '${GOV_VIEWER}', '${V_ESCOLHIDOS}', '${nomeUnico("Plantado")}', ${compartilhado})`,
+        ),
+      ).toBe(0);
+    }
+    expect(
+      sql(`select count(*) from public.crm_filtros_salvos where user_id = '${GOV_VIEWER}' and view_id = '${V_ESCOLHIDOS}';`),
+    ).toBe("0");
+  });
+
+  it("controle positivo: quem VÊ a visualização grava nela (a Ana) e quem vê a origem grava na origem (o viewer)", () => {
+    const nome = nomeUnico("Da Ana na visualizacao");
+    expect(
+      writeCountAs(
+        GOV_AGENT_A,
+        `insert into public.crm_filtros_salvos (organization_id, user_id, view_id, nome) values ('${GOV_ORG}', '${GOV_AGENT_A}', '${V_ESCOLHIDOS}', '${nome}')`,
+      ),
+    ).toBe(1);
+    sql(`delete from public.crm_filtros_salvos where user_id = '${GOV_AGENT_A}' and nome = '${nome}';`);
+    const nomeViewer = nomeUnico("Do viewer na origem");
+    expect(
+      writeCountAs(
+        GOV_VIEWER,
+        `insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome) values ('${GOV_ORG}', '${GOV_VIEWER}', '${GOV_PIPELINE}', '${nomeViewer}')`,
+      ),
+    ).toBe(1);
+    sql(`delete from public.crm_filtros_salvos where user_id = '${GOV_VIEWER}' and nome = '${nomeViewer}';`);
+  });
+
+  it("o dono não reaponta o próprio filtro para um alvo que não vê (UPDATE de view_id), e o filtro fica onde estava", () => {
+    sql(`
+      delete from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}';
+      insert into public.crm_filtros_salvos (id, organization_id, user_id, pipeline_id, nome, compartilhado)
+        values ('${F_TEMP_REAPONTAR}', '${GOV_ORG}', '${GOV_AGENT_B}', '${GOV_PIPELINE}', 'Descartavel reapontar', true);
+    `);
+    expect(
+      writeCountAs(
+        GOV_AGENT_B,
+        `update public.crm_filtros_salvos set pipeline_id = null, view_id = '${V_ESCOLHIDOS}' where id = '${F_TEMP_REAPONTAR}'`,
+      ),
+    ).toBe(0);
+    expect(
+      sql(`select coalesce(pipeline_id::text, 'nulo') || '|' || coalesce(view_id::text, 'nulo') from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}';`),
+    ).toBe(`${GOV_PIPELINE}|nulo`);
+    // Controle: um UPDATE que mantém o alvo visível passa.
+    expect(
+      writeCountAs(GOV_AGENT_B, `update public.crm_filtros_salvos set nome = 'Descartavel reapontado' where id = '${F_TEMP_REAPONTAR}'`),
+    ).toBe(1);
+    sql(`delete from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}';`);
+  });
+
+  it("quem perdeu a visibilidade do alvo ainda apaga o filtro que é seu (USING só do dono)", () => {
+    sql(`
+      delete from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}';
+      insert into public.crm_filtros_salvos (id, organization_id, user_id, view_id, nome)
+        values ('${F_TEMP_REAPONTAR}', '${GOV_ORG}', '${GOV_VIEWER}', '${V_ESCOLHIDOS}', 'Descartavel orfao de visibilidade');
+    `);
+    expect(writeCountAs(GOV_VIEWER, `delete from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}'`)).toBe(1);
+  });
+});
+
+describe("crm_filtros_salvos — o limite de 20 por pessoa e alvo mora no banco", () => {
+  const inserir = (userId: string, pipelineId: string, nome: string) =>
+    `insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome) values ('${GOV_ORG}', '${userId}', '${pipelineId}', '${nome}')`;
+
+  const recriarAlvos = () =>
+    sql(`
+      delete from public.crm_pipelines where id in ('${P_LIMITE}', '${P_OUTRO}');
+      insert into public.crm_pipelines (id, organization_id, name, slug)
+        values ('${P_LIMITE}', '${GOV_ORG}', 'Limite filtros', 'escale-filtros-limite'),
+               ('${P_OUTRO}', '${GOV_ORG}', 'Limite filtros outro', 'escale-filtros-limite-outro');
+      -- 19 com critérios válidos e 1 que o schema da rota não aceita: todas contam.
+      insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome, criterios)
+        select '${GOV_ORG}', '${GOV_AGENT_B}', '${P_LIMITE}', 'Limite ' || n,
+               case when n = 20 then '{"status":[]}'::jsonb else '{"status":["open"]}'::jsonb end
+          from generate_series(1, 20) n;
+    `);
+
+  const total = (userId: string, pipelineId: string) =>
+    sql(`select count(*) from public.crm_filtros_salvos where user_id = '${userId}' and pipeline_id = '${pipelineId}';`);
+
+  it("a 21ª gravação da mesma pessoa no mesmo alvo é recusada com o erro do limite (a linha de critério inválido conta)", () => {
+    recriarAlvos();
+    expect(total(GOV_AGENT_B, P_LIMITE)).toBe("20");
+    expect(() => writeCountAs(GOV_AGENT_B, inserir(GOV_AGENT_B, P_LIMITE, "Limite 21"))).toThrow(/crm_filtros_salvos_limite/);
+    expect(total(GOV_AGENT_B, P_LIMITE)).toBe("20");
+    // O erro é mapeável pela rota: SQLSTATE 23514 (check_violation) com a constraint nomeada.
+    const erro = lastLine(sql(`
+      do $t$ declare c text; begin
+        begin
+          insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome)
+            values ('${GOV_ORG}', '${GOV_AGENT_B}', '${P_LIMITE}', 'Limite 22');
+        exception when check_violation then
+          get stacked diagnostics c = constraint_name;
+          perform set_config('escale.limite', c, false);
+        end;
+      end $t$;
+      select current_setting('escale.limite', true);
+    `));
+    expect(erro).toBe("crm_filtros_salvos_limite");
+  });
+
+  it("outro alvo da mesma pessoa e o mesmo alvo de outra pessoa não são afetados", () => {
+    recriarAlvos();
+    expect(writeCountAs(GOV_AGENT_B, inserir(GOV_AGENT_B, P_OUTRO, "No outro alvo"))).toBe(1);
+    expect(writeCountAs(GOV_MANAGER, inserir(GOV_MANAGER, P_LIMITE, "Do gerente no alvo cheio"))).toBe(1);
+  });
+
+  it("reapontar um filtro para um alvo cheio (UPDATE de pipeline_id) também bate no limite; renomear quem já está no alvo cheio não", () => {
+    recriarAlvos();
+    sql(`insert into public.crm_filtros_salvos (id, organization_id, user_id, pipeline_id, nome)
+            values ('${F_TEMP_REAPONTAR}', '${GOV_ORG}', '${GOV_AGENT_B}', '${P_OUTRO}', 'Reapontar para o cheio');`);
+    expect(() =>
+      writeCountAs(GOV_AGENT_B, `update public.crm_filtros_salvos set pipeline_id = '${P_LIMITE}' where id = '${F_TEMP_REAPONTAR}'`),
+    ).toThrow(/crm_filtros_salvos_limite/);
+    expect(
+      writeCountAs(
+        GOV_AGENT_B,
+        `update public.crm_filtros_salvos set nome = 'Limite 1 renomeado' where nome = 'Limite 1' and pipeline_id = '${P_LIMITE}' and user_id = '${GOV_AGENT_B}'`,
+      ),
+    ).toBe(1);
+    sql(`delete from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}';`);
+  });
+
+  it("limpa os alvos descartáveis (a prova repete)", () => {
+    sql(`delete from public.crm_pipelines where id in ('${P_LIMITE}', '${P_OUTRO}');`);
+    expect(sql(`select count(*) from public.crm_filtros_salvos where pipeline_id in ('${P_LIMITE}', '${P_OUTRO}');`)).toBe("0");
+  });
+});
+
+describe("fn_crm_filtros_salvos_limite", () => {
+  it("é invoker, com search_path fixo, e anon não a executa", () => {
+    expect(sql(`select prosecdef from pg_proc where proname = 'fn_crm_filtros_salvos_limite';`)).toBe("f");
+    expect(sql(`select proconfig::text from pg_proc where proname = 'fn_crm_filtros_salvos_limite';`)).toContain("search_path=public, pg_temp");
+    expect(sql(`select has_function_privilege('anon', 'public.fn_crm_filtros_salvos_limite()', 'execute');`)).toBe("f");
   });
 });
 
