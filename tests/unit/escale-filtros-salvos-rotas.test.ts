@@ -199,6 +199,35 @@ describe("POST /api/v1/filtros-salvos", () => {
     expect(db.escritas).toEqual([]);
   });
 
+  it("o limite conta as linhas CRUAS: um filtro de critérios inválidos (que a lista esconde) ainda conta", async () => {
+    const db = banco();
+    const tabelas = db.tabelas as unknown as Record<string, unknown[]>;
+    for (let i = 0; i < 17; i++) {
+      tabelas.crm_filtros_salvos!.push(linha(`ffffffff-ffff-4fff-8fff-${String(i).padStart(12, "0")}`, USER_ID, { pipeline_id: F1, nome: `Filtro ${i}` }));
+    }
+    tabelas.crm_filtros_salvos!.push(
+      linha("ffffffff-ffff-4fff-8fff-0000000000aa", USER_ID, { pipeline_id: F1, nome: "Velho", criterios: { status: [] } }),
+    );
+    // 2 + 17 válidos + 1 inválido = 20 linhas; a lista mostra só 19.
+    expect((await listaDe(await listar(`origem=${F1}`))).filter((f) => f.meu)).toHaveLength(19);
+    const res = await criar(novoValido);
+    expect(res.status).toBe(422);
+    expect(((await res.json()) as { error: { message: string } }).error.message).toBe(
+      "Limite de 20 filtros salvos atingido. Exclua algum para salvar outro.",
+    );
+    expect(db.escritas).toEqual([]);
+  });
+
+  it("o nome repetido também olha as linhas CRUAS (o filtro de critérios inválidos segura o nome)", async () => {
+    const db = banco();
+    const tabelas = db.tabelas as unknown as Record<string, unknown[]>;
+    tabelas.crm_filtros_salvos!.push(
+      linha("ffffffff-ffff-4fff-8fff-0000000000bb", USER_ID, { pipeline_id: F1, nome: "Café velho", criterios: { status: [] } }),
+    );
+    expect((await criar({ ...novoValido, nome: "cafe VELHO" })).status).toBe(409);
+    expect(db.escritas).toEqual([]);
+  });
+
   it("corpo que não é JSON é 400; chave a mais, alvo duplo ou ausente, critério inválido e nome vazio são 422", async () => {
     banco();
     expect((await criar("{quebrado")).status).toBe(400);
@@ -208,6 +237,25 @@ describe("POST /api/v1/filtros-salvos", () => {
     expect((await criar(semAlvo)).status).toBe(422);
     expect((await criar({ ...novoValido, criterios: { status: [] } })).status).toBe(422);
     expect((await criar({ ...novoValido, nome: "   " })).status).toBe(422);
+  });
+
+  it("o trigger do limite do banco (23514 + crm_filtros_salvos_limite) vira 422 com o texto do limite; outro CHECK segue genérico", async () => {
+    banco({
+      writeError: (_n, table) =>
+        table === "crm_filtros_salvos"
+          ? { code: "23514", message: "crm_filtros_salvos_limite: no máximo 20 filtros salvos por pessoa em cada origem ou visualização" }
+          : null,
+    });
+    const res = await criar(novoValido);
+    expect(res.status).toBe(422);
+    expect(((await res.json()) as { error: { message: string } }).error.message).toBe(
+      "Limite de 20 filtros salvos atingido. Exclua algum para salvar outro.",
+    );
+    banco({ writeError: (_n, table) => (table === "crm_filtros_salvos" ? { code: "23514", message: "crm_filtros_salvos_nome_valido" } : null) });
+    const outro = await criar(novoValido);
+    expect(outro.status).toBe(422);
+    expect(((await outro.json()) as { error: { message: string } }).error.message).toBe("Não consegui completar essa ação. Tente de novo.");
+    expect(audit).not.toHaveBeenCalled();
   });
 
   it("os erros do banco têm nome: 23505 é 409 e 42501 é 403", async () => {

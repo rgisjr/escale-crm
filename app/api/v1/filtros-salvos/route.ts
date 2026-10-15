@@ -24,7 +24,7 @@ import { alvoExiste } from "@/lib/escale/filtros/ler-filtros-salvos";
 import {
   alvoDaBusca,
   falhaDaGravacaoDoFiltro,
-  filtrosSalvosOuFalha,
+  meusFiltrosCrusOuFalha,
   responderComFiltrosSalvos,
 } from "@/lib/escale/filtros/respostas";
 import { filtrosDoQuadroSchema } from "@/lib/escale/filtros/tipos";
@@ -94,19 +94,15 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
   if (!existe) return fail("not_found", t("Origem ou visualização não encontrada."), 404, { requestId });
 
-  const atuais = await filtrosSalvosOuFalha(supabase, orgId, userId, alvo, requestId);
+  // Linhas CRUAS: um filtro de critérios que o schema não aceita mais some da lista, mas conta.
+  const atuais = await meusFiltrosCrusOuFalha(supabase, orgId, userId, alvo, requestId);
   if (!atuais.ok) return atuais.resposta;
-  const meus = atuais.filtros.filter((f) => f.meu);
+  const meus = atuais.filtros;
   if (nomeRepetido(nome.nome, meus)) {
     return fail("state_conflict", t("Você já tem um filtro com esse nome aqui."), 409, { requestId });
   }
   if (meus.length >= FILTROS_SALVOS_MAX) {
-    return fail(
-      "unprocessable_entity",
-      t("Limite de 20 filtros salvos atingido. Exclua algum para salvar outro."),
-      422,
-      { requestId },
-    );
+    return fail("unprocessable_entity", t("Limite de 20 filtros salvos atingido. Exclua algum para salvar outro."), 422, { requestId });
   }
 
   const { error } = await supabase.from("crm_filtros_salvos").insert({

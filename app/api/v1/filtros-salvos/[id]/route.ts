@@ -15,7 +15,7 @@ import { nomeRepetido, validarNomeDoFiltro } from "@/lib/escale/filtros/filtros-
 import { alvoDaLinha, meuFiltro, type LinhaDoMeuFiltro } from "@/lib/escale/filtros/ler-filtros-salvos";
 import {
   falhaDaGravacaoDoFiltro,
-  filtrosSalvosOuFalha,
+  meusFiltrosCrusOuFalha,
   responderComFiltrosSalvos,
 } from "@/lib/escale/filtros/respostas";
 import { filtrosDoQuadroSchema } from "@/lib/escale/filtros/tipos";
@@ -91,9 +91,9 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   if (parsed.data.nome !== undefined) {
     const nome = validarNomeDoFiltro(parsed.data.nome);
     if (!nome.ok) return fail("unprocessable_entity", t(nome.erro), 422, { requestId });
-    const atuais = await filtrosSalvosOuFalha(supabase, orgId, userId, alvo, requestId);
+    const atuais = await meusFiltrosCrusOuFalha(supabase, orgId, userId, alvo, requestId);
     if (!atuais.ok) return atuais.resposta;
-    if (nomeRepetido(nome.nome, atuais.filtros.filter((f) => f.meu), id)) {
+    if (nomeRepetido(nome.nome, atuais.filtros, id)) {
       return fail("state_conflict", t("Você já tem um filtro com esse nome aqui."), 409, { requestId });
     }
     patch.nome = nome.nome;
