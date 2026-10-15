@@ -304,6 +304,14 @@ describe("PATCH /api/v1/filtros-salvos/:id", () => {
     expect(db.escritas).toEqual([]);
   });
 
+  it("42501 na gravação (dono que perdeu a visibilidade do alvo) é 404 de origem/visualização, não 403 de posse; sem auditar", async () => {
+    banco({ writeError: (_n, table) => (table === "crm_filtros_salvos" ? { code: "42501", message: "new row violates row-level security policy" } : null) });
+    const res = await mudar(S_QUENTES, { nome: "Muito quentes" });
+    expect(res.status).toBe(404);
+    expect(((await res.json()) as { error: { message: string } }).error.message).toBe("Origem ou visualização não encontrada.");
+    expect(audit).not.toHaveBeenCalled();
+  });
+
   it("o alvo não se troca: origem, visualizacao, pipeline_id e view_id no corpo são 422, sem gravar nem auditar", async () => {
     const db = banco();
     const tentativas = [

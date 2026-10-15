@@ -99,6 +99,14 @@ as $$
 declare
   v_total integer;
 begin
+  -- Reapontar sem trocar de pessoa nem de alvo (ou mexer só em outra coluna) não
+  -- aumenta a contagem de ninguém: sai sem lock e sem contar. Senão, quem já está
+  -- nos 20 não conseguiria nem regravar a própria linha.
+  if tg_op = 'UPDATE'
+     and (new.organization_id, new.user_id, coalesce(new.pipeline_id, new.view_id))
+         is not distinct from (old.organization_id, old.user_id, coalesce(old.pipeline_id, old.view_id)) then
+    return new;
+  end if;
   perform pg_advisory_xact_lock(hashtextextended(
     'crm_filtros_salvos:' || new.organization_id::text || ':' || new.user_id::text || ':'
       || coalesce(coalesce(new.pipeline_id, new.view_id)::text, ''), 0));
@@ -107,7 +115,7 @@ begin
    where f.organization_id = new.organization_id
      and f.user_id = new.user_id
      and coalesce(f.pipeline_id, f.view_id) = coalesce(new.pipeline_id, new.view_id)
-     and (tg_op = 'INSERT' or f.id <> new.id);
+     and (tg_op = 'INSERT' or f.id <> old.id);
   if v_total >= 20 then
     raise exception 'crm_filtros_salvos_limite: no máximo 20 filtros salvos por pessoa em cada origem ou visualização'
       using errcode = 'check_violation', constraint = 'crm_filtros_salvos_limite';

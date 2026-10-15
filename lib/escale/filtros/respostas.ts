@@ -72,7 +72,8 @@ export async function responderComFiltrosSalvos(
  * repetido) venceu a corrida; 23503 = a FK composta recusou um alvo de fora;
  * 23514 = um CHECK (alvo, nome, critérios) — ou o trigger do limite de 20
  * (constraint crm_filtros_salvos_limite, na mensagem); 42501 = a RLS (não é o
- * dono, ou o alvo não é visível para quem grava).
+ * dono, ou o alvo não é visível para quem grava; o PATCH, que já conferiu a
+ * posse, trata o 42501 como 404 na própria rota).
  */
 export function falhaDaGravacaoDoFiltro(
   erro: { code?: string; message?: string },

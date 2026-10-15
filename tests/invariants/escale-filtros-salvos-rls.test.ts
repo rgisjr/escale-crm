@@ -314,6 +314,7 @@ describe("crm_filtros_salvos — o limite de 20 por pessoa e alvo mora no banco"
 
   it("reapontar um filtro para um alvo cheio (UPDATE de pipeline_id) também bate no limite; renomear quem já está no alvo cheio não", () => {
     recriarAlvos();
+    sql(`delete from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}';`);
     sql(`insert into public.crm_filtros_salvos (id, organization_id, user_id, pipeline_id, nome)
             values ('${F_TEMP_REAPONTAR}', '${GOV_ORG}', '${GOV_AGENT_B}', '${P_OUTRO}', 'Reapontar para o cheio');`);
     expect(() =>
@@ -326,6 +327,18 @@ describe("crm_filtros_salvos — o limite de 20 por pessoa e alvo mora no banco"
       ),
     ).toBe(1);
     sql(`delete from public.crm_filtros_salvos where id = '${F_TEMP_REAPONTAR}';`);
+  });
+
+  it("reapontar sem trocar de alvo, num alvo que já tem 20 filtros da pessoa, passa: a própria linha não conta contra o limite", () => {
+    recriarAlvos();
+    expect(total(GOV_AGENT_B, P_LIMITE)).toBe("20");
+    expect(
+      writeCountAs(
+        GOV_AGENT_B,
+        `update public.crm_filtros_salvos set pipeline_id = '${P_LIMITE}' where nome = 'Limite 2' and pipeline_id = '${P_LIMITE}' and user_id = '${GOV_AGENT_B}'`,
+      ),
+    ).toBe(1);
+    expect(total(GOV_AGENT_B, P_LIMITE)).toBe("20");
   });
 
   it("limpa os alvos descartáveis (a prova repete)", () => {

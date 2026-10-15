@@ -107,7 +107,12 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     .eq("id", id)
     .eq("organization_id", orgId)
     .eq("user_id", userId);
-  if (error) return falhaDaGravacaoDoFiltro(error, t, requestId);
+  if (error) {
+    // A posse já foi conferida acima (acharMeuFiltro); um 42501 aqui é o WITH CHECK
+    // da RLS: quem criou perdeu a visibilidade da origem ou da visualização.
+    if (error.code === "42501") return fail("not_found", t("Origem ou visualização não encontrada."), 404, { requestId });
+    return falhaDaGravacaoDoFiltro(error, t, requestId);
+  }
 
   void audit({
     action: "pipeline_filter.updated",
