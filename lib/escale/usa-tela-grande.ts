@@ -39,6 +39,6 @@ function lerSnapshotDoServidor(): boolean {
 }
 
 /** `true` a partir de 768px (`md` do Tailwind). No servidor, sempre `false`. */
-export function usaTelaGrande(): boolean {
+export function useTelaGrande(): boolean {
   return useSyncExternalStore(inscrever, lerSnapshotDoCliente, lerSnapshotDoServidor);
 }

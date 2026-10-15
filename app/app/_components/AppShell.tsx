@@ -14,7 +14,7 @@ import { estiloDaReserva, useOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
 import { MenuDoTopo } from "@/components/escale/menu/MenuDoTopo";
 import { ConversasFlutuante } from "@/components/escale/ConversasFlutuante";
 import type { PreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
-import { usaTelaGrande } from "@/lib/escale/usa-tela-grande";
+import { useTelaGrande } from "@/lib/escale/usa-tela-grande";
 
 interface AppShellProps {
   sidebarCollapsed: boolean;
@@ -48,9 +48,9 @@ export function AppShell({ sidebarCollapsed, podeAtender, menu = "lateral", chil
   // decide a faixa que o conteúdo perde, e ninguém mais mede isso por fora.
   const ocupacaoDoRodape = useOcupacaoDoRodape();
   // Decide qual cabeçalho MONTAR na casca nova — nunca os dois ao mesmo tempo
-  // (ver o comentário de `usaTelaGrande`). Sem uso em `menu === "lateral"`:
+  // (ver o comentário de `useTelaGrande`). Sem uso em `menu === "lateral"`:
   // aquele caminho sempre foi só `<TopBar />`, sem decisão nenhuma por tela.
-  const telaGrande = usaTelaGrande();
+  const telaGrande = useTelaGrande();
   return (
     /*
       `min-h-dvh`, e não `min-h-screen`: `100vh` no celular é a janela com a
