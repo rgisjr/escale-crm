@@ -255,6 +255,15 @@ describe("cardsDaColuna e planejarSoltura", () => {
     });
     expect(soltura).toEqual({ tipo: "nada" });
   });
+
+  it("com um comparador (a ordenação da Fase 1D), a coluna segue ele", () => {
+    const coluna = { etapas: ["a1", "b1"] };
+    const leads = [
+      { id: "l1", stage_id: "a1", position_in_stage: 1, title: "Bia" },
+      { id: "l2", stage_id: "b1", position_in_stage: 2, title: "Ana" },
+    ] as unknown as Lead[];
+    expect(cardsDaColuna(coluna, leads, (x, y) => x.title.localeCompare(y.title)).map((l) => l.id)).toEqual(["l2", "l1"]);
+  });
 });
 
 describe("settingsDaVisualizacao", () => {

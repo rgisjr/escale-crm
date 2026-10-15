@@ -33,6 +33,7 @@ export default async function VisualizacaoPage({ params }: { params: Promise<{ i
 
   return (
     <QuadroDaVisualizacao
+      id={visualizacao.id}
       nome={visualizacao.name}
       origens={origensVivasDaVisualizacao(visualizacao, origens).map((f) => ({ id: f.id, name: f.name }))}
     />

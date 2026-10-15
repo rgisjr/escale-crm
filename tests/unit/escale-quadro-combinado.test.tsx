@@ -82,10 +82,16 @@ const QUADROS = [
 
 const onSelecao = vi.fn();
 
-function renderizar() {
+function renderizar(ordemDosCards?: (a: Lead, b: Lead) => number) {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <QuadroCombinado quadros={QUADROS} leads={[LEAD_A, LEAD_B]} selecionados={[]} onSelecao={onSelecao} />
+      <QuadroCombinado
+        quadros={QUADROS}
+        leads={[LEAD_A, LEAD_B]}
+        selecionados={[]}
+        onSelecao={onSelecao}
+        ordemDosCards={ordemDosCards}
+      />
     </QueryClientProvider>,
   );
   return userEvent.setup({ pointerEventsCheck: 0 });
@@ -153,5 +159,37 @@ describe("<QuadroCombinado>", () => {
     const user = renderizar();
     await user.click(screen.getByRole("checkbox", { name: "Selecionar todos em Entrada" }));
     expect(onSelecao).toHaveBeenCalledWith(["l-a", "l-b"]);
+  });
+});
+
+describe("<QuadroCombinado> com ordenação (Fase 1D)", () => {
+  const PELO_TITULO_DESC = (a: Lead, b: Lead) => b.title.localeCompare(a.title);
+
+  it("a coluna combinada segue a ordenação escolhida", () => {
+    renderizar(PELO_TITULO_DESC);
+    const entrada = document.querySelector('[data-coluna-da-visualizacao="Entrada"]') as HTMLElement;
+    expect(within(entrada).getAllByRole("button", { name: /—/ }).map((b) => b.textContent)).toEqual([
+      "Bia — Entrada · Parceiros",
+      "Ana — Entrada · Leads",
+    ]);
+  });
+
+  it("arrastar dentro da mesma coluna não move", async () => {
+    renderizar(PELO_TITULO_DESC);
+    await soltar("l-a", "coluna:Entrada", "coluna:Entrada", 1);
+    expect(movers.A).not.toHaveBeenCalled();
+  });
+
+  it("soltar em outra coluna põe o card no fim da etapa da origem dele", async () => {
+    renderizar(PELO_TITULO_DESC);
+    await soltar("l-a", "coluna:Entrada", "coluna:Proposta");
+    expect(movers.A).toHaveBeenCalledWith({ leadId: "l-a", stageId: "a2", positionInStage: 1000, expectedUpdatedAt: "upd-l-a" });
+  });
+
+  it("origem sem a etapa: recusa com aviso, como sem ordenação", async () => {
+    renderizar(PELO_TITULO_DESC);
+    await soltar("l-a", "coluna:Entrada", "coluna:Qualificação");
+    expect(toast.error).toHaveBeenCalledWith("A origem «Leads» não tem a etapa «Qualificação».");
+    expect(movers.A).not.toHaveBeenCalled();
   });
 });

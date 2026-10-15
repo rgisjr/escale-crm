@@ -1,8 +1,8 @@
 "use client";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 
-import { FilterBar } from "@/components/kanban/FilterBar";
+import { BarraDoQuadro } from "@/components/escale/filtros/BarraDoQuadro";
 import { NewLeadDialog } from "@/components/kanban/NewLeadDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,54 +12,58 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useActiveOrg } from "@/hooks/auth/AuthProvider";
+import { useFiltrosDoQuadro } from "@/hooks/escale/useFiltrosDoQuadro";
 import { useQuadrosDaVisualizacao } from "@/hooks/escale/useQuadrosDaVisualizacao";
 import { useT } from "@/hooks/i18n/useT";
+import { recortarQuadro } from "@/lib/escale/filtros/aplicar";
+import { camposFiltraveis } from "@/lib/escale/filtros/campos";
+import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
 import { settingsDaVisualizacao } from "@/lib/escale/visualizacoes/regras";
-import { applyFilters, filtersFromParams, filtersToParams, type LeadFilters } from "@/lib/kanban/filters";
-import { categoriaDoMotivo } from "@/lib/leads/motivos-de-perda-do-funil";
 import { Plus } from "@/lib/ui/icons";
 
 import { LoteDaVisualizacao } from "./LoteDaVisualizacao";
 import { QuadroCombinado } from "./QuadroCombinado";
 
 /**
- * A PÁGINA DE UMA VISUALIZAÇÃO (fork Escale, Fase 1C): o mesmo esqueleto da
- * página do funil (`app/app/pipelines/[id]/_client.tsx`) — título, "Novo Lead",
- * filtros na URL, quadro e lote — com as origens da visualização no lugar de um
- * funil só.
+ * A PÁGINA DE UMA VISUALIZAÇÃO (fork Escale, Fases 1C e 1D): o mesmo esqueleto
+ * da página do funil — título, "Novo Lead", a barra do quadro, quadro e lote —
+ * com as origens da visualização no lugar de um funil só.
  *
- * O filtro é o MESMO `FilterBar` do funil e roda POR ORIGEM: a categoria de um
- * motivo de perda é da origem do card (#1537), e um `categoriaDo` único
- * classificaria o card de uma origem pela régua da outra.
+ * Os filtros rodam POR ORIGEM: a categoria de um motivo de perda e as colunas de
+ * ganho e de perda são da origem do card. Os filtros salvos são da VISUALIZAÇÃO
+ * (o `alvo` da barra), não das origens.
  */
-export function QuadroDaVisualizacao({ nome, origens }: { nome: string; origens: Array<{ id: string; name: string }> }) {
+export function QuadroDaVisualizacao({
+  id,
+  nome,
+  origens,
+}: {
+  id: string;
+  nome: string;
+  origens: Array<{ id: string; name: string }>;
+}) {
   const t = useT();
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const filters = useMemo(() => filtersFromParams(searchParams), [searchParams]);
-  const setFilters = useCallback(
-    (next: LeadFilters) => {
-      const qs = filtersToParams(next);
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [router, pathname],
-  );
+  const { filtros, filtroSalvoId, mudar } = useFiltrosDoQuadro();
+  const orgAtiva = useActiveOrg();
 
   // Estável entre renders: o `combine` do hook depende deste array.
   const ids = useMemo(() => origens.map((o) => o.id), [origens]);
-  const { quadros, carregando, indisponiveis } = useQuadrosDaVisualizacao(ids);
+  const { quadros, carregando, indisponiveis, atualizar, atualizando } = useQuadrosDaVisualizacao(ids);
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [novoEm, setNovoEm] = useState<string | null>(null);
 
-  const todosOsLeads = useMemo(() => quadros.flatMap((q) => q.leads), [quadros]);
-  const filtrados = useMemo(
-    () =>
-      quadros.flatMap((q) =>
-        applyFilters(q.leads, filters, { categoriaDo: (motivo) => categoriaDoMotivo(motivo, q.pipeline.settings) }),
-      ),
-    [quadros, filters],
+  const campos = useMemo(() => camposFiltraveis(quadros.map((q) => q.pipeline.settings)), [quadros]);
+  const recortes = useMemo(
+    () => quadros.map((q) => ({ quadro: q, ...recortarQuadro(q, filtros, { moeda: orgAtiva?.currency ?? null, campos }) })),
+    [quadros, filtros, orgAtiva?.currency, campos],
   );
+  // As colunas do quadro combinado saem só das etapas visíveis de cada origem.
+  const quadrosVisiveis = useMemo(() => recortes.map((r) => ({ ...r.quadro, stages: r.stages })), [recortes]);
+  const filtrados = useMemo(() => recortes.flatMap((r) => r.leads), [recortes]);
+  const ordemDosCards = useMemo(() => comparadorDaOrdem(filtros.ordem, campos), [filtros.ordem, campos]);
+  const todosOsLeads = useMemo(() => quadros.flatMap((q) => q.leads), [quadros]);
   const settings = useMemo(() => settingsDaVisualizacao(quadros), [quadros]);
   const quadroDoNovo = quadros.find((q) => q.pipeline.id === novoEm);
 
@@ -119,17 +123,29 @@ export function QuadroDaVisualizacao({ nome, origens }: { nome: string; origens:
         </p>
       )}
 
-      <FilterBar filters={filters} onChange={setFilters} leads={todosOsLeads} settings={settings} />
+      <BarraDoQuadro
+        alvo={{ tipo: "visualizacao", id }}
+        filtros={filtros}
+        filtroSalvoId={filtroSalvoId}
+        onMudar={mudar}
+        leads={todosOsLeads}
+        campos={campos}
+        settings={settings}
+        contagem={filtrados.length}
+        onAtualizar={atualizar}
+        atualizando={atualizando}
+      />
 
       {carregando && quadros.length === 0 ? (
         <div className="flex flex-1 animate-pulse items-center justify-center text-muted-foreground">{t("Carregando…")}</div>
       ) : (
         <QuadroCombinado
-          quadros={quadros}
+          quadros={quadrosVisiveis}
           leads={filtrados}
           selecionados={selecionados}
           onSelecao={setSelecionados}
           leadInicial={searchParams.get("lead")}
+          ordemDosCards={ordemDosCards}
         />
       )}
 

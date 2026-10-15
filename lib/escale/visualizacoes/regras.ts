@@ -194,10 +194,17 @@ export function montarColunas(quadros: readonly Pick<BoardData, "pipeline" | "st
   return colunas;
 }
 
-/** Os cards da coluna, de todas as origens, na ordem das posições. */
-export function cardsDaColuna(coluna: Pick<ColunaCombinada, "etapas">, leads: readonly Lead[]): Lead[] {
+/**
+ * Os cards da coluna, de todas as origens, na ordem das posições — ou na
+ * ordenação escolhida na barra do quadro (Fase 1D).
+ */
+export function cardsDaColuna(
+  coluna: Pick<ColunaCombinada, "etapas">,
+  leads: readonly Lead[],
+  comparar?: (a: Lead, b: Lead) => number,
+): Lead[] {
   const etapas = new Set(coluna.etapas);
-  return leads.filter((l) => etapas.has(l.stage_id)).sort((a, b) => a.position_in_stage - b.position_in_stage);
+  return leads.filter((l) => etapas.has(l.stage_id)).sort(comparar ?? ((a, b) => a.position_in_stage - b.position_in_stage));
 }
 
 export type Soltura =
