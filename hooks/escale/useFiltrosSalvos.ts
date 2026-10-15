@@ -43,6 +43,9 @@ function useGravar<A>(alvo: AlvoDoFiltro, enviar: (args: A) => Promise<Resposta>
   return useMutation({
     mutationFn: async (args: A) => (await enviar(args)).data,
     onSuccess: (lista) => qc.setQueryData(chaveDosFiltrosSalvos(alvo), lista),
+    // 404/403 (o filtro sumiu ou mudou de dono em outra aba): relê a lista para a entrada velha sair do menu.
+    // O erro continua indo para quem chamou (mutate/mutateAsync).
+    onError: () => qc.invalidateQueries({ queryKey: chaveDosFiltrosSalvos(alvo) }),
   });
 }
 

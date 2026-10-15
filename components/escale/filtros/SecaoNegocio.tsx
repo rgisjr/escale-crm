@@ -99,7 +99,7 @@ export function SecaoNegocio({
         <select
           aria-label={t("Dono do negócio")}
           className={classeDoSeletor}
-          value={filtros.dono ?? ""}
+          value={filtros.dono && filtros.dono !== "any" ? filtros.dono : ""}
           onChange={(e) => onMudar({ ...filtros, dono: e.target.value || undefined })}
         >
           <option value="">{t("Todos")}</option>
