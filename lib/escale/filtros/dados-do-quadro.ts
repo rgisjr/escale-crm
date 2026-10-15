@@ -1,3 +1,4 @@
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { Lead } from "@/lib/types/leads";
 
 /**
@@ -52,9 +53,9 @@ const instante = (iso: string | null) => (iso ? Date.parse(iso) || 0 : 0);
 
 export function anexarDadosDosFiltros(leads: readonly Lead[], linhas: LinhasDosFiltros): Lead[] {
   const concluidas = new Map(linhas.concluidas.map((c) => [c.lead_id, c.total]));
-  const nomes = new Map(
-    linhas.contatos.map((c) => [c.id, c.is_anonymized ? null : c.display_name?.trim() || c.name?.trim() || null]),
-  );
+  // O nome de gente vem do helper central (`name` escolhido antes do `display_name`
+  // do canal; identificador técnico nunca vira nome). Anonimizado (LGPD) não tem nome.
+  const nomes = new Map(linhas.contatos.map((c) => [c.id, c.is_anonymized ? null : nomeDoContato(c)]));
   // A mais recente primeiro, sem data por último: a ordem de `withConversas`.
   const conversas = new Map<string, ConversaDoFiltro>();
   for (const c of [...linhas.conversas].sort((a, b) => instante(b.last_message_at) - instante(a.last_message_at))) {

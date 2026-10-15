@@ -25,7 +25,7 @@ describe("anexarDadosDosFiltros", () => {
     expect(dadosDeFiltro(b!)?.atividades_concluidas).toBe(0);
   });
 
-  it("o nome do contato prefere o nome de exibição e some quando o contato foi anonimizado", () => {
+  it("o nome do contato prefere o nome escolhido (como o rótulo do card) e some quando o contato foi anonimizado", () => {
     const leads = anexarDadosDosFiltros(
       [negocio("a", { contact_id: "c1" }), negocio("b", { contact_id: "c2" }), negocio("c", { contact_id: "c3" }), negocio("d")],
       {
@@ -38,7 +38,7 @@ describe("anexarDadosDosFiltros", () => {
         ],
       },
     );
-    expect(leads.map((l) => dadosDeFiltro(l)?.contato_nome)).toEqual(["Aninha", "Bruno", null, null]);
+    expect(leads.map((l) => dadosDeFiltro(l)?.contato_nome)).toEqual(["Ana Souza", "Bruno", null, null]);
   });
 
   it("a conversa é a mais recente do contato — a mesma da capa —, venha na ordem que vier", () => {
