@@ -9346,7 +9346,7 @@ export const DICIONARIO: Traducoes = {
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
   "{n} negócio": { es: "{n} negocio" },
   "{n} negócios": { es: "{n} negocios" },
-  "Ordenação ativa · arrastar para reordenar dentro da coluna está desabilitado. Mover de etapa continua funcionando.": { es: "Orden activo · arrastrar para reordenar dentro de la columna está desactivado. Mover de etapa sigue funcionando." },
+  "Ordenação ativa · arrastar para reordenar dentro da coluna está desabilitado. Mover de etapa continua funcionando.": { es: "Ordenación activa · arrastrar para reordenar dentro de la columna está desactivado. Mover de etapa sigue funcionando." },
   "Status do negócio": { es: "Estado del negocio" },
   "Mostrar todos": { es: "Mostrar todos" },
   "Filtros": { es: "Filtros" },

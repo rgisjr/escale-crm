@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
@@ -13,7 +14,7 @@ import { MOEDA_PADRAO, simboloDaMoeda } from "@/lib/money";
 import { ROTULO_DO_MOTIVO_CANONICO } from "@/lib/schemas/leads";
 import type { Lead } from "@/lib/types/leads";
 
-import { Caixinha, CampoNumerico, RotuloDoGrupo, classeDoSeletor } from "./controles";
+import { Caixinha, CampoNumerico, RotuloDoGrupo } from "./controles";
 
 const emReais = (centavos: number | undefined) =>
   centavos === undefined ? undefined : centavos / 100;
@@ -67,47 +68,36 @@ export function SecaoNegocio({
       ? t(ROTULO_DO_MOTIVO_CANONICO[motivo as keyof typeof ROTULO_DO_MOTIVO_CANONICO])
       : motivo;
 
-  // As opções são montadas aqui, fora da caixa de seleção, porque os testes do painel exigem
-  // a caixa nativa (combobox com `selectOptions`), e não o `SearchableSelect`.
-  const opcoesDeMembro = (membros ?? [])
-    .filter((m) => m.user_id !== user.id)
-    .map((m) => (
-      <option key={m.user_id} value={m.user_id}>
-        {m.full_name ?? t("Sem nome")}
-      </option>
-    ));
-  const opcoesDeAgente = (agentes ?? []).map((a) => (
-    <option key={a.agent_id} value={agentOwnerFilter(a.agent_id)}>
-      {a.name}
-    </option>
-  ));
-  const opcoesDeMotivo = motivos.map((m) => (
-    <option key={m} value={m}>
-      {rotuloDoMotivo(m)}
-    </option>
-  ));
-  const opcoesDeCategoria = categorias.map((c) => (
-    <option key={c} value={c}>
-      {c}
-    </option>
-  ));
+  // As listas crescem com a equipe e com os cards perdidos: `SearchableSelect` mostra a busca
+  // a partir de 8 opções. Valor "" = sem filtro.
+  const opcoesDoDono = [
+    { value: "", label: t("Todos") },
+    { value: user.id, label: t("Eu") },
+    { value: "unassigned", label: t("Sem responsável") },
+    ...(membros ?? [])
+      .filter((m) => m.user_id !== user.id)
+      .map((m) => ({ value: m.user_id, label: m.full_name ?? t("Sem nome") })),
+    ...(agentes ?? []).map((a) => ({ value: agentOwnerFilter(a.agent_id), label: a.name })),
+  ];
+  const opcoesDeMotivo = [
+    { value: "", label: t("Todos") },
+    ...motivos.map((m) => ({ value: m, label: rotuloDoMotivo(m) })),
+  ];
+  const opcoesDeCategoria = [
+    { value: "", label: t("Todas") },
+    ...categorias.map((c) => ({ value: c, label: c })),
+  ];
 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <RotuloDoGrupo>{t("Dono do negócio")}</RotuloDoGrupo>
-        <select
+        <SearchableSelect
           aria-label={t("Dono do negócio")}
-          className={classeDoSeletor}
+          options={opcoesDoDono}
           value={filtros.dono && filtros.dono !== "any" ? filtros.dono : ""}
-          onChange={(e) => onMudar({ ...filtros, dono: e.target.value || undefined })}
-        >
-          <option value="">{t("Todos")}</option>
-          <option value={user.id}>{t("Eu")}</option>
-          <option value="unassigned">{t("Sem responsável")}</option>
-          {opcoesDeMembro}
-          {opcoesDeAgente}
-        </select>
+          onValueChange={(v) => onMudar({ ...filtros, dono: v || undefined })}
+        />
       </div>
 
       <div className="space-y-1.5">
@@ -174,27 +164,19 @@ export function SecaoNegocio({
       {filtros.status.includes("lost") && motivos.length > 0 ? (
         <div className="space-y-2">
           <RotuloDoGrupo>{t("Motivo de perda")}</RotuloDoGrupo>
-          <select
+          <SearchableSelect
             aria-label={t("Motivo de perda")}
-            className={classeDoSeletor}
+            options={opcoesDeMotivo}
             value={filtros.motivoDePerda ?? ""}
-            onChange={(e) => onMudar({ ...filtros, motivoDePerda: e.target.value || undefined })}
-          >
-            <option value="">{t("Todos")}</option>
-            {opcoesDeMotivo}
-          </select>
+            onValueChange={(v) => onMudar({ ...filtros, motivoDePerda: v || undefined })}
+          />
           {categorias.length > 0 ? (
-            <select
+            <SearchableSelect
               aria-label={t("Categoria de perda")}
-              className={classeDoSeletor}
+              options={opcoesDeCategoria}
               value={filtros.categoriaDePerda ?? ""}
-              onChange={(e) =>
-                onMudar({ ...filtros, categoriaDePerda: e.target.value || undefined })
-              }
-            >
-              <option value="">{t("Todas")}</option>
-              {opcoesDeCategoria}
-            </select>
+              onValueChange={(v) => onMudar({ ...filtros, categoriaDePerda: v || undefined })}
+            />
           ) : null}
         </div>
       ) : null}

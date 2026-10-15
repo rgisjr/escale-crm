@@ -1,6 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useT } from "@/hooks/i18n/useT";
 import {
   chaveDoCampo,
@@ -46,18 +47,20 @@ export function SecaoCampos({
   const doContato = campos.filter((c) => c.alvo === "contato");
   const primeiro = doNegocio[0] ?? doContato[0];
   const atingiuOLimite = condicoes.length >= CONDICOES_DE_CAMPO_MAX;
-  // As opções ficam fora da caixa de seleção porque os testes do painel exigem a caixa
-  // nativa (combobox com `selectOptions`), e não o `SearchableSelect`.
-  const opcoesDoNegocio = doNegocio.map((c) => (
-    <option key={chaveDoCampo(c)} value={chaveDoCampo(c)}>
-      {c.rotulo}
-    </option>
-  ));
-  const opcoesDoContato = doContato.map((c) => (
-    <option key={chaveDoCampo(c)} value={chaveDoCampo(c)}>
-      {t(c.rotulo)}
-    </option>
-  ));
+  // Com campos personalizados a lista de campos cresce: `SearchableSelect` mostra a busca a
+  // partir de 8 opções, e o nome do grupo entra como palavra-chave ("Contato" acha os do contato).
+  const opcoesDeCampo = [
+    ...doNegocio.map((c) => ({
+      value: chaveDoCampo(c),
+      label: c.rotulo,
+      keywords: [t("Negócio")],
+    })),
+    ...doContato.map((c) => ({
+      value: chaveDoCampo(c),
+      label: t(c.rotulo),
+      keywords: [t("Contato")],
+    })),
+  ];
 
   function trocar(indice: number, nova: CondicaoDeCampo | null) {
     const proximas =
@@ -72,30 +75,24 @@ export function SecaoCampos({
       {condicoes.map((condicao, indice) => {
         const campo = porChave.get(chaveDoCampo(condicao));
         const tipo = campo?.tipo ?? "texto";
-        const opcoesDeOperador = operadoresDoTipo(tipo).map((op) => (
-          <option key={op} value={op}>
-            {t(ROTULO_DO_OPERADOR[op])}
-          </option>
-        ));
         return (
           <fieldset key={indice} className="space-y-2 rounded-md border border-border p-2">
             <legend className="sr-only">{`${t("Condição")} ${indice + 1}`}</legend>
             <div className="flex gap-2">
-              <select
+              <SearchableSelect
                 aria-label={t("Campo")}
-                className={classeDoSeletor}
+                className="min-w-0 flex-1"
                 value={chaveDoCampo(condicao)}
-                onChange={(e) => {
-                  const novo = porChave.get(e.target.value);
+                options={
+                  campo
+                    ? opcoesDeCampo
+                    : [{ value: chaveDoCampo(condicao), label: condicao.chave }, ...opcoesDeCampo]
+                }
+                onValueChange={(chave) => {
+                  const novo = porChave.get(chave);
                   if (novo) trocar(indice, condicaoNova(novo));
                 }}
-              >
-                {campo ? null : <option value={chaveDoCampo(condicao)}>{condicao.chave}</option>}
-                {doNegocio.length > 0 ? (
-                  <optgroup label={t("Negócio")}>{opcoesDoNegocio}</optgroup>
-                ) : null}
-                <optgroup label={t("Contato")}>{opcoesDoContato}</optgroup>
-              </select>
+              />
               <button
                 type="button"
                 aria-label={t("Remover condição")}
@@ -105,12 +102,15 @@ export function SecaoCampos({
                 <X size={14} aria-hidden />
               </button>
             </div>
-            <select
+            <SearchableSelect
               aria-label={t("Operador")}
-              className={classeDoSeletor}
               value={condicao.op}
-              onChange={(e) => {
-                const op = e.target.value as OperadorDeCampo;
+              options={operadoresDoTipo(tipo).map((op) => ({
+                value: op,
+                label: t(ROTULO_DO_OPERADOR[op]),
+              }))}
+              onValueChange={(valor) => {
+                const op = valor as OperadorDeCampo;
                 trocar(indice, {
                   alvo: condicao.alvo,
                   chave: condicao.chave,
@@ -118,9 +118,7 @@ export function SecaoCampos({
                   ...(tipo === "booleano" ? { valor: "true" } : {}),
                 });
               }}
-            >
-              {opcoesDeOperador}
-            </select>
+            />
             <ValorDaCondicao
               condicao={condicao}
               campo={campo}
@@ -172,21 +170,13 @@ function ValorDaCondicao({
     );
   }
   if ((tipo === "opcao" || tipo === "opcoes") && campo?.opcoes?.length) {
-    const opcoesDoValor = campo.opcoes.map((o) => (
-      <option key={o.value} value={o.value}>
-        {o.label}
-      </option>
-    ));
     return (
-      <select
+      <SearchableSelect
         aria-label={t("Valor")}
-        className={classeDoSeletor}
         value={c.valor ?? ""}
-        onChange={(e) => onMudar({ ...c, valor: e.target.value || undefined })}
-      >
-        <option value="">{t("Escolha")}</option>
-        {opcoesDoValor}
-      </select>
+        options={[{ value: "", label: t("Escolha") }, ...campo.opcoes]}
+        onValueChange={(v) => onMudar({ ...c, valor: v || undefined })}
+      />
     );
   }
   if (c.op === "entre" && tipo === "data") {

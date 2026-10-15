@@ -7,8 +7,11 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
   useUser: () => ({ id: "u-eu" }),
   useActiveOrg: () => ({ orgId: "org-1", currency: "BRL" }),
 }));
+const equipe = vi.hoisted(() => ({
+  membros: [{ user_id: "u-ana", full_name: "Ana" }] as { user_id: string; full_name: string }[],
+}));
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
-  useAssignableMembers: () => ({ data: [{ user_id: "u-ana", full_name: "Ana" }] }),
+  useAssignableMembers: () => ({ data: equipe.membros }),
 }));
 vi.mock("@/hooks/kanban/useAssignableAgents", () => ({
   useAssignableAgents: () => ({ data: [] }),
@@ -96,7 +99,9 @@ describe("<PainelDeFiltros>", () => {
   it("Negócio: dono, valor (digitado em reais, guardado em centavos) e data de criação", async () => {
     const { onMudar, u } = painel({ status: ["open"] });
     await abrir(u);
-    await u.selectOptions(screen.getByRole("combobox", { name: "Dono do negócio" }), "u-ana");
+    await u.click(screen.getByRole("combobox", { name: "Dono do negócio" }));
+    expect(screen.queryByRole("textbox", { name: "Buscar…" })).not.toBeInTheDocument();
+    await u.click(screen.getByRole("option", { name: "Ana" }));
     expect(onMudar).toHaveBeenLastCalledWith({ status: ["open"], dono: "u-ana" });
     await u.type(screen.getByRole("textbox", { name: "Mínimo" }), "1.500");
     await u.tab();
@@ -108,10 +113,40 @@ describe("<PainelDeFiltros>", () => {
     expect(screen.queryByRole("combobox", { name: "Motivo de perda" })).not.toBeInTheDocument();
   });
 
+  it("Negócio: com 8 ou mais opções de dono a caixa ganha busca, e a busca filtra", async () => {
+    const original = equipe.membros;
+    equipe.membros = Array.from({ length: 7 }, (_, i) => ({
+      user_id: `u-${i}`,
+      full_name: i === 3 ? "Zélia Souza" : `Pessoa ${i}`,
+    }));
+    try {
+      const { onMudar, u } = painel({ status: ["open"] });
+      await abrir(u);
+      await u.click(screen.getByRole("combobox", { name: "Dono do negócio" }));
+      await u.type(screen.getByRole("textbox", { name: "Buscar…" }), "zelia");
+      expect(screen.queryByRole("option", { name: "Pessoa 0" })).not.toBeInTheDocument();
+      await u.click(screen.getByRole("option", { name: "Zélia Souza" }));
+      expect(onMudar).toHaveBeenLastCalledWith({ status: ["open"], dono: "u-3" });
+    } finally {
+      equipe.membros = original;
+    }
+  });
+
+  it("Negócio: o dono 'any' legado aparece como sem filtro; 'Todos' desfaz o filtro", async () => {
+    const { onMudar, u } = painel({ status: ["open"], dono: "any" });
+    await abrir(u);
+    const caixa = screen.getByRole("combobox", { name: "Dono do negócio" });
+    expect(caixa).toHaveTextContent("Todos");
+    await u.click(caixa);
+    await u.click(screen.getByRole("option", { name: "Sem responsável" }));
+    expect(onMudar).toHaveBeenLastCalledWith({ status: ["open"], dono: "unassigned" });
+  });
+
   it("Negócio com perdidos no status: o motivo de perda vem dos cards perdidos", async () => {
     const { onMudar, u } = painel({ status: ["open", "lost"] });
     await abrir(u);
-    await u.selectOptions(screen.getByRole("combobox", { name: "Motivo de perda" }), "price");
+    await u.click(screen.getByRole("combobox", { name: "Motivo de perda" }));
+    await u.click(screen.getByRole("option", { name: "Preço" }));
     expect(onMudar).toHaveBeenLastCalledWith({ status: ["open", "lost"], motivoDePerda: "price" });
   });
 
@@ -165,11 +200,57 @@ describe("<PainelDeFiltros>", () => {
       campos: [{ alvo: "contato", chave: "nome", op: "contem", valor: "ana" }],
     });
     await abrir(u, /^Campos/);
-    expect(screen.getByRole("combobox", { name: "Campo" })).toHaveValue("contato:nome");
-    expect(screen.getByRole("combobox", { name: "Operador" })).toHaveValue("contem");
+    expect(screen.getByRole("combobox", { name: "Campo" })).toHaveTextContent("Nome do contato");
+    expect(screen.getByRole("combobox", { name: "Operador" })).toHaveTextContent("contém");
     expect(screen.getByRole("textbox", { name: "Valor" })).toHaveValue("ana");
     await u.click(screen.getByRole("button", { name: "Remover condição" }));
     expect(onMudar).toHaveBeenLastCalledWith({ status: ["open"], campos: undefined });
+  });
+
+  it("Campos: trocar o campo e escolher o valor de um campo de opção passam pela caixa com busca", async () => {
+    const campos = camposFiltraveis([
+      {
+        fields: [
+          { key: "renda", label: "Renda", type: "number" },
+          {
+            key: "porte",
+            label: "Porte",
+            type: "select",
+            options: [
+              { value: "pequeno", label: "Pequeno" },
+              { value: "grande", label: "Grande" },
+            ],
+          },
+        ],
+      },
+    ]);
+    const onMudar = vi.fn();
+    render(
+      <PainelDeFiltros
+        filtros={{
+          status: ["open"],
+          campos: [{ alvo: "negocio", chave: "porte", op: "igual" }],
+        }}
+        onMudar={onMudar}
+        leads={LEADS}
+        campos={campos}
+        settings={{}}
+      />,
+    );
+    const u = novoUsuario();
+    await abrir(u, /^Campos/);
+    await u.click(screen.getByRole("combobox", { name: "Valor" }));
+    await u.click(screen.getByRole("option", { name: "Grande" }));
+    expect(onMudar).toHaveBeenLastCalledWith({
+      status: ["open"],
+      campos: [{ alvo: "negocio", chave: "porte", op: "igual", valor: "grande" }],
+    });
+    await u.click(screen.getByRole("combobox", { name: "Campo" }));
+    await u.click(screen.getByRole("option", { name: "Renda" }));
+    expect(onMudar).toHaveBeenLastCalledWith({
+      status: ["open"],
+      campos: [{ alvo: "negocio", chave: "renda", op: "entre" }],
+    });
   });
 
   it("Outros: atividades concluídas e tempo na etapa com a unidade escolhida", async () => {
