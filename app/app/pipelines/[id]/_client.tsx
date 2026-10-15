@@ -39,16 +39,30 @@ import { applyFilters, filtersFromParams, filtersToParams } from "@/lib/kanban/f
 import { categoriaDoMotivo } from "@/lib/leads/motivos-de-perda-do-funil";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
+// FORK ESCALE · Fase 1D: a barra do quadro da casca nova (status com várias
+// escolhas, filtros novos, filtros salvos, ordenação, contagem e Atualizar).
+import { BarraDoQuadro } from "@/components/escale/filtros/BarraDoQuadro";
+import { useActiveOrg } from "@/hooks/auth/AuthProvider";
+import { useFiltrosDoQuadro } from "@/hooks/escale/useFiltrosDoQuadro";
+import { recortarQuadro } from "@/lib/escale/filtros/aplicar";
+import { camposFiltraveis } from "@/lib/escale/filtros/campos";
+import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
 
 export function PipelinePageClient({
   pipelineId,
   initialName,
   role,
   funis,
+  cascaNova = false,
 }: {
   pipelineId: string;
   initialName: string;
   role: Role;
+  /**
+   * FORK ESCALE · Fase 1D: com a casca nova (cookie `escale_menu=topo`), a barra
+   * do quadro da Escale entra no lugar do `FilterBar`. Sem ela, nada muda.
+   */
+  cascaNova?: boolean;
   /**
    * Os funis vivos da organização (`id` + `name`, na ordem da lista) — a MESMA
    * partição da tela de Funis. É o que alimenta o seletor de troca rápida do
@@ -57,7 +71,7 @@ export function PipelinePageClient({
   funis: Array<{ id: string; name: string }>;
 }) {
   const t = useT();
-  const { data, isLoading, error, pulses, realtimeStatus, seguranca } = useBoard(pipelineId);
+  const { data, isLoading, error, pulses, realtimeStatus, seguranca, refetch, isFetching } = useBoard(pipelineId);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -91,6 +105,23 @@ export function PipelinePageClient({
     return (motivo: string) => categoriaDoMotivo(motivo, settings);
   }, [data?.pipeline.settings]);
   const filteredLeads = data ? applyFilters(data.leads, filters, { categoriaDo }) : [];
+  // FORK ESCALE · Fase 1D: com a casca nova, quem filtra é a barra nova. O
+  // recorte esconde as colunas de ganho e de perda que o status não pede e
+  // aplica os filtros; a ordenação vale em todas as colunas.
+  const filtrosEscale = useFiltrosDoQuadro();
+  const orgAtiva = useActiveOrg();
+  const camposDoQuadro = useMemo(() => camposFiltraveis([data?.pipeline.settings]), [data?.pipeline.settings]);
+  const recorte = useMemo(
+    () =>
+      cascaNova && data
+        ? recortarQuadro(data, filtrosEscale.filtros, { moeda: orgAtiva?.currency ?? null, campos: camposDoQuadro })
+        : null,
+    [cascaNova, data, filtrosEscale.filtros, orgAtiva?.currency, camposDoQuadro],
+  );
+  const ordemDosCards = useMemo(
+    () => (cascaNova ? comparadorDaOrdem(filtrosEscale.filtros.ordem, camposDoQuadro) : undefined),
+    [cascaNova, filtrosEscale.filtros.ordem, camposDoQuadro],
+  );
   // NÃO é a conta do FilterBar: o seletor de filtro lista as três caixas
   // (`marcadoresDoCard`: negócio, contato e conversa), e esta lista, a da tag em
   // lote, só `lead.tags` — é lá que a ação em lote grava (#852). O `useMemo` é o
@@ -251,12 +282,27 @@ export function PipelinePageClient({
           leads={data.leads}
         />
       )}
-      <FilterBar
-        filters={filters}
-        onChange={setFilters}
-        leads={data?.leads ?? []}
-        settings={data?.pipeline.settings}
-      />
+      {cascaNova ? (
+        <BarraDoQuadro
+          alvo={{ tipo: "origem", id: pipelineId }}
+          filtros={filtrosEscale.filtros}
+          filtroSalvoId={filtrosEscale.filtroSalvoId}
+          onMudar={filtrosEscale.mudar}
+          leads={data?.leads ?? []}
+          campos={camposDoQuadro}
+          settings={data?.pipeline.settings}
+          contagem={recorte?.leads.length ?? 0}
+          onAtualizar={() => void refetch()}
+          atualizando={isFetching}
+        />
+      ) : (
+        <FilterBar
+          filters={filters}
+          onChange={setFilters}
+          leads={data?.leads ?? []}
+          settings={data?.pipeline.settings}
+        />
+      )}
       {error ? (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm">
           {t("Não consegui carregar este funil:")} {formatError(error, t)}
@@ -272,19 +318,20 @@ export function PipelinePageClient({
           pipelineId={pipelineId}
           pipeline={data.pipeline}
           stages={data.stages}
-          leads={filteredLeads}
+          leads={recorte?.leads ?? filteredLeads}
         />
       ) : (
         <KanbanBoard
           pipelineId={pipelineId}
-          stages={data.stages}
-          leads={filteredLeads}
+          stages={recorte?.stages ?? data.stages}
+          leads={recorte?.leads ?? filteredLeads}
           pulses={pulses}
           pipeline={data.pipeline}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           leadInicial={searchParams.get("lead")}
           podeRenomearEtapa={ROLE_RANK[role] >= ROLE_RANK.manager}
+          ordemDosCards={ordemDosCards}
         />
       )}
       <BulkActionBar
