@@ -36,7 +36,7 @@ const ORIGENS: Origens = {
     { id: "f-morto", name: "Funil morto", group_id: "g-cred", is_archived: true, is_default: false },
   ],
 };
-const ABERTO: PreferenciasDoPainel = { painelAberto: true, listaAberta: true, ocultos: [] };
+const ABERTO: PreferenciasDoPainel = { painelAberto: true, listaAberta: true, visualizacoesAbertas: true, ocultos: [] };
 const VISUALIZACOES: Visualizacao[] = [
   { id: "v-time", name: "Time comercial", acesso: "todos", origens: ["f-nayara", "f-morto", "f-leads"], pessoas: [] },
 ];
@@ -116,7 +116,7 @@ describe("<PainelOrigens> — recolher", () => {
   });
 
   it("respeita as preferências que vieram do servidor", () => {
-    renderizar(true, { painelAberto: false, listaAberta: true, ocultos: [] });
+    renderizar(true, { painelAberto: false, listaAberta: true, visualizacoesAbertas: true, ocultos: [] });
     expect(screen.queryByRole("complementary", { name: "Origens" })).toBeNull();
     expect(screen.getByRole("button", { name: "Abrir o painel de origens" })).toBeInTheDocument();
   });
@@ -209,6 +209,28 @@ describe("<PainelOrigens> — visualizações e seleção (Fase 1C)", () => {
     expect(within(secao()).getByText("2 origens")).toBeInTheDocument();
   });
 
+  it("recolher a lista de origens não esconde as visualizações", async () => {
+    const user = renderizar();
+    await user.click(screen.getByRole("button", { name: "Recolher a lista de origens" }));
+    expect(screen.queryByRole("navigation", { name: "Funis por grupo" })).toBeNull();
+    expect(within(secao()).getByRole("link", { name: /Time comercial/ })).toBeInTheDocument();
+  });
+
+  it("o ^ das visualizações recolhe só a seção e guarda a escolha", async () => {
+    const user = renderizar();
+    await user.click(within(secao()).getByRole("button", { name: "Recolher as visualizações" }));
+    expect(within(secao()).queryByRole("link", { name: /Time comercial/ })).toBeNull();
+    expect(lista()).toBeInTheDocument();
+    expect(guardarPreferenciaDeOrigens).toHaveBeenCalledWith({ nome: "visualizacoes", valor: "fechada" });
+  });
+
+  it("com a preferência fechada, a seção chega recolhida mas o título continua à vista", () => {
+    renderizar(true, { ...ABERTO, visualizacoesAbertas: false });
+    expect(within(secao()).getByRole("heading", { name: "Visualizações" })).toBeInTheDocument();
+    expect(within(secao()).queryByRole("link", { name: /Time comercial/ })).toBeNull();
+    expect(within(secao()).getByRole("button", { name: "Abrir as visualizações" })).toBeInTheDocument();
+  });
+
   it("uma visualização com uma só origem viva diz \"1 origem\"; a arquivada não conta", () => {
     renderizar(true, ABERTO, [
       { id: "v-um", name: "Só uma", acesso: "todos", origens: ["f-leads", "f-morto"], pessoas: [] },
@@ -222,10 +244,12 @@ describe("<PainelOrigens> — visualizações e seleção (Fase 1C)", () => {
     expect(within(secao()).getByRole("button", { name: "Criar visualização" })).toBeInTheDocument();
   });
 
-  it("quem não é gerente vê as visualizações, sem + e sem ⋮", () => {
+  it("quem não é gerente vê as visualizações, sem + e sem ⋮ (só o ^ da seção)", () => {
     renderizar(false);
     expect(within(secao()).getByRole("link", { name: /Time comercial/ })).toBeInTheDocument();
-    expect(within(secao()).queryByRole("button")).toBeNull();
+    expect(within(secao()).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Recolher as visualizações",
+    ]);
   });
 
   it("a lupa também procura nas visualizações", async () => {

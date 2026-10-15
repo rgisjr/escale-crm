@@ -153,4 +153,7 @@ export {
   ArrowsOutSimple,
   // /admin/modulos: módulo opcional com tabela própria (ADR-0002)
   Stack,
+  // painel Origens: os cabeçalhos das seções Origens e Visualizações
+  SquaresFour,
+  FrameCorners,
 } from "@phosphor-icons/react/dist/ssr";
