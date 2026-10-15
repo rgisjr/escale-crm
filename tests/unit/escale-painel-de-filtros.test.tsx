@@ -142,6 +142,16 @@ describe("<PainelDeFiltros>", () => {
     expect(onMudar).toHaveBeenLastCalledWith({ status: ["open"], dono: "unassigned" });
   });
 
+  it("Negócio: com um dono escolhido, 'Todos' desfaz o filtro", async () => {
+    const { onMudar, u } = painel({ status: ["open"], dono: "u-ana" });
+    await abrir(u);
+    const caixa = screen.getByRole("combobox", { name: "Dono do negócio" });
+    expect(caixa).toHaveTextContent("Ana");
+    await u.click(caixa);
+    await u.click(screen.getByRole("option", { name: "Todos" }));
+    expect(onMudar).toHaveBeenLastCalledWith({ status: ["open"], dono: undefined });
+  });
+
   it("Negócio com perdidos no status: o motivo de perda vem dos cards perdidos", async () => {
     const { onMudar, u } = painel({ status: ["open", "lost"] });
     await abrir(u);
@@ -205,6 +215,55 @@ describe("<PainelDeFiltros>", () => {
     expect(screen.getByRole("textbox", { name: "Valor" })).toHaveValue("ana");
     await u.click(screen.getByRole("button", { name: "Remover condição" }));
     expect(onMudar).toHaveBeenLastCalledWith({ status: ["open"], campos: undefined });
+  });
+
+  it("Campos: escolher de novo o operador atual não apaga o valor digitado", async () => {
+    const { onMudar, u } = painel({
+      status: ["open"],
+      campos: [{ alvo: "contato", chave: "nome", op: "contem", valor: "ana" }],
+    });
+    await abrir(u, /^Campos/);
+    await u.click(screen.getByRole("combobox", { name: "Operador" }));
+    await u.click(screen.getByRole("option", { name: "contém" }));
+    expect(onMudar).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Valor" })).toHaveValue("ana");
+  });
+
+  it("Campos: escolher de novo o campo atual não zera operador nem valor", async () => {
+    const { onMudar, u } = painel({
+      status: ["open"],
+      campos: [{ alvo: "contato", chave: "nome", op: "contem", valor: "ana" }],
+    });
+    await abrir(u, /^Campos/);
+    await u.click(screen.getByRole("combobox", { name: "Campo" }));
+    await u.click(screen.getByRole("option", { name: "Nome do contato" }));
+    expect(onMudar).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Valor" })).toHaveValue("ana");
+  });
+
+  it("Campos: campo do negócio com o nome de um do contato ganha o grupo no rótulo do contato", async () => {
+    const campos = camposFiltraveis([
+      { fields: [{ key: "nome_contato", label: "Nome do contato", type: "text" }] },
+    ]);
+    const onMudar = vi.fn();
+    render(
+      <PainelDeFiltros
+        filtros={{
+          status: ["open"],
+          campos: [{ alvo: "negocio", chave: "nome_contato", op: "contem" }],
+        }}
+        onMudar={onMudar}
+        leads={LEADS}
+        campos={campos}
+        settings={{}}
+      />,
+    );
+    const u = novoUsuario();
+    await abrir(u, /^Campos/);
+    await u.click(screen.getByRole("combobox", { name: "Campo" }));
+    expect(screen.getByRole("option", { name: "Contato · Nome do contato" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "E-mail do contato" })).toBeInTheDocument();
+    expect(screen.getAllByRole("option", { name: "Nome do contato" })).toHaveLength(1);
   });
 
   it("Campos: trocar o campo e escolher o valor de um campo de opção passam pela caixa com busca", async () => {

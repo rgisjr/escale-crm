@@ -49,17 +49,23 @@ export function SecaoCampos({
   const atingiuOLimite = condicoes.length >= CONDICOES_DE_CAMPO_MAX;
   // Com campos personalizados a lista de campos cresce: `SearchableSelect` mostra a busca a
   // partir de 8 opções, e o nome do grupo entra como palavra-chave ("Contato" acha os do contato).
+  // Um campo personalizado do negócio pode ter o mesmo nome de um do contato: nesse caso (e só
+  // nele) o rótulo do contato carrega o grupo, para as duas opções não parecerem iguais.
+  const rotulosDoNegocio = new Set(doNegocio.map((c) => c.rotulo));
   const opcoesDeCampo = [
     ...doNegocio.map((c) => ({
       value: chaveDoCampo(c),
       label: c.rotulo,
       keywords: [t("Negócio")],
     })),
-    ...doContato.map((c) => ({
-      value: chaveDoCampo(c),
-      label: t(c.rotulo),
-      keywords: [t("Contato")],
-    })),
+    ...doContato.map((c) => {
+      const rotulo = t(c.rotulo);
+      return {
+        value: chaveDoCampo(c),
+        label: rotulosDoNegocio.has(rotulo) ? `${t("Contato")} · ${rotulo}` : rotulo,
+        keywords: [t("Contato")],
+      };
+    }),
   ];
 
   function trocar(indice: number, nova: CondicaoDeCampo | null) {
@@ -89,6 +95,8 @@ export function SecaoCampos({
                     : [{ value: chaveDoCampo(condicao), label: condicao.chave }, ...opcoesDeCampo]
                 }
                 onValueChange={(chave) => {
+                  // Escolher de novo o campo atual não é troca: manteria o operador e o valor.
+                  if (chave === chaveDoCampo(condicao)) return;
                   const novo = porChave.get(chave);
                   if (novo) trocar(indice, condicaoNova(novo));
                 }}
@@ -111,6 +119,8 @@ export function SecaoCampos({
               }))}
               onValueChange={(valor) => {
                 const op = valor as OperadorDeCampo;
+                // Escolher de novo o operador atual não é troca: apagaria o valor digitado.
+                if (op === condicao.op) return;
                 trocar(indice, {
                   alvo: condicao.alvo,
                   chave: condicao.chave,
