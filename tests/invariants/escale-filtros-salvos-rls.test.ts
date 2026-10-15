@@ -31,6 +31,15 @@ const F_PRIVADO = "e5ca1e00-9004-4000-8000-000000000021";
 const F_COMPARTILHADO = "e5ca1e00-9004-4000-8000-000000000022";
 const F_NA_VISUALIZACAO = "e5ca1e00-9004-4000-8000-000000000023";
 const F_B = "e5ca1e00-9004-4000-8000-000000000024";
+const F_TEMP_EDITAR = "e5ca1e00-9004-4000-8000-000000000041";
+const F_TEMP_APAGAR = "e5ca1e00-9004-4000-8000-000000000042";
+const F_TEMP_TROCAR = "e5ca1e00-9004-4000-8000-000000000043";
+const V_TEMP = "e5ca1e00-9004-4000-8000-000000000051";
+const F_NA_V_TEMP = "e5ca1e00-9004-4000-8000-000000000052";
+const P_TEMP = "e5ca1e00-9004-4000-8000-000000000053";
+const F_NA_P_TEMP = "e5ca1e00-9004-4000-8000-000000000054";
+const U_TEMP = "e5ca1e00-9004-4000-8000-000000000055";
+const F_DO_U_TEMP = "e5ca1e00-9004-4000-8000-000000000056";
 const T_FEITA_1 = "e5ca1e00-9004-4000-8000-000000000031";
 const T_FEITA_2 = "e5ca1e00-9004-4000-8000-000000000032";
 const T_ABERTA = "e5ca1e00-9004-4000-8000-000000000033";
@@ -81,8 +90,23 @@ beforeAll(() => {
              ('${T_FEITA_2}', '${GOV_ORG}', 'Mandar proposta', 'done', '${GOV_LEAD}'),
              ('${T_ABERTA}', '${GOV_ORG}', 'Cobrar', 'pending', '${GOV_LEAD}')
       on conflict do nothing;
+    -- Os nomes fixos dos controles positivos de escrita: apagar antes, para a
+    -- prova repetir contra um banco que já a rodou (o índice único recusaria).
+    delete from public.crm_filtros_salvos
+      where organization_id = '${GOV_ORG}'
+        and user_id in ('${GOV_AGENT_B}', '${GOV_VIEWER}')
+        and nome in ('Do agent B', 'Do viewer');
   `);
 });
+
+/** Recria, como superusuário, um filtro descartável do próprio teste (sempre limpo, repetível). */
+function recriarFiltroDescartavel(id: string, nome: string): void {
+  sql(`
+    delete from public.crm_filtros_salvos where id = '${id}';
+    insert into public.crm_filtros_salvos (id, organization_id, user_id, pipeline_id, nome, criterios)
+      values ('${id}', '${GOV_ORG}', '${GOV_AGENT_A}', '${GOV_PIPELINE}', '${nome}', '{"status":["open"]}');
+  `);
+}
 
 const visto = (id: string) => `select count(*) from public.crm_filtros_salvos where id = '${id}';`;
 
@@ -118,6 +142,35 @@ describe("crm_filtros_salvos — quem escreve", () => {
     expect(sql(`select nome from public.crm_filtros_salvos where id = '${F_COMPARTILHADO}';`)).toBe("Do time");
   });
 
+  it("o dono muda e apaga o próprio filtro (controles positivos da policy de escrita)", () => {
+    recriarFiltroDescartavel(F_TEMP_EDITAR, "Descartavel editar");
+    recriarFiltroDescartavel(F_TEMP_APAGAR, "Descartavel apagar");
+
+    expect(
+      writeCountAs(GOV_AGENT_A, `update public.crm_filtros_salvos set nome = 'Renomeado pelo dono' where id = '${F_TEMP_EDITAR}'`),
+    ).toBe(1);
+    expect(sql(`select nome from public.crm_filtros_salvos where id = '${F_TEMP_EDITAR}';`)).toBe("Renomeado pelo dono");
+
+    expect(writeCountAs(GOV_AGENT_A, `delete from public.crm_filtros_salvos where id = '${F_TEMP_APAGAR}'`)).toBe(1);
+    expect(sql(`select count(*) from public.crm_filtros_salvos where id = '${F_TEMP_APAGAR}';`)).toBe("0");
+    sql(`delete from public.crm_filtros_salvos where id = '${F_TEMP_EDITAR}';`);
+  });
+
+  it("o dono não passa o filtro para outra pessoa nem para outra organização (WITH CHECK)", () => {
+    recriarFiltroDescartavel(F_TEMP_TROCAR, "Descartavel trocar");
+
+    expect(
+      writeCountAs(GOV_AGENT_A, `update public.crm_filtros_salvos set user_id = '${GOV_AGENT_B}' where id = '${F_TEMP_TROCAR}'`),
+    ).toBe(0);
+    expect(
+      writeCountAs(GOV_AGENT_A, `update public.crm_filtros_salvos set organization_id = '${ORG_B}' where id = '${F_TEMP_TROCAR}'`),
+    ).toBe(0);
+    expect(
+      sql(`select user_id || '|' || organization_id from public.crm_filtros_salvos where id = '${F_TEMP_TROCAR}';`),
+    ).toBe(`${GOV_AGENT_A}|${GOV_ORG}`);
+    sql(`delete from public.crm_filtros_salvos where id = '${F_TEMP_TROCAR}';`);
+  });
+
   it("ninguém cria filtro em nome de outra pessoa nem em outra organização", () => {
     expect(
       writeCountAs(GOV_AGENT_B, `insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome) values ('${GOV_ORG}', '${GOV_AGENT_A}', '${GOV_PIPELINE}', 'Em nome da Ana')`),
@@ -148,6 +201,15 @@ describe("crm_filtros_salvos — CHECKs, índice e FKs", () => {
     ).toThrow(/crm_filtros_salvos_um_alvo/);
   });
 
+  it("o banco recusa nome em branco e nome com 61 caracteres (crm_filtros_salvos_nome_valido)", () => {
+    expect(() =>
+      sql(`insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome) values ('${GOV_ORG}', '${GOV_AGENT_A}', '${GOV_PIPELINE}', '   ');`),
+    ).toThrow(/crm_filtros_salvos_nome_valido/);
+    expect(() =>
+      sql(`insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome) values ('${GOV_ORG}', '${GOV_AGENT_A}', '${GOV_PIPELINE}', '${"x".repeat(61)}');`),
+    ).toThrow(/crm_filtros_salvos_nome_valido/);
+  });
+
   it("o banco recusa origem de outra organização e nome repetido (sem olhar caixa) da mesma pessoa no mesmo alvo", () => {
     expect(() =>
       sql(`insert into public.crm_filtros_salvos (organization_id, user_id, pipeline_id, nome) values ('${GOV_ORG}', '${GOV_AGENT_A}', '${FUNIL_B}', 'Fora');`),
@@ -157,11 +219,41 @@ describe("crm_filtros_salvos — CHECKs, índice e FKs", () => {
     ).toThrow(/uq_crm_filtros_salvos_nome/);
   });
 
-  it("apagar a origem, a visualização ou a pessoa da organização leva o filtro junto", () => {
+  it("as três FKs declaram ON DELETE CASCADE (metadado do catálogo)", () => {
     expect(
       sql(`select string_agg(conname || '=' || confdeltype::text,',' order by conname) from pg_constraint
             where conname in ('crm_filtros_salvos_dono_fk', 'crm_filtros_salvos_origem_fk', 'crm_filtros_salvos_visualizacao_fk');`),
     ).toBe("crm_filtros_salvos_dono_fk=c,crm_filtros_salvos_origem_fk=c,crm_filtros_salvos_visualizacao_fk=c");
+  });
+
+  it("apagar a visualização, a origem ou a pessoa da organização leva o filtro junto (cascata real, com pais descartáveis)", () => {
+    // Pais descartáveis do próprio teste: o seed compartilhado não é tocado.
+    sql(`
+      delete from public.crm_pipeline_views where id = '${V_TEMP}';
+      delete from public.crm_pipelines where id = '${P_TEMP}';
+      delete from public.user_organizations where user_id = '${U_TEMP}';
+      delete from auth.users where id = '${U_TEMP}';
+      insert into public.crm_pipeline_views (id, organization_id, name) values ('${V_TEMP}', '${GOV_ORG}', 'Descartavel (filtros)');
+      insert into public.crm_pipelines (id, organization_id, name, slug) values ('${P_TEMP}', '${GOV_ORG}', 'Descartavel filtros', 'escale-filtros-descartavel');
+      insert into auth.users (id, email) values ('${U_TEMP}', 'escale-filtros-descartavel@invariant.test');
+      insert into public.user_organizations (user_id, organization_id, role, accepted_at) values ('${U_TEMP}', '${GOV_ORG}', 'agent', now());
+      insert into public.crm_filtros_salvos (id, organization_id, user_id, pipeline_id, view_id, nome)
+        values ('${F_NA_V_TEMP}', '${GOV_ORG}', '${GOV_AGENT_A}', null, '${V_TEMP}', 'Na visualizacao descartavel'),
+               ('${F_NA_P_TEMP}', '${GOV_ORG}', '${GOV_AGENT_A}', '${P_TEMP}', null, 'Na origem descartavel');
+      insert into public.crm_filtros_salvos (id, organization_id, user_id, pipeline_id, nome)
+        values ('${F_DO_U_TEMP}', '${GOV_ORG}', '${U_TEMP}', '${GOV_PIPELINE}', 'Da pessoa descartavel');
+    `);
+    const existe = (id: string) => sql(`select count(*) from public.crm_filtros_salvos where id = '${id}';`);
+    expect([F_NA_V_TEMP, F_NA_P_TEMP, F_DO_U_TEMP].map(existe)).toEqual(["1", "1", "1"]);
+
+    sql(`delete from public.crm_pipeline_views where id = '${V_TEMP}';`);
+    expect(existe(F_NA_V_TEMP)).toBe("0");
+    sql(`delete from public.crm_pipelines where id = '${P_TEMP}';`);
+    expect(existe(F_NA_P_TEMP)).toBe("0");
+    sql(`delete from public.user_organizations where user_id = '${U_TEMP}' and organization_id = '${GOV_ORG}';`);
+    expect(existe(F_DO_U_TEMP)).toBe("0");
+
+    sql(`delete from auth.users where id = '${U_TEMP}';`);
   });
 });
 
