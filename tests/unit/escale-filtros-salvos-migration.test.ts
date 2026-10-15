@@ -53,7 +53,7 @@ describe("filtros salvos: migration 9004 e bloco do baseline", () => {
   it("escrever exige o alvo VISÍVEL sob a RLS de quem grava; o USING segue só do dono", () => {
     const sql = ler(MIGRATION);
     const policy = sql.slice(sql.indexOf("create policy crm_filtros_salvos_dono_write"), sql.indexOf("revoke all on public.crm_filtros_salvos from anon;"));
-    const [using, withCheck] = policy.split("with check (");
+    const [using = "", withCheck] = policy.split("with check (");
     const usingCompacto = using.replace(/\s+/g, " ");
     expect(usingCompacto).toContain("organization_id in (select public.fn_user_org_ids())");
     expect(usingCompacto).toContain("and user_id = auth.uid()");
@@ -72,7 +72,7 @@ describe("filtros salvos: migration 9004 e bloco do baseline", () => {
   it("escrever exige papel (viewer ou acima) no USING e no WITH CHECK — cerca de RBAC da 0150", () => {
     const sql = ler(MIGRATION);
     const policy = sql.slice(sql.indexOf("create policy crm_filtros_salvos_dono_write"), sql.indexOf("revoke all on public.crm_filtros_salvos from anon;"));
-    const [using, withCheck] = policy.split("with check (");
+    const [using = "", withCheck] = policy.split("with check (");
     expect(using).toContain("public.fn_role_at_least(organization_id, 'viewer')");
     expect(withCheck ?? "").toContain("public.fn_role_at_least(organization_id, 'viewer')");
   });
