@@ -24,6 +24,7 @@ import { alvoExiste } from "@/lib/escale/filtros/ler-filtros-salvos";
 import {
   alvoDaBusca,
   falhaDaGravacaoDoFiltro,
+  falhaInesperada,
   meusFiltrosCrusOuFalha,
   responderComFiltrosSalvos,
 } from "@/lib/escale/filtros/respostas";
@@ -34,6 +35,12 @@ import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const ROTA = "/api/v1/filtros-salvos";
+const POST_ONDE = {
+  ler: { rota: `POST ${ROTA}`, operacao: "ler meus filtros" },
+  reler: { rota: `POST ${ROTA}`, operacao: "reler a lista" },
+};
 
 const corpoSchema = z
   .object({
@@ -56,7 +63,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!alvo) {
     return fail("unprocessable_entity", t("Diga de qual origem ou visualização são os filtros."), 422, { requestId });
   }
-  return responderComFiltrosSalvos(await createClient(), authz.org.orgId, authz.user.id, alvo, requestId);
+  return responderComFiltrosSalvos(await createClient(), authz.org.orgId, authz.user.id, alvo, requestId, t, { rota: `GET ${ROTA}`, operacao: "listar" });
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -90,12 +97,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     existe = await alvoExiste(supabase, orgId, alvo);
   } catch (err) {
-    return fail("internal_error", (err as Error).message, 500, { requestId });
+    return falhaInesperada(err as Error, { rota: `POST ${ROTA}`, operacao: "conferir origem ou visualização" }, t, requestId);
   }
   if (!existe) return fail("not_found", t("Origem ou visualização não encontrada."), 404, { requestId });
 
   // Linhas CRUAS: um filtro de critérios que o schema não aceita mais some da lista, mas conta.
-  const atuais = await meusFiltrosCrusOuFalha(supabase, orgId, userId, alvo, requestId);
+  const atuais = await meusFiltrosCrusOuFalha(supabase, orgId, userId, alvo, requestId, t, POST_ONDE.ler);
   if (!atuais.ok) return atuais.resposta;
   const meus = atuais.filtros;
   if (nomeRepetido(nome.nome, meus)) {
@@ -115,7 +122,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     compartilhado: parsed.data.compartilhado,
     criterios: parsed.data.criterios,
   });
-  if (error) return falhaDaGravacaoDoFiltro(error, t, requestId);
+  if (error) return falhaDaGravacaoDoFiltro(error, t, requestId, { rota: `POST ${ROTA}`, operacao: "inserir" });
 
   void audit({
     action: "pipeline_filter.created",
@@ -127,5 +134,5 @@ export async function POST(req: NextRequest): Promise<Response> {
     metadata: { alvo: alvo.tipo, compartilhado: parsed.data.compartilhado },
   });
 
-  return responderComFiltrosSalvos(supabase, orgId, userId, alvo, requestId, 201);
+  return responderComFiltrosSalvos(supabase, orgId, userId, alvo, requestId, t, POST_ONDE.reler, 201);
 }

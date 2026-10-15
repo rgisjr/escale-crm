@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { audit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 import { requireRole } from "@/lib/auth/require-role";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,7 @@ import { ORG_ID, OUTRA_ORG, USER_ID, authOk, makeDb, type PipelineRow } from "@/
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/impersonate/support", () => ({ requireSupportWrite: vi.fn(async () => null) }));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 
 const F1 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1";
@@ -89,6 +91,7 @@ beforeEach(() => {
   vi.mocked(requireRole).mockReset();
   vi.mocked(createClient).mockReset();
   vi.mocked(audit).mockClear();
+  vi.mocked(logger.error).mockClear();
   authOk();
 });
 
@@ -267,6 +270,34 @@ describe("POST /api/v1/filtros-salvos", () => {
       expect((await criar(novoValido)).status).toBe(status);
     }
     expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("erro inesperado do banco é 500 genérico: a mensagem crua vai para o log, não para o cliente", async () => {
+    const CRU = 'insert or update on table "crm_filtros_salvos" violates something internal';
+    const banco500 = { code: "XX000", message: CRU };
+    const casos: Array<[string, () => Promise<Response>, Parameters<typeof makeDb>[0]]> = [
+      ["POST inserir", () => criar(novoValido), { writeError: (_n, t) => (t === "crm_filtros_salvos" ? banco500 : null) }],
+      ["POST ler meus filtros", () => criar(novoValido), { readError: (t) => (t === "crm_filtros_salvos" ? banco500 : null) }],
+      ["GET listar", () => listar(`origem=${F1}`), { readError: (t) => (t === "crm_filtros_salvos" ? banco500 : null) }],
+      ["PATCH atualizar", () => mudar(S_QUENTES, { compartilhado: true }), { writeError: (_n, t) => (t === "crm_filtros_salvos" ? banco500 : null) }],
+      ["DELETE excluir", () => excluir(S_QUENTES), { writeError: (_n, t) => (t === "crm_filtros_salvos" ? banco500 : null) }],
+    ];
+    for (const [nome, chamar, opts] of casos) {
+      vi.mocked(logger.error).mockClear();
+      banco(opts);
+      const res = await chamar();
+      const corpo = await res.text();
+      expect(res.status, nome).toBe(500);
+      expect(corpo, nome).toContain("Não consegui completar essa ação. Tente de novo.");
+      expect(corpo, nome).not.toContain("crm_filtros_salvos");
+      expect(corpo, nome).not.toContain("violates");
+      expect(logger.error, nome).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ rota: expect.stringContaining("/api/v1/filtros-salvos"), operacao: expect.any(String), requestId: expect.any(String) }),
+      );
+      const ctxLog = vi.mocked(logger.error).mock.calls[0]![1] as { erro: string };
+      expect(ctxLog.erro, nome).toContain(nome.startsWith("GET") || nome.includes("ler") ? "crm_filtros_salvos" : CRU);
+    }
   });
 
   it("o suporte somente leitura para antes de tudo", async () => {

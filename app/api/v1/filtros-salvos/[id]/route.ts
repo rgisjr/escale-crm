@@ -15,6 +15,7 @@ import { nomeRepetido, validarNomeDoFiltro } from "@/lib/escale/filtros/filtros-
 import { alvoDaLinha, meuFiltro, type LinhaDoMeuFiltro } from "@/lib/escale/filtros/ler-filtros-salvos";
 import {
   falhaDaGravacaoDoFiltro,
+  falhaInesperada,
   meusFiltrosCrusOuFalha,
   responderComFiltrosSalvos,
 } from "@/lib/escale/filtros/respostas";
@@ -25,6 +26,9 @@ import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const ROTA = "/api/v1/filtros-salvos/[id]";
+const onde = (metodo: "PATCH" | "DELETE", operacao: string) => ({ rota: `${metodo} ${ROTA}`, operacao });
 
 interface RouteCtx {
   params: Promise<{ id: string }>;
@@ -49,6 +53,7 @@ async function acharMeuFiltro(
   id: string,
   t: (texto: string) => string,
   requestId: string,
+  metodo: "PATCH" | "DELETE",
 ): Promise<{ ok: true; linha: LinhaDoMeuFiltro } | { ok: false; resposta: Response }> {
   const naoAchou = { ok: false as const, resposta: fail("not_found", t("Filtro não encontrado."), 404, { requestId }) };
   if (!ehUuid(id)) return naoAchou;
@@ -56,7 +61,7 @@ async function acharMeuFiltro(
     const linha = await meuFiltro(supabase, orgId, userId, id);
     return linha ? { ok: true, linha } : naoAchou;
   } catch (err) {
-    return { ok: false, resposta: fail("internal_error", (err as Error).message, 500, { requestId }) };
+    return { ok: false, resposta: falhaInesperada(err as Error, onde(metodo, "achar o filtro"), t, requestId) };
   }
 }
 
@@ -83,7 +88,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   }
 
   const supabase = await createClient();
-  const achado = await acharMeuFiltro(supabase, orgId, userId, id, t, requestId);
+  const achado = await acharMeuFiltro(supabase, orgId, userId, id, t, requestId, "PATCH");
   if (!achado.ok) return achado.resposta;
   const alvo = alvoDaLinha(achado.linha);
 
@@ -91,7 +96,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   if (parsed.data.nome !== undefined) {
     const nome = validarNomeDoFiltro(parsed.data.nome);
     if (!nome.ok) return fail("unprocessable_entity", t(nome.erro), 422, { requestId });
-    const atuais = await meusFiltrosCrusOuFalha(supabase, orgId, userId, alvo, requestId);
+    const atuais = await meusFiltrosCrusOuFalha(supabase, orgId, userId, alvo, requestId, t, onde("PATCH", "ler meus filtros"));
     if (!atuais.ok) return atuais.resposta;
     if (nomeRepetido(nome.nome, atuais.filtros, id)) {
       return fail("state_conflict", t("Você já tem um filtro com esse nome aqui."), 409, { requestId });
@@ -111,7 +116,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     // A posse já foi conferida acima (acharMeuFiltro); um 42501 aqui é o WITH CHECK
     // da RLS: quem criou perdeu a visibilidade da origem ou da visualização.
     if (error.code === "42501") return fail("not_found", t("Origem ou visualização não encontrada."), 404, { requestId });
-    return falhaDaGravacaoDoFiltro(error, t, requestId);
+    return falhaDaGravacaoDoFiltro(error, t, requestId, onde("PATCH", "atualizar"));
   }
 
   void audit({
@@ -124,7 +129,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     metadata: { campos: Object.keys(patch) },
   });
 
-  return responderComFiltrosSalvos(supabase, orgId, userId, alvo, requestId);
+  return responderComFiltrosSalvos(supabase, orgId, userId, alvo, requestId, t, onde("PATCH", "reler a lista"));
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
@@ -140,7 +145,7 @@ export async function DELETE(_req: NextRequest, ctx: RouteCtx): Promise<Response
   const { id } = await ctx.params;
 
   const supabase = await createClient();
-  const achado = await acharMeuFiltro(supabase, orgId, userId, id, t, requestId);
+  const achado = await acharMeuFiltro(supabase, orgId, userId, id, t, requestId, "DELETE");
   if (!achado.ok) return achado.resposta;
 
   const { error } = await supabase
@@ -149,7 +154,7 @@ export async function DELETE(_req: NextRequest, ctx: RouteCtx): Promise<Response
     .eq("id", id)
     .eq("organization_id", orgId)
     .eq("user_id", userId);
-  if (error) return falhaDaGravacaoDoFiltro(error, t, requestId);
+  if (error) return falhaDaGravacaoDoFiltro(error, t, requestId, onde("DELETE", "excluir"));
 
   void audit({
     action: "pipeline_filter.deleted",
@@ -161,5 +166,13 @@ export async function DELETE(_req: NextRequest, ctx: RouteCtx): Promise<Response
     metadata: { nome: achado.linha.nome },
   });
 
-  return responderComFiltrosSalvos(supabase, orgId, userId, alvoDaLinha(achado.linha), requestId);
+  return responderComFiltrosSalvos(
+    supabase,
+    orgId,
+    userId,
+    alvoDaLinha(achado.linha),
+    requestId,
+    t,
+    onde("DELETE", "reler a lista"),
+  );
 }

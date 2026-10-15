@@ -7,12 +7,42 @@
  * guarda de suporte escrita nele.
  */
 import { fail, ok } from "@/lib/api/wrappers";
+import { logger } from "@/lib/logger";
 import type { createClient } from "@/lib/supabase/server";
 
 import type { AlvoDoFiltro, FiltroSalvo } from "./filtros-salvos";
 import { lerFiltrosSalvos, lerMeusFiltrosCrus } from "./ler-filtros-salvos";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+type Traduzir = (texto: string) => string;
+
+/** Onde o erro aconteceu: vai para o log, nunca para o cliente. */
+export interface OndeFalhou {
+  rota: string;
+  operacao: string;
+}
+
+/**
+ * 500 para o que o banco devolveu e a gente não sabe nomear: o cliente recebe só
+ * o texto genérico; a mensagem crua (que cita tabela, constraint e coluna) fica
+ * no log do servidor, com o requestId para achar a linha.
+ */
+export function falhaInesperada(
+  erro: { code?: string; message?: string } | null | undefined,
+  onde: OndeFalhou,
+  t: Traduzir,
+  requestId: string,
+): Response {
+  logger.error("[filtros-salvos] erro inesperado", {
+    rota: onde.rota,
+    operacao: onde.operacao,
+    codigo: erro?.code ?? null,
+    erro: erro?.message ?? String(erro),
+    requestId,
+  });
+  return fail("internal_error", t("Não consegui completar essa ação. Tente de novo."), 500, { requestId });
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -31,11 +61,13 @@ export async function filtrosSalvosOuFalha(
   userId: string,
   alvo: AlvoDoFiltro,
   requestId: string,
+  t: Traduzir,
+  onde: OndeFalhou,
 ): Promise<{ ok: true; filtros: FiltroSalvo[] } | { ok: false; resposta: Response }> {
   try {
     return { ok: true, filtros: await lerFiltrosSalvos(supabase, orgId, userId, alvo) };
   } catch (err) {
-    return { ok: false, resposta: fail("internal_error", (err as Error).message, 500, { requestId }) };
+    return { ok: false, resposta: falhaInesperada(err as Error, onde, t, requestId) };
   }
 }
 
@@ -46,11 +78,13 @@ export async function meusFiltrosCrusOuFalha(
   userId: string,
   alvo: AlvoDoFiltro,
   requestId: string,
+  t: Traduzir,
+  onde: OndeFalhou,
 ): Promise<{ ok: true; filtros: Array<{ id: string; nome: string }> } | { ok: false; resposta: Response }> {
   try {
     return { ok: true, filtros: await lerMeusFiltrosCrus(supabase, orgId, userId, alvo) };
   } catch (err) {
-    return { ok: false, resposta: fail("internal_error", (err as Error).message, 500, { requestId }) };
+    return { ok: false, resposta: falhaInesperada(err as Error, onde, t, requestId) };
   }
 }
 
@@ -61,9 +95,11 @@ export async function responderComFiltrosSalvos(
   userId: string,
   alvo: AlvoDoFiltro,
   requestId: string,
+  t: Traduzir,
+  onde: OndeFalhou,
   status: 200 | 201 = 200,
 ): Promise<Response> {
-  const lido = await filtrosSalvosOuFalha(supabase, orgId, userId, alvo, requestId);
+  const lido = await filtrosSalvosOuFalha(supabase, orgId, userId, alvo, requestId, t, onde);
   return lido.ok ? ok(lido.filtros, { status, requestId }) : lido.resposta;
 }
 
@@ -77,8 +113,9 @@ export async function responderComFiltrosSalvos(
  */
 export function falhaDaGravacaoDoFiltro(
   erro: { code?: string; message?: string },
-  t: (texto: string) => string,
+  t: Traduzir,
   requestId: string,
+  onde: OndeFalhou,
 ): Response {
   if (erro.code === "23505") {
     return erro.message?.includes("crm_filtros_salvos_pkey")
@@ -93,5 +130,5 @@ export function falhaDaGravacaoDoFiltro(
     return fail("unprocessable_entity", t("Não consegui completar essa ação. Tente de novo."), 422, { requestId });
   }
   if (erro.code === "42501") return fail("forbidden", t("Só quem criou o filtro pode mudá-lo."), 403, { requestId });
-  return fail("internal_error", erro.message ?? "", 500, { requestId });
+  return falhaInesperada(erro, onde, t, requestId);
 }
