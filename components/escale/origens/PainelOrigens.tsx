@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAtualizarVisualizacao } from "@/hooks/escale/useVisualizacoes";
 import { useT } from "@/hooks/i18n/useT";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
@@ -34,8 +35,8 @@ import { cn } from "@/lib/utils";
 import { ArquivadosDoPainel } from "./ArquivadosDoPainel";
 import { CabecalhoDaSecao } from "./CabecalhoDaSecao";
 import { JanelasDeOrigens, type Janela } from "./JanelasDeOrigens";
+import { BOTAO_DE_ICONE } from "./estilos-do-painel";
 import {
-  BOTAO_DE_ICONE,
   LinhaDaOrigem,
   LinhaDoGrupo,
   type AcaoDaOrigem,
@@ -268,6 +269,7 @@ export function PainelOrigens({
   }
 
   return (
+    <TooltipProvider delayDuration={300}>
     <aside
       aria-label={t("Origens")}
       className="sticky top-0 hidden max-h-[calc(100dvh-6.5rem)] w-64 shrink-0 flex-col rounded-lg border bg-card md:flex"
@@ -457,5 +459,6 @@ export function PainelOrigens({
         />
       )}
     </aside>
+    </TooltipProvider>
   );
 }

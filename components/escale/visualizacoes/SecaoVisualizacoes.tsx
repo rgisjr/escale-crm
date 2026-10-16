@@ -2,7 +2,8 @@
 import Link from "next/link";
 
 import { CabecalhoDaSecao } from "@/components/escale/origens/CabecalhoDaSecao";
-import { BOTAO_DE_ICONE, SO_NO_FOCO, Tres } from "@/components/escale/origens/LinhasDoPainel";
+import { BOTAO_DE_ICONE, SO_NO_HOVER as SO_NO_FOCO } from "@/components/escale/origens/estilos-do-painel";
+import { Tres } from "@/components/escale/origens/MenuDoPainel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useT } from "@/hooks/i18n/useT";
 import { iniciais, type Origens } from "@/lib/escale/origens/regras";
