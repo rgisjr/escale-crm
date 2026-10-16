@@ -118,10 +118,28 @@ describe("tema Escale", () => {
     }
   });
 
-  it("as fontes do @font-face existem no repositório", () => {
+  it("as fontes do @font-face existem no repositório e são woff2 de verdade", () => {
     const urls = [...CSS.matchAll(/url\("\.\/(fonts\/[^"]+)"\)/g)].map((m) => m[1]!);
-    expect(urls.length).toBe(2);
+    expect(urls).toEqual([
+      "fonts/poppins-400-latin.woff2",
+      "fonts/poppins-500-latin.woff2",
+      "fonts/poppins-600-latin.woff2",
+      "fonts/jetbrains-mono-100-800-latin.woff2",
+    ]);
     expect(urls.filter((u) => !existsSync(join(RAIZ, "app", u)))).toEqual([]);
+    // Uma página de erro salva com o nome .woff2 passaria no existsSync.
+    for (const u of urls) {
+      expect(readFileSync(join(RAIZ, "app", u)).subarray(0, 4).toString("latin1"), u).toBe("wOF2");
+    }
+  });
+
+  it("a casca usa a Poppins da Clint, só nos pesos 400, 500 e 600", () => {
+    expect(CLARO["--font-atkinson"]).toMatch(/^"Escale Poppins",/);
+    const pesos = [...CSS.matchAll(/font-family:\s*"Escale Poppins";[^}]*?font-weight:\s*(\d+);/g)].map(
+      (m) => m[1],
+    );
+    expect(pesos).toEqual(["400", "500", "600"]);
+    expect(CSS).not.toContain("Figtree");
   });
 
   it("a casca põe o marcador do tema só no modo topo, e o layout lê a chave do cookie", () => {
