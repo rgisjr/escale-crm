@@ -407,6 +407,18 @@ export function PipelinePageClient({
           }
           // FORK ESCALE · Fase 1E: o ⋮ da etapa (lote pede agent, como a rota).
           podeSelecionarNaEtapa={cascaNova && podeCriar}
+          aoFecharDossie={
+            cascaNova
+              ? () => {
+                  // FORK ESCALE · Fase 1E: o `?lead=` sai da URL ao fechar, para o mesmo Recente reabrir.
+                  if (!searchParams.has("lead")) return;
+                  const busca = new URLSearchParams(searchParams);
+                  busca.delete("lead");
+                  const qs = busca.toString();
+                  router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+                }
+              : undefined
+          }
         />
       )}
       <BulkActionBar

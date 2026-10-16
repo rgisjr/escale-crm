@@ -1,9 +1,11 @@
 "use client";
 import { CardDaCasca } from "@/components/escale/quadro/CardDaCasca";
 import { ColunaDaCasca } from "@/components/escale/quadro/ColunaDaCasca";
+import { useChaveDosRecentes, useNegociosRecentes } from "@/hooks/escale/useNegociosRecentes";
 import { usePrefsDoCard } from "@/hooks/escale/usePrefsDoCard";
 import { PREFS_PADRAO, type CampoDaCapa } from "@/lib/escale/capa/tipos";
 import { totalDaColuna } from "@/lib/escale/quadro/aparencia";
+import { recenteDoLead } from "@/lib/escale/recentes/regras";
 import type { ColunaCombinada } from "@/lib/escale/visualizacoes/regras";
 import { buildCardInput } from "@/lib/kanban/card-state";
 import type { Lead } from "@/lib/types/leads";
@@ -45,6 +47,7 @@ export function ColunaDaVisualizacao({
   onOpen: (leadId: string) => void;
 }) {
   const prefs = usePrefsDoCard().data ?? PREFS_PADRAO;
+  const { registrar } = useNegociosRecentes(useChaveDosRecentes());
   return (
     <ColunaDaCasca
       idDaColuna={coluna.chave}
@@ -74,7 +77,11 @@ export function ColunaDaVisualizacao({
             isSelecting={selecionados.size > 0}
             pulseCount={contexto.pulses.get(lead.id) ?? 0}
             onSelect={aoSelecionar}
-            onOpen={onOpen}
+            onOpen={(id) => {
+              onOpen(id);
+              // Fase 1E: o negócio aberto entra nos Recentes do painel, com a origem DELE.
+              registrar(recenteDoLead(lead, origem));
+            }}
             nomes={contexto.ownerNames}
             origem={origem}
             prefs={prefs}

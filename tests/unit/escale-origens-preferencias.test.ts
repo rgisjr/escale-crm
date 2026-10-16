@@ -4,6 +4,7 @@ import {
   COOKIE_LISTA,
   COOKIE_OCULTOS,
   COOKIE_PAINEL,
+  COOKIE_RECENTES,
   COOKIE_ULTIMO_FUNIL,
   COOKIE_VISUALIZACOES,
   OCULTOS_MAX,
@@ -35,6 +36,7 @@ describe("preferências do painel Origens (cookies)", () => {
       painelAberto: true,
       listaAberta: true,
       visualizacoesAbertas: true,
+      recentesAbertos: false,
       ocultos: [],
     });
   });
@@ -50,6 +52,7 @@ describe("preferências do painel Origens (cookies)", () => {
       painelAberto: false,
       listaAberta: false,
       visualizacoesAbertas: false,
+      recentesAbertos: false,
       ocultos: [A, B],
     });
   });
@@ -68,5 +71,11 @@ describe("preferências do painel Origens (cookies)", () => {
     expect(cookieDaPreferencia({ nome: "painel", valor: "talvez" })).toBeNull();
     expect(cookieDaPreferencia({ nome: "outro", valor: "x" })).toBeNull();
     expect(cookieDaPreferencia("lixo")).toBeNull();
+  });
+
+  it("Fase 1E: Recentes abre recolhida; o cookie 'aberta' abre, e o navegador só grava aberta/fechada", () => {
+    expect(lerPreferenciasDoPainel((nome) => (nome === COOKIE_RECENTES ? "aberta" : undefined)).recentesAbertos).toBe(true);
+    expect(cookieDaPreferencia({ nome: "recentes", valor: "aberta" })).toEqual({ cookie: COOKIE_RECENTES, valor: "aberta" });
+    expect(cookieDaPreferencia({ nome: "recentes", valor: "talvez" })).toBeNull();
   });
 });

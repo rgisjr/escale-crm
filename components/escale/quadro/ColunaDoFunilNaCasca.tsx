@@ -1,10 +1,12 @@
 "use client";
 import { useRef, useState } from "react";
 
+import { useChaveDosRecentes, useNegociosRecentes } from "@/hooks/escale/useNegociosRecentes";
 import { usePrefsDoCard } from "@/hooks/escale/usePrefsDoCard";
 import { useT } from "@/hooks/i18n/useT";
 import { PREFS_PADRAO, type CampoDaCapa } from "@/lib/escale/capa/tipos";
 import { totalDaColuna } from "@/lib/escale/quadro/aparencia";
+import { recenteDoLead } from "@/lib/escale/recentes/regras";
 import { buildCardInput } from "@/lib/kanban/card-state";
 import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
@@ -32,7 +34,7 @@ export interface ColunaDoFunilNaCascaProps {
   aoSelecionarNaEtapa?: (ids: string[], n: number) => void;
   /** Os campos que o "Personalizar cards" pode pôr no card (Fase 1E). */
   camposDoCard?: readonly CampoDaCapa[];
-  /** O nome da origem (usado pelo Recentes, Task 14). */
+  /** O nome da origem: o detalhe do negócio nos Recentes do painel (Fase 1E). */
   nomeDaOrigem?: string;
 }
 
@@ -62,8 +64,10 @@ export function ColunaDoFunilNaCasca({
   aoAdicionar,
   aoSelecionarNaEtapa,
   camposDoCard,
+  nomeDaOrigem,
 }: ColunaDoFunilNaCascaProps) {
   const t = useT();
+  const { registrar } = useNegociosRecentes(useChaveDosRecentes());
   const prefs = usePrefsDoCard().data ?? PREFS_PADRAO;
   const selecionados = selectedLeadIds ?? NENHUM;
   const chance = stage.is_won ? 100 : stage.is_lost ? 0 : (stage.win_probability ?? null);
@@ -125,7 +129,11 @@ export function ColunaDoFunilNaCasca({
           isSelecting={selecionados.size > 0}
           pulseCount={pulses?.get(lead.id) ?? 0}
           onSelect={aoSelecionar}
-          onOpen={onOpen}
+          onOpen={(id) => {
+            onOpen?.(id);
+            // Fase 1E: o negócio aberto entra nos Recentes do painel.
+            registrar(recenteDoLead(lead, nomeDaOrigem ?? ""));
+          }}
           nomes={ownerNames}
           prefs={prefs}
           camposDoCard={camposDoCard}

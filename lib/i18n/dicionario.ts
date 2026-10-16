@@ -9490,6 +9490,18 @@ export const DICIONARIO: Traducoes = {
   "Falha ao exportar os negócios, tente novamente ou chame o suporte.": {
     es: "Error al exportar los negocios, inténtalo de nuevo o contacta con soporte.",
   },
+  // ─── FORK ESCALE · Fase 1E (Task 14): RECENTES no painel Origens (a Task 15 acrescenta o resto) ───
+  "Recentes": { es: "Recientes" },
+  "Recolher os recentes": { es: "Contraer los recientes" },
+  "Abrir os recentes": { es: "Abrir los recientes" },
+  "Você não possui negócios recém trabalhados.": { es: "No tienes negocios trabajados recientemente." },
+  "Você atingiu o limite. Desafixe algo pra fixar mais.": { es: "Alcanzaste el límite. Desfija algo para fijar más." },
+  "Fixar": { es: "Fijar" },
+  "Desafixar": { es: "Desfijar" },
+  "Esconder detalhes": { es: "Ocultar detalles" },
+  "Ver mais": { es: "Ver más" },
+  "Ver menos": { es: "Ver menos" },
+  "Sem empresa": { es: "Sin empresa" },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },

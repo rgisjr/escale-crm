@@ -15,6 +15,8 @@ export const COOKIE_PAINEL = "escale_origens_painel";
 export const COOKIE_LISTA = "escale_origens_lista";
 export const COOKIE_VISUALIZACOES = "escale_origens_visualizacoes";
 export const COOKIE_OCULTOS = "escale_origens_ocultos";
+/** Fase 1E: a seção Recentes aberta ("aberta"). Sem o cookie ela abre recolhida, como na Clint. */
+export const COOKIE_RECENTES = "escale_origens_recentes";
 
 /** Teto de grupos ocultos guardados: o cookie não cresce sem limite. */
 export const OCULTOS_MAX = 100;
@@ -25,6 +27,7 @@ export interface PreferenciasDoPainel {
   painelAberto: boolean;
   listaAberta: boolean;
   visualizacoesAbertas: boolean;
+  recentesAbertos: boolean;
   ocultos: string[];
 }
 
@@ -32,6 +35,7 @@ export type PreferenciaDeOrigens =
   | { nome: "painel"; valor: "aberto" | "fechado" }
   | { nome: "lista"; valor: "aberta" | "fechada" }
   | { nome: "visualizacoes"; valor: "aberta" | "fechada" }
+  | { nome: "recentes"; valor: "aberta" | "fechada" }
   | { nome: "ocultos"; valor: string[] }
   | { nome: "ultimo_funil"; valor: string };
 
@@ -57,6 +61,7 @@ export function lerPreferenciasDoPainel(ler: (nome: string) => string | undefine
     painelAberto: ler(COOKIE_PAINEL) !== "fechado",
     listaAberta: ler(COOKIE_LISTA) !== "fechada",
     visualizacoesAbertas: ler(COOKIE_VISUALIZACOES) !== "fechada",
+    recentesAbertos: ler(COOKIE_RECENTES) === "aberta",
     ocultos: lerOcultos(ler(COOKIE_OCULTOS)),
   };
 }
@@ -70,6 +75,7 @@ export function cookieDaPreferencia(pedido: unknown): { cookie: string; valor: s
   if (nome === "visualizacoes" && (valor === "aberta" || valor === "fechada")) {
     return { cookie: COOKIE_VISUALIZACOES, valor };
   }
+  if (nome === "recentes" && (valor === "aberta" || valor === "fechada")) return { cookie: COOKIE_RECENTES, valor };
   if (nome === "ocultos" && Array.isArray(valor)) return { cookie: COOKIE_OCULTOS, valor: soUuids(valor).join(",") };
   if (nome === "ultimo_funil") {
     const id = lerUuid(typeof valor === "string" ? valor : null);

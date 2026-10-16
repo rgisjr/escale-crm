@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   camposDaCapa,
@@ -32,14 +32,21 @@ vi.mock("@/components/escale/quadro/CardDaCasca", () => ({
     lead,
     prefs,
     camposDoCard,
+    onOpen,
   }: {
     lead: { id: string };
     prefs?: PrefsDoCard;
     camposDoCard?: readonly CampoDaCapa[];
+    onOpen?: (id: string) => void;
   }) => (
-    <p data-testid={`card-${lead.id}`}>
-      {`valor ${String(prefs?.itens.valor)} · campos ${camposDoCard?.length ?? 0}`}
-    </p>
+    <>
+      <p data-testid={`card-${lead.id}`}>
+        {`valor ${String(prefs?.itens.valor)} · campos ${camposDoCard?.length ?? 0}`}
+      </p>
+      <button type="button" onClick={() => onOpen?.(lead.id)}>
+        {`abrir ${lead.id}`}
+      </button>
+    </>
   ),
 }));
 
@@ -120,5 +127,76 @@ describe("as colunas da casca passam a preferência ao card", () => {
     for (const id of ["a", "b"]) {
       expect(screen.getByTestId(`card-${id}`)).toHaveTextContent("valor false · campos 2");
     }
+  });
+});
+
+describe("abrir um card guarda o negócio nos Recentes (Fase 1E)", () => {
+  const CHAVE = "escale:negocios-recentes:v2:org-1:u-1";
+  beforeEach(() => window.localStorage.clear());
+  const guardado = () =>
+    JSON.parse(window.localStorage.getItem(CHAVE) ?? "{}") as {
+      fixados: unknown[];
+      recentes: Array<Record<string, unknown>>;
+    };
+
+  it("o funil: o título, a origem e o telefone ficam na chave desta pessoa; o onOpen continua chamado", () => {
+    const onOpen = vi.fn();
+    render(
+      <ColunaDoFunilNaCasca
+        stage={
+          {
+            id: "e1",
+            pipeline_id: "p-1",
+            name: "Entrada",
+            position: 1,
+            is_won: false,
+            is_lost: false,
+            is_archived: false,
+            color: null,
+          } as Stage
+        }
+        leads={LEADS}
+        pipelineId="p-1"
+        nomeDaOrigem="Vendas"
+        onOpen={onOpen}
+      />,
+    );
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "abrir b" }));
+    });
+    expect(onOpen).toHaveBeenCalledWith("b");
+    expect(guardado().recentes).toEqual([
+      expect.objectContaining({ id: "b", titulo: "Negócio b", origemId: "p-1", origem: "Vendas" }),
+    ]);
+  });
+
+  it("a Visualização: a origem é a do próprio negócio", () => {
+    const contexto: ContextoDosCards = {
+      nomeDaOrigem: { "p-1": "Vendas" },
+      tagsCanonicas: {},
+      ownerNames: new Map(),
+      coolingIds: new Set(),
+      reactivations: new Map(),
+      pulses: new Map(),
+      camposDoCard: CAMPOS,
+    };
+    const onOpen = vi.fn();
+    render(
+      <ColunaDaVisualizacao
+        coluna={{ chave: "entrada", nome: "Entrada", destinos: {} } as ColunaCombinada}
+        leads={LEADS}
+        contexto={contexto}
+        selecionados={new Set()}
+        onSelectMany={vi.fn()}
+        onOpen={onOpen}
+      />,
+    );
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "abrir a" }));
+    });
+    expect(onOpen).toHaveBeenCalledWith("a");
+    expect(guardado().recentes).toEqual([
+      expect.objectContaining({ id: "a", titulo: "Negócio a", origemId: "p-1", origem: "Vendas" }),
+    ]);
   });
 });

@@ -74,6 +74,12 @@ interface KanbanBoardProps {
    * "Selecione N"). Agent ou acima, o mesmo corte das ações em lote.
    */
   podeSelecionarNaEtapa?: boolean;
+  /**
+   * FORK ESCALE · Fase 1E: o dossiê fechou (a página da casca tira o `?lead=` da
+   * URL, para o mesmo Recente reabrir). Com ela, um `?lead=` NOVO com o quadro
+   * aberto abre o dossiê dele. Sem ela, o contrato do original: o estado local manda.
+   */
+  aoFecharDossie?: () => void;
 }
 
 function groupLeadsByStage(
@@ -127,6 +133,7 @@ export function KanbanBoard({
   aparencia,
   aoAdicionarNegocio,
   podeSelecionarNaEtapa = false,
+  aoFecharDossie,
 }: KanbanBoardProps) {
   const t = useT();
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
@@ -193,6 +200,14 @@ export function KanbanBoard({
   // o histórico de captação tinha o id e nenhum lugar para levá-lo. Uma vez
   // aberto, o estado local manda (fechar não reabre pela URL).
   const [dossieId, setDossieId] = useState<string | null>(leadInicial ?? null);
+  // FORK ESCALE · Fase 1E: um link novo para `?lead=` (um Recente do painel) com
+  // o quadro já aberto abre o dossiê dele. Ajuste no render, o padrão do React
+  // para estado que segue prop, e só na casca (quem passa `aoFecharDossie`).
+  const [leadInicialVisto, setLeadInicialVisto] = useState<string | null>(leadInicial ?? null);
+  if (aoFecharDossie && (leadInicial ?? null) !== leadInicialVisto) {
+    setLeadInicialVisto(leadInicial ?? null);
+    if (leadInicial) setDossieId(leadInicial);
+  }
   const [internalSelected, setInternalSelected] = useState<Set<string>>(new Set());
   const selectedLeadIds = useMemo(
     () => (selectedIds ? new Set(selectedIds) : internalSelected),
@@ -423,7 +438,12 @@ export function KanbanBoard({
       {leadDoDossie && (
         <LeadDossier
           open
-          onOpenChange={(v: boolean) => !v && setDossieId(null)}
+          onOpenChange={(v: boolean) => {
+            if (v) return;
+            setDossieId(null);
+            // FORK ESCALE · Fase 1E: a página da casca tira o `?lead=` da URL.
+            aoFecharDossie?.();
+          }}
           lead={leadDoDossie}
           pipelineId={pipelineId}
           fieldDefs={camposDoFunil(data.pipeline.settings ?? null)}
