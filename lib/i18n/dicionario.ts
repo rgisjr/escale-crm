@@ -9502,6 +9502,11 @@ export const DICIONARIO: Traducoes = {
   "Ver mais": { es: "Ver más" },
   "Ver menos": { es: "Ver menos" },
   "Sem empresa": { es: "Sin empresa" },
+  // ─── FORK ESCALE · Fase 1E (Task 15): o espanhol que faltava dos textos da fase ───
+  "Origem não encontrada.": { es: "Origen no encontrado." },
+  "A preferência mudou em outra aba. Abra de novo e salve.": {
+    es: "La preferencia cambió en otra pestaña. Ábrala de nuevo y guarde.",
+  },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
