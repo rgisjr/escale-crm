@@ -34,7 +34,11 @@ const quadro = vi.hoisted(() => {
         { id: "ganho", name: "Ganho", position: 3, is_won: true, is_lost: false },
         { id: "perdido", name: "Perdido", position: 4, is_won: false, is_lost: true },
       ],
-      leads: [lead("l-aberto", "entrada", "open"), lead("l-ganho", "ganho", "won"), lead("l-perdido", "perdido", "lost")],
+      leads: [
+        lead("l-aberto", "entrada", "open"),
+        lead("l-ganho", "ganho", "won"),
+        lead("l-perdido", "perdido", "lost"),
+      ],
     },
   };
 });
@@ -64,11 +68,19 @@ vi.mock("@/hooks/kanban/useBoard", () => ({
   chaveDoQuadro: (id: string | null) => ["board", id],
 }));
 vi.mock("@/components/kanban/KanbanBoard", () => ({
-  KanbanBoard: (p: { stages: Array<{ name: string }>; leads: Array<{ id: string }>; ordemDosCards?: unknown }) => (
+  KanbanBoard: (p: {
+    stages: Array<{ name: string }>;
+    leads: Array<{ id: string }>;
+    ordemDosCards?: unknown;
+    aparencia?: string;
+    aoAdicionarNegocio?: unknown;
+  }) => (
     <div>
       <p>{`etapas: ${p.stages.map((s) => s.name).join(", ")}`}</p>
       <p>{`cards: ${p.leads.map((l) => l.id).join(", ")}`}</p>
       <p>{`ordem: ${typeof p.ordemDosCards}`}</p>
+      <p>{`aparencia: ${p.aparencia ?? "original"}`}</p>
+      <p>{`adicionar: ${typeof p.aoAdicionarNegocio}`}</p>
     </div>
   ),
 }));
@@ -79,14 +91,31 @@ vi.mock("@/components/escale/filtros/BarraDoQuadro", () => ({
 }));
 vi.mock("@/components/kanban/FilterBar", () => ({ FilterBar: () => <p>barra do original</p> }));
 vi.mock("@/components/kanban/BulkActionBar", () => ({ BulkActionBar: () => null }));
-vi.mock("@/components/kanban/NewLeadDialog", () => ({ NewLeadDialog: () => null }));
+vi.mock("@/components/kanban/NewLeadDialog", () => ({
+  NewLeadDialog: ({ open }: { open: boolean }) => (open ? <p>novo negócio aberto</p> : null),
+}));
 vi.mock("@/components/kanban/CalendarioDoFunil", () => ({ CalendarioDoFunil: () => null }));
 
 import { PipelinePageClient } from "@/app/app/pipelines/[id]/_client";
 
-const abrir = (cascaNova: boolean) =>
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
+window.HTMLElement.prototype.setPointerCapture = vi.fn();
+window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+
+const DOIS_FUNIS = [
+  { id: "p-1", name: "Vendas" },
+  { id: "p-2", name: "Pós-venda" },
+];
+const abrir = (cascaNova: boolean, funis = [{ id: "p-1", name: "Vendas" }]) =>
   render(
-    <PipelinePageClient pipelineId="p-1" initialName="Vendas" role="agent" funis={[{ id: "p-1", name: "Vendas" }]} cascaNova={cascaNova} />,
+    <PipelinePageClient
+      pipelineId="p-1"
+      initialName="Vendas"
+      role="agent"
+      funis={funis}
+      cascaNova={cascaNova}
+    />,
   );
 
 beforeEach(() => {
@@ -124,9 +153,34 @@ describe("a página do funil com a casca nova (Fase 1D)", () => {
   });
 
   it("sem a casca nova, o quadro do original fica como está", () => {
-    abrir(false);
+    abrir(false, DOIS_FUNIS);
     expect(screen.getByText("barra do original")).toBeInTheDocument();
     expect(screen.getByText("etapas: Entrada, Proposta, Ganho, Perdido")).toBeInTheDocument();
     expect(screen.getByText("cards: l-aberto, l-ganho, l-perdido")).toBeInTheDocument();
+    expect(screen.getByText("aparencia: original")).toBeInTheDocument();
+    expect(screen.getByText("adicionar: undefined")).toBeInTheDocument();
+    expect(screen.getByTestId("trocar-funil")).toBeInTheDocument();
+    expect(screen.getByTestId("visao-quadro")).toBeInTheDocument();
+    expect(screen.getByTestId("visao-calendario")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Novo Lead/ })).toBeInTheDocument();
+    expect(screen.queryByText("Negócios da origem")).not.toBeInTheDocument();
+  });
+
+  it("com a casca: o cabeçalho da Clint, sem seletor no título e sem Quadro/Calendário; o quadro na aparência da casca", () => {
+    abrir(true, DOIS_FUNIS);
+    expect(screen.getByText("Negócios da origem")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Vendas" })).toBeInTheDocument();
+    expect(screen.queryByTestId("trocar-funil")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("visao-quadro")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("visao-calendario")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Novo Lead/ })).not.toBeInTheDocument();
+    expect(screen.getByText("aparencia: casca")).toBeInTheDocument();
+    expect(screen.getByText("adicionar: function")).toBeInTheDocument();
+  });
+
+  it("com a casca, 'Negócio +' abre o Novo negócio de sempre", async () => {
+    abrir(true);
+    await userEvent.setup().click(screen.getByRole("button", { name: /^Negócio/ }));
+    expect(screen.getByText("novo negócio aberto")).toBeInTheDocument();
   });
 });
