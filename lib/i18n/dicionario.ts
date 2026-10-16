@@ -9411,6 +9411,13 @@ export const DICIONARIO: Traducoes = {
   "Exemplo": { es: "Ejemplo" },
   "Oii Maria! Aqui é a Ana, posso te ajudar?": { es: "¡Hola María! Soy Ana, ¿puedo ayudarte?" },
   "Ana Souza": { es: "Ana Souza" },
+  // ─── FORK ESCALE · Fase 1E (Task 9): o ⋮ da etapa (a Task 15 acrescenta o resto) ───
+  "Selecionar todos...": { es: "Seleccionar todos..." },
+  "Selecione": { es: "Selecciona" },
+  "Escolha quantos negócios você quer selecionar": {
+    es: "Elige cuántos negocios quieres seleccionar",
+  },
+  "Nenhum negócio nesta etapa": { es: "Ningún negocio en esta etapa" },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },

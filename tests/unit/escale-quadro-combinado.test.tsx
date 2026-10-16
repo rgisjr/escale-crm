@@ -214,11 +214,9 @@ describe("<QuadroCombinado>", () => {
     expect(screen.getByText("dossiê B Entrada")).toBeInTheDocument();
   });
 
-  it("selecionar a coluna inteira (pelo ⋮ da coluna) marca os cards das duas origens", async () => {
-    const user = renderizar();
-    await user.click(screen.getByRole("button", { name: "Ações da etapa Entrada" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Selecionar todos" }));
-    expect(onSelecao).toHaveBeenCalledWith(["l-a", "l-b"]);
+  it("a Visualização não tem o ⋮ da etapa (E7); a seleção continua pelo card", () => {
+    renderizar();
+    expect(screen.queryByRole("button", { name: /Ações da etapa/ })).toBeNull();
   });
 });
 

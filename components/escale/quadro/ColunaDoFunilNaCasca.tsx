@@ -28,6 +28,8 @@ export interface ColunaDoFunilNaCascaProps {
   podeRenomear?: boolean;
   onRenomear?: (nome: string) => void;
   aoAdicionar?: (stageId: string) => void;
+  /** Fase 1E: o ⋮ da etapa ("Selecione N"); ausente = sem ⋮. */
+  aoSelecionarNaEtapa?: (ids: string[], n: number) => void;
   /** Os campos que o "Personalizar cards" pode pôr no card (Fase 1E). */
   camposDoCard?: readonly CampoDaCapa[];
   /** O nome da origem (usado pelo Recentes, Task 14). */
@@ -58,6 +60,7 @@ export function ColunaDoFunilNaCasca({
   podeRenomear = false,
   onRenomear,
   aoAdicionar,
+  aoSelecionarNaEtapa,
   camposDoCard,
 }: ColunaDoFunilNaCascaProps) {
   const t = useT();
@@ -94,6 +97,17 @@ export function ColunaDoFunilNaCasca({
       selecionados={selecionados}
       onSelectMany={onSelectMany}
       aoAdicionar={aberta && aoAdicionar ? () => aoAdicionar(stage.id) : undefined}
+      menuDaEtapa={
+        aoSelecionarNaEtapa
+          ? {
+              aoSelecionar: (n) =>
+                aoSelecionarNaEtapa(
+                  leads.map((l) => l.id),
+                  n,
+                ),
+            }
+          : undefined
+      }
       renderCard={(lead, indice, aoSelecionar) => (
         <CardDaCasca
           key={lead.id}

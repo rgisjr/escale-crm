@@ -24,6 +24,7 @@ import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
 // FORK ESCALE · Casca V4: com a casca nova, a coluna e o card da Clint (fork).
 import { ColunaDoFunilNaCasca } from "@/components/escale/quadro/ColunaDoFunilNaCasca";
+import { selecaoDaEtapa } from "@/lib/escale/quadro/selecao";
 // FORK ESCALE · Fase 1E: os campos que o "Personalizar cards" oferece.
 import { camposDaCapa } from "@/lib/escale/capa/tipos";
 
@@ -68,6 +69,11 @@ interface KanbanBoardProps {
   aparencia?: "casca";
   /** FORK ESCALE · Casca V4: o "+ Adicionar negócio" das colunas (só na casca). */
   aoAdicionarNegocio?: (stageId: string) => void;
+  /**
+   * FORK ESCALE · Fase 1E: o ⋮ da etapa na casca ("Selecionar todos..." e
+   * "Selecione N"). Agent ou acima, o mesmo corte das ações em lote.
+   */
+  podeSelecionarNaEtapa?: boolean;
 }
 
 function groupLeadsByStage(
@@ -120,6 +126,7 @@ export function KanbanBoard({
   ordemDosCards,
   aparencia,
   aoAdicionarNegocio,
+  podeSelecionarNaEtapa = false,
 }: KanbanBoardProps) {
   const t = useT();
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
@@ -231,6 +238,15 @@ export function KanbanBoard({
       } else {
         setInternalSelected((prev) => apply(prev));
       }
+    },
+    [onSelectionChange, selectedLeadIds],
+  );
+
+  // FORK ESCALE · Fase 1E: "Selecione N" troca a seleção da etapa numa conta só.
+  const selecionarNaEtapa = useCallback(
+    (ids: string[], n: number) => {
+      if (onSelectionChange) onSelectionChange(Array.from(selecaoDaEtapa(ids, selectedLeadIds, n)));
+      else setInternalSelected((prev) => selecaoDaEtapa(ids, prev, n));
     },
     [onSelectionChange, selectedLeadIds],
   );
@@ -380,6 +396,7 @@ export function KanbanBoard({
               podeRenomear={podeRenomearEtapa}
               onRenomear={(nome) => renameStage.mutate({ stageId: stage.id, name: nome })}
               aoAdicionar={aoAdicionarNegocio}
+              aoSelecionarNaEtapa={podeSelecionarNaEtapa ? selecionarNaEtapa : undefined}
               camposDoCard={camposDoCard}
               nomeDaOrigem={data.pipeline.name}
             />

@@ -353,6 +353,8 @@ export function PipelinePageClient({
           // "+ Adicionar negócio" da coluna abre o mesmo "Novo negócio" do botão.
           aparencia={cascaNova ? "casca" : undefined}
           aoAdicionarNegocio={cascaNova ? () => setNewOpen(true) : undefined}
+          // FORK ESCALE · Fase 1E: o ⋮ da etapa (lote pede agent, como a rota).
+          podeSelecionarNaEtapa={cascaNova && ROLE_RANK[role] >= ROLE_RANK.agent}
         />
       )}
       <BulkActionBar

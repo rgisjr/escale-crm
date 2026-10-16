@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -16,10 +17,23 @@ vi.mock("@/components/escale/quadro/ColunaDoFunilNaCasca", () => ({
   ColunaDoFunilNaCasca: ({
     stage,
     aoAdicionar,
+    aoSelecionarNaEtapa,
+    selectedLeadIds,
   }: {
     stage: { id: string };
     aoAdicionar?: (id: string) => void;
-  }) => <p>{`casca ${stage.id} ${aoAdicionar ? "com" : "sem"} adicionar`}</p>,
+    aoSelecionarNaEtapa?: (ids: string[], n: number) => void;
+    selectedLeadIds?: Set<string>;
+  }) => (
+    <div>
+      <p>{`casca ${stage.id} ${aoAdicionar ? "com" : "sem"} adicionar`}</p>
+      <p>{`${aoSelecionarNaEtapa ? "com" : "sem"} selecionar`}</p>
+      <p>{`marcados: ${[...(selectedLeadIds ?? [])].join(",")}`}</p>
+      <button type="button" onClick={() => aoSelecionarNaEtapa?.(["l1", "l2", "l3"], 2)}>
+        selecionar 2
+      </button>
+    </div>
+  ),
 }));
 vi.mock("@/components/kanban/LeadDossier", () => ({ LeadDossier: () => null }));
 vi.mock("@/components/kanban/CamposObrigatoriosDialog", () => ({
@@ -57,7 +71,13 @@ const ETAPAS = [
 const LEADS: Lead[] = [];
 
 function renderizar(
-  extra: { aparencia?: "casca"; aoAdicionarNegocio?: (id: string) => void } = {},
+  extra: {
+    aparencia?: "casca";
+    aoAdicionarNegocio?: (id: string) => void;
+    podeSelecionarNaEtapa?: boolean;
+    onSelectionChange?: (ids: string[]) => void;
+    selectedIds?: string[];
+  } = {},
 ) {
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -87,5 +107,22 @@ describe("<KanbanBoard> com e sem a casca (Casca V4)", () => {
     expect(screen.queryByText("original e1")).not.toBeInTheDocument();
     expect(quadro).toHaveClass("overflow-x-auto", "overflow-y-hidden");
     expect(quadro).not.toHaveClass("px-4");
+  });
+
+  it("o ⋮ da etapa só liga com podeSelecionarNaEtapa (Fase 1E)", () => {
+    renderizar({ aparencia: "casca" });
+    expect(screen.getByText("sem selecionar")).toBeInTheDocument();
+  });
+
+  it("'Selecione N' troca a seleção da etapa e mantém as das outras (Fase 1E)", async () => {
+    const onSelectionChange = vi.fn();
+    renderizar({
+      aparencia: "casca",
+      podeSelecionarNaEtapa: true,
+      onSelectionChange,
+      selectedIds: ["l1", "l2", "l3", "x"],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "selecionar 2" }));
+    expect(onSelectionChange).toHaveBeenCalledWith(["x", "l1", "l2"]);
   });
 });
