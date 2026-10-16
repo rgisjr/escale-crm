@@ -27,13 +27,13 @@
 
 | O quê | PNG da Clint | Variante |
 |---|---|---|
-| Quadro, card, coluna, "+ Adicionar negócio", ícones da linha de contagem e RECENTES fechado | `C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\01-010-kanban-v1.png` | **superior (alvo)** |
-| Card ampliado | `C:\Documentos\projetos claude\Deskcom CRM\docs\clint\crops\card1.png` (no repositório: `docs/escale/clint/crops/card1.png`) | superior |
-| Cabeçalho da coluna | `...\docs\clint\crops\colhead.png` | superior |
-| Ícones atualizar, exportar, engrenagem e ajuda | `...\docs\clint\crops\icons-right.png` | superior |
-| Painel esquerdo com RECENTES | `...\docs\clint\crops\leftpanel.png` | superior |
-| Janela "Personalizar cards" | `...\01-negocios\imagens\01-019-personalizacao-cards.png` | lateral. É o ÚNICO print dela: a Clint superior não tem essa janela |
-| Hover do card (caixinha no lugar da foto) | `...\01-negocios\imagens\01-020-kanban-negocios.png` | lateral |
+| Quadro, card, coluna, "+ Adicionar negócio", ícones da linha de contagem e RECENTES fechado | `C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\01-010-kanban-v1` | **superior (alvo)** |
+| Card ampliado | `C:\Documentos\projetos claude\Deskcom CRM\docs\clint\crops\card1` (no repositório: `docs/escale/clint/crops/card1.png`) | superior |
+| Cabeçalho da coluna | `...\docs\clint\crops\colhead` | superior |
+| Ícones atualizar, exportar, engrenagem e ajuda | `...\docs\clint\crops\icons-right` | superior |
+| Painel esquerdo com RECENTES | `...\docs\clint\crops\leftpanel` | superior |
+| Janela "Personalizar cards" | `...\01-negocios\imagens\01-019-personalizacao-cards` | lateral. É o ÚNICO print dela: a Clint superior não tem essa janela |
+| Hover do card (caixinha no lugar da foto) | `...\01-negocios\imagens\01-020-kanban-negocios` | lateral |
 | **Prints de 16/10 desta fase** (⋮ da etapa, "Negócio +", Exportar, Importar, RECENTES, card no hover, Personalizar cards, Ordenar) | `C:\Documentos\projetos claude\Deskcom CRM\docs\clint\prints-1e\` (o `README.md` da pasta traz as medidas lidas do CSS) | superior (`11`–`40`) e lateral (`33a`, `33b`, `v2-*`) |
 
 **Regra desta fase (usuário, 16/10): o layout é o da Clint v1 (menu no topo) e as funções são as da Clint v2 (menu lateral), que é mais avançada.** Onde as duas divergem, a posição na tela segue a v1 e o comportamento segue a v2. Cada task diz qual print vale.
@@ -1494,7 +1494,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Create também: `components/escale/capa/PersonalizarCards.tsx`
 - Modify: `components/escale/filtros/LinhaDeContagem.tsx`, `components/escale/filtros/BarraDoQuadro.tsx`, `tests/unit/escale-barra-do-quadro.test.tsx`
 
-**Visual** (abrir `01-019-personalizacao-cards.png` e os prints da v2 `33a`, `33b`, `v2-12` a `v2-15` em `docs/clint/prints-1e/`; medidas do código `vf`, em px de CSS):
+**Visual** (abrir `01-019-personalizacao-cards` e os prints da v2 `33a`, `33b`, `v2-12` a `v2-15` em `docs/clint/prints-1e/`; medidas do código `vf`, em px de CSS):
 
 | Peça | Detalhe |
 |---|---|
@@ -4029,7 +4029,7 @@ Pelo CAMINHO A (local, com banco de teste) ou pelo CAMINHO B (depois do deploy, 
 
 | Peça | PNG | O que conferir |
 |---|---|---|
-| Card padrão | `card1.png`, 01-010 | idêntico à V4 (a preferência padrão não muda nada) |
+| Card padrão | `card1`, 01-010 | idêntico à V4 (a preferência padrão não muda nada) |
 | Card no hover | `20`, `v2-16` | a caixinha de seleção no lugar da foto |
 | Card com a preferência | sem print (PRINT 36) | tags, prévia, ícones e valor somem e voltam; os chips dos campos ficam abaixo do rodapé |
 | Personalizar cards | `33a`, `33b`, `v2-12` a `v2-15`, 01-019 | o ícone de ajustes depois do atualizar com a dica lavanda; 820px, a grade 400px/1fr, os grupos com contagem, o interruptor 28×16, a dica de limite, a prévia, "Salvar preferência" |

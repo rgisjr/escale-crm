@@ -80,7 +80,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     actorUserId: authz.user.id,
     organizationId: authz.org.orgId,
     resourceType: "crm_pipeline",
-    resourceId: parsed.data.origem,
+    resourceId: origem.id,
     requestId,
     metadata: { quantidade: parsed.data.quantidade },
   });

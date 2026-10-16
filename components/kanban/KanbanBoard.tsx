@@ -24,6 +24,7 @@ import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
 // FORK ESCALE · Casca V4: com a casca nova, a coluna e o card da Clint (fork).
 import { ColunaDoFunilNaCasca } from "@/components/escale/quadro/ColunaDoFunilNaCasca";
+// FORK ESCALE · Fase 1E: o "Selecione N" da etapa (casca nova).
 import { selecaoDaEtapa } from "@/lib/escale/quadro/selecao";
 // FORK ESCALE · Fase 1E: os campos que o "Personalizar cards" oferece.
 import { camposDaCapa } from "@/lib/escale/capa/tipos";
@@ -187,10 +188,10 @@ export function KanbanBoard({
     return Array.isArray(raw) ? raw.filter((t): t is string => typeof t === "string") : [];
   }, [pipelineProp, queryResult.data?.pipeline]);
   // FORK ESCALE · Fase 1E: os campos que o "Personalizar cards" pode pôr no card da casca.
-  const camposDoCard = useMemo(
-    () => camposDaCapa([(pipelineProp ?? queryResult.data?.pipeline)?.settings ?? null]),
-    [pipelineProp, queryResult.data?.pipeline],
-  );
+  const camposDoCard = useMemo(() => {
+    const settings = (pipelineProp ?? queryResult.data?.pipeline)?.settings ?? null;
+    return camposDaCapa([settings]);
+  }, [pipelineProp, queryResult.data?.pipeline]);
 
   // O dossiê é do BOARD e não da página: ele precisa do lead inteiro e do nome
   // do estágio, que só existem aqui depois do agrupamento.
@@ -411,6 +412,7 @@ export function KanbanBoard({
               podeRenomear={podeRenomearEtapa}
               onRenomear={(nome) => renameStage.mutate({ stageId: stage.id, name: nome })}
               aoAdicionar={aoAdicionarNegocio}
+              // FORK ESCALE · Fase 1E: "Selecione N", campos do "Personalizar cards" e nome da origem.
               aoSelecionarNaEtapa={podeSelecionarNaEtapa ? selecionarNaEtapa : undefined}
               camposDoCard={camposDoCard}
               nomeDaOrigem={data.pipeline.name}

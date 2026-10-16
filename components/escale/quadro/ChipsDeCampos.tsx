@@ -3,6 +3,7 @@ import { useState, type MouseEvent } from "react";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useT } from "@/hooks/i18n/useT";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   chaveDoCampo,
   textoDoValor,
@@ -78,8 +79,12 @@ function ChipDoCampo({ rotulo, texto }: { rotulo: string; texto: string }) {
             rotulo,
           )}
           onClick={() => {
-            void navigator.clipboard?.writeText(texto);
-            setCopiado(true);
+            // Só marca "Copiado" quando a cópia deu certo; recusa não vira rejeição solta.
+            void copyToClipboard(texto)
+              .then((ok) => {
+                if (ok) setCopiado(true);
+              })
+              .catch(() => undefined);
           }}
           className="grid size-5 place-items-center rounded-[4px] hover:bg-white/10"
         >

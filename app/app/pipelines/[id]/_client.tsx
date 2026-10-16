@@ -49,6 +49,7 @@ import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
 // FORK ESCALE · Casca V4: o cabeçalho da Clint na casca nova (o quadro troca coluna e card pela prop `aparencia`).
 import { CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
+// FORK ESCALE · Fase 1E: o menu "Negócio +" e a janela "Importar negócios" (casca nova).
 import { MenuNegocioMais } from "@/components/escale/quadro/MenuNegocioMais";
 import { JanelaDeImportarNegocios } from "@/components/escale/quadro/JanelaDeImportarNegocios";
 
@@ -93,6 +94,7 @@ export function PipelinePageClient({
   const [etapaDoNovo, setEtapaDoNovo] = useState<string | null>(null);
   // FORK ESCALE · Fase 1E: a janela "Importar negócios" do menu "Negócio +" (casca nova).
   const [importando, setImportando] = useState(false);
+  // FORK ESCALE · Fase 1E: quem pode criar também importa e seleciona por etapa (casca nova).
   const podeCriar = ROLE_RANK[role] >= ROLE_RANK.agent;
   /**
    * A visão do funil (#2770). Quadro é o padrão — é o que todo mundo já
