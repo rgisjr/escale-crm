@@ -48,7 +48,8 @@ import { recortarQuadro } from "@/lib/escale/filtros/aplicar";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
 // FORK ESCALE · Casca V4: o cabeçalho da Clint na casca nova (o quadro troca coluna e card pela prop `aparencia`).
-import { BotaoNegocioMais, CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
+import { CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
+import { MenuNegocioMais } from "@/components/escale/quadro/MenuNegocioMais";
 
 export function PipelinePageClient({
   pipelineId,
@@ -195,7 +196,18 @@ export function PipelinePageClient({
         <CabecalhoDaCasca
           sobrelinha={t("Negócios da origem")}
           titulo={nomeAtual}
-          acao={<BotaoNegocioMais onClick={() => setNewOpen(true)} disabled={!data} />}
+          acao={
+            // FORK ESCALE · Fase 1E: "Negócio +" com o menu da Clint (Novo / Importar).
+            <MenuNegocioMais
+              desabilitado={!data || !podeCriar}
+              dica={podeCriar ? undefined : t("Sem permissão")}
+              aoNovo={() => {
+                setEtapaDoNovo(null);
+                setNewOpen(true);
+              }}
+              aoImportar={() => {}} // Task 12
+            />
+          }
         />
       ) : (
         <>

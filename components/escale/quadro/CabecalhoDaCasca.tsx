@@ -4,6 +4,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { Plus } from "@/lib/ui/icons-da-casca";
+import { cn } from "@/lib/utils";
 
 /**
  * O CABEÇALHO DA PÁGINA DO QUADRO (fork Escale, Casca V4; 01-010): a sobrelinha
@@ -39,13 +40,14 @@ export function CabecalhoDaCasca({
  */
 export const BotaoNegocioMais = forwardRef<
   HTMLButtonElement,
-  ButtonHTMLAttributes<HTMLButtonElement>
->(function BotaoNegocioMais(props, ref) {
+  ButtonHTMLAttributes<HTMLButtonElement> & { aberto?: boolean }
+>(function BotaoNegocioMais({ aberto = false, ...props }, ref) {
   const t = useT();
   return (
-    <BotaoDaCasca ref={ref} type="button" variante="marca" {...props}>
+    <BotaoDaCasca ref={ref} type="button" variante="marca" data-aberto={aberto} {...props}>
       {t("Negócio")}
-      <Plus size={16} aria-hidden />
+      {/* Fase 1E: com o menu aberto, o "+" gira 45° e vira "×" (Clint superior). */}
+      <Plus size={16} aria-hidden className={cn("transition-transform duration-150", aberto && "rotate-45")} />
     </BotaoDaCasca>
   );
 });

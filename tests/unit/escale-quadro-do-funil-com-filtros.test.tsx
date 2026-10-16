@@ -189,10 +189,17 @@ describe("a página do funil com a casca nova (Fase 1D)", () => {
     expect(screen.getByText("adicionar: function")).toBeInTheDocument();
   });
 
-  it("com a casca, 'Negócio +' abre o Novo negócio de sempre", async () => {
+  it("com a casca, 'Negócio +' abre o menu da Clint e 'Novo negócio' abre a janela de sempre", async () => {
     abrir(true);
-    await userEvent.setup().click(screen.getByRole("button", { name: /^Negócio/ }));
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("button", { name: /^Negócio/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Novo negócio" }));
     expect(screen.getByText("novo negócio aberto na etapa padrão")).toBeInTheDocument();
+  });
+
+  it("viewer: 'Negócio +' fica desligado", () => {
+    abrir(true, undefined, "viewer");
+    expect(screen.getByRole("button", { name: /^Negócio/ })).toBeDisabled();
   });
 
   it("'+ Adicionar negócio' da coluna abre o Novo negócio já na etapa dela", async () => {
