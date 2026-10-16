@@ -3,8 +3,8 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { BarraDoQuadro } from "@/components/escale/filtros/BarraDoQuadro";
+import { BotaoNegocioMais, CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
 import { NewLeadDialog } from "@/components/kanban/NewLeadDialog";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,19 +20,18 @@ import { recortarQuadro } from "@/lib/escale/filtros/aplicar";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
 import { settingsDaVisualizacao } from "@/lib/escale/visualizacoes/regras";
-import { Plus } from "@/lib/ui/icons";
 
 import { LoteDaVisualizacao } from "./LoteDaVisualizacao";
 import { QuadroCombinado } from "./QuadroCombinado";
 
 /**
- * A PÁGINA DE UMA VISUALIZAÇÃO (fork Escale, Fases 1C e 1D): o mesmo esqueleto
- * da página do funil — título, "Novo Lead", a barra do quadro, quadro e lote —
- * com as origens da visualização no lugar de um funil só.
+ * A PÁGINA DE UMA VISUALIZAÇÃO (fork Escale, Fases 1C e 1D; visual da Clint na
+ * Casca V4): o mesmo esqueleto da página do funil — cabeçalho com "Negócio +",
+ * a barra, o quadro e o lote — com as origens da visualização no lugar de um
+ * funil só. A sobrelinha é "NEGÓCIOS DA VISUALIZAÇÃO" (D15; sem print).
  *
  * Os filtros rodam POR ORIGEM: a categoria de um motivo de perda e as colunas de
- * ganho e de perda são da origem do card. Os filtros salvos são da VISUALIZAÇÃO
- * (o `alvo` da barra), não das origens.
+ * ganho e de perda são da origem do card. Os filtros salvos são da VISUALIZAÇÃO.
  */
 export function QuadroDaVisualizacao({
   id,
@@ -50,19 +49,33 @@ export function QuadroDaVisualizacao({
 
   // Estável entre renders: o `combine` do hook depende deste array.
   const ids = useMemo(() => origens.map((o) => o.id), [origens]);
-  const { quadros, carregando, indisponiveis, atualizar, atualizando } = useQuadrosDaVisualizacao(ids);
+  const { quadros, carregando, indisponiveis, atualizar, atualizando } =
+    useQuadrosDaVisualizacao(ids);
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [novoEm, setNovoEm] = useState<string | null>(null);
 
-  const campos = useMemo(() => camposFiltraveis(quadros.map((q) => q.pipeline.settings)), [quadros]);
+  const campos = useMemo(
+    () => camposFiltraveis(quadros.map((q) => q.pipeline.settings)),
+    [quadros],
+  );
   const recortes = useMemo(
-    () => quadros.map((q) => ({ quadro: q, ...recortarQuadro(q, filtros, { moeda: orgAtiva?.currency ?? null, campos }) })),
+    () =>
+      quadros.map((q) => ({
+        quadro: q,
+        ...recortarQuadro(q, filtros, { moeda: orgAtiva?.currency ?? null, campos }),
+      })),
     [quadros, filtros, orgAtiva?.currency, campos],
   );
   // As colunas do quadro combinado saem só das etapas visíveis de cada origem.
-  const quadrosVisiveis = useMemo(() => recortes.map((r) => ({ ...r.quadro, stages: r.stages })), [recortes]);
+  const quadrosVisiveis = useMemo(
+    () => recortes.map((r) => ({ ...r.quadro, stages: r.stages })),
+    [recortes],
+  );
   const filtrados = useMemo(() => recortes.flatMap((r) => r.leads), [recortes]);
-  const ordemDosCards = useMemo(() => comparadorDaOrdem(filtros.ordem, campos), [filtros.ordem, campos]);
+  const ordemDosCards = useMemo(
+    () => comparadorDaOrdem(filtros.ordem, campos),
+    [filtros.ordem, campos],
+  );
   const todosOsLeads = useMemo(() => quadros.flatMap((q) => q.leads), [quadros]);
   const settings = useMemo(() => settingsDaVisualizacao(quadros), [quadros]);
   const quadroDoNovo = quadros.find((q) => q.pipeline.id === novoEm);
@@ -70,39 +83,37 @@ export function QuadroDaVisualizacao({
   if (origens.length === 0) {
     return (
       <p className="rounded-md border p-4 text-sm text-muted-foreground">
-        {t("Nenhuma origem desta visualização está ativa. Edite as origens pelo ⋮ da visualização.")}
+        {t(
+          "Nenhuma origem desta visualização está ativa. Edite as origens pelo ⋮ da visualização.",
+        )}
       </p>
     );
   }
 
   return (
     // A mesma altura da página do funil (ver o comentário longo lá): o quadro
-    // cabe na tela e quem rola é ele.
-    <div className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] min-h-[28rem] flex-col gap-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("Visualização")}</p>
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{nome}</h1>
-          <p className="text-xs text-muted-foreground">
-            {(origens.length === 1 ? t("{n} origem") : t("{n} origens")).replace("{n}", String(origens.length))}
-          </p>
-        </div>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <Button disabled={quadros.length === 0} className="shrink-0">
-              <Plus size={16} className="mr-2" /> {t("Novo Lead")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t("Em qual origem?")}</DropdownMenuLabel>
-            {quadros.map((q) => (
-              <DropdownMenuItem key={q.pipeline.id} onSelect={() => setNovoEm(q.pipeline.id)}>
-                {q.pipeline.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </header>
+    // cabe na tela e quem rola é ele. A última classe desconta o topo de 44px da
+    // casca (V2) do md para cima; sem a casca e no celular vale a de 3.5rem.
+    <div className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] min-h-[28rem] flex-col gap-4 md:[body:has([data-escale-casca])_&]:h-[calc(100dvh-2.75rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))]">
+      <CabecalhoDaCasca
+        sobrelinha={t("Negócios da visualização")}
+        titulo={nome}
+        acao={
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <BotaoNegocioMais disabled={quadros.length === 0} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t("Em qual origem?")}</DropdownMenuLabel>
+              {quadros.map((q) => (
+                <DropdownMenuItem key={q.pipeline.id} onSelect={() => setNovoEm(q.pipeline.id)}>
+                  {q.pipeline.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
 
       {quadroDoNovo && (
         <NewLeadDialog
@@ -115,7 +126,10 @@ export function QuadroDaVisualizacao({
       )}
 
       {indisponiveis.length > 0 && (
-        <p role="status" className="rounded-md border border-border bg-surface-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        <p
+          role="status"
+          className="rounded-casca-gatilho bg-casca-raia px-3 py-2 text-xs text-casca-suave"
+        >
           {(indisponiveis.length === 1
             ? t("{n} origem desta visualização não abriu para você.")
             : t("{n} origens desta visualização não abriram para você.")
@@ -137,7 +151,9 @@ export function QuadroDaVisualizacao({
       />
 
       {carregando && quadros.length === 0 ? (
-        <div className="flex flex-1 animate-pulse items-center justify-center text-muted-foreground">{t("Carregando…")}</div>
+        <div className="flex flex-1 animate-pulse items-center justify-center text-casca-suave">
+          {t("Carregando…")}
+        </div>
       ) : (
         <QuadroCombinado
           quadros={quadrosVisiveis}
@@ -149,7 +165,11 @@ export function QuadroDaVisualizacao({
         />
       )}
 
-      <LoteDaVisualizacao selecionados={selecionados} quadros={quadros} onLimpar={() => setSelecionados([])} />
+      <LoteDaVisualizacao
+        selecionados={selecionados}
+        quadros={quadros}
+        onLimpar={() => setSelecionados([])}
+      />
     </div>
   );
 }

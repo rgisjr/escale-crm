@@ -22,15 +22,30 @@ vi.mock("@/components/escale/visualizacoes/QuadroCombinado", () => ({
   ),
 }));
 vi.mock("@/components/escale/filtros/BarraDoQuadro", () => ({
-  BarraDoQuadro: (p: { alvo: { tipo: string; id: string }; contagem: number; onAtualizar: () => void }) => (
-    <button type="button" onClick={p.onAtualizar}>{`barra ${p.alvo.tipo} ${p.alvo.id}: ${p.contagem}`}</button>
+  BarraDoQuadro: (p: {
+    alvo: { tipo: string; id: string };
+    contagem: number;
+    onAtualizar: () => void;
+  }) => (
+    <button
+      type="button"
+      onClick={p.onAtualizar}
+    >{`barra ${p.alvo.tipo} ${p.alvo.id}: ${p.contagem}`}</button>
   ),
 }));
-vi.mock("@/hooks/auth/AuthProvider", () => ({ useActiveOrg: () => ({ orgId: "org-1", currency: "BRL" }) }));
+vi.mock("@/hooks/auth/AuthProvider", () => ({
+  useActiveOrg: () => ({ orgId: "org-1", currency: "BRL" }),
+}));
 vi.mock("@/components/kanban/BulkActionBar", () => ({
-  BulkActionBar: ({ pipelineId, stages, selectedIds }: { pipelineId: string; stages: unknown[]; selectedIds: string[] }) => (
-    <p>{`lote ${pipelineId} ${stages.length} ${selectedIds.length}`}</p>
-  ),
+  BulkActionBar: ({
+    pipelineId,
+    stages,
+    selectedIds,
+  }: {
+    pipelineId: string;
+    stages: unknown[];
+    selectedIds: string[];
+  }) => <p>{`lote ${pipelineId} ${stages.length} ${selectedIds.length}`}</p>,
 }));
 vi.mock("@/components/kanban/NewLeadDialog", () => ({
   NewLeadDialog: ({ pipelineId, stages }: { pipelineId: string; stages: unknown[] }) => (
@@ -41,10 +56,28 @@ vi.mock("@/components/kanban/NewLeadDialog", () => ({
 import { useQuadrosDaVisualizacao } from "@/hooks/escale/useQuadrosDaVisualizacao";
 import { LoteDaVisualizacao } from "@/components/escale/visualizacoes/LoteDaVisualizacao";
 import { QuadroDaVisualizacao } from "@/components/escale/visualizacoes/QuadroDaVisualizacao";
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
+window.HTMLElement.prototype.setPointerCapture = vi.fn();
+window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+globalThis.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 const atualizarOrigens = vi.fn();
 
 const lead = (id: string, pipeline_id: string, status: string) =>
-  ({ id, pipeline_id, status, stage_id: `${pipeline_id}1`, tags: [], owner_user_id: null, owner_agent_id: null }) as never;
+  ({
+    id,
+    pipeline_id,
+    status,
+    stage_id: `${pipeline_id}1`,
+    tags: [],
+    owner_user_id: null,
+    owner_agent_id: null,
+  }) as never;
 const QUADROS = [
   {
     pipeline: { id: "A", name: "Leads", settings: {}, vocabulary: null },
@@ -53,7 +86,10 @@ const QUADROS = [
   },
   {
     pipeline: { id: "B", name: "Parceiros", settings: {}, vocabulary: null },
-    stages: [{ id: "B1", name: "Entrada" }, { id: "B2", name: "Proposta" }],
+    stages: [
+      { id: "B1", name: "Entrada" },
+      { id: "B2", name: "Proposta" },
+    ],
     leads: [lead("b-aberto", "B", "open")],
   },
 ] as unknown as BoardData[];
@@ -65,20 +101,35 @@ const ORIGENS = [
 
 beforeEach(() => {
   busca.atual = "";
-  vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: QUADROS, carregando: false, indisponiveis: [], atualizar: atualizarOrigens, atualizando: false });
+  vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({
+    quadros: QUADROS,
+    carregando: false,
+    indisponiveis: [],
+    atualizar: atualizarOrigens,
+    atualizando: false,
+  });
 });
 
 const idsNoQuadro = () =>
-  Array.from(screen.getByRole("list", { name: "quadro" }).querySelectorAll("li")).map((li) => li.textContent);
+  Array.from(screen.getByRole("list", { name: "quadro" }).querySelectorAll("li")).map(
+    (li) => li.textContent,
+  );
 
 describe("<QuadroDaVisualizacao>", () => {
-  it("mostra o nome, quantas origens junta e as origens que não abriram para quem olha", () => {
-    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: QUADROS, carregando: false, indisponiveis: ["C"], atualizar: atualizarOrigens, atualizando: false });
+  it("mostra o nome com a sobrelinha da Clint e as origens que não abriram para quem olha", () => {
+    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({
+      quadros: QUADROS,
+      carregando: false,
+      indisponiveis: ["C"],
+      atualizar: atualizarOrigens,
+      atualizando: false,
+    });
     render(<QuadroDaVisualizacao id="v-1" nome="Time comercial" origens={ORIGENS} />);
     expect(screen.getByRole("heading", { level: 1, name: "Time comercial" })).toBeInTheDocument();
-    expect(screen.getByText("Visualização")).toBeInTheDocument();
-    expect(screen.getByText("3 origens")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("1 origem desta visualização não abriu para você.");
+    expect(screen.getByText("Negócios da visualização")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "1 origem desta visualização não abriu para você.",
+    );
     expect(useQuadrosDaVisualizacao).toHaveBeenLastCalledWith(["A", "B", "C"]);
   });
 
@@ -87,11 +138,11 @@ describe("<QuadroDaVisualizacao>", () => {
     expect(idsNoQuadro()).toEqual(["a-aberto", "b-aberto"]);
     busca.atual = "st=open,won,lost";
     render(<QuadroDaVisualizacao id="v-1" nome="Time 2" origens={ORIGENS} />);
-    expect(Array.from(screen.getAllByRole("list", { name: "quadro" })[1]!.querySelectorAll("li")).map((li) => li.textContent)).toEqual([
-      "a-aberto",
-      "a-ganho",
-      "b-aberto",
-    ]);
+    expect(
+      Array.from(screen.getAllByRole("list", { name: "quadro" })[1]!.querySelectorAll("li")).map(
+        (li) => li.textContent,
+      ),
+    ).toEqual(["a-aberto", "a-ganho", "b-aberto"]);
   });
 
   it("a barra é da visualização (alvo dos filtros salvos), conta os cards e Atualizar relê as origens", async () => {
@@ -101,10 +152,10 @@ describe("<QuadroDaVisualizacao>", () => {
     expect(atualizarOrigens).toHaveBeenCalled();
   });
 
-  it("Novo Lead pergunta em qual origem e abre o formulário com as etapas dela", async () => {
+  it("'Negócio +' pergunta em qual origem e abre o formulário com as etapas dela", async () => {
     render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={ORIGENS} />);
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    await user.click(screen.getByRole("button", { name: /Novo Lead/ }));
+    await user.click(screen.getByRole("button", { name: /^Negócio/ }));
     await user.click(await screen.findByRole("menuitem", { name: "Parceiros" }));
     expect(screen.getByText("novo em B com 2 etapas")).toBeInTheDocument();
   });
@@ -112,10 +163,18 @@ describe("<QuadroDaVisualizacao>", () => {
   it("sem origem ativa, explica o que fazer; carregando, avisa", () => {
     const { unmount } = render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={[]} />);
     expect(
-      screen.getByText("Nenhuma origem desta visualização está ativa. Edite as origens pelo ⋮ da visualização."),
+      screen.getByText(
+        "Nenhuma origem desta visualização está ativa. Edite as origens pelo ⋮ da visualização.",
+      ),
     ).toBeInTheDocument();
     unmount();
-    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: [], carregando: true, indisponiveis: [], atualizar: atualizarOrigens, atualizando: false });
+    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({
+      quadros: [],
+      carregando: true,
+      indisponiveis: [],
+      atualizar: atualizarOrigens,
+      atualizando: false,
+    });
     render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={ORIGENS} />);
     expect(screen.getByText("Carregando…")).toBeInTheDocument();
   });
@@ -129,7 +188,13 @@ describe("<LoteDaVisualizacao>", () => {
 
   it("cards de várias origens: avisa que o lote é uma origem por vez e oferece limpar", async () => {
     const onLimpar = vi.fn();
-    render(<LoteDaVisualizacao selecionados={["a-aberto", "b-aberto"]} quadros={QUADROS} onLimpar={onLimpar} />);
+    render(
+      <LoteDaVisualizacao
+        selecionados={["a-aberto", "b-aberto"]}
+        quadros={QUADROS}
+        onLimpar={onLimpar}
+      />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent(
       "2 negócios de 2 origens selecionados. A ação em lote vale para uma origem por vez.",
     );
@@ -138,12 +203,20 @@ describe("<LoteDaVisualizacao>", () => {
   });
 
   it("seleção velha (ids que não estão em nenhum quadro): nada aparece, em vez de '0 origens'", () => {
-    const { container } = render(<LoteDaVisualizacao selecionados={["sumiu-1", "sumiu-2"]} quadros={QUADROS} onLimpar={vi.fn()} />);
+    const { container } = render(
+      <LoteDaVisualizacao
+        selecionados={["sumiu-1", "sumiu-2"]}
+        quadros={QUADROS}
+        onLimpar={vi.fn()}
+      />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("nada selecionado: nada aparece", () => {
-    const { container } = render(<LoteDaVisualizacao selecionados={[]} quadros={QUADROS} onLimpar={vi.fn()} />);
+    const { container } = render(
+      <LoteDaVisualizacao selecionados={[]} quadros={QUADROS} onLimpar={vi.fn()} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 });

@@ -24,6 +24,8 @@ type Busca = { get(chave: string): string | null; getAll?: (chave: string) => st
 
 const avancadosSchema = filtrosDoQuadroSchema.pick({
   criadoEm: true,
+  ganhoEm: true,
+  perdidoEm: true,
   valor: true,
   conversa: true,
   campos: true,

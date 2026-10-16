@@ -47,6 +47,8 @@ import { useFiltrosDoQuadro } from "@/hooks/escale/useFiltrosDoQuadro";
 import { recortarQuadro } from "@/lib/escale/filtros/aplicar";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
+// FORK ESCALE · Casca V4: o cabeçalho da Clint na casca nova (o quadro troca coluna e card pela prop `aparencia`).
+import { BotaoNegocioMais, CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
 
 export function PipelinePageClient({
   pipelineId,
@@ -161,7 +163,8 @@ export function PipelinePageClient({
       // `components/inbox/InboxLayout.tsx`, e é o que o gate
       // `tests/unit/altura-fixa-le-a-reserva-do-rodape.test.ts` cobra: altura
       // fixa não desconta número próprio, lê a reserva.
-      className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] min-h-[28rem] flex-col gap-4"
+      // FORK ESCALE · Casca V4: na casca nova, do md para cima, o topo tem 44px (V2), não os 56px do h-14 (a última classe).
+      className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] min-h-[28rem] flex-col gap-4 md:[body:has([data-escale-casca])_&]:h-[calc(100dvh-2.75rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))]"
       // OBSERVÁVEL de propósito, e é a razão de existir desta linha: "a
       // assinatura morreu" e "nada aconteceu" produzem o MESMO silêncio na
       // tela, e sem este valor nem o produto nem o teste conseguem separar as
@@ -181,6 +184,18 @@ export function PipelinePageClient({
       data-refetch-divergencias={seguranca.divergencias}
       data-refetch-em={seguranca.ultimaVerificacao ?? ""}
     >
+      {cascaNova ? (
+        // FORK ESCALE · Casca V4: o cabeçalho da Clint (01-010): "NEGÓCIOS DA
+        // ORIGEM", o nome grande e "Negócio +". Trocar de origem é pelo painel da
+        // esquerda (V3), e a alternância Quadro/Calendário fica escondida (o
+        // calendário segue no menu lateral). O cabeçalho original abaixo não muda.
+        <CabecalhoDaCasca
+          sobrelinha={t("Negócios da origem")}
+          titulo={nomeAtual}
+          acao={<BotaoNegocioMais onClick={() => setNewOpen(true)} disabled={!data} />}
+        />
+      ) : (
+        <>
       {/* `flex-col` no mobile: nome de funil comprido (é texto livre, sem
           limite curto) + botão na mesma linha sem quebra empurrava o botão pra
           fora da viewport em telas estreitas. De `sm:` pra cima volta a ser
@@ -271,6 +286,8 @@ export function PipelinePageClient({
           </Button>
         </div>
       </header>
+        </>
+      )}
       {data && (
         <NewLeadDialog
           open={newOpen}
@@ -332,6 +349,10 @@ export function PipelinePageClient({
           leadInicial={searchParams.get("lead")}
           podeRenomearEtapa={ROLE_RANK[role] >= ROLE_RANK.manager}
           ordemDosCards={ordemDosCards}
+          // FORK ESCALE · Casca V4: na casca nova, a coluna e o card da Clint; o
+          // "+ Adicionar negócio" da coluna abre o mesmo "Novo negócio" do botão.
+          aparencia={cascaNova ? "casca" : undefined}
+          aoAdicionarNegocio={cascaNova ? () => setNewOpen(true) : undefined}
         />
       )}
       <BulkActionBar

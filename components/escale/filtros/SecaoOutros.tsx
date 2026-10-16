@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 
+import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import type { FiltrosDoQuadro, IntervaloDeTempo, UnidadeDeTempo } from "@/lib/escale/filtros/tipos";
 
-import { CampoNumerico, RotuloDoGrupo, classeDoSeletor } from "./controles";
+import { CampoNumerico, RotuloDoGrupo } from "./controles";
 
 type ChaveDeTempo = "tempoNaEtapa" | "tempoDesdeEntrada";
 
@@ -135,15 +136,15 @@ function BlocoDeTempo({
           onMudar={(v) => onIntervalo({ max: v })}
         />
       </div>
-      <select
+      <SeletorDaCasca<UnidadeDeTempo>
         aria-label={`${titulo}: ${t("Unidade")}`}
-        className={classeDoSeletor}
-        value={unidade}
-        onChange={(e) => onUnidade(e.target.value === "horas" ? "horas" : "dias")}
-      >
-        <option value="dias">{rotulos.dias}</option>
-        <option value="horas">{rotulos.horas}</option>
-      </select>
+        valor={unidade}
+        opcoes={[
+          { valor: "dias", rotulo: rotulos.dias },
+          { valor: "horas", rotulo: rotulos.horas },
+        ]}
+        aoMudar={(v) => onUnidade(v === "horas" ? "horas" : "dias")}
+      />
     </div>
   );
 }

@@ -25,6 +25,12 @@ export interface DadosDeFiltroDoNegocio {
   atividades_concluidas: number;
   /** Nulo sem contato, com contato anonimizado (LGPD) ou sem nome. */
   contato_nome: string | null;
+  /**
+   * FORK ESCALE · Casca V4: o contato tem foto. A tela pede a imagem pela rota
+   * `GET /api/v1/contacts/{id}/avatar` (URL assinada curta, cache privado, nunca
+   * para anonimizado): assinar aqui expiraria com o quadro aberto.
+   */
+  contato_tem_foto: boolean;
   /** A conversa MAIS RECENTE do contato: a mesma da capa (`withConversas`). */
   conversa: ConversaDoFiltro | null;
 }
@@ -37,7 +43,13 @@ export function dadosDeFiltro(lead: Lead): DadosDeFiltroDoNegocio | undefined {
 
 export interface LinhasDosFiltros {
   concluidas: ReadonlyArray<{ lead_id: string; total: number }>;
-  contatos: ReadonlyArray<{ id: string; name: string | null; display_name: string | null; is_anonymized: boolean | null }>;
+  contatos: ReadonlyArray<{
+    id: string;
+    name: string | null;
+    display_name: string | null;
+    is_anonymized: boolean | null;
+    avatar_storage_path?: string | null;
+  }>;
   conversas: ReadonlyArray<{
     contact_id: string;
     status: string;
@@ -56,6 +68,7 @@ export function anexarDadosDosFiltros(leads: readonly Lead[], linhas: LinhasDosF
   // O nome de gente vem do helper central (`name` escolhido antes do `display_name`
   // do canal; identificador técnico nunca vira nome). Anonimizado (LGPD) não tem nome.
   const nomes = new Map(linhas.contatos.map((c) => [c.id, c.is_anonymized ? null : nomeDoContato(c)]));
+  const comFoto = new Set(linhas.contatos.filter((c) => !c.is_anonymized && c.avatar_storage_path).map((c) => c.id));
   // A mais recente primeiro, sem data por último: a ordem de `withConversas`.
   const conversas = new Map<string, ConversaDoFiltro>();
   for (const c of [...linhas.conversas].sort((a, b) => instante(b.last_message_at) - instante(a.last_message_at))) {
@@ -74,6 +87,7 @@ export function anexarDadosDosFiltros(leads: readonly Lead[], linhas: LinhasDosF
       filtros_escale: {
         atividades_concluidas: concluidas.get(lead.id) ?? 0,
         contato_nome: lead.contact_id ? (nomes.get(lead.contact_id) ?? null) : null,
+        contato_tem_foto: lead.contact_id ? comFoto.has(lead.contact_id) : false,
         conversa: lead.contact_id ? (conversas.get(lead.contact_id) ?? null) : null,
       },
     }),

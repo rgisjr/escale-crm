@@ -14,7 +14,12 @@ import type { RecusaDeCampos, RetomadaPendente } from "@/hooks/kanban/useMoveCar
 import { useAtRiskLeads } from "@/hooks/leads/useAtRiskLeads";
 import { useReactivations } from "@/hooks/leads/useReactivations";
 import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
-import { alternarNaSelecao, cardsDaColuna, montarColunas, planejarSoltura } from "@/lib/escale/visualizacoes/regras";
+import {
+  alternarNaSelecao,
+  cardsDaColuna,
+  montarColunas,
+  planejarSoltura,
+} from "@/lib/escale/visualizacoes/regras";
 import type { BoardData } from "@/lib/kanban/types";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import type { Lead } from "@/lib/types/leads";
@@ -72,13 +77,20 @@ export function QuadroCombinado({
     movers.current = proximo;
   }, []);
 
-  const [pulsosPorOrigem, setPulsosPorOrigem] = useState<Readonly<Record<string, Map<string, number>>>>({});
+  const [pulsosPorOrigem, setPulsosPorOrigem] = useState<
+    Readonly<Record<string, Map<string, number>>>
+  >({});
   const registrarPulsos = useCallback((pipelineId: string, pulsos: Map<string, number>) => {
-    setPulsosPorOrigem((atual) => (atual[pipelineId] === pulsos ? atual : { ...atual, [pipelineId]: pulsos }));
+    setPulsosPorOrigem((atual) =>
+      atual[pipelineId] === pulsos ? atual : { ...atual, [pipelineId]: pulsos },
+    );
   }, []);
   const [recusa, setRecusa] = useState<RecusaNaOrigem | null>(null);
   const [retomada, setRetomada] = useState<RetomadaNaOrigem | null>(null);
-  const aoFaltarCampos = useCallback((pipelineId: string, r: RecusaDeCampos) => setRecusa({ pipelineId, recusa: r }), []);
+  const aoFaltarCampos = useCallback(
+    (pipelineId: string, r: RecusaDeCampos) => setRecusa({ pipelineId, recusa: r }),
+    [],
+  );
   const aoRetomar = useCallback(
     (pipelineId: string, r: RetomadaPendente) => setRetomada({ pipelineId, retomada: r }),
     [],
@@ -95,18 +107,26 @@ export function QuadroCombinado({
       tagsCanonicas: Object.fromEntries(
         quadros.map((q) => {
           const bruto = (q.pipeline.settings ?? {}).canonical_tags;
-          return [q.pipeline.id, Array.isArray(bruto) ? bruto.filter((x): x is string => typeof x === "string") : []];
+          return [
+            q.pipeline.id,
+            Array.isArray(bruto) ? bruto.filter((x): x is string => typeof x === "string") : [],
+          ];
         }),
       ),
       ownerNames: new Map((members ?? []).map((m) => [m.user_id, m.full_name])),
       // Esfriando vem do MESMO radar do funil, recortado pelas origens daqui.
       coolingIds: new Set(
         (atRisk?.items ?? [])
-          .filter((i) => origens.has(i.pipeline_id) && (i.risk === "em_risco" || i.risk === "critico"))
+          .filter(
+            (i) => origens.has(i.pipeline_id) && (i.risk === "em_risco" || i.risk === "critico"),
+          )
           .map((i) => i.id),
       ),
       reactivations: new Map(
-        (propostasVivas ?? []).map((p) => [p.lead_id, { proposalId: p.proposal_id, expiresAt: p.expires_at }]),
+        (propostasVivas ?? []).map((p) => [
+          p.lead_id,
+          { proposalId: p.proposal_id, expiresAt: p.expires_at },
+        ]),
       ),
       pulses: new Map(Object.values(pulsosPorOrigem).flatMap((m) => [...m])),
     };
@@ -117,7 +137,8 @@ export function QuadroCombinado({
   const quadroDoDossie = leadDoDossie ? quadroDe.get(leadDoDossie.pipeline_id) : undefined;
 
   const selecionarVarios = useCallback(
-    (ids: string[], marcar: boolean) => onSelecao([...alternarNaSelecao(selecionadosSet, ids, marcar)]),
+    (ids: string[], marcar: boolean) =>
+      onSelecao([...alternarNaSelecao(selecionadosSet, ids, marcar)]),
     [onSelecao, selecionadosSet],
   );
 
@@ -125,7 +146,8 @@ export function QuadroCombinado({
     (result: DropResult) => {
       const { source, destination, draggableId } = result;
       if (!destination) return;
-      if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+      if (source.droppableId === destination.droppableId && source.index === destination.index)
+        return;
       const lead = leads.find((l) => l.id === draggableId);
       const coluna = colunas.find((c) => c.chave === destination.droppableId);
       if (!lead || !coluna) return;
@@ -145,7 +167,8 @@ export function QuadroCombinado({
           recusar();
           return;
         }
-        const daOrigem = qc.getQueryData<BoardData>(chaveDoQuadro(lead.pipeline_id))?.leads ?? leads;
+        const daOrigem =
+          qc.getQueryData<BoardData>(chaveDoQuadro(lead.pipeline_id))?.leads ?? leads;
         movers.current.get(lead.pipeline_id)?.({
           leadId: lead.id,
           stageId,
@@ -157,7 +180,9 @@ export function QuadroCombinado({
 
       const destino = coluna.destinos[lead.pipeline_id];
       const etapaInteira = destino
-        ? (qc.getQueryData<BoardData>(chaveDoQuadro(lead.pipeline_id))?.leads.filter((l) => l.stage_id === destino) ?? null)
+        ? (qc
+            .getQueryData<BoardData>(chaveDoQuadro(lead.pipeline_id))
+            ?.leads.filter((l) => l.stage_id === destino) ?? null)
         : null;
       const soltura = planejarSoltura({
         lead,
@@ -195,7 +220,11 @@ export function QuadroCombinado({
       ))}
       <DragDropContext onDragEnd={aoSoltar}>
         {/* Um contêiner de rolagem só, como o quadro do funil (`KanbanBoard`). */}
-        <div className="flex min-h-0 flex-1 items-start gap-3 overflow-auto px-4 pb-4" data-quadro-da-visualizacao>
+        {/* Casca V4: como o quadro do funil na casca, cada coluna rola sozinha e o quadro só anda para o lado. */}
+        <div
+          className="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden pb-3"
+          data-quadro-da-visualizacao
+        >
           {colunas.map((coluna) => (
             <ColunaDaVisualizacao
               key={coluna.chave}

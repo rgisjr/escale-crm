@@ -13,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useExcluirFiltroSalvo, useFiltrosSalvos, useMudarFiltroSalvo } from "@/hooks/escale/useFiltrosSalvos";
+import {
+  useExcluirFiltroSalvo,
+  useFiltrosSalvos,
+  useMudarFiltroSalvo,
+} from "@/hooks/escale/useFiltrosSalvos";
 import { useT } from "@/hooks/i18n/useT";
 import {
   FILTROS_SALVOS_MAX,
@@ -32,12 +35,15 @@ import {
   type FiltroSalvo,
 } from "@/lib/escale/filtros/filtros-salvos";
 import { enxugar, type FiltrosDoQuadro } from "@/lib/escale/filtros/tipos";
-import { BookmarkSimple, CaretDown, Users } from "@/lib/ui/icons";
+import { Users } from "@/lib/ui/icons";
+import { Bookmark, ChevronRight } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
+import { CLASSE_DA_LINHA_DO_MENU } from "./controles";
 import { JanelaDoFiltroSalvo, type JanelaDoFiltro } from "./JanelaDoFiltroSalvo";
 
-const emOrdem = <T extends string>(lista: readonly T[] | undefined) => (lista ? [...lista].sort() : undefined);
+const emOrdem = <T extends string>(lista: readonly T[] | undefined) =>
+  lista ? [...lista].sort() : undefined;
 
 /**
  * Cópia com as listas de valores em ordem fixa: tags, canais, atendentes e
@@ -50,7 +56,12 @@ function comListasEmOrdem(f: FiltrosDoQuadro): FiltrosDoQuadro {
     ...f,
     tags: emOrdem(f.tags),
     conversa: conversa
-      ? { ...conversa, canais: emOrdem(conversa.canais), atendentes: emOrdem(conversa.atendentes), situacao: emOrdem(conversa.situacao) }
+      ? {
+          ...conversa,
+          canais: emOrdem(conversa.canais),
+          atendentes: emOrdem(conversa.atendentes),
+          situacao: emOrdem(conversa.situacao),
+        }
       : undefined,
   };
 }
@@ -64,7 +75,8 @@ const foiAlterado = (salvo: FiltroSalvo, atuais: FiltrosDoQuadro) =>
  * aplicado (e "alterado" quando ele foi mexido depois). O menu aplica os meus e
  * os compartilhados, salva o filtro atual (até 20 por pessoa em cada origem ou
  * visualização, como na Clint) e, para o MEU filtro aplicado, salva alterações,
- * renomeia ou compartilha, e exclui.
+ * renomeia ou compartilha, e exclui. Na Casca V4 o gatilho é uma linha do menu
+ * da engrenagem.
  */
 export function MenuDeFiltrosSalvos({
   alvo,
@@ -98,7 +110,10 @@ export function MenuDeFiltrosSalvos({
   function salvarAlteracoes(filtro: FiltroSalvo) {
     mudar.mutate(
       { id: filtro.id, mudanca: { criterios: enxugar(filtros) } },
-      { onSuccess: () => toast.success(t("Filtro atualizado.")), onError: (e) => toast.error(textoDoErro(e, t)) },
+      {
+        onSuccess: () => toast.success(t("Filtro atualizado.")),
+        onError: (e) => toast.error(textoDoErro(e, t)),
+      },
     );
   }
 
@@ -119,17 +134,20 @@ export function MenuDeFiltrosSalvos({
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="max-w-[16rem] gap-1.5" data-testid="filtros-salvos">
-            <BookmarkSimple size={16} aria-hidden />
-            <span className="truncate">{ativo ? ativo.nome : t("Filtros salvos")}</span>
-            {alterado ? <span className="text-xs text-muted-foreground">{`(${t("alterado")})`}</span> : null}
-            <CaretDown size={14} aria-hidden />
-          </Button>
+          {/* Casca V4: uma linha do menu da engrenagem (D5; PRINT 32). */}
+          <button type="button" className={CLASSE_DA_LINHA_DO_MENU} data-testid="filtros-salvos">
+            <Bookmark size={14} aria-hidden />
+            <span className="min-w-0 truncate">{ativo ? ativo.nome : t("Filtros salvos")}</span>
+            {alterado ? <span className="text-casca-meta">{`(${t("alterado")})`}</span> : null}
+            <ChevronRight size={12} aria-hidden className="ml-auto shrink-0" />
+          </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuContent side="left" align="start" className="w-64">
           <DropdownMenuItem onSelect={salvarNovo}>{t("Salvar filtro atual…")}</DropdownMenuItem>
           {ativo?.meu && alterado ? (
-            <DropdownMenuItem onSelect={() => salvarAlteracoes(ativo)}>{t("Salvar alterações neste filtro")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => salvarAlteracoes(ativo)}>
+              {t("Salvar alterações neste filtro")}
+            </DropdownMenuItem>
           ) : null}
           {ativo?.meu ? (
             <>
@@ -142,13 +160,24 @@ export function MenuDeFiltrosSalvos({
             </>
           ) : null}
           <DropdownMenuSeparator />
-          {isError ? <DropdownMenuItem disabled>{t("Não consegui carregar os filtros salvos.")}</DropdownMenuItem> : null}
-          {!isError && lista.length === 0 ? <DropdownMenuItem disabled>{t("Nenhum filtro salvo ainda.")}</DropdownMenuItem> : null}
+          {isError ? (
+            <DropdownMenuItem disabled>
+              {t("Não consegui carregar os filtros salvos.")}
+            </DropdownMenuItem>
+          ) : null}
+          {!isError && lista.length === 0 ? (
+            <DropdownMenuItem disabled>{t("Nenhum filtro salvo ainda.")}</DropdownMenuItem>
+          ) : null}
           {meus.length > 0 ? (
             <>
               <DropdownMenuLabel>{t("Meus filtros")}</DropdownMenuLabel>
               {meus.map((f) => (
-                <ItemDoFiltro key={f.id} filtro={f} ativo={f.id === filtroSalvoId} onAplicar={onAplicar} />
+                <ItemDoFiltro
+                  key={f.id}
+                  filtro={f}
+                  ativo={f.id === filtroSalvoId}
+                  onAplicar={onAplicar}
+                />
               ))}
             </>
           ) : null}
@@ -156,7 +185,12 @@ export function MenuDeFiltrosSalvos({
             <>
               <DropdownMenuLabel>{t("Compartilhados com você")}</DropdownMenuLabel>
               {compartilhados.map((f) => (
-                <ItemDoFiltro key={f.id} filtro={f} ativo={f.id === filtroSalvoId} onAplicar={onAplicar} />
+                <ItemDoFiltro
+                  key={f.id}
+                  filtro={f}
+                  ativo={f.id === filtroSalvoId}
+                  onAplicar={onAplicar}
+                />
               ))}
             </>
           ) : null}
@@ -180,9 +214,13 @@ export function MenuDeFiltrosSalvos({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("Excluir o filtro «{nome}»?").replace("{nome}", apagar?.nome ?? "")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("Excluir o filtro «{nome}»?").replace("{nome}", apagar?.nome ?? "")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("Ele some para você e, se estiver compartilhado, para todo mundo. Nenhum negócio é tocado.")}
+              {t(
+                "Ele some para você e, se estiver compartilhado, para todo mundo. Nenhum negócio é tocado.",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -206,7 +244,10 @@ function ItemDoFiltro({
 }) {
   const t = useT();
   return (
-    <DropdownMenuItem onSelect={() => onAplicar(filtro.criterios, filtro.id)} className={cn(ativo && "font-semibold")}>
+    <DropdownMenuItem
+      onSelect={() => onAplicar(filtro.criterios, filtro.id)}
+      className={cn(ativo && "font-semibold")}
+    >
       <span className="truncate">{filtro.nome}</span>
       {filtro.meu && filtro.compartilhado ? (
         <span className="ml-auto text-muted-foreground" title={t("Compartilhado")}>

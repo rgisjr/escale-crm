@@ -73,6 +73,14 @@ function diaLocal(iso: string): string {
   return `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
 }
 
+/** O dia local de `iso` está no período? Sem período, passa; com período e sem data, não passa. */
+function noPeriodo(iso: string | null, p: { de?: string; ate?: string } | undefined): boolean {
+  if (!p) return true;
+  if (!iso) return false;
+  const dia = diaLocal(iso);
+  return !(p.de && dia < p.de) && !(p.ate && dia > p.ate);
+}
+
 const dentro = (n: number, i: Intervalo | undefined) =>
   !i || ((i.min === undefined || n >= i.min) && (i.max === undefined || n <= i.max));
 
@@ -117,14 +125,13 @@ export function aplicarFiltrosDoQuadro(leads: readonly Lead[], filtros: FiltrosD
   const status = new Set<string>(f.status);
   const busca = normalizar(f.busca ?? "");
   const campos = new Map(ctx.campos.map((c) => [chaveDoCampo(c), c]));
-  const criadoEm = f.criadoEm;
   return applyFilters([...leads], paraLeadFilters(f, ctx.moeda), { categoriaDo: ctx.categoriaDo }).filter((l) => {
     if (!status.has(l.status)) return false;
     if (!passaBusca(l, busca)) return false;
-    if (criadoEm) {
-      const dia = diaLocal(l.created_at);
-      if ((criadoEm.de && dia < criadoEm.de) || (criadoEm.ate && dia > criadoEm.ate)) return false;
-    }
+    if (!noPeriodo(l.created_at, f.criadoEm)) return false;
+    // FORK ESCALE · Casca V4: ganho e perda pelo dia do fechamento, só dos negócios nesse status.
+    if (f.ganhoEm && !(l.status === "won" && noPeriodo(l.closed_at, f.ganhoEm))) return false;
+    if (f.perdidoEm && !(l.status === "lost" && noPeriodo(l.closed_at, f.perdidoEm))) return false;
     if (!passaConversa(l, f.conversa)) return false;
     if (!(f.campos ?? []).every((c) => passaCondicao(l, c, campos.get(chaveDoCampo(c))))) return false;
     if (!dentro(dadosDeFiltro(l)?.atividades_concluidas ?? 0, f.atividadesConcluidas)) return false;

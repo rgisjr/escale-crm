@@ -22,6 +22,8 @@ import { RetomarComoNovoNegocioDialog } from "./RetomarComoNovoNegocioDialog";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 // FORK ESCALE · Fase 1D: com ordenação ativa, soltar em outra etapa vai para o fim dela.
 import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
+// FORK ESCALE · Casca V4: com a casca nova, a coluna e o card da Clint (fork).
+import { ColunaDoFunilNaCasca } from "@/components/escale/quadro/ColunaDoFunilNaCasca";
 
 interface KanbanBoardProps {
   pipelineId: string;
@@ -56,6 +58,14 @@ interface KanbanBoardProps {
    * outra etapa põe o card no fim dela. Ausente = a ordem manual de sempre.
    */
   ordemDosCards?: (a: Lead, b: Lead) => number;
+  /**
+   * FORK ESCALE · Casca V4: "casca" troca a coluna e o card pelos da Clint
+   * (`components/escale/quadro/`), com rolagem própria em cada coluna. Ausente =
+   * o quadro do original, sem mudança nenhuma.
+   */
+  aparencia?: "casca";
+  /** FORK ESCALE · Casca V4: o "+ Adicionar negócio" das colunas (só na casca). */
+  aoAdicionarNegocio?: (stageId: string) => void;
 }
 
 function groupLeadsByStage(
@@ -106,6 +116,8 @@ export function KanbanBoard({
   leadInicial,
   podeRenomearEtapa = false,
   ordemDosCards,
+  aparencia,
+  aoAdicionarNegocio,
 }: KanbanBoardProps) {
   const t = useT();
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
@@ -334,10 +346,35 @@ export function KanbanBoard({
           "o quadro cabe na tela"). O respiro até os filtros vem do `gap-4` da
           página. */}
       <div
-        className="flex min-h-0 flex-1 items-start gap-3 overflow-auto px-4 pb-4"
+        className={
+          // FORK ESCALE · Casca V4: na casca, cada coluna rola sozinha e o quadro só anda para o lado.
+          aparencia === "casca"
+            ? "flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden pb-3"
+            : "flex min-h-0 flex-1 items-start gap-3 overflow-auto px-4 pb-4"
+        }
         data-quadro-do-funil
       >
-        {data.stages.map((stage) => (
+        {data.stages.map((stage) =>
+          // FORK ESCALE · Casca V4: as mesmas props, na coluna da Clint.
+          aparencia === "casca" ? (
+            <ColunaDoFunilNaCasca
+              key={stage.id}
+              stage={stage}
+              leads={grouped.get(stage.id) ?? []}
+              pipelineId={pipelineId}
+              ownerNames={ownerNames}
+              coolingIds={coolingIds}
+              reactivations={reactivations}
+              pulses={pulsesProp ?? queryResult.pulses}
+              canonicalTags={canonicalTags}
+              selectedLeadIds={selectedLeadIds}
+              onSelectMany={handleSelectMany}
+              onOpen={setDossieId}
+              podeRenomear={podeRenomearEtapa}
+              onRenomear={(nome) => renameStage.mutate({ stageId: stage.id, name: nome })}
+              aoAdicionar={aoAdicionarNegocio}
+            />
+          ) : (
           <StageColumn
             key={stage.id}
             stage={stage}
@@ -354,7 +391,8 @@ export function KanbanBoard({
             podeRenomear={podeRenomearEtapa}
             onRenomear={(nome) => renameStage.mutate({ stageId: stage.id, name: nome })}
           />
-        ))}
+          ),
+        )}
       </div>
       {leadDoDossie && (
         <LeadDossier

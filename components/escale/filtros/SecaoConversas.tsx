@@ -1,4 +1,6 @@
 "use client";
+import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
+import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import {
@@ -8,7 +10,7 @@ import {
   type FiltrosDoQuadro,
 } from "@/lib/escale/filtros/tipos";
 
-import { Caixinha, RotuloDoGrupo, alternarNaLista, classeDoSeletor } from "./controles";
+import { RotuloDoGrupo, alternarNaLista } from "./controles";
 
 /** Nomes de marca: iguais em todo idioma. */
 const CANAIS: ReadonlyArray<{ valor: CanalDaConversa; nome: string }> = [
@@ -17,11 +19,12 @@ const CANAIS: ReadonlyArray<{ valor: CanalDaConversa; nome: string }> = [
   { valor: "facebook", nome: "Facebook" },
 ];
 
+type Existe = "" | "com" | "sem";
+
 /**
- * Conversas (Clint: "Conversas"), adaptado ao que o original tem: com ou sem
- * conversa, não lidas, não respondidas, status, canal e atendente. Olha a
- * conversa MAIS RECENTE do contato — a mesma que a capa do card mostra. O
- * original não tem setor; quando tiver, entra aqui.
+ * Conversas (Clint: "Conversas", dentro de "Mais filtros" na Casca V4): com ou
+ * sem conversa, não lidas, não respondidas, status, canal e atendente. Olha a
+ * conversa MAIS RECENTE do contato — a mesma que o card mostra.
  */
 export function SecaoConversas({
   filtros,
@@ -40,77 +43,70 @@ export function SecaoConversas({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <RotuloDoGrupo>{t("Conversa")}</RotuloDoGrupo>
-        <select
+        <SeletorDaCasca<Existe>
           aria-label={t("Conversa")}
-          className={classeDoSeletor}
-          value={c.existe ?? ""}
-          onChange={(e) => {
-            const existe = e.target.value;
-            mudar({ existe: existe === "com" || existe === "sem" ? existe : undefined });
-          }}
-        >
-          <option value="">{t("Com ou sem conversa")}</option>
-          <option value="com">{t("Com conversa")}</option>
-          <option value="sem">{t("Sem conversa")}</option>
-        </select>
+          valor={c.existe ?? ""}
+          opcoes={[
+            { valor: "", rotulo: t("Com ou sem conversa") },
+            { valor: "com", rotulo: t("Com conversa") },
+            { valor: "sem", rotulo: t("Sem conversa") },
+          ]}
+          aoMudar={(v) => mudar({ existe: v === "com" || v === "sem" ? v : undefined })}
+        />
       </div>
 
       {c.existe === "sem" ? null : (
         <>
           <div className="space-y-2">
-            <Caixinha marcada={!!c.naoLidas} onMudar={(m) => mudar({ naoLidas: m || undefined })}>
-              {t("Não lidas")}
-            </Caixinha>
-            <Caixinha
+            <CaixaDaCasca
+              marcada={!!c.naoLidas}
+              aoMudar={(m) => mudar({ naoLidas: m || undefined })}
+              rotulo={t("Não lidas")}
+            />
+            <CaixaDaCasca
               marcada={!!c.semResposta}
-              onMudar={(m) => mudar({ semResposta: m || undefined })}
-            >
-              {t("Não respondidas pelo atendente")}
-            </Caixinha>
+              aoMudar={(m) => mudar({ semResposta: m || undefined })}
+              rotulo={t("Não respondidas pelo atendente")}
+            />
           </div>
           <div className="space-y-2">
             <RotuloDoGrupo>{t("Status da conversa")}</RotuloDoGrupo>
-            <Caixinha
+            <CaixaDaCasca
               marcada={!!c.situacao?.includes("aberta")}
-              onMudar={() => mudar({ situacao: alternarNaLista(c.situacao, "aberta") })}
-            >
-              {t("Aberta")}
-            </Caixinha>
-            <Caixinha
+              aoMudar={() => mudar({ situacao: alternarNaLista(c.situacao, "aberta") })}
+              rotulo={t("Aberta")}
+            />
+            <CaixaDaCasca
               marcada={!!c.situacao?.includes("encerrada")}
-              onMudar={() => mudar({ situacao: alternarNaLista(c.situacao, "encerrada") })}
-            >
-              {t("Encerrada")}
-            </Caixinha>
+              aoMudar={() => mudar({ situacao: alternarNaLista(c.situacao, "encerrada") })}
+              rotulo={t("Encerrada")}
+            />
           </div>
           <div className="space-y-2">
             <RotuloDoGrupo>{t("Canais")}</RotuloDoGrupo>
             {CANAIS.map((canal) => (
-              <Caixinha
+              <CaixaDaCasca
                 key={canal.valor}
                 marcada={!!c.canais?.includes(canal.valor)}
-                onMudar={() => mudar({ canais: alternarNaLista(c.canais, canal.valor) })}
-              >
-                {canal.nome}
-              </Caixinha>
+                aoMudar={() => mudar({ canais: alternarNaLista(c.canais, canal.valor) })}
+                rotulo={canal.nome}
+              />
             ))}
           </div>
           <div className="space-y-2">
             <RotuloDoGrupo>{t("Atendentes")}</RotuloDoGrupo>
-            <Caixinha
+            <CaixaDaCasca
               marcada={!!c.atendentes?.includes(SEM_ATENDENTE)}
-              onMudar={() => mudar({ atendentes: alternarNaLista(c.atendentes, SEM_ATENDENTE) })}
-            >
-              {t("Não atribuídos")}
-            </Caixinha>
+              aoMudar={() => mudar({ atendentes: alternarNaLista(c.atendentes, SEM_ATENDENTE) })}
+              rotulo={t("Não atribuídos")}
+            />
             {(membros ?? []).map((m) => (
-              <Caixinha
+              <CaixaDaCasca
                 key={m.user_id}
                 marcada={!!c.atendentes?.includes(m.user_id)}
-                onMudar={() => mudar({ atendentes: alternarNaLista(c.atendentes, m.user_id) })}
-              >
-                {m.full_name ?? t("Sem nome")}
-              </Caixinha>
+                aoMudar={() => mudar({ atendentes: alternarNaLista(c.atendentes, m.user_id) })}
+                rotulo={m.full_name ?? t("Sem nome")}
+              />
             ))}
           </div>
         </>

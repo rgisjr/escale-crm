@@ -108,6 +108,9 @@ export const filtrosDoQuadroSchema = z
     motivoDePerda: z.string().min(1).max(200).optional(),
     categoriaDePerda: z.string().min(1).max(200).optional(),
     criadoEm: z.object({ de: dia.optional(), ate: dia.optional() }).strict().optional(),
+    /** FORK ESCALE · Casca V4: o "Data" da Clint por ganho e por perda (o dia do fechamento, `closed_at`). */
+    ganhoEm: z.object({ de: dia.optional(), ate: dia.optional() }).strict().optional(),
+    perdidoEm: z.object({ de: dia.optional(), ate: dia.optional() }).strict().optional(),
     /** Centavos, na moeda da organização (a régua da #1531 em `applyFilters`). */
     valor: intervaloSchema.optional(),
     conversa: filtroDeConversaSchema.optional(),
@@ -144,6 +147,11 @@ function intervalo<T extends { min?: number; max?: number }>(i: T | undefined): 
   return semIndefinidos(i);
 }
 
+/** Um período de dias sem nada vazio; sem `de` nem `ate`, não é filtro. */
+function periodoEnxuto(p: { de?: string; ate?: string } | undefined): { de?: string; ate?: string } | undefined {
+  return p && (p.de || p.ate) ? semIndefinidos({ de: p.de || undefined, ate: p.ate || undefined }) : undefined;
+}
+
 function enxugarConversa(c: FiltroDeConversa | undefined): FiltroDeConversa | undefined {
   if (!c) return undefined;
   // "Sem conversa" não combina com nenhum outro critério de conversa.
@@ -165,10 +173,7 @@ function enxugarConversa(c: FiltroDeConversa | undefined): FiltroDeConversa | un
  */
 export function enxugar(f: FiltrosDoQuadro): FiltrosDoQuadro {
   const tags = f.tags?.length ? [...f.tags] : undefined;
-  const criadoEm =
-    f.criadoEm && (f.criadoEm.de || f.criadoEm.ate)
-      ? semIndefinidos({ de: f.criadoEm.de || undefined, ate: f.criadoEm.ate || undefined })
-      : undefined;
+  const criadoEm = periodoEnxuto(f.criadoEm);
   return semIndefinidos<FiltrosDoQuadro>({
     status: normalizarStatus(f.status),
     busca: f.busca?.trim() || undefined,
@@ -179,6 +184,8 @@ export function enxugar(f: FiltrosDoQuadro): FiltrosDoQuadro {
     motivoDePerda: f.motivoDePerda?.trim() ? f.motivoDePerda : undefined,
     categoriaDePerda: f.categoriaDePerda?.trim() ? f.categoriaDePerda : undefined,
     criadoEm,
+    ganhoEm: periodoEnxuto(f.ganhoEm),
+    perdidoEm: periodoEnxuto(f.perdidoEm),
     valor: intervalo(f.valor),
     conversa: enxugarConversa(f.conversa),
     campos: f.campos?.length ? [...f.campos] : undefined,
@@ -195,7 +202,7 @@ export const SECOES_DE_FILTRO = ["negocio", "conversas", "tags", "campos", "outr
 export type SecaoDeFiltro = (typeof SECOES_DE_FILTRO)[number];
 
 const CHAVES_DA_SECAO: Record<SecaoDeFiltro, ReadonlyArray<keyof FiltrosDoQuadro>> = {
-  negocio: ["dono", "criadoEm", "valor", "atrasados", "motivoDePerda", "categoriaDePerda"],
+  negocio: ["dono", "criadoEm", "ganhoEm", "perdidoEm", "valor", "atrasados", "motivoDePerda", "categoriaDePerda"],
   conversas: ["conversa"],
   tags: ["tags", "modoDasTags"],
   campos: ["campos"],
@@ -258,6 +265,8 @@ export function mesmosFiltros(a: FiltrosDoQuadro, b: FiltrosDoQuadro): boolean {
 export type ChaveDeCriterio =
   | "dono"
   | "criadoEm"
+  | "ganhoEm"
+  | "perdidoEm"
   | "valor"
   | "atrasados"
   | "motivoDePerda"
@@ -273,6 +282,8 @@ export type ChaveDeCriterio =
 const ROTULOS_DOS_CRITERIOS: Record<ChaveDeCriterio, string> = {
   dono: "Dono",
   criadoEm: "Data de criação",
+  ganhoEm: "Data de ganho",
+  perdidoEm: "Data de perda",
   valor: "Valor",
   atrasados: "Apenas atrasados",
   motivoDePerda: "Motivo de perda",

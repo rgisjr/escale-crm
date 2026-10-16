@@ -74,6 +74,27 @@ describe("anexarDadosDosFiltros", () => {
     expect(leads.map((l) => dadosDeFiltro(l)?.conversa)).toEqual([null, null]);
   });
 
+  it("foto: só contato com arquivo e não anonimizado tem foto (a tela pede pela rota do avatar)", () => {
+    const leads = anexarDadosDosFiltros(
+      [
+        negocio("com", { contact_id: "c1" }),
+        negocio("sem-arquivo", { contact_id: "c2" }),
+        negocio("anonimizado", { contact_id: "c3" }),
+        negocio("sem-contato"),
+      ],
+      {
+        concluidas: [],
+        conversas: [],
+        contatos: [
+          { id: "c1", name: "Ana", display_name: null, is_anonymized: false, avatar_storage_path: "org-1/avatars/c1.jpg" },
+          { id: "c2", name: "Bia", display_name: null, is_anonymized: false, avatar_storage_path: null },
+          { id: "c3", name: "Cris", display_name: null, is_anonymized: true, avatar_storage_path: "org-1/avatars/c3.jpg" },
+        ],
+      },
+    );
+    expect(leads.map((l) => dadosDeFiltro(l)?.contato_tem_foto)).toEqual([true, false, false, false]);
+  });
+
   it("não muda o negócio de entrada", () => {
     const original = negocio("a");
     anexarDadosDosFiltros([original], { concluidas: [{ lead_id: "a", total: 1 }], contatos: [], conversas: [] });

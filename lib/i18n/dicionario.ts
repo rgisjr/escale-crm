@@ -9372,6 +9372,22 @@ export const DICIONARIO: Traducoes = {
   // ─── FORK ESCALE · casca V3 (painel esquerdo de Negócios igual à Clint) ───
   "Nova origem": { es: "Nuevo origen" },
   "Buscar origens, grupos, visualizações…": { es: "Buscar orígenes, grupos, vistas…" },
+  // ─── FORK ESCALE · casca igual à Clint (V4: quadro, barra de filtros, colunas e cards) ───
+  "Negócios da origem": { es: "Negocios del origen" },
+  "Negócios da visualização": { es: "Negocios de la vista" },
+  "{n} oportunidade de {negocio}": { es: "{n} oportunidad de {negocio}" },
+  "{n} oportunidades de {negocio}": { es: "{n} oportunidades de {negocio}" },
+  "Mais filtros": { es: "Más filtros" },
+  "dd/mm/aaaa": { es: "dd/mm/aaaa" },
+  "Configurações do quadro": { es: "Configuración del tablero" },
+  "Personalizar cards": { es: "Personalizar tarjetas" },
+  "Exportar": { es: "Exportar" },
+  "Sem e-mail": { es: "Sin correo" },
+  "{c} de {n} atividades concluídas": { es: "{c} de {n} actividades completadas" },
+  "Ações da etapa": { es: "Acciones de la etapa" },
+  "Selecionar todos": { es: "Seleccionar todos" },
+  "Desmarcar todos": { es: "Desmarcar todos" },
+  "Adicionar negócio": { es: "Agregar negocio" },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
