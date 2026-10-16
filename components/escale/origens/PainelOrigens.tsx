@@ -9,13 +9,8 @@ import {
 } from "@/components/escale/visualizacoes/JanelasDaVisualizacao";
 import { RodapeDaSelecao } from "@/components/escale/visualizacoes/RodapeDaSelecao";
 import { SecaoVisualizacoes, type AcaoDaVisualizacao } from "@/components/escale/visualizacoes/SecaoVisualizacoes";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAtualizarVisualizacao } from "@/hooks/escale/useVisualizacoes";
 import { useT } from "@/hooks/i18n/useT";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
@@ -28,20 +23,30 @@ import {
   visualizacaoDoCaminho,
   type Visualizacao,
 } from "@/lib/escale/visualizacoes/regras";
-import { CaretDown, CaretLeft, CaretRight, CaretUp, MagnifyingGlass, Plus, SquaresFour } from "@/lib/ui/icons";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  FolderPlus,
+  LayoutPanelLeft,
+  Plus,
+  Search,
+} from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 import { ArquivadosDoPainel } from "./ArquivadosDoPainel";
 import { CabecalhoDaSecao } from "./CabecalhoDaSecao";
+import { BOLINHA_DO_PAINEL, BOTAO_DE_ICONE, SO_NO_HOVER } from "./estilos-do-painel";
 import { JanelasDeOrigens, type Janela } from "./JanelasDeOrigens";
 import {
-  BOTAO_DE_ICONE,
   LinhaDaOrigem,
   LinhaDoGrupo,
   type AcaoDaOrigem,
   type AcaoDoGrupo,
   type SelecaoNoPainel,
 } from "./LinhasDoPainel";
+import { ConteudoDoMenu, ItemDoMenu } from "./MenuDoPainel";
 import { textoDoErro } from "./texto-do-erro";
 
 const JANELA_DO_GRUPO: Record<
@@ -70,19 +75,26 @@ interface Selecao {
 }
 
 /**
- * O PAINEL ORIGENS (fork Escale, Fases 1A, 1B e 1C): a coluna da esquerda de
- * Negócios na casca nova, como na Clint. `<` recolhe o painel, `^` recolhe a
- * lista, a seta abre o grupo, o `+` de cima adiciona origem ou grupo, o `+` do
- * grupo cria uma origem dentro dele, e os ⋮ levam às janelas
- * (`JanelasDeOrigens`). Abaixo, a seção irmã Visualizações, com o mesmo
- * cabeçalho em destaque e o seu próprio `^`; o `+` dela e o "Selecionar" dos ⋮
- * entram no modo seleção. Só md+: no celular o quadro segue como sempre.
+ * O PAINEL ORIGENS (fork Escale, Fases 1A, 1B e 1C; visual da Clint na casca V3).
+ *
+ * É a coluna da esquerda de Negócios na casca nova, igual à Clint (01-010): 250px,
+ * branca, do topo ao fundo da tela, com a borda direita #E8E4F5. Peças:
+ * - a bolinha "<" fica centrada na borda e recolhe o painel;
+ * - 78px abaixo do topo vêm as seções: ORIGENS (lupa, ^ e o "+" de adicionar,
+ *   que só aparece no hover) e VISUALIZAÇÕES;
+ * - a seta abre o grupo, o "+" do grupo cria uma origem dentro dele, e os ⋮
+ *   levam às janelas (`JanelasDeOrigens`);
+ * - o "+" das visualizações e o "Selecionar" dos ⋮ entram no modo seleção.
+ *
+ * RECENTES entra com a Fase 1E (ver o comentário no lugar dela).
+ *
+ * Só md+: no celular o quadro segue como sempre.
  *
  * Origens e visualizações vêm do servidor (`ComOrigens`) e são trocadas pelo que
- * cada mutação devolve; quando o servidor manda novidade, o ajuste acontece
+ * cada mutação devolve. Quando o servidor manda novidade, o ajuste acontece
  * durante o render (padrão de `app/app/kanban/_client.tsx`). As preferências
- * (painel, lista, visualizações, ocultos) também vêm do servidor, de cookie, e cada mudança é
- * gravada pela Server Action — nenhum `useState` lê o navegador.
+ * (painel, lista, visualizações, ocultos) também vêm do servidor, de cookie, e
+ * cada mudança é gravada pela Server Action; nenhum `useState` lê o navegador.
  */
 export function PainelOrigens({
   origens: doServidor,
@@ -252,6 +264,8 @@ export function PainelOrigens({
     );
   }
 
+  // Recolhido: a Clint não mostra este estado (item 8 de "Prints que faltam").
+  // Fica a mesma bolinha, no topo da borda esquerda, para reabrir.
   if (!painelAberto) {
     return (
       <div className="relative hidden w-0 shrink-0 md:block">
@@ -259,47 +273,49 @@ export function PainelOrigens({
           type="button"
           aria-label={t("Abrir o painel de origens")}
           onClick={alternarPainel}
-          className="absolute left-0 top-1 z-10 grid size-6 place-items-center rounded-full border bg-card text-muted-foreground shadow-sm hover:text-foreground"
+          className={cn(BOLINHA_DO_PAINEL, "left-2")}
         >
-          <CaretRight size={12} aria-hidden />
+          <ChevronRight size={12} aria-hidden />
         </button>
       </div>
     );
   }
 
   return (
-    <aside
-      aria-label={t("Origens")}
-      className="sticky top-0 hidden max-h-[calc(100dvh-6.5rem)] w-64 shrink-0 flex-col rounded-lg border bg-card md:flex"
-    >
-      <button
-        type="button"
-        aria-label={t("Recolher o painel de origens")}
-        onClick={alternarPainel}
-        className="absolute -right-3 top-2 z-10 grid size-6 place-items-center rounded-full border bg-card text-muted-foreground shadow-sm hover:text-foreground"
+    <TooltipProvider delayDuration={300}>
+      <aside
+        aria-label={t("Origens")}
+        className="sticky top-0 hidden h-[calc(100dvh-2.75rem)] w-[250px] shrink-0 flex-col border-r border-casca-borda bg-surface md:flex"
       >
-        <CaretLeft size={12} aria-hidden />
-      </button>
+        <button
+          type="button"
+          aria-label={t("Recolher o painel de origens")}
+          onClick={alternarPainel}
+          className={cn(BOLINHA_DO_PAINEL, "-right-[10px]")}
+        >
+          <ChevronLeft size={12} aria-hidden />
+        </button>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className={cn(!selecao && "border-b")}>
-          <CabecalhoDaSecao icone={<SquaresFour size={18} />} titulo={t("Origens")}>
+        <div data-rolagem-do-painel="" className="min-h-0 flex-1 overflow-y-auto pt-[78px]">
+          <CabecalhoDaSecao icone={<LayoutPanelLeft size={16} className="-scale-x-100" />} titulo={t("Origens")}>
             {podeGerenciar && !selecao && (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <button type="button" aria-label={t("Adicionar")} className={BOTAO_DE_ICONE}>
-                    <Plus size={15} aria-hidden />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => setJanela({ tipo: "adicionar-origem", grupoId: null })}>
-                    {t("Adicionar origem")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setJanela({ tipo: "adicionar-grupo" })}>
-                    {t("Adicionar grupo de origens")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <span className={cn(SO_NO_HOVER, "group-hover/cabecalho:opacity-100")}>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" aria-label={t("Adicionar")} className={BOTAO_DE_ICONE}>
+                      <Plus size={16} aria-hidden />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <ConteudoDoMenu side="bottom" align="end">
+                    <ItemDoMenu icone={Plus} onSelect={() => setJanela({ tipo: "adicionar-origem", grupoId: null })}>
+                      {t("Adicionar origem")}
+                    </ItemDoMenu>
+                    <ItemDoMenu icone={FolderPlus} onSelect={() => setJanela({ tipo: "adicionar-grupo" })}>
+                      {t("Adicionar grupo de origens")}
+                    </ItemDoMenu>
+                  </ConteudoDoMenu>
+                </DropdownMenu>
+              </span>
             )}
             <button
               type="button"
@@ -309,38 +325,38 @@ export function PainelOrigens({
                 setBuscaAberta((v) => !v);
                 setBusca("");
               }}
-              className={BOTAO_DE_ICONE}
+              className={cn(BOTAO_DE_ICONE, buscaAberta && "text-casca-marca")}
             >
-              <MagnifyingGlass size={15} aria-hidden />
+              <Search size={16} aria-hidden />
             </button>
             <button
               type="button"
               aria-label={listaAberta ? t("Recolher a lista de origens") : t("Abrir a lista de origens")}
               aria-expanded={listaAberta}
               onClick={alternarLista}
-              className={BOTAO_DE_ICONE}
+              className={cn(BOTAO_DE_ICONE, "text-casca-meta")}
             >
-              {listaAberta ? <CaretUp size={14} aria-hidden /> : <CaretDown size={14} aria-hidden />}
+              {listaAberta ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
             </button>
           </CabecalhoDaSecao>
 
           {buscaAberta && (
-            <div className="px-3 pb-2">
-              <Input
+            <div className="border-b border-casca-borda px-4 py-2">
+              <input
                 autoFocus
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder={t("Buscar grupo ou funil")}
+                placeholder={t("Buscar origens, grupos, visualizações…")}
                 aria-label={t("Buscar grupo ou funil")}
-                className="h-8"
+                className="h-8 w-full rounded-casca-gatilho bg-casca-busca px-3 text-xs text-casca-texto outline-hidden placeholder:text-casca-meta focus:ring-1 focus:ring-casca-marca"
               />
             </div>
           )}
 
           {listaAberta && (
-            <div className="px-2 pb-2">
+            <div>
               <nav aria-label={t("Funis por grupo")}>
-                <ul className="space-y-0.5">
+                <ul>
                   {visiveis.map((g) => (
                     <LinhaDoGrupo
                       key={g.id}
@@ -365,11 +381,11 @@ export function PainelOrigens({
                   ))}
                 </ul>
                 {filtrada.semGrupo.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    <p className="px-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <div>
+                    <p className="flex h-8 items-center px-4 text-[11px] font-semibold text-casca-suave uppercase">
                       {t("Sem grupo")}
                     </p>
-                    <ul className="space-y-0.5">
+                    <ul>
                       {filtrada.semGrupo.map((f) => (
                         <LinhaDaOrigem
                           key={f.id}
@@ -386,17 +402,23 @@ export function PainelOrigens({
                 )}
               </nav>
 
-              {nadaAchado && <p className="px-2 py-1 text-sm text-muted-foreground">{t("Nada encontrado.")}</p>}
+              {nadaAchado && (
+                <p className="flex h-[34px] items-center px-4 text-xs text-casca-suave">{t("Nada encontrado.")}</p>
+              )}
 
               {quantosOcultos > 0 && (
-                <div className="mt-3 flex items-center justify-between px-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+                <div className="flex h-8 items-center justify-between px-4 text-[11px] text-casca-suave uppercase">
                   <span>
                     {(quantosOcultos === 1 ? t("{n} grupo oculto") : t("{n} grupos ocultos")).replace(
                       "{n}",
                       String(quantosOcultos),
                     )}
                   </span>
-                  <button type="button" onClick={() => setVerOcultos((v) => !v)} className="font-semibold hover:text-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setVerOcultos((v) => !v)}
+                    className="font-semibold hover:text-casca-texto"
+                  >
                     {verOcultos ? t("Esconder") : t("Mostrar")}
                   </button>
                 </div>
@@ -405,57 +427,65 @@ export function PainelOrigens({
               {podeGerenciar && !selecao && <ArquivadosDoPainel arvore={arvore} onOrigens={setOrigens} />}
             </div>
           )}
+
+          {!selecao && (
+            <SecaoVisualizacoes
+              visualizacoes={visualizacoesVisiveis}
+              origens={origens}
+              ativa={visualizacaoAtiva}
+              aberta={visualizacoesAbertas}
+              podeGerenciar={podeGerenciar}
+              onAlternar={alternarVisualizacoes}
+              onCriar={() => selecionar([], null)}
+              onAcao={acaoDaVisualizacao}
+            />
+          )}
+
+          {/*
+            RECENTES (01-010, terceira seção) entra AQUI com a Fase 1E, quando ela for
+            reescrita sob a regra nova: `SecaoRecentes` com `CabecalhoDaSecao`, o ícone
+            `Clock`, o chevron com `BOTAO_DE_ICONE` + `text-casca-meta` e as linhas com
+            `LINHA`/`LINHA_COM_HOVER`. Hoje não há dado de recentes, e cabeçalho que não
+            abre nada seria controle decorativo.
+          */}
         </div>
 
-        {!selecao && (
-          <SecaoVisualizacoes
-            visualizacoes={visualizacoesVisiveis}
-            origens={origens}
-            ativa={visualizacaoAtiva}
-            aberta={visualizacoesAbertas}
-            podeGerenciar={podeGerenciar}
-            onAlternar={alternarVisualizacoes}
-            onCriar={() => selecionar([], null)}
-            onAcao={acaoDaVisualizacao}
+        {selecao && (
+          <RodapeDaSelecao
+            quantas={selecao.marcadas.size}
+            editando={selecao.editando !== null}
+            salvando={atualizarVisualizacao.isPending}
+            erro={erroDaSelecao}
+            onCancelar={() => setSelecao(null)}
+            onSalvar={salvarSelecao}
           />
         )}
-      </div>
 
-      {selecao && (
-        <RodapeDaSelecao
-          quantas={selecao.marcadas.size}
-          editando={selecao.editando !== null}
-          salvando={atualizarVisualizacao.isPending}
-          erro={erroDaSelecao}
-          onCancelar={() => setSelecao(null)}
-          onSalvar={salvarSelecao}
-        />
-      )}
-
-      {podeGerenciar && (
-        <JanelasDeOrigens
-          janela={janela}
-          origens={origens}
-          onFechar={() => setJanela(null)}
-          onOrigens={setOrigens}
-          onAbrirOrigem={abrirOrigem}
-        />
-      )}
-      {podeGerenciar && (
-        <JanelasDaVisualizacao
-          janela={janelaDaVisualizacao}
-          visualizacoes={visualizacoes}
-          onFechar={() => setJanelaDaVisualizacao(null)}
-          onVisualizacoes={setVisualizacoes}
-          onCriada={(id) => {
-            setSelecao(null);
-            abrirVisualizacao(id);
-          }}
-          onExcluida={(id) => {
-            if (visualizacaoAtiva === id) router.push("/app/escale/negocios");
-          }}
-        />
-      )}
-    </aside>
+        {podeGerenciar && (
+          <JanelasDeOrigens
+            janela={janela}
+            origens={origens}
+            onFechar={() => setJanela(null)}
+            onOrigens={setOrigens}
+            onAbrirOrigem={abrirOrigem}
+          />
+        )}
+        {podeGerenciar && (
+          <JanelasDaVisualizacao
+            janela={janelaDaVisualizacao}
+            visualizacoes={visualizacoes}
+            onFechar={() => setJanelaDaVisualizacao(null)}
+            onVisualizacoes={setVisualizacoes}
+            onCriada={(id) => {
+              setSelecao(null);
+              abrirVisualizacao(id);
+            }}
+            onExcluida={(id) => {
+              if (visualizacaoAtiva === id) router.push("/app/escale/negocios");
+            }}
+          />
+        )}
+      </aside>
+    </TooltipProvider>
   );
 }

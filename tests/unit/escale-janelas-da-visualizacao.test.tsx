@@ -120,3 +120,14 @@ describe("<JanelasDaVisualizacao> — configurar e excluir", () => {
     expect(screen.getByText("Visualização não encontrada.")).toBeInTheDocument();
   });
 });
+
+describe("casca V3 — a janela da visualização no visual da Clint", () => {
+  it("as pessoas escolhidas são caixinhas da casca, e o Criar é o verde-menta", async () => {
+    const { user } = abrir({ tipo: "nova", origens: ["f-a"] });
+    expect(screen.getByRole("dialog", { name: "Nova visualização" })).toHaveClass("rounded-[8px]");
+    await user.click(screen.getByRole("radio", { name: "Só as pessoas escolhidas" }));
+    expect(await screen.findByRole("checkbox", { name: "Ana" })).not.toBeChecked();
+    expect(document.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(screen.getByRole("button", { name: "Criar visualização" })).toHaveClass("bg-(--escale-salvar)");
+  });
+});

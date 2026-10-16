@@ -111,4 +111,18 @@ describe("<ComOrigens>", () => {
     expect(screen.getByRole("complementary", { name: "Origens" })).toBeInTheDocument();
     expect(screen.getByText("Nenhuma visualização ainda.")).toBeInTheDocument();
   });
+
+  it("casca V3: o painel fica colado no topo, na esquerda e no fundo, e o conteúdo começa 20px depois dele", async () => {
+    const { container } = mostrar(await ComOrigens({ children: <p>o quadro</p> }));
+    const envoltorio = container.firstElementChild!;
+    expect(envoltorio).toHaveClass("md:-mt-6", "md:-ml-6");
+    expect(envoltorio.className).toContain("var(--rodape-ocupado,0px)");
+    expect(screen.getByText("o quadro").parentElement).toHaveClass("md:pl-5", "md:pt-6");
+  });
+
+  it("casca V3: sem a casca nova, o quadro do original chega sem embrulho nenhum", async () => {
+    cookies = { escale_menu: "lateral" };
+    const { container } = mostrar(await ComOrigens({ children: <p>o quadro</p> }));
+    expect(container.innerHTML).toBe("<p>o quadro</p>");
+  });
 });

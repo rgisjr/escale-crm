@@ -165,3 +165,31 @@ describe("janelas da origem", () => {
     expect(apiClient.delete).toHaveBeenLastCalledWith("/api/v1/pipelines/f-nayara");
   });
 });
+
+describe("casca V3 — janelas no visual do modal da Clint (01-013)", () => {
+  it("a janela é a caixa branca de raio 8, com título 22px, campo #EFF3FF de 43px e o Salvar verde-menta", () => {
+    abrir({ tipo: "config-grupo", id: "g-obras" });
+    expect(screen.getByRole("dialog", { name: "Configurações do grupo" })).toHaveClass("rounded-[8px]", "bg-surface");
+    expect(screen.getByRole("heading", { name: "Configurações do grupo" })).toHaveClass("text-[22px]", "font-normal");
+    expect(screen.getByRole("textbox", { name: "Nome do grupo" })).toHaveClass("bg-casca-raia", "h-[43px]");
+    expect(screen.getByRole("button", { name: "Salvar" })).toHaveClass("bg-(--escale-salvar)", "text-(--escale-salvar-texto)");
+    expect(screen.getByRole("button", { name: "Cancelar" })).toHaveClass("border-casca-borda", "bg-surface");
+  });
+
+  it("Excluir é o botão vermelho da casca", () => {
+    abrir({ tipo: "excluir-grupo", id: "g-vazio" });
+    expect(screen.getByRole("button", { name: "Excluir grupo" })).toHaveClass("bg-casca-alerta");
+  });
+
+  it("Configurações da origem usa o seletor e a caixinha da casca, nada nativo", () => {
+    abrir({ tipo: "config-origem", id: "f-nayara" });
+    expect(screen.getByRole("combobox", { name: "Grupo" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Tornar esta a origem padrão/ })).not.toBeChecked();
+    expect(document.querySelector('input[type="checkbox"], select')).toBeNull();
+  });
+
+  it("Customizar mostra a paleta nas cores da Clint; o tom gravado continua o da paleta", () => {
+    abrir({ tipo: "customizar", id: "g-obras" });
+    expect(screen.getByRole("button", { name: "Azul" })).toHaveStyle({ backgroundColor: "#83B4FF" });
+  });
+});

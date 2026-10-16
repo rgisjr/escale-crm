@@ -9369,6 +9369,9 @@ export const DICIONARIO: Traducoes = {
   "QUI": { es: "JUE" },
   "SEX": { es: "VIE" },
   "SÁB": { es: "SÁB" },
+  // ─── FORK ESCALE · casca V3 (painel esquerdo de Negócios igual à Clint) ───
+  "Nova origem": { es: "Nuevo origen" },
+  "Buscar origens, grupos, visualizações…": { es: "Buscar orígenes, grupos, vistas…" },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },

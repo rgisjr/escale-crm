@@ -2,22 +2,37 @@
 import Link from "next/link";
 import { useState, type KeyboardEvent } from "react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useCriarOrigem } from "@/hooks/escale/useOrigens";
 import { useT } from "@/hooks/i18n/useT";
 import type { FunilDaOrigem, GrupoNaArvore, Origens } from "@/lib/escale/origens/regras";
 import { estadoDoGrupo } from "@/lib/escale/visualizacoes/regras";
-import { CaretDown, CaretRight, DotsThree, Plus } from "@/lib/ui/icons";
+import {
+  Archive,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  ListChecks,
+  Pencil,
+  Plus,
+  Settings,
+  Trash2,
+} from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
+import { DicaEscura } from "./DicaEscura";
+import {
+  BOTAO_DE_ICONE,
+  LINHA,
+  LINHA_ATUAL,
+  LINHA_COM_HOVER,
+  RECUO_DO_TEXTO,
+  SO_NO_HOVER,
+} from "./estilos-do-painel";
 import { IconeDoGrupo } from "./IconeDoGrupo";
+import { ConteudoDoMenu, ItemDoMenu, SeparadorDoMenu, Tres } from "./MenuDoPainel";
 import { textoDoErro } from "./texto-do-erro";
 
 export type AcaoDoGrupo = "configurar" | "selecionar" | "customizar" | "ocultar" | "arquivar" | "excluir";
@@ -29,61 +44,69 @@ export interface SelecaoNoPainel {
   onAlternar: (ids: string[], marcar: boolean) => void;
 }
 
-export const BOTAO_DE_ICONE =
-  "grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent-soft hover:text-foreground";
-/** Os botões de gerente aparecem ao passar o mouse ou ao chegar pelo teclado, como na Clint. */
-export const SO_NO_FOCO = "flex items-center opacity-0 transition-opacity focus-within:opacity-100";
-
-export function Tres({ rotulo }: { rotulo: string }) {
-  return (
-    <DropdownMenuTrigger asChild>
-      <button type="button" aria-label={rotulo} className={BOTAO_DE_ICONE}>
-        <DotsThree size={16} weight="bold" className="rotate-90" aria-hidden />
-      </button>
-    </DropdownMenuTrigger>
-  );
-}
-
+/** O ⋮ do grupo: os itens, a ordem, os ícones e a divisória de 01-032; "Excluir" em vermelho. */
 function MenuDoGrupo({ nome, oculto, onAcao }: { nome: string; oculto: boolean; onAcao: (a: AcaoDoGrupo) => void }) {
   const t = useT();
   return (
     <DropdownMenu modal={false}>
       <Tres rotulo={`${t("Mais ações de")} ${nome}`} />
-      <DropdownMenuContent align="start" side="right">
-        <DropdownMenuItem onSelect={() => onAcao("configurar")}>{t("Configurações")}</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAcao("selecionar")}>{t("Selecionar origens")}</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAcao("customizar")}>{t("Customizar")}</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAcao("ocultar")}>
+      <ConteudoDoMenu>
+        <ItemDoMenu icone={Settings} onSelect={() => onAcao("configurar")}>
+          {t("Configurações")}
+        </ItemDoMenu>
+        <ItemDoMenu icone={ListChecks} onSelect={() => onAcao("selecionar")}>
+          {t("Selecionar origens")}
+        </ItemDoMenu>
+        <ItemDoMenu icone={Pencil} onSelect={() => onAcao("customizar")}>
+          {t("Customizar")}
+        </ItemDoMenu>
+        <ItemDoMenu icone={oculto ? Eye : EyeOff} onSelect={() => onAcao("ocultar")}>
           {oculto ? t("Mostrar na minha barra lateral") : t("Ocultar da minha barra lateral")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onAcao("arquivar")}>{t("Arquivar")}</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAcao("excluir")} className="text-destructive">
+        </ItemDoMenu>
+        <SeparadorDoMenu />
+        <ItemDoMenu icone={Archive} onSelect={() => onAcao("arquivar")}>
+          {t("Arquivar")}
+        </ItemDoMenu>
+        <ItemDoMenu icone={Trash2} perigo onSelect={() => onAcao("excluir")}>
           {t("Excluir")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+        </ItemDoMenu>
+      </ConteudoDoMenu>
     </DropdownMenu>
   );
 }
 
+/** O ⋮ da origem: os itens de 01-033. */
 function MenuDaOrigem({ nome, onAcao }: { nome: string; onAcao: (a: AcaoDaOrigem) => void }) {
   const t = useT();
   return (
     <DropdownMenu modal={false}>
       <Tres rotulo={`${t("Mais ações de")} ${nome}`} />
-      <DropdownMenuContent align="start" side="right">
-        <DropdownMenuItem onSelect={() => onAcao("configurar")}>{t("Configurações")}</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAcao("selecionar")}>{t("Selecionar origem")}</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onAcao("arquivar")}>{t("Arquivar")}</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAcao("excluir")} className="text-destructive">
+      <ConteudoDoMenu>
+        <ItemDoMenu icone={Settings} onSelect={() => onAcao("configurar")}>
+          {t("Configurações")}
+        </ItemDoMenu>
+        <ItemDoMenu icone={ListChecks} onSelect={() => onAcao("selecionar")}>
+          {t("Selecionar origem")}
+        </ItemDoMenu>
+        <SeparadorDoMenu />
+        <ItemDoMenu icone={Archive} onSelect={() => onAcao("arquivar")}>
+          {t("Arquivar")}
+        </ItemDoMenu>
+        <ItemDoMenu icone={Trash2} perigo onSelect={() => onAcao("excluir")}>
           {t("Excluir")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+        </ItemDoMenu>
+      </ConteudoDoMenu>
     </DropdownMenu>
   );
 }
 
+/**
+ * A linha da origem (01-032/033), de 34px e de borda a borda, só com texto.
+ * - O texto fica a 43px quando a origem está dentro de um grupo.
+ * - A origem aberta ganha o fundo #EFF3FF e a barra de 3px da marca.
+ * - O hover pinta de #F3F3F3 e mostra o ⋮.
+ * - No modo seleção, a caixinha da casca vem antes do nome; clicar no nome também marca.
+ */
 export function LinhaDaOrigem({
   funil,
   ativo,
@@ -103,40 +126,33 @@ export function LinhaDaOrigem({
   if (selecao) {
     const marcada = selecao.marcadas.has(funil.id);
     return (
-      <li className={cn("flex items-center rounded-md hover:bg-accent-soft", recuo && "ml-8")}>
-        <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-2 py-1 text-sm">
-          <input
-            type="checkbox"
-            checked={marcada}
-            onChange={() => selecao.onAlternar([funil.id], !marcada)}
-            className="size-4 shrink-0 cursor-pointer accent-accent"
-          />
-          <span className="truncate">{funil.name}</span>
-        </label>
+      <li className={cn(LINHA, LINHA_COM_HOVER, "gap-2 pr-3", recuo ? RECUO_DO_TEXTO : "pl-4")}>
+        <CaixaDaCasca
+          marcada={marcada}
+          aoMudar={(marcar) => selecao.onAlternar([funil.id], marcar)}
+          aria-label={funil.name}
+        />
+        <span
+          className="min-w-0 flex-1 cursor-pointer truncate"
+          onClick={() => selecao.onAlternar([funil.id], !marcada)}
+        >
+          {funil.name}
+        </span>
       </li>
     );
   }
   const atual = funil.id === ativo;
   return (
-    <li
-      className={cn(
-        "group/origem flex items-center rounded-md pr-1",
-        recuo && "ml-8",
-        atual ? "bg-accent-soft" : "hover:bg-accent-soft",
-      )}
-    >
+    <li className={cn("group/origem", LINHA, atual ? LINHA_ATUAL : LINHA_COM_HOVER, "pr-1")}>
       <Link
         href={`/app/pipelines/${funil.id}`}
         aria-current={atual ? "page" : undefined}
-        className={cn(
-          "min-w-0 flex-1 truncate px-2 py-1 text-sm",
-          atual ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground",
-        )}
+        className={cn("flex h-full min-w-0 flex-1 items-center pr-2", recuo ? RECUO_DO_TEXTO : "pl-4")}
       >
-        {funil.name}
+        <span className="truncate">{funil.name}</span>
       </Link>
       {podeGerenciar && (
-        <span className={cn(SO_NO_FOCO, "group-hover/origem:opacity-100")}>
+        <span className={cn(SO_NO_HOVER, "group-hover/origem:opacity-100")}>
           <MenuDaOrigem nome={funil.name} onAcao={onAcao} />
         </span>
       )}
@@ -144,6 +160,11 @@ export function LinhaDaOrigem({
   );
 }
 
+/**
+ * Criar a origem ali mesmo, pelo "+" do grupo. A Clint não mostra o formulário
+ * (01-034; item 13 de "Prints que faltam"): fica o campo de hoje, no visual do
+ * campo de busca da casca.
+ */
 function NovaOrigemNoGrupo({
   grupoId,
   onCriada,
@@ -176,8 +197,8 @@ function NovaOrigemNoGrupo({
   }
 
   return (
-    <li className="ml-8 py-1 pr-2">
-      <Input
+    <li className={cn("py-1 pr-3", RECUO_DO_TEXTO)}>
+      <input
         autoFocus
         value={nome}
         onChange={(e) => setNome(e.target.value)}
@@ -186,19 +207,27 @@ function NovaOrigemNoGrupo({
         placeholder={t("Nome da nova origem")}
         disabled={criar.isPending}
         maxLength={80}
-        className="h-8"
+        className="h-7 w-full rounded-casca-gatilho bg-casca-busca px-2 text-xs text-casca-texto outline-hidden placeholder:text-casca-meta focus:ring-1 focus:ring-casca-marca disabled:opacity-60"
       />
       {erro ? (
-        <p role="alert" className="mt-1 text-xs text-destructive">
+        <p role="alert" className="mt-1 text-[11px] text-casca-alerta">
           {erro}
         </p>
       ) : (
-        <p className="mt-1 text-xs text-muted-foreground">{t("Enter cria · Esc cancela")}</p>
+        <p className="mt-1 text-[11px] text-casca-suave">{t("Enter cria · Esc cancela")}</p>
       )}
     </li>
   );
 }
 
+/**
+ * A linha do grupo (01-010, 01-032, 01-034), de 34px, com o quadradinho de 20px
+ * a 16px da borda e o nome a 43px.
+ * - Em repouso, só ícone e nome, em peso normal. O grupo da origem aberta fica em 600.
+ * - No hover, a linha fica #F3F3F3 e aparecem a seta (na margem esquerda), o "+"
+ *   (com a dica "Nova origem") e o ⋮.
+ * - Aberto, o grupo fica assim mesmo sem o mouse em cima, como em 01-032/033.
+ */
 export function LinhaDoGrupo({
   grupo,
   aberto,
@@ -231,29 +260,41 @@ export function LinhaDoGrupo({
 }) {
   const t = useT();
   const estado = selecao ? estadoDoGrupo(grupo, selecao.marcadas) : "vazia";
+  const temAOrigemAberta = grupo.funis.some((f) => f.id === ativo);
   return (
     <li>
-      <div className="group/grupo flex items-center gap-1.5 rounded-md py-1 pl-0.5 pr-1 hover:bg-accent-soft">
+      <div
+        className={cn(
+          "group/grupo",
+          LINHA,
+          LINHA_COM_HOVER,
+          "gap-[7px] pr-1 pl-4",
+          aberto && "bg-(--escale-painel-hover)",
+        )}
+      >
         <button
           type="button"
           aria-expanded={aberto}
           aria-label={`${aberto ? t("Fechar") : t("Abrir")} ${grupo.name}`}
           onClick={onAlternar}
-          className={BOTAO_DE_ICONE}
+          className={cn(
+            "absolute inset-y-0 left-0 grid w-4 place-items-center text-casca-meta opacity-0 transition-opacity group-hover/grupo:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-casca-marca",
+            aberto && "opacity-100",
+          )}
         >
-          {aberto ? <CaretDown size={12} aria-hidden /> : <CaretRight size={12} aria-hidden />}
+          {aberto ? <ChevronDown size={11} aria-hidden /> : <ChevronRight size={11} aria-hidden />}
         </button>
         {selecao && (
-          <input
-            type="checkbox"
+          <CaixaDaCasca
+            marcada={estado === "marcada" ? true : estado === "parcial" ? "indeterminada" : false}
+            aoMudar={() =>
+              selecao.onAlternar(
+                grupo.funis.map((f) => f.id),
+                estado !== "marcada",
+              )
+            }
             aria-label={`${t("Selecionar")} ${grupo.name}`}
-            checked={estado === "marcada"}
-            ref={(el) => {
-              if (el) el.indeterminate = estado === "parcial";
-            }}
-            disabled={grupo.funis.length === 0}
-            onChange={() => selecao.onAlternar(grupo.funis.map((f) => f.id), estado !== "marcada")}
-            className="size-4 shrink-0 cursor-pointer accent-accent"
+            desabilitada={grupo.funis.length === 0}
           />
         )}
         <IconeDoGrupo grupo={grupo} />
@@ -261,32 +302,36 @@ export function LinhaDoGrupo({
           type="button"
           tabIndex={-1}
           onClick={onAlternar}
-          className="min-w-0 flex-1 truncate text-left text-sm font-semibold"
+          className={cn("h-full min-w-0 flex-1 truncate text-left", temAOrigemAberta && "font-semibold")}
         >
           {grupo.name}
-          {oculto && <span className="ml-1 text-xs font-normal text-muted-foreground">({t("oculto")})</span>}
+          {oculto && <span className="ml-1 text-[11px] font-normal text-casca-suave">({t("oculto")})</span>}
         </button>
         {podeGerenciar && !selecao && (
-          <span className={cn(SO_NO_FOCO, "group-hover/grupo:opacity-100")}>
-            <button
-              type="button"
-              aria-label={`${t("Nova origem em")} ${grupo.name}`}
-              onClick={onNovaOrigem}
-              className={BOTAO_DE_ICONE}
-            >
-              <Plus size={14} aria-hidden />
-            </button>
+          <span className={cn(SO_NO_HOVER, "group-hover/grupo:opacity-100", aberto && "opacity-100")}>
+            <DicaEscura texto={t("Nova origem")}>
+              <button
+                type="button"
+                aria-label={`${t("Nova origem em")} ${grupo.name}`}
+                onClick={onNovaOrigem}
+                className={BOTAO_DE_ICONE}
+              >
+                <Plus size={14} aria-hidden />
+              </button>
+            </DicaEscura>
             <MenuDoGrupo nome={grupo.name} oculto={oculto} onAcao={onAcao} />
           </span>
         )}
       </div>
       {aberto && (
-        <ul className="space-y-0.5">
+        <ul>
           {criandoAqui && !selecao && (
             <NovaOrigemNoGrupo grupoId={grupo.id} onCriada={onCriada} onCancelar={onCancelarCriacao} />
           )}
           {grupo.funis.length === 0 && !criandoAqui ? (
-            <li className="ml-10 py-1 text-xs text-muted-foreground">{t("Nenhum funil neste grupo.")}</li>
+            <li className={cn("flex h-[34px] items-center pr-3 text-[11px] text-casca-suave", RECUO_DO_TEXTO)}>
+              {t("Nenhum funil neste grupo.")}
+            </li>
           ) : (
             grupo.funis.map((f) => (
               <LinhaDaOrigem
