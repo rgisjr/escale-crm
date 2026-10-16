@@ -1,7 +1,6 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import {
   chaveDoCampo,
@@ -15,9 +14,9 @@ import {
   type FiltrosDoQuadro,
   type OperadorDeCampo,
 } from "@/lib/escale/filtros/tipos";
-import { Plus, X } from "@/lib/ui/icons";
+import { Plus, X } from "@/lib/ui/icons-da-casca";
 
-import { CampoDeTexto, CampoNumerico, classeDoSeletor } from "./controles";
+import { CampoDeData, CampoDeTexto, CampoNumerico } from "./controles";
 
 const ROTULO_DO_OPERADOR: Record<OperadorDeCampo, string> = {
   contem: "contém",
@@ -28,8 +27,9 @@ const ROTULO_DO_OPERADOR: Record<OperadorDeCampo, string> = {
 };
 
 /**
- * Campos (Clint: "Campos"): condições sobre os campos personalizados do negócio
- * e os campos fixos do contato. As condições se somam (E).
+ * Campos (gatilho "Campos" da Clint; o conteúdo aberto não tem print, PRINT 25):
+ * condições sobre os campos personalizados do negócio e os campos fixos do
+ * contato, somadas (E). A lógica é a da 1D; o visual, o da casca.
  */
 export function SecaoCampos({
   filtros,
@@ -47,23 +47,17 @@ export function SecaoCampos({
   const doContato = campos.filter((c) => c.alvo === "contato");
   const primeiro = doNegocio[0] ?? doContato[0];
   const atingiuOLimite = condicoes.length >= CONDICOES_DE_CAMPO_MAX;
-  // Com campos personalizados a lista de campos cresce: `SearchableSelect` mostra a busca a
-  // partir de 8 opções, e o nome do grupo entra como palavra-chave ("Contato" acha os do contato).
-  // Um campo personalizado do negócio pode ter o mesmo nome de um do contato: nesse caso (e só
-  // nele) o rótulo do contato carrega o grupo, para as duas opções não parecerem iguais.
+  // Um campo personalizado do negócio pode ter o mesmo nome de um do contato: nesse
+  // caso (e só nele) o rótulo do contato carrega o grupo, para as opções não parecerem iguais.
   const rotulosDoNegocio = new Set(doNegocio.map((c) => c.rotulo));
   const opcoesDeCampo = [
-    ...doNegocio.map((c) => ({
-      value: chaveDoCampo(c),
-      label: c.rotulo,
-      keywords: [t("Negócio")],
-    })),
+    ...doNegocio.map((c) => ({ valor: chaveDoCampo(c), rotulo: c.rotulo, grupo: t("Negócio") })),
     ...doContato.map((c) => {
       const rotulo = t(c.rotulo);
       return {
-        value: chaveDoCampo(c),
-        label: rotulosDoNegocio.has(rotulo) ? `${t("Contato")} · ${rotulo}` : rotulo,
-        keywords: [t("Contato")],
+        valor: chaveDoCampo(c),
+        rotulo: rotulosDoNegocio.has(rotulo) ? `${t("Contato")} · ${rotulo}` : rotulo,
+        grupo: t("Contato"),
       };
     }),
   ];
@@ -82,45 +76,51 @@ export function SecaoCampos({
         const campo = porChave.get(chaveDoCampo(condicao));
         const tipo = campo?.tipo ?? "texto";
         return (
-          <fieldset key={indice} className="space-y-2 rounded-md border border-border p-2">
+          <fieldset
+            key={indice}
+            className="space-y-2 rounded-casca-gatilho border border-casca-borda p-2"
+          >
             <legend className="sr-only">{`${t("Condição")} ${indice + 1}`}</legend>
-            <div className="flex gap-2">
-              <SearchableSelect
-                aria-label={t("Campo")}
-                className="min-w-0 flex-1"
-                value={chaveDoCampo(condicao)}
-                options={
-                  campo
-                    ? opcoesDeCampo
-                    : [{ value: chaveDoCampo(condicao), label: condicao.chave }, ...opcoesDeCampo]
-                }
-                onValueChange={(chave) => {
-                  // Escolher de novo o campo atual não é troca: manteria o operador e o valor.
-                  if (chave === chaveDoCampo(condicao)) return;
-                  const novo = porChave.get(chave);
-                  if (novo) trocar(indice, condicaoNova(novo));
-                }}
-              />
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <SeletorDaCasca
+                  aria-label={t("Campo")}
+                  valor={chaveDoCampo(condicao)}
+                  opcoes={
+                    campo
+                      ? opcoesDeCampo
+                      : [
+                          { valor: chaveDoCampo(condicao), rotulo: condicao.chave },
+                          ...opcoesDeCampo,
+                        ]
+                  }
+                  aoMudar={(chave) => {
+                    // Escolher de novo o campo atual não é troca: manteria o operador e o valor.
+                    if (!chave || chave === chaveDoCampo(condicao)) return;
+                    const novo = porChave.get(chave);
+                    if (novo) trocar(indice, condicaoNova(novo));
+                  }}
+                />
+              </div>
               <button
                 type="button"
                 aria-label={t("Remover condição")}
                 onClick={() => trocar(indice, null)}
-                className="shrink-0 rounded-md px-2 text-muted-foreground hover:text-foreground"
+                className="grid size-7 shrink-0 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
               >
                 <X size={14} aria-hidden />
               </button>
             </div>
-            <SearchableSelect
+            <SeletorDaCasca<OperadorDeCampo>
               aria-label={t("Operador")}
-              value={condicao.op}
-              options={operadoresDoTipo(tipo).map((op) => ({
-                value: op,
-                label: t(ROTULO_DO_OPERADOR[op]),
+              valor={condicao.op}
+              opcoes={operadoresDoTipo(tipo).map((op) => ({
+                valor: op,
+                rotulo: t(ROTULO_DO_OPERADOR[op]),
               }))}
-              onValueChange={(valor) => {
-                const op = valor as OperadorDeCampo;
+              aoMudar={(op) => {
                 // Escolher de novo o operador atual não é troca: apagaria o valor digitado.
-                if (op === condicao.op) return;
+                if (!op || op === condicao.op) return;
                 trocar(indice, {
                   alvo: condicao.alvo,
                   chave: condicao.chave,
@@ -137,18 +137,18 @@ export function SecaoCampos({
           </fieldset>
         );
       })}
-      <Button
+      <BotaoDaCasca
         type="button"
-        variant="outline"
-        size="sm"
+        variante="texto"
+        tamanho="sm"
         disabled={!primeiro || atingiuOLimite}
         onClick={() =>
           primeiro && onMudar({ ...filtros, campos: [...condicoes, condicaoNova(primeiro)] })
         }
       >
-        <Plus size={14} className="mr-1" aria-hidden />
+        <Plus size={14} aria-hidden />
         {t("Adicionar condição")}
-      </Button>
+      </BotaoDaCasca>
     </div>
   );
 }
@@ -168,43 +168,44 @@ function ValorDaCondicao({
 
   if (tipo === "booleano") {
     return (
-      <select
+      <SeletorDaCasca<"true" | "false">
         aria-label={t("Valor")}
-        className={classeDoSeletor}
-        value={c.valor ?? "true"}
-        onChange={(e) => onMudar({ ...c, valor: e.target.value })}
-      >
-        <option value="true">{t("Sim")}</option>
-        <option value="false">{t("Não")}</option>
-      </select>
+        valor={c.valor === "false" ? "false" : "true"}
+        opcoes={[
+          { valor: "true", rotulo: t("Sim") },
+          { valor: "false", rotulo: t("Não") },
+        ]}
+        aoMudar={(v) => onMudar({ ...c, valor: v || "true" })}
+      />
     );
   }
   if ((tipo === "opcao" || tipo === "opcoes") && campo?.opcoes?.length) {
     return (
-      <SearchableSelect
+      <SeletorDaCasca
         aria-label={t("Valor")}
-        value={c.valor ?? ""}
-        options={[{ value: "", label: t("Escolha") }, ...campo.opcoes]}
-        onValueChange={(v) => onMudar({ ...c, valor: v || undefined })}
+        valor={c.valor ?? ""}
+        opcoes={[
+          { valor: "", rotulo: t("Escolha") },
+          ...campo.opcoes.map((o) => ({ valor: o.value, rotulo: o.label })),
+        ]}
+        aoMudar={(v) => onMudar({ ...c, valor: v || undefined })}
       />
     );
   }
   if (c.op === "entre" && tipo === "data") {
     return (
       <div className="grid grid-cols-2 gap-2">
-        <Input
-          type="date"
-          aria-label={t("De")}
-          value={c.valor ?? ""}
-          onChange={(e) => onMudar({ ...c, valor: e.target.value || undefined })}
-          className="h-9"
+        <CampoDeData
+          key={`de:${c.valor ?? ""}`}
+          rotulo={t("De")}
+          valor={c.valor}
+          onMudar={(v) => onMudar({ ...c, valor: v })}
         />
-        <Input
-          type="date"
-          aria-label={t("Até")}
-          value={c.ate ?? ""}
-          onChange={(e) => onMudar({ ...c, ate: e.target.value || undefined })}
-          className="h-9"
+        <CampoDeData
+          key={`ate:${c.ate ?? ""}`}
+          rotulo={t("Até")}
+          valor={c.ate}
+          onMudar={(v) => onMudar({ ...c, ate: v })}
         />
       </div>
     );
