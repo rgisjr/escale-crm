@@ -43,5 +43,5 @@ export function negocio(id: string, over: Partial<Lead> = {}, filtros?: Partial<
   } as Lead;
   const lead = { ...base, ...over };
   if (!filtros) return lead;
-  return { ...lead, filtros_escale: { atividades_concluidas: 0, contato_nome: null, conversa: null, ...filtros } } as Lead;
+  return { ...lead, filtros_escale: { atividades_concluidas: 0, contato_nome: null, contato_tem_foto: false, conversa: null, ...filtros } } as Lead;
 }

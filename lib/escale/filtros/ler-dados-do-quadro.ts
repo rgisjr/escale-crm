@@ -13,6 +13,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
  * - quantas atividades concluídas, pela função `fn_escale_atividades_concluidas`,
  *   que CONTA no banco (trazer as linhas bateria no corte de 1000 do PostgREST);
  * - o nome do contato;
+ * - se o contato tem foto (Casca V4);
  * - status, canal, atendente e a última mensagem de cada lado da conversa da capa.
  *
  * Tudo com a sessão de quem olha (a RLS vale) e filtrado pela organização do
@@ -32,7 +33,7 @@ export async function comDadosDosFiltros(
       (lote) => supabase.rpc("fn_escale_atividades_concluidas", { p_org: orgId, p_leads: lote }),
     ),
     buscaEmLotes(contatos, (lote) =>
-      supabase.from("contacts").select("id, name, display_name, is_anonymized").eq("organization_id", orgId).in("id", lote),
+      supabase.from("contacts").select("id, name, display_name, is_anonymized, avatar_storage_path").eq("organization_id", orgId).in("id", lote),
     ),
     buscaEmLotes(contatos, (lote) =>
       supabase

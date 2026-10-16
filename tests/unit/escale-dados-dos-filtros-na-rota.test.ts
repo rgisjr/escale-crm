@@ -61,6 +61,7 @@ describe("comDadosDosFiltros", () => {
     expect(dadosDeFiltro(r.leads[0]!)).toEqual({
       atividades_concluidas: 2,
       contato_nome: "Ana",
+      contato_tem_foto: false,
       conversa: { status: "open", canal: "whatsapp", atendente_id: null, ultima_entrada: null, ultima_saida: null },
     });
     expect(dadosDeFiltro(r.leads[1]!)?.atividades_concluidas).toBe(0);
@@ -76,6 +77,15 @@ describe("comDadosDosFiltros", () => {
       ["organization_id", "org-1"],
       ["contact_id", ["c1"]],
     ]);
+  });
+
+  it("lê o caminho da foto junto com o nome, para dizer se há foto", async () => {
+    const { client } = clienteFalso(
+      { contacts: [{ id: "c1", name: "Ana", display_name: null, is_anonymized: false, avatar_storage_path: "org-1/avatars/c1.jpg" }] },
+      { data: [], error: null },
+    );
+    const r = await comDadosDosFiltros(client, "org-1", [negocio("a", { contact_id: "c1" })]);
+    expect(dadosDeFiltro(r.leads[0]!)?.contato_tem_foto).toBe(true);
   });
 
   it("erro do banco sobe com a mensagem, e os negócios voltam como vieram", async () => {
