@@ -42,3 +42,6 @@ export type { LucideIcon } from "lucide-react";
 
 // V2 — topo da casca: ✦, menu da conta, Novo +, botão de conversas
 export { Bell, FileText, LogOut, Megaphone, MessageCircleMore, ShieldCheck, Sparkle, UserPlus, X } from "lucide-react";
+
+// FORK ESCALE · casca V3 — painel esquerdo de Negócios (menus, cabeçalhos, ícones de grupo, janelas)
+export { ChevronUp, ListChecks, Pencil, Eye, EyeOff, Archive, Trash2, LayoutPanelLeft, SquareDashedKanban, Funnel, Users, Building2, Store, Bookmark, Save, FolderPlus } from "lucide-react";

@@ -215,3 +215,22 @@ body:has([data-escale-casca]) {
   --color-casca-dia: color-mix(in oklab, var(--color-accent) 10%, #181b26);
   --shadow-casca-painel: 0 8px 16px rgb(0 0 0 / 0.45), 0 0 1px rgb(0 0 0 / 0.6);
 }
+
+/* ─── FORK ESCALE · casca V3 (painel esquerdo de Negócios) ───
+   Cores da Clint que NÃO são a marca e que só o painel e as janelas dele usam:
+   o cinza do hover da linha (01-032/033/034) e o "Salvar" verde-menta do modal
+   da variante superior (01-013, clint.green 400 com o texto navy). São lidas
+   por valor arbitrário, como a --color-escale-marca: não viram utilitário e
+   não passam pelo @theme. Os blocos de cima (claro e escuro) são os que
+   tests/unit/escale-tema.test.ts lê, e não mudam. */
+body:has([data-escale-casca]) {
+  --escale-painel-hover: #f3f3f3;
+  --escale-salvar: #35efb3;
+  --escale-salvar-texto: #2f2c5d;
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --escale-painel-hover: #2a2d3d;
+  --escale-salvar: #35efb3;
+  --escale-salvar-texto: #2f2c5d;
+}
