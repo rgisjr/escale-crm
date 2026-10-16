@@ -194,7 +194,8 @@ test.describe("a automação conta o que aconteceu de verdade", () => {
       ruleId = ((await salvo.json()) as { data: { id: string } }).data.id;
 
       // Liga a regra (nasce pausada, por desenho).
-      await page.getByLabel(new RegExp(`Ligar ${RULE_NAME}`)).click();
+      // FORK ESCALE · Fase 1E: o interruptor passou a "Ativar"; aceita os dois para a sincronização com o original.
+      await page.getByLabel(new RegExp(`(Ligar|Ativar) ${RULE_NAME}`)).click();
       await expect(page.getByText("Automação ligada.")).toBeVisible({ timeout: 15_000 });
 
       // ── O lead entra pelo formulário ─────────────────────────────────────
