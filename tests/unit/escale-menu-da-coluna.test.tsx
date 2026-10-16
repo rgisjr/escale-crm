@@ -43,4 +43,52 @@ describe("<MenuDaColuna> (⋮ da etapa da Clint)", () => {
       screen.getByLabelText("Escolha quantos negócios você quer selecionar"),
     ).toBeInTheDocument();
   });
+  async function abrirCampo() {
+    const ctx = menu();
+    await ctx.user.click(screen.getByRole("button", { name: "Ações da etapa Entrada" }));
+    return { ...ctx, campo: screen.getByRole("spinbutton", { name: "Selecione" }) };
+  }
+
+  it("decimal não vira outro número: 2.5 seleciona 2, não 25", async () => {
+    const { aoSelecionar, campo } = await abrirCampo();
+    fireEvent.change(campo, { target: { value: "2.5" } });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(2);
+    expect(aoSelecionar).not.toHaveBeenCalledWith(25);
+    expect(campo).toHaveValue(2);
+  });
+
+  it("acima do total limita ao total, no campo e na seleção", async () => {
+    const { aoSelecionar, campo } = await abrirCampo();
+    fireEvent.change(campo, { target: { value: "99" } });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(7);
+    expect(campo).toHaveValue(7);
+  });
+
+  it("negativo vira 0", async () => {
+    const { aoSelecionar, campo } = await abrirCampo();
+    fireEvent.change(campo, { target: { value: "3" } });
+    fireEvent.change(campo, { target: { value: "-4" } });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(0);
+    expect(campo).toHaveValue(0);
+  });
+
+  it("digitação parcial inválida (o navegador informa vazio) não desmarca nem apaga o campo", async () => {
+    const { aoSelecionar, campo } = await abrirCampo();
+    fireEvent.change(campo, { target: { value: "3" } });
+    aoSelecionar.mockClear();
+    Object.defineProperty(campo, "validity", { value: { badInput: true }, configurable: true });
+    fireEvent.change(campo, { target: { value: "" } });
+    expect(aoSelecionar).not.toHaveBeenCalled();
+    expect(campo).toHaveValue(3);
+  });
+
+  it("setas do teclado (uma mudança de cada vez) seguem o número e param no total", async () => {
+    const { aoSelecionar, campo } = await abrirCampo();
+    fireEvent.change(campo, { target: { value: "1" } });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(1);
+    fireEvent.change(campo, { target: { value: "2" } });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(2);
+    fireEvent.change(campo, { target: { value: "1" } });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(1);
+  });
 });

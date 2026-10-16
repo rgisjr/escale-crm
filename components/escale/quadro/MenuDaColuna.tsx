@@ -6,6 +6,7 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useT } from "@/hooks/i18n/useT";
+import { quantidadeDigitada } from "@/lib/escale/quadro/selecao";
 import { EllipsisVertical, HelpCircle } from "@/lib/ui/icons-da-casca";
 
 import { CAIXA_DO_MENU, ITEM_DO_MENU } from "./estilos-do-menu";
@@ -76,9 +77,13 @@ export function MenuDaColuna({
               max={total}
               value={quantos}
               onChange={(e) => {
-                const valor = e.target.value.replace(/\D/g, "").slice(0, 4);
-                setQuantos(valor);
-                aoSelecionar(valor === "" ? 0 : Number(valor));
+                // Digitação parcial inválida ("-", "e", "2."): o navegador informa "";
+                // mantém o que a pessoa digitou e a seleção de antes.
+                if (e.target.validity.badInput) return;
+                const texto = e.target.value;
+                const n = quantidadeDigitada(texto, total);
+                setQuantos(texto.trim() === "" ? "" : String(n));
+                aoSelecionar(n);
               }}
               className="ml-1 h-[23px] w-[65px] rounded-[5px] border-[0.8px] border-[#E8E4F5] bg-[#F8FAFF] p-[3px] text-center text-[11.9px] font-light text-casca-texto outline-hidden focus:border-casca-marca"
             />
