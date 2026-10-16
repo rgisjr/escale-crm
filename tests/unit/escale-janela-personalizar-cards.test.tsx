@@ -28,6 +28,7 @@ window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
 window.HTMLElement.prototype.releasePointerCapture = vi.fn();
 
 import { JanelaPersonalizarCards } from "@/components/escale/capa/JanelaPersonalizarCards";
+import { PersonalizarCards } from "@/components/escale/capa/PersonalizarCards";
 import { ApiError } from "@/lib/api/types";
 import { CAMPOS_MAX, PREFS_PADRAO, camposDaCapa } from "@/lib/escale/capa/tipos";
 
@@ -45,7 +46,18 @@ function janela(prefs = PREFS_PADRAO) {
   return userEvent.setup({ pointerEventsCheck: 0 });
 }
 
+function icone() {
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <PersonalizarCards campos={[]} />
+    </QueryClientProvider>,
+  );
+  return userEvent.setup({ pointerEventsCheck: 0 });
+}
+
 beforeEach(() => {
+  api.get.mockReset();
+  toast.success.mockReset();
   api.put.mockReset().mockResolvedValue({ data: { prefs: PREFS_PADRAO } });
   onFechar.mockReset();
   toast.error.mockReset();
@@ -131,5 +143,67 @@ describe("<JanelaPersonalizarCards> (01-019)", () => {
         "A preferência mudou em outra aba. Abra de novo e salve.",
       ),
     );
+  });
+});
+
+describe("canais no limite de 3 (01-019)", () => {
+  it("com 3 ícones ligados, o que está desligado trava com 'Limite de 3 ícones no rodapé atingido'", async () => {
+    // Só chega neste estado por preferência já gravada: Lembrete e Agendamento são
+    // "Em breve" (travados), então pela tela a pessoa só tem 3 canais para ligar.
+    const user = janela({
+      ...PREFS_PADRAO,
+      canais: { telefone: true, mensagem: true, email: false, lembrete: true, agendamento: false },
+    });
+    await user.click(screen.getByRole("button", { name: /Ícones de canal no rodapé/ }));
+    const email = screen.getByRole("switch", { name: "Ícones de canal no rodapé: E-mail" });
+    expect(email).toBeDisabled();
+    expect(email).toHaveAttribute("title", "Limite de 3 ícones no rodapé atingido");
+    await user.click(screen.getByRole("switch", { name: "Ícones de canal no rodapé: Telefone" }));
+    expect(screen.getByRole("switch", { name: "Ícones de canal no rodapé: E-mail" })).toBeEnabled();
+  });
+});
+
+describe("<PersonalizarCards> (ícone de ajustes)", () => {
+  it("o ponto da marca aparece quando a preferência difere do padrão", async () => {
+    api.get.mockResolvedValue({
+      data: { prefs: { ...PREFS_PADRAO, itens: { ...PREFS_PADRAO.itens, tags: false } } },
+    });
+    icone();
+    expect(await screen.findByTestId("ponto-da-capa")).toBeInTheDocument();
+  });
+
+  it("sem preferência gravada, ou igual ao padrão, não há ponto", async () => {
+    api.get.mockResolvedValue({ data: { prefs: PREFS_PADRAO } });
+    icone();
+    await waitFor(() => expect(api.get).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Personalizar cards" })).not.toHaveAttribute(
+        "aria-busy",
+        "true",
+      ),
+    );
+    expect(screen.queryByTestId("ponto-da-capa")).toBeNull();
+  });
+
+  it("se a leitura da preferência falha, o clique mostra o erro e a janela não abre", async () => {
+    api.get.mockRejectedValue(new ApiError(500, "internal", undefined, "r", "Falha ao ler."));
+    const user = icone();
+    await waitFor(() => expect(api.get).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Personalizar cards" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Falha ao ler."));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("enquanto carrega, o ícone fica aria-busy e a janela abre quando chega", async () => {
+    let chega: (v: unknown) => void = () => {};
+    api.get.mockReturnValue(new Promise((r) => (chega = r)));
+    const user = icone();
+    const botao = screen.getByRole("button", { name: "Personalizar cards" });
+    expect(botao).toHaveAttribute("aria-busy", "true");
+    await user.click(botao);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    chega({ data: { prefs: PREFS_PADRAO } });
+    expect(await screen.findByRole("dialog", { name: "Personalizar cards" })).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

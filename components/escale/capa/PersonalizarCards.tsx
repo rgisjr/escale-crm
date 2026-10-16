@@ -1,6 +1,8 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
+import { textoDoErro } from "@/components/escale/origens/texto-do-erro";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePrefsDoCard } from "@/hooks/escale/usePrefsDoCard";
@@ -24,7 +26,7 @@ import { JanelaPersonalizarCards } from "./JanelaPersonalizarCards";
 export function PersonalizarCards({ campos }: { campos: readonly CampoFiltravel[] }) {
   const t = useT();
   const [aberta, setAberta] = useState(false);
-  const { data: prefs } = usePrefsDoCard();
+  const { data: prefs, isPending } = usePrefsDoCard();
   return (
     <>
       <TooltipProvider delayDuration={200}>
@@ -34,6 +36,7 @@ export function PersonalizarCards({ campos }: { campos: readonly CampoFiltravel[
               type="button"
               variante="icone"
               aria-label={t("Personalizar cards")}
+              aria-busy={isPending}
               onClick={() => setAberta(true)}
             >
               <span className="relative">
@@ -61,7 +64,10 @@ export function PersonalizarCards({ campos }: { campos: readonly CampoFiltravel[
   );
 }
 
-/** A janela só monta com a preferência carregada: senão o rascunho nasceria do padrão e gravaria por cima. */
+/**
+ * A janela só monta com a preferência carregada: senão o rascunho nasceria do padrão e gravaria por cima.
+ * Se a leitura falhar, a pessoa vê o erro e a janela não abre (antes, o clique não fazia nada).
+ */
 function AbrirJanela({
   campos,
   onFechar,
@@ -69,7 +75,14 @@ function AbrirJanela({
   campos: readonly CampoFiltravel[];
   onFechar: () => void;
 }) {
-  const { data: prefs, isSuccess } = usePrefsDoCard();
+  const t = useT();
+  const { data: prefs, isSuccess, isError, error } = usePrefsDoCard();
+  useEffect(() => {
+    if (!isError) return;
+    toast.error(textoDoErro(error, t));
+    onFechar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avisa uma vez por falha
+  }, [isError]);
   const camposDoCard = useMemo<CampoDaCapa[]>(
     () =>
       camposDaCapa([]).concat(
