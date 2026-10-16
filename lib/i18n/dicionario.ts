@@ -7451,7 +7451,7 @@ export const DICIONARIO: Traducoes = {
   Quem: { es: "Quién" },
   "ação": { es: "acción" },
   "ações": { es: "acciones" },
-  Ligar: { es: "Activar" },
+  Ligar: { es: "Llamar" },
   "Seu nome": { es: "Tu nombre" },
   "Selecione uma conversa para visualizar": {
     es: "Selecciona una conversación para verla",
@@ -9388,6 +9388,10 @@ export const DICIONARIO: Traducoes = {
   "Selecionar todos": { es: "Seleccionar todos" },
   "Desmarcar todos": { es: "Desmarcar todos" },
   "Adicionar negócio": { es: "Agregar negocio" },
+  // ─── FORK ESCALE · Fase 1E (Task 6): card da casca com a preferência (a Task 15 acrescenta o resto) ───
+  "Enviar Whatsapp": { es: "Enviar WhatsApp" },
+  "Copiar {label}": { es: "Copiar {label}" },
+  "Copiado: {label}": { es: "Copiado: {label}" },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
@@ -11542,6 +11546,7 @@ export const DICIONARIO: Traducoes = {
   // linha ~3725: "Ligar" -> "Activar"). Mesma palavra em PT, contextos
   // diferentes; o dicionário é chaveado pelo texto, não por significado, então
   // a colisão vira TS1117 (chave duplicada) se as duas usarem a mesma string.
+  // FORK ESCALE · Fase 1E: desde a 1E, "Ligar" é ligação ("Llamar") e o interruptor usa "Ativar".
   "Chamar": { es: "Llamar" },
   "Em ligação": { es: "En llamada" },
   "Chamada de voz recebida": { es: "Llamada de voz recibida" },

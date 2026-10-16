@@ -397,11 +397,8 @@ export function TemplatesParceiroClient({
                 >
                   <option value="quick_reply">{t("Resposta rápida")}</option>
                   <option value="url">{t("Abrir link")}</option>
-                  {/* NÃO usar t("Ligar") aqui: essa chave já existe no dicionário
-                      traduzida como "Activar" (o toggle de automações em
-                      RulesTab.tsx) — mesma palavra fonte, sentido diferente
-                      ("Llamar", não "Activar"). Texto puro evita a tradução errada. */}
-                  <option value="phone_number">Ligar</option>
+                  {/* FORK ESCALE · Fase 1E: "Ligar" agora é ligação no dicionário ("Llamar"). */}
+                  <option value="phone_number">{t("Ligar")}</option>
                 </select>
                 <input
                   value={b.texto}

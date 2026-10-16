@@ -123,15 +123,15 @@ describe("<CardDaCasca> (Casca V4, 01-010)", () => {
   it("o rodapé: dono, chamar, conversa, e-mail, valor curto, atividades e tempo na etapa", () => {
     montar(COMPLETO);
     expect(screen.getByRole("img", { name: "Responsável: Ivo" })).toHaveTextContent("I");
-    expect(screen.getByRole("link", { name: "Chamar" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ligar" })).toHaveAttribute(
       "href",
       "tel:+5511999990000",
     );
-    expect(screen.getByRole("link", { name: "Abrir esta conversa no Inbox" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Enviar Whatsapp" })).toHaveAttribute(
       "href",
       "/app/inbox?id=conv-1",
     );
-    expect(screen.getByRole("link", { name: "Enviar e-mail" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Email" })).toHaveAttribute(
       "href",
       "mailto:reinaldo@x.com",
     );
@@ -143,7 +143,7 @@ describe("<CardDaCasca> (Casca V4, 01-010)", () => {
   it("sem contato, conversa, valor nem dono: nada quebra e nada diz 'undefined'", () => {
     montar(negocio("l2", { title: "Projeto X" }));
     expect(screen.getByRole("group", { name: "Lead: Projeto X" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Chamar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ligar" })).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Sem telefone" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Sem responsável" })).toBeInTheDocument();
     expect(screen.getByText("R$0")).toBeInTheDocument();

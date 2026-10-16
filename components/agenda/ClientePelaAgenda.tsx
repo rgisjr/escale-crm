@@ -228,7 +228,8 @@ export function ClientePelaAgenda({
               }}
               data-testid="cliente-pela-agenda-confirmar"
             >
-              {t("Ligar")}
+              {/* FORK ESCALE · Fase 1E: "Ligar" agora é ligação; o interruptor usa "Ativar". */}
+              {t("Ativar")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

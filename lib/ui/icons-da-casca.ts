@@ -48,3 +48,6 @@ export { ChevronUp, ListChecks, Pencil, Eye, EyeOff, Archive, Trash2, LayoutPane
 
 // Casca V4 (quadro de Negócios): ícones que a V1 ainda não reexportava.
 export { MessageSquare, CheckCheck, User, UserX, ArrowDownUp, SlidersHorizontal } from "lucide-react";
+
+// Fase 1E: Personalizar cards, chips dos campos, Negócio +, Ordenar e Recentes.
+export { ArrowUpDown, Briefcase, Calendar, Copy, DollarSign, Pin, PinOff, Tag } from "lucide-react";
