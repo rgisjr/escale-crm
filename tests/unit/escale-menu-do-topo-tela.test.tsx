@@ -25,22 +25,20 @@ vi.mock("@/components/escale/menu/MarcaNoTopo", () => ({ MarcaNoTopo: () => null
 import { MenuDoTopo } from "@/components/escale/menu/MenuDoTopo";
 
 describe("<MenuDoTopo>", () => {
-  it("mostra os 9 itens na ordem e marca Negócios dentro de um funil", () => {
+  it("mostra os 7 itens da Clint na ordem e marca Negócios dentro de um funil", () => {
     render(<MenuDoTopo />);
     const nav = screen.getByRole("navigation", { name: "Menu principal" });
     expect(within(nav).getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Negócios",
-      "Conversas",
       "Contatos",
-      "Empresas",
       "Atividades",
-      "Agenda",
-      "Agentes IA",
+      "Atendimento",
       "Automações",
+      "Campanhas",
       "Indicadores",
     ]);
     expect(within(nav).getByRole("link", { name: "Negócios" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("link", { name: "Conversas" })).not.toHaveAttribute("aria-current");
+    expect(within(nav).getByRole("link", { name: "Atendimento" })).not.toHaveAttribute("aria-current");
   });
 
   it("Mais abre as outras telas, sem repetir as do topo, e Esc fecha", async () => {

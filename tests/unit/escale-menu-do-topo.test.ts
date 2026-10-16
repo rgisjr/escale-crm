@@ -4,38 +4,56 @@ import { DICIONARIO } from "@/lib/i18n/dicionario";
 import type { ModuloOpcional } from "@/lib/instalacao/modulos";
 import { NAV_GROUPS, searchable } from "@/lib/navigation/registry";
 import {
+  ACOES_DE_CRIAR,
   ITENS_DO_TOPO,
+  acoesDeCriar,
   destinoAtivo,
+  entradaDaIa,
   itemAtivo,
   montarMenuDoTopo,
+  textoDoSelo,
 } from "@/lib/escale/menu-do-topo";
 
 const COM_EMPRESAS: ModuloOpcional[] = ["crm_b2b"];
 const ADMIN = searchable(false, "admin", undefined, COM_EMPRESAS, []);
 const AGENT = searchable(false, "agent", undefined, [], []);
+const AGENT_COM_PROPOSTAS = searchable(false, "agent", undefined, [], ["propostas"]);
+const VIEWER = searchable(false, "viewer", undefined, [], []);
 
-describe("menu do topo", () => {
-  it("admin com o módulo de empresas vê os 9 itens, na ordem combinada", () => {
+describe("menu do topo (igual ao da Clint, variante superior)", () => {
+  it("admin vê os 7 itens da Clint, na ordem da Clint", () => {
     expect(montarMenuDoTopo(ADMIN).topo.map((i) => i.rotulo)).toEqual([
       "Negócios",
-      "Conversas",
       "Contatos",
-      "Empresas",
       "Atividades",
-      "Agenda",
-      "Agentes IA",
+      "Atendimento",
       "Automações",
+      "Campanhas",
       "Indicadores",
     ]);
+  });
+
+  it("Atendimento é o nosso Conversas, com o contador da fila; Campanhas é a tela de campanhas", () => {
+    const topo = montarMenuDoTopo(ADMIN).topo;
+    expect(topo.find((i) => i.rotulo === "Atendimento")).toMatchObject({ href: "/app/inbox", contador: "fila" });
+    expect(topo.find((i) => i.rotulo === "Campanhas")?.href).toBe("/app/campaigns");
+  });
+
+  it("Empresas, Agenda e Agentes IA saem do topo e vão para o Mais", () => {
+    const menu = montarMenuDoTopo(ADMIN);
+    const saem = ["/app/companies", "/app/agenda", "/app/ai/agents"];
+    const noMais = menu.mais.flatMap((g) => g.secoes.flatMap((s) => s.itens.map((d) => d.href)));
+    expect(noMais).toEqual(expect.arrayContaining(saem));
+    expect(menu.topo.some((i) => saem.includes(i.href))).toBe(false);
   });
 
   it("item que o papel ou o módulo não permite não aparece (mesma regra da lateral)", () => {
     expect(montarMenuDoTopo(AGENT).topo.map((i) => i.href)).toEqual([
       "/app/kanban",
-      "/app/inbox",
       "/app/contacts",
       "/app/tasks",
-      "/app/agenda",
+      "/app/inbox",
+      "/app/campaigns",
       "/app/metrics",
     ]);
   });
@@ -63,17 +81,55 @@ describe("menu do topo", () => {
   });
 
   it("o item fica ativo também nas telas de dentro dele", () => {
-    const [negocios, conversas] = ITENS_DO_TOPO;
-    expect(itemAtivo("/app/pipelines/p-1", negocios!)).toBe(true);
-    expect(itemAtivo("/app/leads/l-1", negocios!)).toBe(true);
-    expect(itemAtivo("/app/kanban", negocios!)).toBe(true);
-    expect(itemAtivo("/app/inbox/c-9", conversas!)).toBe(true);
-    expect(itemAtivo("/app/inboxx", conversas!)).toBe(false);
+    const negocios = ITENS_DO_TOPO[0]!;
+    const atendimento = ITENS_DO_TOPO.find((i) => i.href === "/app/inbox")!;
+    expect(itemAtivo("/app/pipelines/p-1", negocios)).toBe(true);
+    expect(itemAtivo("/app/leads/l-1", negocios)).toBe(true);
+    expect(itemAtivo("/app/kanban", negocios)).toBe(true);
+    expect(itemAtivo("/app/inbox/c-9", atendimento)).toBe(true);
+    expect(itemAtivo("/app/inboxx", atendimento)).toBe(false);
     expect(destinoAtivo("/app/webhooks/regra-1", "/app/webhooks")).toBe(true);
     expect(destinoAtivo("/app/webhooksx", "/app/webhooks")).toBe(false);
   });
 
-  it("todo rótulo do topo tem espanhol no dicionário", () => {
-    expect(ITENS_DO_TOPO.filter((i) => !DICIONARIO[i.rotulo]?.es).map((i) => i.rotulo)).toEqual([]);
+  it("todo rótulo do topo e do Novo + tem espanhol no dicionário", () => {
+    const rotulos = [...ITENS_DO_TOPO.map((i) => i.rotulo), ...ACOES_DE_CRIAR.map((a) => a.rotulo)];
+    expect(rotulos.filter((r) => !DICIONARIO[r]?.es)).toEqual([]);
+  });
+});
+
+describe("o que o Novo + cria", () => {
+  it("só entra o que a pessoa enxerga e o papel deixa criar", () => {
+    expect(acoesDeCriar(ADMIN, "admin").map((a) => a.id)).toEqual(["contato", "campanha"]);
+    expect(acoesDeCriar(AGENT, "agent").map((a) => a.id)).toEqual(["contato"]);
+    expect(acoesDeCriar(AGENT_COM_PROPOSTAS, "agent").map((a) => a.id)).toEqual(["contato", "proposta"]);
+    expect(acoesDeCriar(VIEWER, "viewer")).toEqual([]);
+    expect(acoesDeCriar(ADMIN, null)).toEqual([]);
+  });
+
+  it("contato abre a janela na própria tela; campanha e proposta vão para a tela de criar", () => {
+    expect(ACOES_DE_CRIAR.map((a) => [a.id, a.destino])).toEqual([
+      ["contato", null],
+      ["campanha", "/app/campaigns/new"],
+      ["proposta", "/app/proposals/novo"],
+    ]);
+  });
+});
+
+describe("a porta do ✦ e o selo vermelho", () => {
+  it("✦ leva ao hub de IA quando a pessoa enxerga alguma tela do grupo IA", () => {
+    expect(entradaDaIa(ADMIN)).toBe("/app/ai");
+    expect(entradaDaIa(ADMIN.filter((d) => d.group !== "ia"))).toBeNull();
+    expect(entradaDaIa([])).toBeNull();
+  });
+
+  it("o selo some no zero, vai até 99+ no topo e até +9 no botão de conversas", () => {
+    expect(textoDoSelo(0, 99)).toBeNull();
+    expect(textoDoSelo(-3, 9)).toBeNull();
+    expect(textoDoSelo(5, 99)).toBe("5");
+    expect(textoDoSelo(99, 99)).toBe("99");
+    expect(textoDoSelo(100, 99)).toBe("99+");
+    expect(textoDoSelo(9, 9)).toBe("9");
+    expect(textoDoSelo(10, 9)).toBe("+9");
   });
 });
