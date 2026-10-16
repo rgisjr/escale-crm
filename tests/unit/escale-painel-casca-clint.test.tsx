@@ -208,3 +208,45 @@ describe("casca V3 — a coluna do painel (01-010)", () => {
     expect(campo).toHaveAttribute("placeholder", "Buscar origens, grupos, visualizações…");
   });
 });
+
+describe("casca V3 — VISUALIZAÇÕES e o rodapé da seleção", () => {
+  it("o cabeçalho tem o ícone de quadro tracejado e o ^ cinza; o + só aparece no hover", () => {
+    renderizar();
+    const secao = screen.getByRole("region", { name: "Visualizações" });
+    const cabecalho = within(secao).getByRole("heading", { name: "Visualizações" }).parentElement!;
+    expect(cabecalho).toHaveClass("h-12", "border-b");
+    expect(cabecalho.querySelector("svg")).not.toBeNull();
+    expect(within(secao).getByRole("button", { name: "Recolher as visualizações" })).toHaveClass("text-casca-meta");
+    expect(within(secao).getByRole("button", { name: "Criar visualização" }).closest("span")).toHaveClass("opacity-0");
+  });
+
+  it("a linha da visualização tem 34px, o quadrado #4A4A4A com as iniciais e a contagem à direita", () => {
+    renderizar();
+    const link = screen.getByRole("link", { name: /Time comercial/ });
+    expect(link.closest("li")).toHaveClass("h-[34px]");
+    const icone = link.querySelector("[data-icone-da-visualizacao]");
+    expect(icone).toHaveStyle({ backgroundColor: "#4A4A4A" });
+    expect(icone).toHaveTextContent("TC");
+    expect(within(link).getByText("2 origens")).toHaveClass("text-[11px]", "text-casca-suave");
+  });
+
+  it("a visualização aberta ganha o fundo #EFF3FF e a barra da marca", () => {
+    caminho = "/app/pipelines/visualizacoes/v-time";
+    renderizar();
+    expect(screen.getByRole("link", { name: /Time comercial/ }).closest("li")).toHaveClass(
+      "bg-casca-raia",
+      "before:bg-casca-marca",
+    );
+  });
+
+  it("o rodapé da seleção fala na cor da marca, com o marcador, e o Salvar leva o disquete (01-026)", async () => {
+    const user = renderizar();
+    await user.click(
+      within(screen.getByRole("region", { name: "Visualizações" })).getByRole("button", { name: "Criar visualização" }),
+    );
+    const texto = screen.getByText("0 origens selecionadas · Rascunho");
+    expect(texto).toHaveClass("text-casca-marca", "font-semibold");
+    expect(texto.querySelector("svg")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Salvar como visualização" }).querySelector("svg")).not.toBeNull();
+  });
+});
