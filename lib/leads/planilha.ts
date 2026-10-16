@@ -73,7 +73,9 @@ function normalizarCabecalho(texto: string): string {
     .trim();
 }
 
-function campoDaColuna(cabecalho: string): string | null {
+// FORK ESCALE · Fase 1E: exportada para o mapeamento da importação da casca
+// sugerir o campo pelo MESMO critério da leitura (sem segunda lista de nomes).
+export function campoDaColuna(cabecalho: string): string | null {
   const alvo = normalizarCabecalho(cabecalho);
   for (const [campo, formas] of Object.entries(COLUNAS)) {
     if (formas.some((f) => normalizarCabecalho(f) === alvo)) return campo;

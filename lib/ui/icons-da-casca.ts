@@ -51,3 +51,6 @@ export { MessageSquare, CheckCheck, User, UserX, ArrowDownUp, SlidersHorizontal 
 
 // Fase 1E: Personalizar cards, chips dos campos, Negócio +, Ordenar e Recentes.
 export { ArrowUpDown, Briefcase, Calendar, Copy, DollarSign, Pin, PinOff, Tag } from "lucide-react";
+
+// Fase 1E (Task 12): a janela "Importar negócios" (nuvem, coluna, status e bandeira).
+export { CircleMinus, CircleX, CloudUpload, Columns2, Flag, Upload } from "lucide-react";

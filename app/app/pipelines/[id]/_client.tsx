@@ -50,6 +50,7 @@ import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
 // FORK ESCALE · Casca V4: o cabeçalho da Clint na casca nova (o quadro troca coluna e card pela prop `aparencia`).
 import { CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
 import { MenuNegocioMais } from "@/components/escale/quadro/MenuNegocioMais";
+import { JanelaDeImportarNegocios } from "@/components/escale/quadro/JanelaDeImportarNegocios";
 
 export function PipelinePageClient({
   pipelineId,
@@ -90,6 +91,8 @@ export function PipelinePageClient({
   const [newOpen, setNewOpen] = useState(false);
   // FORK ESCALE · Fase 1E: a etapa do "+ Adicionar negócio" da coluna (casca nova).
   const [etapaDoNovo, setEtapaDoNovo] = useState<string | null>(null);
+  // FORK ESCALE · Fase 1E: a janela "Importar negócios" do menu "Negócio +" (casca nova).
+  const [importando, setImportando] = useState(false);
   const podeCriar = ROLE_RANK[role] >= ROLE_RANK.agent;
   /**
    * A visão do funil (#2770). Quadro é o padrão — é o que todo mundo já
@@ -205,7 +208,7 @@ export function PipelinePageClient({
                 setEtapaDoNovo(null);
                 setNewOpen(true);
               }}
-              aoImportar={() => {}} // Task 12
+              aoImportar={() => setImportando(true)}
             />
           }
         />
@@ -318,6 +321,18 @@ export function PipelinePageClient({
           leads={data.leads}
         />
       )}
+      {/* FORK ESCALE · Fase 1E: "Importar negócios" do menu "Negócio +" (casca nova). */}
+      {cascaNova && data ? (
+        <JanelaDeImportarNegocios
+          aberta={importando}
+          onFechar={() => setImportando(false)}
+          pipelineId={pipelineId}
+          nomeDaOrigem={nomeAtual}
+          etapas={data.stages.filter((s) => !s.is_won && !s.is_lost && !s.is_archived)}
+          tagsDoQuadro={tagsDoQuadro}
+          aoImportar={() => void refetch()}
+        />
+      ) : null}
       {cascaNova ? (
         <BarraDoQuadro
           alvo={{ tipo: "origem", id: pipelineId }}

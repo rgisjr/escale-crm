@@ -101,6 +101,10 @@ vi.mock("@/components/kanban/NewLeadDialog", () => ({
     open ? <p>{`novo negócio aberto na etapa ${etapaInicial ?? "padrão"}`}</p> : null,
 }));
 vi.mock("@/components/kanban/CalendarioDoFunil", () => ({ CalendarioDoFunil: () => null }));
+vi.mock("@/components/escale/quadro/JanelaDeImportarNegocios", () => ({
+  JanelaDeImportarNegocios: ({ aberta, etapas }: { aberta: boolean; etapas: Array<{ name: string }> }) =>
+    aberta ? <p>{`importar aberto: ${etapas.map((e) => e.name).join(", ")}`}</p> : null,
+}));
 
 import type { Role } from "@/lib/auth/types";
 import { PipelinePageClient } from "@/app/app/pipelines/[id]/_client";
@@ -195,6 +199,15 @@ describe("a página do funil com a casca nova (Fase 1D)", () => {
     await user.click(screen.getByRole("button", { name: /^Negócio/ }));
     await user.click(screen.getByRole("menuitem", { name: "Novo negócio" }));
     expect(screen.getByText("novo negócio aberto na etapa padrão")).toBeInTheDocument();
+  });
+
+  it("com a casca, 'Importar negócios' abre a janela de importar só com as etapas abertas", async () => {
+    abrir(true);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    expect(screen.queryByText(/importar aberto/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Negócio/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Importar negócios" }));
+    expect(screen.getByText("importar aberto: Entrada, Proposta")).toBeInTheDocument();
   });
 
   it("viewer: 'Negócio +' fica desligado", () => {
