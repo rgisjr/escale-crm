@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
+import { PersonalizarCards } from "@/components/escale/capa/PersonalizarCards";
 import { useT } from "@/hooks/i18n/useT";
 import type { CampoFiltravel } from "@/lib/escale/filtros/campos";
 import type { AlvoDoFiltro } from "@/lib/escale/filtros/filtros-salvos";
@@ -101,6 +102,8 @@ export function BarraDoQuadro({
         ordemAtiva={Boolean(filtros.ordem?.length)}
         onAtualizar={onAtualizar}
         atualizando={atualizando}
+        // FORK ESCALE · Fase 1E: o ícone "Personalizar cards", logo depois do atualizar.
+        personalizar={<PersonalizarCards campos={campos} />}
         engrenagem={
           <MenuDaEngrenagem
             alvo={alvo}

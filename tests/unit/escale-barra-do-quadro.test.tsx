@@ -15,6 +15,10 @@ vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
 vi.mock("@/hooks/kanban/useAssignableAgents", () => ({
   useAssignableAgents: () => ({ data: [] }),
 }));
+vi.mock("@/hooks/escale/usePrefsDoCard", () => ({
+  usePrefsDoCard: () => ({ data: null }),
+  useSalvarPrefsDoCard: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock("@/components/escale/filtros/MenuDeFiltrosSalvos", () => ({
   MenuDeFiltrosSalvos: () => <p>filtros salvos</p>,
 }));
@@ -143,11 +147,21 @@ describe("<BarraDoQuadro> da casca (Casca V4)", () => {
     expect(screen.getByRole("button", { name: "Ajuda" })).toBeDisabled();
   });
 
-  it("na engrenagem: os filtros salvos, Limpar filtros (solta o filtro salvo) e Personalizar desligado", async () => {
+  it("Personalizar cards fica ligado na linha de contagem, logo depois de Atualizar (Fase 1E)", () => {
+    barra();
+    const linha = screen.getByTestId("contagem-do-quadro").parentElement!.parentElement!;
+    const nomes = within(linha)
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label"));
+    const personalizar = screen.getAllByRole("button", { name: "Personalizar cards" })[0]!;
+    expect(personalizar).toBeEnabled();
+    expect(nomes.indexOf("Personalizar cards")).toBe(nomes.indexOf("Atualizar") + 1);
+  });
+
+  it("na engrenagem: os filtros salvos e Limpar filtros (solta o filtro salvo)", async () => {
     const { onMudar, u } = barra({ status: ["open", "won"], tags: ["vip"], ordem: ORDEM });
     await u.click(screen.getByRole("button", { name: "Configurações do quadro" }));
     expect(screen.getByText("filtros salvos")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Personalizar cards/ })).toBeDisabled();
     await u.click(screen.getByRole("button", { name: /Limpar filtros/ }));
     expect(onMudar).toHaveBeenCalledWith({ status: ["open", "won"], ordem: ORDEM }, null);
   });

@@ -19,12 +19,15 @@ export function LinhaDeContagem({
   onAtualizar,
   atualizando = false,
   engrenagem,
+  personalizar,
 }: {
   contagem: number;
   ordemAtiva: boolean;
   onAtualizar: () => void;
   atualizando?: boolean;
   engrenagem: ReactNode;
+  /** FORK ESCALE · Fase 1E: o ícone "Personalizar cards" (Clint v2), logo depois do atualizar. */
+  personalizar?: ReactNode;
 }) {
   const t = useT();
   const { antes, depois } = partesDaContagem(
@@ -58,6 +61,7 @@ export function LinhaDeContagem({
         >
           <RefreshCw size={17} aria-hidden className={cn(atualizando && "animate-spin")} />
         </BotaoDaCasca>
+        {personalizar}
         <BotaoDaCasca
           type="button"
           variante="icone"
