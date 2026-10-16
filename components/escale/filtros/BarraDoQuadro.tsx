@@ -1,20 +1,22 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useT } from "@/hooks/i18n/useT";
 import type { CampoFiltravel } from "@/lib/escale/filtros/campos";
 import type { AlvoDoFiltro } from "@/lib/escale/filtros/filtros-salvos";
-import { limparCriterios, type FiltrosDoQuadro } from "@/lib/escale/filtros/tipos";
+import type { FiltrosDoQuadro } from "@/lib/escale/filtros/tipos";
 import type { Lead } from "@/lib/types/leads";
-import { ArrowsClockwise } from "@/lib/ui/icons";
-import { cn } from "@/lib/utils";
+import { Search } from "@/lib/ui/icons-da-casca";
 
-import { MenuDeFiltrosSalvos } from "./MenuDeFiltrosSalvos";
-import { OrdenarCards } from "./OrdenarCards";
-import { PainelDeFiltros } from "./PainelDeFiltros";
-import { ResumoDosFiltros } from "./ResumoDosFiltros";
+import { FiltroDeData } from "./FiltroDeData";
+import {
+  GatilhoDeCampos,
+  GatilhoDeTags,
+  GatilhoDoDono,
+  GatilhoMaisFiltros,
+} from "./GatilhosDoQuadro";
+import { LinhaDeContagem } from "./LinhaDeContagem";
+import { MenuDaEngrenagem } from "./MenuDaEngrenagem";
 import { StatusDoQuadro } from "./StatusDoQuadro";
 
 export interface BarraDoQuadroProps {
@@ -27,7 +29,7 @@ export interface BarraDoQuadroProps {
   leads: readonly Lead[];
   campos: readonly CampoFiltravel[];
   settings?: Record<string, unknown>;
-  /** Quantos negócios o quadro mostra agora (Clint: "21 Negócios"). */
+  /** Quantos negócios o quadro mostra agora. */
   contagem: number;
   onAtualizar: () => void;
   atualizando?: boolean;
@@ -36,9 +38,10 @@ export interface BarraDoQuadroProps {
 const ESPERA_DA_BUSCA_MS = 250;
 
 /**
- * A BARRA DO QUADRO (fork Escale, Fase 1D; ficha 01-020 da Clint): busca,
- * status, Filtros, filtros salvos, a contagem, Ordenar e Atualizar. Embaixo, o
- * resumo dos filtros ativos, visível com o painel fechado.
+ * A BARRA DO QUADRO DA CASCA (fork Escale, Fase 1D; visual da Clint na Casca V4:
+ * 01-010 e o print da barra de 15/10). Linha 1: a busca e os seis gatilhos, na
+ * ordem da Clint. Linha 2: a contagem e as ações. Os critérios ativos aparecem
+ * no selo de cada gatilho (D4).
  */
 export function BarraDoQuadro({
   alvo,
@@ -56,8 +59,14 @@ export function BarraDoQuadro({
   // Muda só quando os filtros vêm de fora da digitação (filtro salvo, limpar):
   // é o que reinicia a caixa de busca com o texto novo.
   const [geracao, setGeracao] = useState(0);
-  const mudar = useCallback((proximos: FiltrosDoQuadro) => onMudar(proximos, filtroSalvoId), [onMudar, filtroSalvoId]);
-  const buscar = useCallback((busca: string) => mudar({ ...filtros, busca: busca || undefined }), [mudar, filtros]);
+  const mudar = useCallback(
+    (proximos: FiltrosDoQuadro) => onMudar(proximos, filtroSalvoId),
+    [onMudar, filtroSalvoId],
+  );
+  const buscar = useCallback(
+    (busca: string) => mudar({ ...filtros, busca: busca || undefined }),
+    [mudar, filtros],
+  );
 
   function trocarTudo(proximos: FiltrosDoQuadro, salvoId: string | null) {
     setGeracao((g) => g + 1);
@@ -65,43 +74,62 @@ export function BarraDoQuadro({
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-surface p-2">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mt-4 flex flex-col gap-6" data-barra-do-quadro>
+      <div role="group" aria-label={t("Filtros")} className="flex flex-wrap items-center gap-3.5">
         <CampoDeBusca
           key={geracao}
           atual={filtros.busca ?? ""}
           onBuscar={buscar}
-          placeholder={alvo.tipo === "origem" ? t("Pesquisar nessa origem…") : t("Pesquisar nessa visualização…")}
+          rotulo={
+            alvo.tipo === "origem"
+              ? t("Pesquisar nessa origem…")
+              : t("Pesquisar nessa visualização…")
+          }
         />
-        <StatusDoQuadro status={filtros.status} onMudar={(status) => mudar({ ...filtros, status })} />
-        <PainelDeFiltros filtros={filtros} onMudar={mudar} leads={leads} campos={campos} settings={settings} />
-        <MenuDeFiltrosSalvos alvo={alvo} filtros={filtros} filtroSalvoId={filtroSalvoId} onAplicar={trocarTudo} />
-        <div className="ml-auto flex items-center gap-1">
-          <span className="px-2 text-sm text-muted-foreground" aria-live="polite">
-            {(contagem === 1 ? t("{n} negócio") : t("{n} negócios")).replace("{n}", String(contagem))}
-          </span>
-          <OrdenarCards ordem={filtros.ordem} campos={campos} onAplicar={(ordem) => mudar({ ...filtros, ordem })} />
-          <Button variant="ghost" size="sm" onClick={onAtualizar} disabled={atualizando} aria-label={t("Atualizar")} title={t("Atualizar")}>
-            <ArrowsClockwise size={16} className={cn(atualizando && "animate-spin")} aria-hidden />
-          </Button>
-        </div>
+        <FiltroDeData filtros={filtros} onMudar={mudar} />
+        <GatilhoDeCampos filtros={filtros} onMudar={mudar} campos={campos} />
+        <GatilhoDeTags filtros={filtros} onMudar={mudar} leads={leads} />
+        <GatilhoDoDono filtros={filtros} onMudar={mudar} />
+        <StatusDoQuadro
+          status={filtros.status}
+          onMudar={(status) => mudar({ ...filtros, status })}
+        />
+        <GatilhoMaisFiltros filtros={filtros} onMudar={mudar} leads={leads} settings={settings} />
       </div>
-      <ResumoDosFiltros filtros={filtros} onMudar={mudar} onLimpar={() => trocarTudo(limparCriterios(filtros), null)} />
-      {filtros.ordem?.length ? (
-        <p className="px-1 text-xs text-muted-foreground">
-          {t("Ordenação ativa · arrastar para reordenar dentro da coluna está desabilitado. Mover de etapa continua funcionando.")}
-        </p>
-      ) : null}
+      <LinhaDeContagem
+        contagem={contagem}
+        ordemAtiva={Boolean(filtros.ordem?.length)}
+        onAtualizar={onAtualizar}
+        atualizando={atualizando}
+        engrenagem={
+          <MenuDaEngrenagem
+            alvo={alvo}
+            filtros={filtros}
+            filtroSalvoId={filtroSalvoId}
+            campos={campos}
+            onMudar={mudar}
+            onTrocarTudo={trocarTudo}
+          />
+        }
+      />
     </div>
   );
 }
 
 /**
- * A busca espera a pessoa parar de digitar (250ms, o mesmo do `FilterBar` do
- * original). Compara com o valor de FORA (`atual`): depois que a URL muda, o
- * efeito roda de novo e para, sem mandar a mesma busca duas vezes.
+ * A busca da Clint (design system §6.4): 109×32, fundo claro, sem borda e sem
+ * placeholder, lupa à direita. Espera a pessoa parar de digitar (250ms, o mesmo
+ * do `FilterBar` do original) e compara com o valor de FORA (`atual`).
  */
-function CampoDeBusca({ atual, placeholder, onBuscar }: { atual: string; placeholder: string; onBuscar: (busca: string) => void }) {
+function CampoDeBusca({
+  atual,
+  rotulo,
+  onBuscar,
+}: {
+  atual: string;
+  rotulo: string;
+  onBuscar: (busca: string) => void;
+}) {
   const [valor, setValor] = useState(atual);
   useEffect(() => {
     if (valor === atual) return;
@@ -109,13 +137,19 @@ function CampoDeBusca({ atual, placeholder, onBuscar }: { atual: string; placeho
     return () => clearTimeout(id);
   }, [valor, atual, onBuscar]);
   return (
-    <Input
-      type="search"
-      placeholder={placeholder}
-      aria-label={placeholder}
-      value={valor}
-      onChange={(e) => setValor(e.target.value)}
-      className="h-9 w-full sm:w-64"
-    />
+    <div className="relative h-8 w-[109px] shrink-0">
+      <input
+        type="search"
+        aria-label={rotulo}
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        className="h-8 w-full rounded-casca-gatilho border-0 bg-casca-busca pr-7 pl-2.5 text-xs text-casca-texto outline-hidden focus:ring-1 focus:ring-casca-marca [&::-webkit-search-cancel-button]:hidden"
+      />
+      <Search
+        size={16}
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-casca-suave"
+      />
+    </div>
   );
 }
