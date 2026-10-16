@@ -135,6 +135,9 @@ describe("<CardDaCasca> (Casca V4, 01-010)", () => {
       "href",
       "mailto:reinaldo@x.com",
     );
+    // E13: as dicas dos atalhos são as da Clint ("Ligar", "Enviar Whatsapp", "Email"),
+    // não o endereço do e-mail.
+    expect(screen.getByRole("link", { name: "Email" })).toHaveAttribute("title", "Email");
     expect(screen.getByText("R$64,8k")).toBeInTheDocument();
     expect(screen.getByText("2/5")).toBeInTheDocument();
     expect(screen.getByText("31h")).toBeInTheDocument();

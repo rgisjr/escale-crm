@@ -306,7 +306,7 @@ export function RodapeDoCard({
             onClick={parar}
             onPointerDown={parar}
             aria-label={t("Email")}
-            title={email}
+            title={t("Email")}
             className={icone}
           >
             <Mail size={12} aria-hidden />
