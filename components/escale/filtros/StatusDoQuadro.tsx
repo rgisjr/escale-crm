@@ -1,21 +1,15 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import {
   STATUS_DO_NEGOCIO,
   normalizarStatus,
   type StatusDoNegocio,
 } from "@/lib/escale/filtros/tipos";
-import { CaretDown } from "@/lib/ui/icons";
+
+import { RotuloDoGrupo } from "./controles";
+import { GatilhoComPainel } from "./GatilhoComPainel";
 
 const ROTULOS: Record<StatusDoNegocio, string> = {
   open: "Em aberto",
@@ -24,9 +18,10 @@ const ROTULOS: Record<StatusDoNegocio, string> = {
 };
 
 /**
- * O STATUS DO QUADRO (fork Escale, Fase 1D): "Em aberto" é o padrão, como na
- * Clint, e dá para juntar ganhos e perdidos. Pelo menos um fica marcado: um
- * quadro sem status nenhum seria vazio sem explicação.
+ * O STATUS DO QUADRO (fork Escale, Fase 1D; gatilho "Status 1" da barra da Clint
+ * na Casca V4). "Em aberto" é o padrão, e dá para juntar ganhos e perdidos. O
+ * selo conta os status escolhidos. Pelo menos um fica marcado: um quadro sem
+ * status seria vazio sem explicação. O conteúdo aberto não tem print (PRINT 28).
  */
 export function StatusDoQuadro({
   status,
@@ -36,10 +31,6 @@ export function StatusDoQuadro({
   onMudar: (status: StatusDoNegocio[]) => void;
 }) {
   const t = useT();
-  const rotulo =
-    status.length === STATUS_DO_NEGOCIO.length
-      ? t("Todos os status")
-      : status.map((s) => t(ROTULOS[s])).join(" + ");
 
   function alternar(s: StatusDoNegocio) {
     const proximos = status.includes(s) ? status.filter((x) => x !== s) : [...status, s];
@@ -48,30 +39,32 @@ export function StatusDoQuadro({
   }
 
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5" data-testid="status-do-quadro">
-          {rotulo}
-          <CaretDown size={14} aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        <DropdownMenuLabel>{t("Status do negócio")}</DropdownMenuLabel>
+    <GatilhoComPainel
+      rotulo={t("Status")}
+      contagem={status.length}
+      testId="status-do-quadro"
+      className="w-56"
+    >
+      <div className="space-y-2">
+        <RotuloDoGrupo>{t("Status do negócio")}</RotuloDoGrupo>
         {STATUS_DO_NEGOCIO.map((s) => (
-          <DropdownMenuCheckboxItem
+          <CaixaDaCasca
             key={s}
-            checked={status.includes(s)}
-            onCheckedChange={() => alternar(s)}
-            onSelect={(e) => e.preventDefault()}
-          >
-            {t(ROTULOS[s])}
-          </DropdownMenuCheckboxItem>
+            marcada={status.includes(s)}
+            aoMudar={() => alternar(s)}
+            rotulo={t(ROTULOS[s])}
+            desabilitada={status.length === 1 && status.includes(s)}
+          />
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onMudar([...STATUS_DO_NEGOCIO])}>
+        <BotaoDaCasca
+          type="button"
+          variante="texto"
+          tamanho="sm"
+          onClick={() => onMudar([...STATUS_DO_NEGOCIO])}
+        >
           {t("Mostrar todos")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </BotaoDaCasca>
+      </div>
+    </GatilhoComPainel>
   );
 }
