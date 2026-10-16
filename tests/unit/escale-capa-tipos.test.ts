@@ -27,9 +27,12 @@ const SETTINGS = {
 const RENDA = { entidade: "negocio" as const, chave: "renda" };
 
 describe("a preferência do card (forma da Clint)", () => {
-  it("o padrão é o da Clint: os sete itens ligados, sem campos, telefone/mensagem/e-mail", () => {
+  it("o padrão é o da Clint: seis itens ligados e 'Nome da empresa' desligado (E3), sem campos, telefone/mensagem/e-mail", () => {
     expect(lerPrefs(PREFS_PADRAO)).toEqual(PREFS_PADRAO);
-    expect(Object.values(PREFS_PADRAO.itens).every(Boolean)).toBe(true);
+    // FORK ESCALE · Fase 1E (decisão E3): "Nome da empresa" fica desligado até a empresa existir.
+    expect(PREFS_PADRAO.itens.empresa).toBe(false);
+    const { empresa: _empresa, ...demais } = PREFS_PADRAO.itens;
+    expect(Object.values(demais).every(Boolean)).toBe(true);
     expect(PREFS_PADRAO.canais).toEqual({
       telefone: true,
       mensagem: true,
@@ -37,8 +40,12 @@ describe("a preferência do card (forma da Clint)", () => {
       lembrete: false,
       agendamento: false,
     });
-    expect(ocupados(PREFS_PADRAO)).toBe(7);
+    expect(ocupados(PREFS_PADRAO)).toBe(6);
     expect(diferemDoPadrao(PREFS_PADRAO)).toBe(false);
+    // Preferência salva antes da E3, com a empresa ligada, agora conta como personalizada.
+    expect(diferemDoPadrao({ ...PREFS_PADRAO, itens: { ...PREFS_PADRAO.itens, empresa: true } })).toBe(
+      true,
+    );
   });
 
   it("o que não serve mais vira null, sem lançar", () => {
@@ -52,9 +59,9 @@ describe("a preferência do card (forma da Clint)", () => {
 
   it("10 campos no máximo (itens ligados + campos) e 3 ícones; alternar devolve preferência nova", () => {
     let p: PrefsDoCard = PREFS_PADRAO;
-    for (const chave of ["a", "b", "c"]) p = alternarCampo(p, { entidade: "negocio", chave });
+    for (const chave of ["a", "b", "c", "d"]) p = alternarCampo(p, { entidade: "negocio", chave });
     expect(ocupados(p)).toBe(10);
-    expect(alternarCampo(p, { entidade: "negocio", chave: "d" })).toBe(p);
+    expect(alternarCampo(p, { entidade: "negocio", chave: "e" })).toBe(p);
     expect(alternarItem(p, "tags").itens.tags).toBe(false);
     expect(alternarCanal(PREFS_PADRAO, "lembrete")).toBe(PREFS_PADRAO);
     expect(canaisLigados(alternarCanal(alternarCanal(PREFS_PADRAO, "email"), "lembrete"))).toBe(3);

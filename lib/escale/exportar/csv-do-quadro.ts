@@ -79,7 +79,7 @@ function valorDoCampo(campo: CustomFieldDef, valor: unknown): unknown {
 export function csvDoQuadro({ leads, stages, campos, nomeDoDono, t }: EntradaDoCsv): string {
   const etapa = new Map(stages.map((s) => [s.id, s.name]));
   const status: Record<string, string> = {
-    open: t("Em aberto"),
+    open: t("Aberto"),
     won: t("Ganho"),
     lost: t("Perdido"),
   };

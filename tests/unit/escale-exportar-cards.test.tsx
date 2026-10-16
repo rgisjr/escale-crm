@@ -74,7 +74,7 @@ describe("<ExportarCards> (ícone da linha de contagem)", () => {
     });
     const [nome, csv] = baixar.mock.calls[0] as [string, string];
     expect(nome).toMatch(/^negocios-vendas-\d{4}-\d{2}-\d{2}\.csv$/);
-    expect(csv).toContain("Proposta ACME,Entrada,Em aberto,,,Bruno");
+    expect(csv).toContain("Proposta ACME,Entrada,Aberto,,,Bruno");
     expect(toast.success).toHaveBeenCalledWith("Os negócios foram exportados com sucesso.");
   });
 

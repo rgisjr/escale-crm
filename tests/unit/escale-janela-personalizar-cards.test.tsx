@@ -96,7 +96,7 @@ describe("<JanelaPersonalizarCards> (01-019)", () => {
   it("com 10 ocupados, o que está desligado trava com a dica da Clint", async () => {
     const cheia = {
       ...PREFS_PADRAO,
-      campos: [1, 2, 3].map((n) => ({ entidade: "negocio" as const, chave: `x${n}` })),
+      campos: [1, 2, 3, 4].map((n) => ({ entidade: "negocio" as const, chave: `x${n}` })),
     };
     const user = janela(cheia);
     await user.click(screen.getByRole("button", { name: /Negócio/ }));
@@ -115,10 +115,11 @@ describe("<JanelaPersonalizarCards> (01-019)", () => {
       screen.getByRole("switch", { name: "Ícones de canal no rodapé: Lembrete" }),
     ).toBeDisabled();
     await user.click(screen.getByRole("button", { name: /Empresa/ }));
-    expect(screen.getByRole("switch", { name: "Nome da empresa" })).toHaveAttribute(
-      "title",
-      "Em breve",
-    );
+    const empresa = screen.getByRole("switch", { name: "Nome da empresa" });
+    expect(empresa).toHaveAttribute("title", "Em breve");
+    // Decisão E3: nasce desligado e travado até a empresa existir.
+    expect(empresa).toHaveAttribute("aria-checked", "false");
+    expect(empresa).toBeDisabled();
   });
 
   it("a busca filtra e avisa quando não acha; a recusa da rota aparece com a mensagem dela", async () => {

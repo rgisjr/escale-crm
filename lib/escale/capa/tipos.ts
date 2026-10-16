@@ -82,7 +82,7 @@ export const prefsDoCardSchema = z
 export const PREFS_PADRAO: PrefsDoCard = {
   itens: {
     tags: true,
-    empresa: true,
+    empresa: false,
     ultimaMensagem: true,
     atividades: true,
     valor: true,

@@ -9,6 +9,7 @@ import {
 } from "@/lib/escale/exportar/csv-do-quadro";
 import type { Stage } from "@/lib/kanban/types";
 import type { CustomFieldDef } from "@/lib/schemas/settings";
+import { traduzir } from "@/lib/i18n/dicionario";
 import { negocio } from "@/tests/helpers/negocio-do-quadro";
 
 const t = (texto: string) => texto;
@@ -83,6 +84,20 @@ describe("o CSV dos cards", () => {
       `Proposta ACME,Entrada,Ganho,"1500,00",BRL,Bruno,Ana Souza,'+5511999998888,ana@exemplo.com,"vip, quente",05/10/2026,16/10/2026,5000`,
     );
     expect(fim).toBe("");
+  });
+
+  it("o status do negócio sai no singular em espanhol (Abierto, Ganado, Perdido)", () => {
+    const linhaDe = (status: "open" | "won" | "lost") =>
+      csvDoQuadro({
+        leads: [negocio("l-s", { status })],
+        stages: ETAPAS,
+        campos: CAMPOS,
+        nomeDoDono: () => "",
+        t: (texto) => traduzir(texto, "es"),
+      }).split("\r\n")[1]!;
+    expect(linhaDe("open").split(",")[2]).toBe("Abierto");
+    expect(linhaDe("won").split(",")[2]).toBe("Ganado");
+    expect(linhaDe("lost").split(",")[2]).toBe("Perdido");
   });
 
   it("valor negativo sai como número (-10,00), sem apóstrofo; campo de objeto não imprime [object Object]", () => {
