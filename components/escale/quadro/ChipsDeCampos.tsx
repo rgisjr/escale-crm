@@ -67,7 +67,7 @@ function ChipDoCampo({ rotulo, texto }: { rotulo: string; texto: string }) {
           {texto}
         </span>
       </TooltipTrigger>
-      <TooltipContent className="flex items-center gap-2 bg-casca-texto-2 text-[11px] text-white">
+      <TooltipContent className="flex max-w-64 items-center gap-2 bg-casca-texto-2 text-[11px] break-words text-white">
         <span>
           <span className="font-semibold">{rotulo}</span> {texto}
         </span>
