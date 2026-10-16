@@ -10,20 +10,20 @@ Data: 2026-10-15 · Pesquisa somente leitura. Nada no projeto foi alterado.
 - **[VIS]**: estimativa visual feita sobre um recorte ampliado.
 
 **Escala dos screenshots: DPR = 1,25 (Windows a 125%).**
-- O bundle fixa a coluna do kanban em `Kt={WIDTH:"260px"}` [BUNDLE index-CTaP4T6N]. Nos screenshots ela mede 325 px: em `01-010` (x 338–662) e em `2.png` (x 55–379). 325/260 = 1,25.
-- O mesmo vale para a célula do calendário: o código diz 32 px e o `1.png` mede 40 px.
+- O bundle fixa a coluna do kanban em `Kt={WIDTH:"260px"}` [BUNDLE index-CTaP4T6N]. Nos screenshots ela mede 325 px: em `01-010` (x 338–662) e em 2.png (x 55–379). 325/260 = 1,25.
+- O mesmo vale para a célula do calendário: o código diz 32 px e o 1.png mede 40 px.
 - Conversão: **px CSS = px do screenshot ÷ 1,25**. Todas as medidas abaixo já estão em px CSS, salvo quando escrito "dev".
 - Os JPEGs `01-032/033/034` têm só 500 px de largura e estão comprimidos. Servem apenas como referência visual.
 
 **Duas gerações de UI convivem (importante)**
-1. **UI "legada" (o alvo, com menu no topo).** Aparece em `01-010`, `01-011`, `01-013`, `01-032/033` e nos prints do usuário `1.png` e `2.png`.
+1. **UI "legada" (o alvo, com menu no topo).** Aparece em `01-010`, `01-011`, `01-013`, `01-032/033` e nos prints do usuário 1.png e 2.png.
    - Filtros soltos: Data / Campos / Tags / Dono / Status / Mais filtros.
    - Mistura react-bootstrap (grid `Row`/`Col`, classes `c-dark`, `text-blue-gray`, `pt-4`), react-select, react-widgets, react-datepicker e Chakra UI v3.
    - O código dela está no bundle `raw` (`index-Eivtu0ck.js`).
 2. **UI nova (menu lateral).** Aparece em `01-018`.
    - Um único popover "Filtros" com acordeão (Negócio/Conversas/Tags/Campos/Outros), busca "Pesquisar nessa origem...", "Em aberto" e "Ordenar".
    - 100% Chakra v3. Está no bundle `raw-v2`.
-   - **O `3.png` é o Escale atual, não o Clint.** Ele já se parece com essa UI nova.
+   - **O 3.png é o Escale atual, não o Clint.** Ele já se parece com essa UI nova.
 
 Os **tokens** (paleta, fontes, raios, sombras) são os mesmos nas duas gerações: o styleguide do bundle `raw` e o tema do `raw-v2` têm os mesmos hex. O que muda são algumas cores "hardcoded" da UI legada (`#EFF3FF`, `#E8E4F5`, `#3E3A6F`, `#7C00FF`), listadas na seção 3.
 
@@ -38,7 +38,7 @@ Os **tokens** (paleta, fontes, raios, sombras) são os mesmos nas duas geraçõe
 | Grid/legado | **react-bootstrap** + CSS próprio (base Bootstrap/Dashkit) | `className:"deal-content-header pt-4 px-lg-0"`, `noGutters:!0`, `className:"c-dark"`, `"text-blue-gray"`, `form-control-white` [BUNDLE raw/index-Eivtu0ck]. O CSS (`react-ui-DcuPHkRx.css`, `chat-media-BKH6ZZgG.css`) não foi capturado |
 | Selects legados | **react-select** | `control:a=>({...a,minHeight:"45px",background:"#eff3ff",borderColor:"#f8faff"})`, `menuIsOpen` [BUNDLE raw/chat-media] |
 | Busca legada | **react-widgets** Combobox | `className:" rw-combobox-lite"`, `renderListItem`, `textField:"label"` [BUNDLE raw/index-Eivtu0ck] |
-| Datepicker do filtro "Data" (legado, `1.png`) | **react-datepicker**, com container próprio de presets e abas | `r(Fr,{selectsRange:!0,...,monthsShown:Re?1:2,calendarContainer:S=>r(_r,{onChangeFilterDate:X,dateFilterType:me,showPresets:!Re,...S})})`; classes `react-datepicker__day--selected` em `raw/react-ui-GnwoMDPx.js` |
+| Datepicker do filtro "Data" (legado, 1.png) | **react-datepicker**, com container próprio de presets e abas | `r(Fr,{selectsRange:!0,...,monthsShown:Re?1:2,calendarContainer:S=>r(_r,{onChangeFilterDate:X,dateFilterType:me,showPresets:!Re,...S})})`; classes `react-datepicker__day--selected` em `raw/react-ui-GnwoMDPx.js` |
 | Datepicker novo | Componente próprio (dayjs + Chakra Popover) | `D5t` / `Yoe` / `E6t` em `index-CY2O8ZFZ` (célula `O5="32px"`, presets à esquerda com `minW:"150px"`) |
 | Datas | **dayjs** (`at().startOf("week")`), date-fns no trigger novo (`format(o,"dd MMM, yyyy")`) | [BUNDLE] |
 | i18n | **react-intl** (`formatMessage`, ids `label.tThisWeek`) | [BUNDLE] |
@@ -663,7 +663,7 @@ Chip: `borderRadius:"full"`, `pl:2`, `pr:2` (1.5 quando há botão de fechar), `
 - **Popover:** borda 1px `border`, raio `l3`, sombra `lg`, padding por tamanho (xs 12 / sm 16 / md 20 / lg 24), largura padrão `sizes.xs` 320px [BUNDLE `rot`].
 - **Painel de filtros novo:** raio xl 12px, borda 1px, sombra `lg`, padding 12px.
 
-### 6.6 Seletor de período (filtro "Data", `1.png`)
+### 6.6 Seletor de período (filtro "Data", 1.png)
 - Popover ancorado abaixo do botão (o botão fica "aberto", em navy). Painel branco ~734px de largura, raio ~8, sombra `lg`.
 - **Coluna esquerda (184px)**, com borda direita 1px `#E8E4F5`:
   - No topo, 4 **abas de tipo de data** (42×23, gap ~8, padding do bloco ~12): ativa com bg `#3E3A6F` e ícone branco; inativas com bg `#EFF3FF` e ícone `#3E3A6F`. Abaixo, borda 1px `#EBEBEB`.

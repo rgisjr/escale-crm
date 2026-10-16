@@ -15,9 +15,9 @@ Cópias estáveis em `C:\Documentos\projetos claude\Deskcom CRM\docs\clint\`. A 
 - `clint-design-system.md`: cores medidas, fonte, raios, sombras, tamanhos e componentes. Escala dos prints = 1,25; os valores do documento já vêm em px de CSS.
 - `clint-telas.md`: spec tela a tela. Atenção: ela mede em px do PRINT. Divida por 1,25 para ter px de CSS (ex.: topo 55 → 44, coluna 325 → 260).
 - `inventario-escale.md`: o nosso código e as cercas.
-- `crops/`: recortes ampliados (`datatabs.png`, `essasemana.png`, `filterbar.png`, `top-left.png`, `top-right.png`, `fab.png`, `leftpanel.png`, `m032.png`, `card1.png`, `colhead.png`, `icons-right.png`, `msg-status.png`, `msg-voice-unread.png`, `bottom-tags.png`, `card-tag-voice.png`).
-- `prints-do-usuario/`: `2026-10-15-filtro-data-aberto.png` (o Data aberto), `2026-10-15-barra-de-filtros.png` (a barra, hover em "Dono do negócio") e `2026-10-15-escale-atual.png` (o NOSSO app de hoje; não é referência).
-- Capturas da Clint: `C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\` (abrir o PNG) e `...\modulos\12-configuracoes-e-mais\imagens\12-001-menu-mais.png`.
+- `crops/`: recortes ampliados (datatabs.png, essasemana.png, filterbar.png, top-left.png, top-right.png, fab.png, leftpanel.png, m032.png, card1.png, colhead.png, icons-right.png, msg-status.png, msg-voice-unread.png, bottom-tags.png, card-tag-voice.png).
+- `prints-do-usuario/`: 2026-10-15-filtro-data-aberto.png (o Data aberto), 2026-10-15-barra-de-filtros.png (a barra, hover em "Dono do negócio") e 2026-10-15-escale-atual.png (o NOSSO app de hoje; não é referência).
+- Capturas da Clint: `C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\` (abrir o PNG) e ...\modulos\12-configuracoes-e-mais\imagens\12-001-menu-mais.png.
 
 ## Tokens da casca (criados na V1)
 Todos valem só com a casca ligada. Cada um mora em três lugares:

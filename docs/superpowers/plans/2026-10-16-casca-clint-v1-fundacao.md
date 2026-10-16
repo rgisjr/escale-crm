@@ -28,9 +28,9 @@ As telas reais (topo, painel esquerdo, quadro) chegam na V2, na V3 e na V4, que 
   - `clint-telas.md`: mede em px do PRINT. Divida por 1,25;
   - `contrato-casca-igual-a-clint.md`: os nomes que este plano produz;
   - `inventario-escale.md`: o nosso código e as cercas;
-  - `crops/`: recortes ampliados. Os que esta fase usa são `datatabs.png`, `essasemana.png` e `filterbar.png`;
-  - `prints-do-usuario/2026-10-15-filtro-data-aberto.png` (o calendário aberto) e `prints-do-usuario/2026-10-15-barra-de-filtros.png` (a barra, com hover em "Dono do negócio"). O `2026-10-15-escale-atual.png` é o NOSSO app de hoje e não serve de referência.
-- Captura da Clint: `C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\01-010-kanban-v1.png`.
+  - `crops/`: recortes ampliados. Os que esta fase usa são datatabs.png, essasemana.png e filterbar.png;
+  - prints-do-usuario/2026-10-15-filtro-data-aberto.png (o calendário aberto) e prints-do-usuario/2026-10-15-barra-de-filtros.png (a barra, com hover em "Dono do negócio"). O 2026-10-15-escale-atual.png é o NOSSO app de hoje e não serve de referência.
+- Captura da Clint: C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\01-010-kanban-v1.png.
 
 ## Global Constraints
 
@@ -185,7 +185,7 @@ ls docs/escale/clint docs/escale/clint/prints-do-usuario
 ```
 Expected:
 - em `docs/escale/clint`: `clint-design-system.md`, `clint-telas.md`, `contrato-casca-igual-a-clint.md`, `crops`, `inventario-escale.md` e `prints-do-usuario`;
-- em `prints-do-usuario`: `2026-10-15-barra-de-filtros.png`, `2026-10-15-escale-atual.png` e `2026-10-15-filtro-data-aberto.png`.
+- em `prints-do-usuario`: 2026-10-15-barra-de-filtros.png, 2026-10-15-escale-atual.png e 2026-10-15-filtro-data-aberto.png.
 
 - [ ] **Step 3: Conferir que as duas cópias do contrato já trazem as mudanças da V1**
 
@@ -1870,7 +1870,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - O elemento ganha `data-aberto` quando está aberto.
   - O `rotulo` é texto de quem chama, já traduzido. O componente não o passa por `t()`.
 
-**Detalhes visuais (prints `2026-10-15-barra-de-filtros.png` e `2026-10-15-filtro-data-aberto.png`; bundle `DateRangeButtonTrigger`):**
+**Detalhes visuais (prints 2026-10-15-barra-de-filtros.png e 2026-10-15-filtro-data-aberto.png; bundle `DateRangeButtonTrigger`):**
 - repouso: sem fundo, texto `#3E3A6F` 0,7rem (11,2px) peso 500, chevron 11px `#7489A8`, gap 10px, altura 36px, padding 10px, raio 6;
 - hover: fundo `#EFF3FF`, texto `#2F2C5D`;
 - aberto: fundo `#2F2C5D`, texto e chevron brancos. O chevron não gira (print do Data aberto);
@@ -2769,7 +2769,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
   A V4 põe este componente dentro de `<PainelSuspenso className="w-auto p-0">`, aberto pelo `GatilhoDeFiltro` "Data".
 
-**Detalhes visuais (print `2026-10-15-filtro-data-aberto.png`, recortes `datatabs.png` e `essasemana.png`, em px de CSS):**
+**Detalhes visuais (print 2026-10-15-filtro-data-aberto.png, recortes datatabs.png e essasemana.png, em px de CSS):**
 - painel de ≈742px: coluna esquerda de 184px com borda direita `#E8E4F5`, mais a área dos meses;
 - abas de tipo: 4 de **34×23px**, gap 8 e padding 12. A soma (4×34 + 3×8 + 2×12 = 184) bate com a coluna; os "42×23" do design system somam 192 e não cabem. Só as pontas do grupo têm canto (5px). Ativa: fundo `#3E3A6F` e ícone claro. Inativas: fundo `#EFF3FF` e ícone `#3E3A6F`. Ícones de 14px. Linha `#EBEBEB` embaixo;
 - atalhos: linhas de 42px com divisórias `#EBEBEB`, texto 0,7rem peso 500 `#3E3A6F` com 12px à esquerda. Hover e ativo em `#597EFF` (o "Essa semana" do print);
@@ -3409,7 +3409,7 @@ fi
 - **`CAMINHO B`** (o normal hoje: em 16/10 não havia `.env.local`):
   - **não** crie `.env.local`, **não** suba o Supabase local nem o Docker sem o "pode fazer" do usuário e **nunca** aponte o dev server para o banco de produção (`jsrzgxyioczdgwiklkrc`) nem para o antigo (`hwpnnstguqrfhfnsvthv`);
   - pule os Steps 1 a 5 (a vitrine não é criada) e siga para a Task 14. No PR, a linha da conferência diz "pendente: depois do deploy, pela regra do contrato";
-  - **depois do deploy** (quando o usuário avisar que mergeou, publicou a versão e atualizou a VPS; nada disso é deste plano): carregue a skill `chrome-browser` e as ferramentas do Claude in Chrome (`mcp__claude-in-chrome__*`) num único ToolSearch e trabalhe numa aba nova. Abra https://app.escaleia.com com a sessão do próprio usuário (se pedir login, PARE e peça para ele entrar; nunca digite senha) e ligue a casca com `https://app.escaleia.com/app/escale/menu?usar=topo&voltar=%2Fapp%2Fkanban` (só grava o cookie de preferência). **Só leitura:** navegar, abrir e fechar menus (Esc), passar o mouse, ler a página, medir com `javascript_tool` e tirar captura. Proibido arrastar card, criar, editar, salvar, arquivar, excluir ou mudar configuração: é o banco de produção. Janela com `resize_window` 1536×~880. Na V1 a tela real só mostra a **fonte**: confira que as telas da casca estão em Poppins (400/500/600) e que nada mudou de lugar. Os componentes da V1 são comparados com `datatabs.png`, `essasemana.png`, `filterbar.png`, `2026-10-15-filtro-data-aberto.png` e `2026-10-15-barra-de-filtros.png` na conferência da V2 (botão "Novo +", painel do "?") e da V4 (gatilhos, calendário, caixinha e seletor), onde eles aparecem na tela;
+  - **depois do deploy** (quando o usuário avisar que mergeou, publicou a versão e atualizou a VPS; nada disso é deste plano): carregue a skill `chrome-browser` e as ferramentas do Claude in Chrome (`mcp__claude-in-chrome__*`) num único ToolSearch e trabalhe numa aba nova. Abra https://app.escaleia.com com a sessão do próprio usuário (se pedir login, PARE e peça para ele entrar; nunca digite senha) e ligue a casca com `https://app.escaleia.com/app/escale/menu?usar=topo&voltar=%2Fapp%2Fkanban` (só grava o cookie de preferência). **Só leitura:** navegar, abrir e fechar menus (Esc), passar o mouse, ler a página, medir com `javascript_tool` e tirar captura. Proibido arrastar card, criar, editar, salvar, arquivar, excluir ou mudar configuração: é o banco de produção. Janela com `resize_window` 1536×~880. Na V1 a tela real só mostra a **fonte**: confira que as telas da casca estão em Poppins (400/500/600) e que nada mudou de lugar. Os componentes da V1 são comparados com datatabs.png, essasemana.png, filterbar.png, 2026-10-15-filtro-data-aberto.png e 2026-10-15-barra-de-filtros.png na conferência da V2 (botão "Novo +", painel do "?") e da V4 (gatilhos, calendário, caixinha e seletor), onde eles aparecem na tela;
   - a lista das diferenças (cada uma com o porquê) vai num **PR de correção**: branch `fix/casca-clint-v1-conferencia` a partir de `escale-crm/main`, cada conserto com o teste da peça, commits com o rodapé `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, PR para `rgisjr/escale-crm` com o corpo terminando em `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Sem push em `origin`, sem merge, sem release, sem VPS.
 
 - [ ] **Step 1: Criar a vitrine temporária (só no CAMINHO A)**
@@ -3526,16 +3526,16 @@ No navegador:
 - [ ] **Step 3: Comparar lado a lado com os prints**
 
 Abra com a ferramenta Read (ou num visualizador de imagens) e compare com a vitrine:
-- `docs/escale/clint/prints-do-usuario/2026-10-15-filtro-data-aberto.png` contra o "Data" aberto da vitrine:
+- docs/escale/clint/prints-do-usuario/2026-10-15-filtro-data-aberto.png contra o "Data" aberto da vitrine:
   - gatilho escuro, painel, abas, atalhos e os dois meses;
   - hoje é 15/10/2026, então devem aparecer outubro e novembro de 2026, como no print;
-- `docs/escale/clint/crops/datatabs.png`: as 4 abas (34×23, só as pontas com canto);
-- `docs/escale/clint/crops/essasemana.png`: a cor do atalho em hover;
-- `docs/escale/clint/prints-do-usuario/2026-10-15-barra-de-filtros.png` e `docs/escale/clint/crops/filterbar.png`:
+- docs/escale/clint/crops/datatabs.png: as 4 abas (34×23, só as pontas com canto);
+- docs/escale/clint/crops/essasemana.png: a cor do atalho em hover;
+- docs/escale/clint/prints-do-usuario/2026-10-15-barra-de-filtros.png e docs/escale/clint/crops/filterbar.png:
   - os seis gatilhos em repouso;
   - passe o mouse em "Dono do negócio" para ver o hover;
   - o selo do "Status 1";
-- `C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\01-010-kanban-v1.png`: o "Negócio +" (≈95×31 com raio 6) e o "Novo +" (≈53×22);
+- C:\Documentos\projetos claude\Escale IA OS\clint-documentacao\modulos\01-negocios\imagens\01-010-kanban-v1.png: o "Negócio +" (≈95×31 com raio 6) e o "Novo +" (≈53×22);
 - o tema escuro (troque pelo menu do avatar) só precisa ficar legível, porque a Clint escura não tem print.
 
 Confira, item a item:
@@ -3679,7 +3679,7 @@ O contrato (`docs/superpowers/plans/2026-10-16-contrato-casca-igual-a-clint.md`)
 6. **`PainelSuspenso`:** montado no primitivo do Radix, com a mesma assinatura (`ComponentProps<typeof PopoverContent>`), porque o `tailwind-merge` não resolve `rounded-casca-*`/`shadow-casca-*` contra o `rounded-md`/`shadow-md` do `PopoverContent`. Padrões: `align="start"`, `sideOffset={11}` e sem padding.
 7. **`periodos.ts` exporta a mais:** `ATALHOS_DE_PERIODO`, `isoDaData`, `dataDoIso`, `formatarDataBr`, `ordenarIntervalo`, `dentroDoIntervalo`, `mesVizinho` e `atalhoDoPeriodo`. A V4 usa `formatarDataBr` no gatilho "Data" quando chegar o print.
 8. **Ícones:** os nomes do contrato `HelpCircle`, `CheckCircle2` e `MoreVertical` existem no lucide 1.52 como apelidos (de `CircleQuestionMark`, `CircleCheck` e `EllipsisVertical`; conferido no `dist` instalado). Entraram também `Check`, `Minus` e `EllipsisVertical`, o nome canônico do ⋮, que a V3 e a V4 usam.
-9. **Abas de tipo de data:** 34×23px, e não 42×23. Medido no recorte `datatabs.png`, e a soma bate com a coluna de 184px.
+9. **Abas de tipo de data:** 34×23px, e não 42×23. Medido no recorte datatabs.png, e a soma bate com a coluna de 184px.
 10. **`SeletorDaCasca` com `vazio`:** a opção vazia aparece só quando a busca está vazia.
 11. **`CalendarioDePeriodo` com `tiposDisponiveis`:** as 4 abas aparecem sempre; as que não estão na lista ficam desligadas (`disabled`, dica "Em breve", puladas pelas setas). A V4 passa criação, ganho e perda, e a aba do relógio fica desligada.
 12. **`className`:** `BotaoDaCasca`, `GatilhoDeFiltro` e `PainelSuspenso` juntam o `className` de quem usa com `cn(...)` e repassam as demais props ao elemento. `CaixaDaCasca`, `SeletorDaCasca` e `CalendarioDePeriodo` não recebem `className` (quem usa embrulha). O nome acessível da `CaixaDaCasca` com `rotulo` é o texto do próprio botão (o `aria-label`, se vier, tem precedência).
