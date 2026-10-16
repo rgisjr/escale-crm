@@ -11,6 +11,7 @@ import type { Visualizacao } from "@/lib/escale/visualizacoes/regras";
 import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
 import { createClient } from "@/lib/supabase/server";
 
+import { CONTEUDO_AO_LADO_DO_PAINEL, ENVOLTORIO_DO_PAINEL } from "./estilos-do-painel";
 import { PainelOrigens } from "./PainelOrigens";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -26,13 +27,18 @@ async function visualizacoesOuNada(supabase: Supabase, orgId: string): Promise<V
 }
 
 /**
- * O PAINEL ORIGENS AO LADO DE NEGÓCIOS (fork Escale, Fase 1A).
+ * O PAINEL ORIGENS AO LADO DE NEGÓCIOS (fork Escale, Fase 1A; coluna da Clint na casca V3).
  *
- * Só com a casca nova ligada (cookie `escale_menu=topo`, Fase 0): na lateral do
- * original a tela é exatamente a de sempre, e o banco nem é consultado. O
- * marcador de gerente é o mesmo critério das rotas (`requireRole("manager")`,
- * sem atalho de platform admin) — mostrar um botão que o servidor recusaria
- * seria prometer o que não se cumpre (ver `app/app/kanban/page.tsx`).
+ * Só com a casca nova ligada (cookie `escale_menu=topo`, Fase 0). Na lateral do
+ * original a tela é exatamente a de sempre: `children` sem embrulho nenhum, e o
+ * banco nem é consultado.
+ *
+ * O marcador de gerente é o mesmo critério das rotas (`requireRole("manager")`,
+ * sem atalho de platform admin). Mostrar um botão que o servidor recusaria seria
+ * prometer o que não se cumpre (ver `app/app/kanban/page.tsx`).
+ *
+ * Na casca, o envoltório cola o painel no topo, na esquerda e no fundo da tela
+ * (01-010), e o conteúdo começa 20px depois dele (`estilos-do-painel.ts`).
  *
  * Se a leitura falhar (banco ainda sem a migration 9001, ou fora do ar), o
  * quadro abre sem o painel: Negócios nunca fica fora do ar por causa dele.
@@ -55,7 +61,7 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex items-start gap-4">
+    <div className={ENVOLTORIO_DO_PAINEL}>
       <PainelOrigens
         origens={origens}
         visualizacoes={await visualizacoesOuNada(supabase, activeOrg.orgId)}
@@ -63,7 +69,7 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
         // Painel/lista recolhidos e grupos ocultos vêm de cookie: o primeiro render já sai certo.
         preferencias={lerPreferenciasDoPainel((nome) => store.get(nome)?.value)}
       />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className={CONTEUDO_AO_LADO_DO_PAINEL}>{children}</div>
     </div>
   );
 }

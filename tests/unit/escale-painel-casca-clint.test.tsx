@@ -139,3 +139,72 @@ describe("casca V3 — linhas de grupo e de origem (01-010, 01-032, 01-033, 01-0
     );
   });
 });
+
+describe("casca V3 — a coluna do painel (01-010)", () => {
+  it("é a coluna de 250px, branca, com a borda direita #E8E4F5 e a altura da tela abaixo do topo — não um cartão", () => {
+    renderizar();
+    const painel = screen.getByRole("complementary", { name: "Origens" });
+    expect(painel).toHaveClass(
+      "w-[250px]",
+      "border-r",
+      "border-casca-borda",
+      "bg-surface",
+      "h-[calc(100dvh-2.75rem)]",
+      "sticky",
+      "top-0",
+    );
+    expect(painel).not.toHaveClass("rounded-lg");
+    expect(painel.querySelector("[data-rolagem-do-painel]")).toHaveClass("pt-[78px]");
+  });
+
+  it("o < é a bolinha de 20px centrada na borda direita, 16px abaixo do topo", () => {
+    renderizar();
+    expect(screen.getByRole("button", { name: "Recolher o painel de origens" })).toHaveClass(
+      "size-5",
+      "rounded-full",
+      "-right-[10px]",
+      "top-4",
+      "border-casca-borda",
+    );
+  });
+
+  it("recolhido, o > é a mesma bolinha, no topo da borda esquerda", () => {
+    renderizar({ ...ABERTO, painelAberto: false });
+    expect(screen.getByRole("button", { name: "Abrir o painel de origens" })).toHaveClass(
+      "size-5",
+      "rounded-full",
+      "top-4",
+    );
+  });
+
+  it("ORIGENS: lupa e ^ à vista; o + (nosso, sem print) só aparece no hover do cabeçalho", () => {
+    renderizar();
+    const cabecalho = screen.getByRole("heading", { name: "Origens" }).parentElement!;
+    expect(cabecalho).toHaveClass("h-12", "border-b", "group/cabecalho");
+    expect(screen.getByRole("button", { name: "Adicionar" }).closest("span")).toHaveClass(
+      "opacity-0",
+      "group-hover/cabecalho:opacity-100",
+    );
+    expect(screen.getByRole("button", { name: "Buscar grupo ou funil" })).not.toHaveClass("opacity-0");
+    expect(screen.getByRole("button", { name: "Recolher a lista de origens" })).toHaveClass("text-casca-meta");
+  });
+
+  it("o + de ORIGENS abre o menu da casca com Adicionar origem e Adicionar grupo de origens", async () => {
+    const user = renderizar();
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    const menu = await screen.findByRole("menu");
+    expect(menu).toHaveClass("rounded-[8px]");
+    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
+      "Adicionar origem",
+      "Adicionar grupo de origens",
+    ]);
+  });
+
+  it("a lupa abre o campo #F6F8FF sem borda, com o texto de busca da Clint", async () => {
+    const user = renderizar();
+    await user.click(screen.getByRole("button", { name: "Buscar grupo ou funil" }));
+    const campo = screen.getByRole("textbox", { name: "Buscar grupo ou funil" });
+    expect(campo).toHaveClass("bg-casca-busca", "rounded-casca-gatilho");
+    expect(campo).toHaveAttribute("placeholder", "Buscar origens, grupos, visualizações…");
+  });
+});
