@@ -945,6 +945,9 @@ export const AUDIT_ACTIONS = [
   "pipeline_filter.created",
   "pipeline_filter.updated",
   "pipeline_filter.deleted",
+  // FORK ESCALE · Fase 1E: a preferência do card (migration 9005) e a exportação dos cards.
+  "card_cover.updated",
+  "pipeline.cards_exported",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
