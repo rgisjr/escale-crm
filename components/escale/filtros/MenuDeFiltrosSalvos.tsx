@@ -75,8 +75,8 @@ const foiAlterado = (salvo: FiltroSalvo, atuais: FiltrosDoQuadro) =>
  * aplicado (e "alterado" quando ele foi mexido depois). O menu aplica os meus e
  * os compartilhados, salva o filtro atual (até 20 por pessoa em cada origem ou
  * visualização, como na Clint) e, para o MEU filtro aplicado, salva alterações,
- * renomeia ou compartilha, e exclui. Na Casca V4 o gatilho é uma linha do menu
- * da engrenagem.
+ * renomeia ou compartilha, e exclui. Na Casca V4 o gatilho é uma linha do
+ * rodapé do painel "Mais filtros" (a BarraDoQuadro o passa em `rodape`).
  */
 export function MenuDeFiltrosSalvos({
   alvo,
@@ -134,7 +134,7 @@ export function MenuDeFiltrosSalvos({
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          {/* Casca V4: uma linha do menu da engrenagem (D5; PRINT 32). */}
+          {/* Casca V4: uma linha do rodapé do painel "Mais filtros" (D5; PRINT 32). */}
           <button type="button" className={CLASSE_DA_LINHA_DO_MENU} data-testid="filtros-salvos">
             <Bookmark size={14} aria-hidden />
             <span className="min-w-0 truncate">{ativo ? ativo.nome : t("Filtros salvos")}</span>
