@@ -9,8 +9,11 @@ vi.mock("@/lib/api/client", () => ({ apiClient: { post } }));
 vi.mock("@/lib/escale/exportar/baixar", () => ({ baixarCsv: baixar }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (texto: string) => texto }));
+const membros = vi.hoisted(() => ({
+  estado: { data: [{ user_id: "u-1", full_name: "Bruno" }] as unknown, isError: false },
+}));
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
-  useAssignableMembers: () => ({ data: [{ user_id: "u-1", full_name: "Bruno" }] }),
+  useAssignableMembers: () => membros.estado,
 }));
 
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -50,6 +53,7 @@ beforeEach(() => {
   baixar.mockReset();
   toast.success.mockReset();
   toast.error.mockReset();
+  membros.estado = { data: [{ user_id: "u-1", full_name: "Bruno" }], isError: false };
 });
 
 describe("<ExportarCards> (ícone da linha de contagem)", () => {
@@ -102,6 +106,18 @@ describe("<ExportarCards> (ícone da linha de contagem)", () => {
         "Falha ao exportar os negócios, tente novamente ou chame o suporte.",
       ),
     );
+    expect(baixar).not.toHaveBeenCalled();
+  });
+
+  it("a lista de donos falhou: toast de erro, nada registrado e nada baixado (sem coluna de dono em branco)", async () => {
+    membros.estado = { data: undefined, isError: true };
+    const user = exportar();
+    await user.click(screen.getByRole("button", { name: "Exportar" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar" }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Não consegui completar essa ação. Tente de novo."),
+    );
+    expect(post).not.toHaveBeenCalled();
     expect(baixar).not.toHaveBeenCalled();
   });
 

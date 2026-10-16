@@ -33,7 +33,11 @@ export function ExportarCards({ origem, leads, stages, settings }: ExportacaoDoQ
   const t = useT();
   const [aberta, setAberta] = useState(false);
   const [exportando, setExportando] = useState(false);
-  const { data: membros, isLoading: carregandoMembros } = useAssignableMembers(aberta);
+  const {
+    data: membros,
+    isLoading: carregandoMembros,
+    isError: falhouOsMembros,
+  } = useAssignableMembers(aberta);
   const vazio = leads.length === 0;
   const dica = vazio
     ? t("Nenhum negócio para exportar.")
@@ -43,6 +47,11 @@ export function ExportarCards({ origem, leads, stages, settings }: ExportacaoDoQ
       );
 
   async function exportar() {
+    // Sem a lista de donos, a coluna "Dono do negócio" sairia em branco sem aviso: melhor não exportar.
+    if (falhouOsMembros) {
+      toast.error(t("Não consegui completar essa ação. Tente de novo."));
+      return;
+    }
     setExportando(true);
     try {
       // A trava de papel vem ANTES do arquivo: sem o 201 (gerente+ e origem visível), não há exportação.

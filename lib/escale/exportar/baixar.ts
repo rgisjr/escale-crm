@@ -4,7 +4,7 @@
  */
 export function baixarCsv(nome: string, conteudo: string): void {
   const url = URL.createObjectURL(
-    new Blob(["\uFEFF", conteudo], { type: "text/csv;charset=utf-8" }),
+    new Blob(["﻿", conteudo], { type: "text/csv;charset=utf-8" }),
   );
   const link = document.createElement("a");
   link.href = url;
@@ -12,5 +12,6 @@ export function baixarCsv(nome: string, conteudo: string): void {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // O Safari aborta o download se a URL for revogada no mesmo instante do clique.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }

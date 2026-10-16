@@ -11,16 +11,51 @@ import type { Lead } from "@/lib/types/leads";
  * Texto que começa com `=`, `+`, `-`, `@`, tab ou CR ganha um apóstrofo na
  * frente: sem isso, um título "=HYPERLINK(...)" vindo de um formulário vira
  * fórmula ao abrir no Excel (injeção de fórmula em CSV, OWASP). Número não
- * passa pela guarda: o valor negativo continua número.
+ * passa pela guarda: o valor negativo continua número (`numeroBr`).
+ *
+ * Datas e números saem no formato brasileiro (regra do produto): dd/mm/aaaa no
+ * fuso de quem exporta e vírgula decimal. Como o separador do CSV segue sendo a
+ * vírgula, a célula "1500,00" sai entre aspas pelo escape do RFC 4180.
  */
 const INICIO_DE_FORMULA = /^[=+\-@\t\r]/;
 
+/** Um número já formatado em pt-BR (`-10,00`): passa direto, sem a guarda de fórmula. */
+export class NumeroBr {
+  constructor(readonly texto: string) {}
+}
+
+export const numeroBr = (texto: string): NumeroBr => new NumeroBr(texto);
+
+/** Valor em centavos como número pt-BR com duas casas: `150000` vira `1500,00`; `-1000` vira `-10,00`. */
+export const reaisDeCentavos = (centavos: number): NumeroBr =>
+  numeroBr((centavos / 100).toFixed(2).replace(".", ","));
+
+/** ISO vira dd/mm/aaaa no horário local de quem exporta; data inválida ou ausente sai vazia. */
+export function dataBr(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dia}/${mes}/${d.getFullYear()}`;
+}
+
+function textoDoItem(item: unknown): string {
+  return item !== null && typeof item === "object" ? (JSON.stringify(item) ?? "") : String(item);
+}
+
+function escapar(texto: string): string {
+  return /[",\n\r]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+}
+
 export function celula(valor: unknown): string {
   if (valor === null || valor === undefined) return "";
-  if (typeof valor === "number") return String(valor);
-  let texto = Array.isArray(valor) ? valor.map(String).join(", ") : String(valor);
+  if (valor instanceof NumeroBr) return escapar(valor.texto);
+  // Número de verdade (campo personalizado): vírgula decimal, sem a guarda de fórmula.
+  if (typeof valor === "number") return escapar(String(valor).replace(".", ","));
+  let texto = Array.isArray(valor) ? valor.map(textoDoItem).join(", ") : textoDoItem(valor);
   if (INICIO_DE_FORMULA.test(texto)) texto = `'${texto}`;
-  return /[",\n\r]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+  return escapar(texto);
 }
 
 export interface EntradaDoCsv {
@@ -67,16 +102,15 @@ export function csvDoQuadro({ leads, stages, campos, nomeDoDono, t }: EntradaDoC
     l.title,
     etapa.get(l.stage_id) ?? "",
     status[l.status] ?? l.status,
-    // Texto e não número: "1500.00" sai com as duas casas, igual em toda planilha.
-    l.value_cents == null ? "" : (l.value_cents / 100).toFixed(2),
+    l.value_cents == null ? "" : reaisDeCentavos(l.value_cents),
     l.currency ?? "",
     nomeDoDono(l),
     dadosDeFiltro(l)?.contato_nome ?? "",
     l.contact_phone ?? "",
     l.contact_email ?? "",
     l.tags,
-    l.created_at,
-    l.updated_at,
+    dataBr(l.created_at),
+    dataBr(l.updated_at),
     ...campos.map((c) => valorDoCampo(c, l.custom_fields?.[c.key]) ?? ""),
   ]);
   return `${[cabecalho, ...linhas].map((linha) => linha.map(celula).join(",")).join("\r\n")}\r\n`;
