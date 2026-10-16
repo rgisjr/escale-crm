@@ -15,12 +15,37 @@
  * branco do botão passar AA (4,5:1). Laranja = cor do que a IA faz (tokens
  * --color-ai*), usada a partir da Fase 2. Atenção = amarelo, para não se
  * confundir com a IA. Medido em `tests/unit/escale-tema.test.ts`.
+ *
+ * CASCA IGUAL À CLINT (V1, 16/10/2026). A casca nova copia a Clint (variante
+ * com menu superior). A fonte passa a ser a Poppins, a mesma da Clint, nos
+ * pesos 400, 500 e 600 (a Clint não passa de 600). Entram também os tokens
+ * `casca-*`, com os valores medidos nos prints (docs/escale/clint/). Onde a
+ * Clint usa o roxo dela, os tons `casca-marca` derivam de var(--color-accent)
+ * declarados AQUI, no body: assim vale a cor da marca da organização, que o
+ * mesmo body recebe depois. O escuro da Clint nunca foi visto (não há print),
+ * então os valores escuros da casca são derivados da paleta escura abaixo.
  */
 
 @font-face {
-  font-family: "Escale Figtree";
-  src: url("./fonts/figtree-300-900-latin.woff2") format("woff2");
-  font-weight: 300 900;
+  font-family: "Escale Poppins";
+  src: url("./fonts/poppins-400-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Escale Poppins";
+  src: url("./fonts/poppins-500-latin.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Escale Poppins";
+  src: url("./fonts/poppins-600-latin.woff2") format("woff2");
+  font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
@@ -35,7 +60,7 @@
 
 body:has([data-escale-casca]) {
   /* fontes: o original usa var(--font-atkinson) e var(--font-mono) */
-  --font-atkinson: "Escale Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-atkinson: "Escale Poppins",ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Escale JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* superfícies e texto */
@@ -91,6 +116,35 @@ body:has([data-escale-casca]) {
 
   /* nome da marca quando não há logo */
   --color-escale-marca: #2965b3;
+
+  /* casca igual à Clint (V1): cores medidas nos prints da Clint, menu superior */
+  --color-casca-texto: #2f2c5d;
+  --color-casca-texto-2: #3e3a6f;
+  --color-casca-suave: #686d86;
+  --color-casca-meta: #8c89b0;
+  --color-casca-sobrelinha: #828282;
+  --color-casca-borda: #e8e4f5;
+  --color-casca-raia: #eff3ff;
+  --color-casca-caixa-msg: #eff6ff;
+  --color-casca-borda-msg: #e3ebff;
+  --color-casca-busca: #f6f8ff;
+  --color-casca-contador: #e8e4f5;
+  --color-casca-cinza-selo: #e0e0e0;
+  --color-casca-novo: #597eff;
+  --color-casca-alerta: #ff4b4c;
+  --color-casca-escuro: #2f2c5d;
+  --color-casca-chevron: #7489a8;
+  --color-casca-divisoria: #ebebeb;
+  --color-casca-seta: #cccccc;
+  --color-casca-caixa: #dfe2fd;
+  --color-casca-caixa-borda: #d5dcff;
+  /* onde a Clint usa o roxo dela entra a marca da organização, no mesmo lugar */
+  --color-casca-marca: var(--color-accent);
+  --color-casca-marca-forte: color-mix(in oklab, var(--color-accent) 85%, black);
+  --color-casca-marca-suave: color-mix(in oklab, var(--color-accent) 8%, white);
+  --color-casca-marca-media: color-mix(in oklab, var(--color-accent) 18%, white);
+  --color-casca-dia: color-mix(in oklab, var(--color-accent) 4%, white);
+  --shadow-casca-painel: 0 8px 16px rgb(17 24 39 / 0.1), 0 0 1px rgb(17 24 39 / 0.3);
 }
 
 [data-theme="dark"] body:has([data-escale-casca]) {
@@ -131,4 +185,33 @@ body:has([data-escale-casca]) {
   --color-neutral-800: #242838;
   --color-neutral-900: #181b26;
   --color-neutral-950: #0d0f17;
+
+  /* casca igual à Clint (V1), escuro: a Clint escura nunca foi vista (não há
+     print). Valores DERIVADOS da paleta escura acima, não copiados. */
+  --color-casca-texto: #e8eaf2;
+  --color-casca-texto-2: #d3d6e6;
+  --color-casca-suave: #a5aac0;
+  --color-casca-meta: #8f94ad;
+  --color-casca-sobrelinha: #9aa0b5;
+  --color-casca-borda: #2a2f42;
+  --color-casca-raia: #202433;
+  --color-casca-caixa-msg: #232838;
+  --color-casca-borda-msg: #30364b;
+  --color-casca-busca: #202433;
+  --color-casca-contador: #2a2f42;
+  --color-casca-cinza-selo: #353b52;
+  --color-casca-novo: #6f8fff;
+  --color-casca-alerta: #ff5f60;
+  --color-casca-escuro: #3e4560;
+  --color-casca-chevron: #7d849c;
+  --color-casca-divisoria: #2a2f42;
+  --color-casca-seta: #4a5068;
+  --color-casca-caixa: #2a2f42;
+  --color-casca-caixa-borda: #3a4160;
+  --color-casca-marca: var(--color-accent);
+  --color-casca-marca-forte: color-mix(in oklab, var(--color-accent) 85%, white);
+  --color-casca-marca-suave: color-mix(in oklab, var(--color-accent) 16%, #181b26);
+  --color-casca-marca-media: color-mix(in oklab, var(--color-accent) 28%, #181b26);
+  --color-casca-dia: color-mix(in oklab, var(--color-accent) 10%, #181b26);
+  --shadow-casca-painel: 0 8px 16px rgb(0 0 0 / 0.45), 0 0 1px rgb(0 0 0 / 0.6);
 }

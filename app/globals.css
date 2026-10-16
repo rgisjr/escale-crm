@@ -227,6 +227,51 @@
   --agenda-pessoa-6: #608bda; /* índigo */
   --agenda-pessoa-7: #7b5bad; /* violeta */
   --agenda-pessoa-8: #cc77b1; /* framboesa */
+
+  /* ---- FORK ESCALE · casca Clint V1 ------------------------------------
+   * Tokens que só a casca nova usa (`text-casca-texto`, `bg-casca-raia`…).
+   * O valor de verdade mora em `app/escale-tema.css`, dentro de
+   * `body:has([data-escale-casca])`. Aqui fica só o fallback, e ele é SEMPRE
+   * um token do próprio original: sem a casca, um utilitário da casca pinta a
+   * cor que o original já tinha.
+   *
+   * Duas regras, cada uma com uma cerca por trás:
+   *  - nada disto vai para `[data-theme="light"]` nem `[data-theme="dark"]`:
+   *    branding-tema-claro-escopavel exige que os dois cubram as mesmas
+   *    chaves, e o escuro da casca mora no escale-tema.css;
+   *  - nenhum fallback aponta para um grau da rampa do accent e nenhum nome
+   *    termina em -soft ou -fg: a régua da marca contaria um par novo e
+   *    branding-pares-pintados reprovaria.
+   */
+  --color-casca-texto: var(--color-text);
+  --color-casca-texto-2: var(--color-text);
+  --color-casca-suave: var(--color-text-muted);
+  --color-casca-meta: var(--color-text-muted);
+  --color-casca-sobrelinha: var(--color-text-muted);
+  --color-casca-borda: var(--color-border);
+  --color-casca-raia: var(--color-surface-elevated);
+  --color-casca-caixa-msg: var(--color-surface-elevated);
+  --color-casca-borda-msg: var(--color-border);
+  --color-casca-busca: var(--color-surface-elevated);
+  --color-casca-contador: var(--color-border);
+  --color-casca-cinza-selo: var(--color-border-strong);
+  --color-casca-dia: var(--color-accent-soft);
+  --color-casca-marca: var(--color-accent);
+  --color-casca-marca-forte: var(--color-accent-hover);
+  --color-casca-marca-suave: var(--color-accent-soft);
+  --color-casca-marca-media: var(--color-accent-soft);
+  --color-casca-novo: var(--color-accent);
+  --color-casca-alerta: var(--color-error);
+  --color-casca-escuro: var(--color-text);
+  --color-casca-chevron: var(--color-text-subtle);
+  --color-casca-divisoria: var(--color-border);
+  --color-casca-seta: var(--color-border-strong);
+  --color-casca-caixa: var(--color-surface-elevated);
+  --color-casca-caixa-borda: var(--color-border-strong);
+  --radius-casca-gatilho: 6px;
+  --radius-casca-card: 10px;
+  --radius-casca-raia: 16px;
+  --shadow-casca-painel: 0 8px 16px rgb(17 24 39 / 0.1), 0 0 1px rgb(17 24 39 / 0.3);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -592,6 +637,37 @@
   --ease-in-out: var(--ease-in-out);
   --ease-out-slow: var(--ease-out-slow);
   --ease-spring: var(--ease-spring);
+
+  /* FORK ESCALE · casca Clint V1: ponte dos tokens da casca (valor no escale-tema.css) */
+  --color-casca-texto: var(--color-casca-texto);
+  --color-casca-texto-2: var(--color-casca-texto-2);
+  --color-casca-suave: var(--color-casca-suave);
+  --color-casca-meta: var(--color-casca-meta);
+  --color-casca-sobrelinha: var(--color-casca-sobrelinha);
+  --color-casca-borda: var(--color-casca-borda);
+  --color-casca-raia: var(--color-casca-raia);
+  --color-casca-caixa-msg: var(--color-casca-caixa-msg);
+  --color-casca-borda-msg: var(--color-casca-borda-msg);
+  --color-casca-busca: var(--color-casca-busca);
+  --color-casca-contador: var(--color-casca-contador);
+  --color-casca-cinza-selo: var(--color-casca-cinza-selo);
+  --color-casca-dia: var(--color-casca-dia);
+  --color-casca-marca: var(--color-casca-marca);
+  --color-casca-marca-forte: var(--color-casca-marca-forte);
+  --color-casca-marca-suave: var(--color-casca-marca-suave);
+  --color-casca-marca-media: var(--color-casca-marca-media);
+  --color-casca-novo: var(--color-casca-novo);
+  --color-casca-alerta: var(--color-casca-alerta);
+  --color-casca-escuro: var(--color-casca-escuro);
+  --color-casca-chevron: var(--color-casca-chevron);
+  --color-casca-divisoria: var(--color-casca-divisoria);
+  --color-casca-seta: var(--color-casca-seta);
+  --color-casca-caixa: var(--color-casca-caixa);
+  --color-casca-caixa-borda: var(--color-casca-caixa-borda);
+  --radius-casca-gatilho: var(--radius-casca-gatilho);
+  --radius-casca-card: var(--radius-casca-card);
+  --radius-casca-raia: var(--radius-casca-raia);
+  --shadow-casca-painel: var(--shadow-casca-painel);
 }
 
 /* `duration-*` não tem espaço de tema no v4 (o `transitionDuration` do v3 não
