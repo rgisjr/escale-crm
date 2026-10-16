@@ -1,12 +1,10 @@
 "use client";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/ui/button";
-import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useAtualizarGrupo, useCriarGrupo, useExcluirGrupo } from "@/hooks/escale/useOrigens";
 import { useT } from "@/hooks/i18n/useT";
+import { corDoIconeNaCasca } from "@/lib/escale/origens/cores-da-casca";
 import {
   ICONES_DE_GRUPO,
   NOME_DE_GRUPO_MAX,
@@ -17,9 +15,11 @@ import { NOME_DO_TOM, PALETA_DE_ETIQUETAS } from "@/lib/tags/cor-da-etiqueta";
 import { cn } from "@/lib/utils";
 
 import { IconeDoGrupo } from "./IconeDoGrupo";
+import { BotaoDaJanela, CabecaDaJanela, Campo, CampoDeTexto, RodapeDaJanela } from "./JanelaDaCasca";
 import type { PropsDaJanela } from "./JanelasDeOrigens";
 import { textoDoErro } from "./texto-do-erro";
 
+/** O aviso de erro das janelas. Também é usado pela janela do filtro salvo (1D); não mudou. */
 export function Alerta({ texto }: { texto: string | null }) {
   if (!texto) return null;
   return (
@@ -33,14 +33,12 @@ function GrupoSumiu({ onFechar }: { onFechar: () => void }) {
   const t = useT();
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t("Grupo não encontrado.")}</DialogTitle>
-      </DialogHeader>
-      <DialogFooter>
-        <Button type="button" onClick={onFechar}>
+      <CabecaDaJanela titulo={t("Grupo não encontrado.")} />
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="salvar" onClick={onFechar}>
           {t("Fechar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </>
   );
 }
@@ -64,28 +62,30 @@ export function FormAdicionarGrupo({ onFechar, onOrigens }: PropsDaJanela) {
   }
 
   return (
-    <form onSubmit={enviar} className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Adicionar grupo de origens")}</DialogTitle>
-        <DialogDescription>{t("O grupo nasce vazio. Use o + dele para criar origens dentro.")}</DialogDescription>
-      </DialogHeader>
-      <Alerta texto={erro} />
-      <Input
-        autoFocus
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        aria-label={t("Nome do novo grupo")}
-        placeholder={t("Nome do novo grupo")}
-        maxLength={NOME_DE_GRUPO_MAX}
+    <form onSubmit={enviar} className="grid gap-5">
+      <CabecaDaJanela
+        titulo={t("Adicionar grupo de origens")}
+        descricao={t("O grupo nasce vazio. Use o + dele para criar origens dentro.")}
       />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <Alerta texto={erro} />
+      <Campo rotulo={t("Nome")} obrigatorio>
+        <CampoDeTexto
+          autoFocus
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          aria-label={t("Nome do novo grupo")}
+          placeholder={t("Nome do novo grupo")}
+          maxLength={NOME_DE_GRUPO_MAX}
+        />
+      </Campo>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="submit" disabled={criar.isPending || !nome.trim()}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" enviar disabled={criar.isPending || !nome.trim()}>
           {t("Criar grupo")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </form>
   );
 }
@@ -114,30 +114,35 @@ export function FormConfigGrupo({ origens, onFechar, onOrigens, id }: PropsDaJan
   }
 
   return (
-    <form onSubmit={enviar} className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Configurações do grupo")}</DialogTitle>
-      </DialogHeader>
+    <form onSubmit={enviar} className="grid gap-5">
+      <CabecaDaJanela titulo={t("Configurações do grupo")} />
       <Alerta texto={erro} />
-      <Input
-        autoFocus
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        aria-label={t("Nome do grupo")}
-        maxLength={NOME_DE_GRUPO_MAX}
-      />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <Campo rotulo={t("Nome")} obrigatorio>
+        <CampoDeTexto
+          autoFocus
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          aria-label={t("Nome do grupo")}
+          maxLength={NOME_DE_GRUPO_MAX}
+        />
+      </Campo>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="submit" disabled={atualizar.isPending || !nome.trim()}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" enviar disabled={atualizar.isPending || !nome.trim()}>
           {t("Salvar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </form>
   );
 }
 
+/**
+ * Customizar (sem print da Clint, item 12): a cor e o ícone do grupo.
+ * Os quadradinhos mostram a cor da Clint de cada tom (`corDoIconeNaCasca`), mas
+ * o que se grava continua sendo o tom da paleta — a rota só aceita a paleta.
+ */
 export function FormCustomizarGrupo({ origens, onFechar, onOrigens, id }: PropsDaJanela & { id: string }) {
   const t = useT();
   const atualizar = useAtualizarGrupo();
@@ -160,23 +165,27 @@ export function FormCustomizarGrupo({ origens, onFechar, onOrigens, id }: PropsD
     );
   }
 
-  const quadrado = "size-8 rounded-md border-2 transition-colors";
   return (
-    <div className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>
-          {t("Customizar")} «{grupo.name}»
-        </DialogTitle>
-      </DialogHeader>
+    <div className="grid gap-5">
+      <CabecaDaJanela
+        titulo={
+          <>
+            {t("Customizar")} «{grupo.name}»
+          </>
+        }
+      />
       <Alerta texto={erro} />
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-semibold">{t("Cor")}</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="mb-2 text-[13px] font-medium text-casca-texto">{t("Cor")}</legend>
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             aria-pressed={cor === null}
             onClick={() => setCor(null)}
-            className={cn(quadrado, "px-2 text-xs", cor === null ? "border-foreground" : "border-transparent bg-muted")}
+            className={cn(
+              "h-7 rounded-[4px] px-2 text-xs text-casca-texto",
+              cor === null ? "bg-casca-marca-suave ring-2 ring-casca-marca" : "bg-casca-raia",
+            )}
           >
             {t("Cor automática")}
           </button>
@@ -187,14 +196,14 @@ export function FormCustomizarGrupo({ origens, onFechar, onOrigens, id }: PropsD
               aria-label={t(NOME_DO_TOM[tom] ?? tom)}
               aria-pressed={cor === tom}
               onClick={() => setCor(tom)}
-              className={cn(quadrado, cor === tom ? "border-foreground" : "border-transparent")}
-              style={{ backgroundColor: tom }}
+              className={cn("size-7 rounded-[4px]", cor === tom && "ring-2 ring-casca-marca ring-offset-2")}
+              style={{ backgroundColor: corDoIconeNaCasca(tom) }}
             />
           ))}
         </div>
       </fieldset>
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-semibold">{t("Ícone")}</legend>
+        <legend className="mb-2 text-[13px] font-medium text-casca-texto">{t("Ícone")}</legend>
         <div className="flex flex-wrap gap-2">
           {ICONES_DE_GRUPO.map((i) => (
             <button
@@ -204,8 +213,8 @@ export function FormCustomizarGrupo({ origens, onFechar, onOrigens, id }: PropsD
               aria-pressed={icone === i}
               onClick={() => setIcone(i)}
               className={cn(
-                "grid h-9 w-11 place-items-center rounded-md border",
-                icone === i ? "border-accent bg-accent-soft" : "border-border",
+                "grid h-9 w-11 place-items-center rounded-[4px] border",
+                icone === i ? "border-casca-marca bg-casca-marca-suave" : "border-casca-borda",
               )}
             >
               <IconeDoGrupo grupo={{ ...grupo, color: cor, icon: i }} />
@@ -213,19 +222,19 @@ export function FormCustomizarGrupo({ origens, onFechar, onOrigens, id }: PropsD
           ))}
         </div>
       </fieldset>
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">{t("Prévia")}</span>
+      <div className="flex items-center gap-2 text-[13px]">
+        <span className="text-casca-suave">{t("Prévia")}</span>
         <IconeDoGrupo grupo={{ ...grupo, color: cor, icon: icone }} />
-        <span className="font-semibold">{grupo.name}</span>
+        <span className="text-casca-texto">{grupo.name}</span>
       </div>
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="button" onClick={salvar} disabled={atualizar.isPending}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" onClick={salvar} disabled={atualizar.isPending}>
           {t("Salvar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </div>
   );
 }
@@ -252,24 +261,22 @@ export function FormArquivarGrupo({ origens, onFechar, onOrigens, id }: PropsDaJ
   }
 
   return (
-    <div className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Arquivar «{nome}»?").replace("{nome}", grupo.name)}</DialogTitle>
-        <DialogDescription>
-          {t(
-            "O grupo e as {n} origens dele saem do painel e vão para Arquivados. Nada é apagado, as origens continuam recebendo negócios e Desarquivar traz tudo de volta.",
-          ).replace("{n}", String(n))}
-        </DialogDescription>
-      </DialogHeader>
+    <div className="grid gap-5">
+      <CabecaDaJanela
+        titulo={t("Arquivar «{nome}»?").replace("{nome}", grupo.name)}
+        descricao={t(
+          "O grupo e as {n} origens dele saem do painel e vão para Arquivados. Nada é apagado, as origens continuam recebendo negócios e Desarquivar traz tudo de volta.",
+        ).replace("{n}", String(n))}
+      />
       <Alerta texto={erro} />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="button" onClick={arquivar} disabled={atualizar.isPending}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" onClick={arquivar} disabled={atualizar.isPending}>
           {t("Arquivar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </div>
   );
 }
@@ -299,58 +306,53 @@ export function FormExcluirGrupo({ origens, onFechar, onOrigens, id }: PropsDaJa
 
   if (n > 0 && outros.length === 0) {
     return (
-      <div className="grid gap-4">
-        <DialogHeader>
-          <DialogTitle>{t("«{nome}» é o único grupo").replace("{nome}", grupo.name)}</DialogTitle>
-          <DialogDescription>
-            {t(
-              "Toda origem precisa de um grupo. Crie outro grupo antes, pelo + ao lado da lupa, para as origens irem para lá.",
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button type="button" onClick={onFechar}>
+      <div className="grid gap-5">
+        <CabecaDaJanela
+          titulo={t("«{nome}» é o único grupo").replace("{nome}", grupo.name)}
+          descricao={t(
+            "Toda origem precisa de um grupo. Crie outro grupo antes, pelo + ao lado da lupa, para as origens irem para lá.",
+          )}
+        />
+        <RodapeDaJanela>
+          <BotaoDaJanela variante="salvar" onClick={onFechar}>
             {t("Entendi")}
-          </Button>
-        </DialogFooter>
+          </BotaoDaJanela>
+        </RodapeDaJanela>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Excluir «{nome}»?").replace("{nome}", grupo.name)}</DialogTitle>
-        <DialogDescription>
-          {n === 0
+    <div className="grid gap-5">
+      <CabecaDaJanela
+        titulo={t("Excluir «{nome}»?").replace("{nome}", grupo.name)}
+        descricao={
+          n === 0
             ? t("O grupo está vazio. Nenhuma origem e nenhum negócio é apagado.")
             : t(
                 "Toda origem precisa de um grupo. Escolha para onde vão as {n} origens deste grupo. Nenhum negócio é apagado.",
-              ).replace("{n}", String(n))}
-        </DialogDescription>
-      </DialogHeader>
+              ).replace("{n}", String(n))
+        }
+      />
       <Alerta texto={erro} />
       {n > 0 && (
-        <SearchableSelect
-          options={outros.map((g) => ({ value: g.id, label: g.name }))}
-          value={destino ?? undefined}
-          onValueChange={setDestino}
-          aria-label={t("Mover as origens para")}
-        />
+        <Campo rotulo={t("Mover as origens para")}>
+          <SeletorDaCasca
+            valor={destino ?? ""}
+            opcoes={outros.map((g) => ({ valor: g.id, rotulo: g.name }))}
+            aoMudar={(v) => setDestino(v || null)}
+            aria-label={t("Mover as origens para")}
+          />
+        </Campo>
       )}
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={enviar}
-          disabled={excluir.isPending || (n > 0 && !destino)}
-        >
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="perigo" onClick={enviar} disabled={excluir.isPending || (n > 0 && !destino)}>
           {n === 0 ? t("Excluir grupo") : t("Mover e excluir grupo")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </div>
   );
 }

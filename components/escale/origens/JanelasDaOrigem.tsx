@@ -1,10 +1,8 @@
 "use client";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/ui/button";
-import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
+import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import {
   useArquivarOrigem,
   useAtualizarOrigem,
@@ -14,6 +12,7 @@ import {
 } from "@/hooks/escale/useOrigens";
 import { useT } from "@/hooks/i18n/useT";
 
+import { BotaoDaJanela, CabecaDaJanela, Campo, CampoDeTexto, RodapeDaJanela } from "./JanelaDaCasca";
 import type { PropsDaJanela } from "./JanelasDeOrigens";
 import { Alerta } from "./JanelasDoGrupo";
 import { textoDoErro } from "./texto-do-erro";
@@ -22,14 +21,12 @@ function OrigemSumiu({ onFechar }: { onFechar: () => void }) {
   const t = useT();
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t("Funil não encontrado.")}</DialogTitle>
-      </DialogHeader>
-      <DialogFooter>
-        <Button type="button" onClick={onFechar}>
+      <CabecaDaJanela titulo={t("Funil não encontrado.")} />
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="salvar" onClick={onFechar}>
           {t("Fechar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </>
   );
 }
@@ -67,38 +64,42 @@ export function FormAdicionarOrigem({
   }
 
   return (
-    <form onSubmit={enviar} className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Adicionar origem")}</DialogTitle>
-        <DialogDescription>
-          {ativos.length === 0
+    <form onSubmit={enviar} className="grid gap-5">
+      <CabecaDaJanela
+        titulo={t("Adicionar origem")}
+        descricao={
+          ativos.length === 0
             ? t("Crie um grupo antes, pelo + ao lado da lupa.")
-            : t("Toda origem fica num grupo. Ela nasce com as etapas padrão e já abre no quadro.")}
-        </DialogDescription>
-      </DialogHeader>
+            : t("Toda origem fica num grupo. Ela nasce com as etapas padrão e já abre no quadro.")
+        }
+      />
       <Alerta texto={erro} />
-      <Input
-        autoFocus
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        aria-label={t("Nome da origem")}
-        placeholder={t("Nome da origem")}
-        maxLength={80}
-      />
-      <SearchableSelect
-        options={ativos.map((g) => ({ value: g.id, label: g.name }))}
-        value={grupo ?? undefined}
-        onValueChange={setGrupo}
-        aria-label={t("Grupo")}
-      />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <Campo rotulo={t("Nome")} obrigatorio>
+        <CampoDeTexto
+          autoFocus
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          aria-label={t("Nome da origem")}
+          placeholder={t("Nome da origem")}
+          maxLength={80}
+        />
+      </Campo>
+      <Campo rotulo={t("Grupo")}>
+        <SeletorDaCasca
+          valor={grupo ?? ""}
+          opcoes={ativos.map((g) => ({ valor: g.id, rotulo: g.name }))}
+          aoMudar={(v) => setGrupo(v || null)}
+          aria-label={t("Grupo")}
+        />
+      </Campo>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="submit" disabled={criar.isPending || !nome.trim() || !grupo}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" enviar disabled={criar.isPending || !nome.trim() || !grupo}>
           {t("Criar origem")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </form>
   );
 }
@@ -134,51 +135,50 @@ export function FormConfigOrigem({ origens, onFechar, onOrigens, id }: PropsDaJa
   }
 
   return (
-    <form onSubmit={enviar} className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Configurações da origem")}</DialogTitle>
-        <DialogDescription>{t("As etapas continuam sendo editadas no próprio quadro.")}</DialogDescription>
-      </DialogHeader>
+    <form onSubmit={enviar} className="grid gap-5">
+      <CabecaDaJanela
+        titulo={t("Configurações da origem")}
+        descricao={t("As etapas continuam sendo editadas no próprio quadro.")}
+      />
       <Alerta texto={erro} />
-      <Input
-        autoFocus
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        aria-label={t("Nome da origem")}
-        maxLength={80}
-      />
-      <SearchableSelect
-        options={ativos.map((g) => ({ value: g.id, label: g.name }))}
-        value={grupo ?? undefined}
-        onValueChange={setGrupo}
-        aria-label={t("Grupo")}
-      />
+      <Campo rotulo={t("Nome")} obrigatorio>
+        <CampoDeTexto
+          autoFocus
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          aria-label={t("Nome da origem")}
+          maxLength={80}
+        />
+      </Campo>
+      <Campo rotulo={t("Grupo")}>
+        <SeletorDaCasca
+          valor={grupo ?? ""}
+          opcoes={ativos.map((g) => ({ valor: g.id, rotulo: g.name }))}
+          aoMudar={(v) => setGrupo(v || null)}
+          aria-label={t("Grupo")}
+        />
+      </Campo>
       {funil.is_default ? (
-        <p className="text-sm text-muted-foreground">{t("Esta é a origem padrão da organização.")}</p>
+        <p className="text-[13px] text-casca-suave">{t("Esta é a origem padrão da organização.")}</p>
       ) : (
-        <label className="flex items-start gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={tornarPadrao}
-            onChange={(e) => setTornarPadrao(e.target.checked)}
-            className="mt-0.5"
+        <div className="grid gap-1">
+          <CaixaDaCasca
+            marcada={tornarPadrao}
+            aoMudar={setTornarPadrao}
+            rotulo={t("Tornar esta a origem padrão")}
+            aria-label={t("Tornar esta a origem padrão")}
           />
-          <span>
-            {t("Tornar esta a origem padrão")}
-            <span className="block text-xs text-muted-foreground">
-              {t("Abre para quem ainda não abriu nenhuma origem.")}
-            </span>
-          </span>
-        </label>
+          <p className="pl-7 text-xs text-casca-suave">{t("Abre para quem ainda não abriu nenhuma origem.")}</p>
+        </div>
       )}
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="submit" disabled={atualizar.isPending}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" enviar disabled={atualizar.isPending}>
           {t("Salvar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </form>
   );
 }
@@ -201,22 +201,20 @@ export function FormArquivarOrigem({ origens, onFechar, onOrigens, id }: PropsDa
   }
 
   return (
-    <div className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Arquivar «{nome}»?").replace("{nome}", funil.name)}</DialogTitle>
-        <DialogDescription>
-          {t("A origem sai do painel e vai para Arquivados com os negócios dela. Desarquivar traz de volta.")}
-        </DialogDescription>
-      </DialogHeader>
+    <div className="grid gap-5">
+      <CabecaDaJanela
+        titulo={t("Arquivar «{nome}»?").replace("{nome}", funil.name)}
+        descricao={t("A origem sai do painel e vai para Arquivados com os negócios dela. Desarquivar traz de volta.")}
+      />
       <Alerta texto={erro} />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="button" onClick={confirmar} disabled={arquivar.isPending}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" onClick={confirmar} disabled={arquivar.isPending}>
           {t("Arquivar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </div>
   );
 }
@@ -238,34 +236,31 @@ export function FormExcluirOrigem({ origens, onFechar, onOrigens, id }: PropsDaJ
   };
 
   return (
-    <div className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{t("Excluir «{nome}» de vez?").replace("{nome}", funil.name)}</DialogTitle>
-        <DialogDescription>
-          {t(
-            "A origem e as etapas dela são apagadas, e isso não se desfaz. Origem com negócios não é excluída: aí o caminho é arquivar.",
-          )}
-        </DialogDescription>
-      </DialogHeader>
-      <Alerta texto={erro} />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
-          {t("Cancelar")}
-        </Button>
-        {erro && !funil.is_archived && (
-          <Button type="button" onClick={() => arquivar.mutate(id, aoTerminar)} disabled={arquivar.isPending}>
-            {t("Arquivar")}
-          </Button>
+    <div className="grid gap-5">
+      <CabecaDaJanela
+        titulo={t("Excluir «{nome}» de vez?").replace("{nome}", funil.name)}
+        descricao={t(
+          "A origem e as etapas dela são apagadas, e isso não se desfaz. Origem com negócios não é excluída: aí o caminho é arquivar.",
         )}
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={() => excluir.mutate(id, aoTerminar)}
-          disabled={excluir.isPending}
-        >
+      />
+      <Alerta texto={erro} />
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
+          {t("Cancelar")}
+        </BotaoDaJanela>
+        {erro && !funil.is_archived && (
+          <BotaoDaJanela
+            variante="salvar"
+            onClick={() => arquivar.mutate(id, aoTerminar)}
+            disabled={arquivar.isPending}
+          >
+            {t("Arquivar")}
+          </BotaoDaJanela>
+        )}
+        <BotaoDaJanela variante="perigo" onClick={() => excluir.mutate(id, aoTerminar)} disabled={excluir.isPending}>
           {t("Excluir de vez")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </div>
   );
 }

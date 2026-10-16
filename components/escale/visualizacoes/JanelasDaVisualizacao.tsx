@@ -1,18 +1,17 @@
 "use client";
 import { useState, type FormEvent } from "react";
 
+import {
+  BotaoDaJanela,
+  CabecaDaJanela,
+  Campo,
+  CampoDeTexto,
+  JanelaDaCasca,
+  RodapeDaJanela,
+} from "@/components/escale/origens/JanelaDaCasca";
 import { Alerta } from "@/components/escale/origens/JanelasDoGrupo";
 import { textoDoErro } from "@/components/escale/origens/texto-do-erro";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import {
   useAtualizarVisualizacao,
   useCriarVisualizacao,
@@ -39,9 +38,10 @@ interface PropsComuns {
 }
 
 /**
- * As janelas das visualizações (fork Escale, Fase 1C): um Dialog só, como
- * `JanelasDeOrigens`. Só gerente+ chega aqui — o painel esconde o + e o ⋮, e as
- * rotas cobram `requireRole("manager")`.
+ * As janelas das visualizações (fork Escale, Fase 1C; visual da Clint na casca V3).
+ *
+ * É uma janela só (`JanelaDaCasca`), como em `JanelasDeOrigens`. Só gerente+
+ * chega aqui: o painel esconde o + e o ⋮, e as rotas cobram `requireRole("manager")`.
  */
 export function JanelasDaVisualizacao({
   janela,
@@ -55,24 +55,17 @@ export function JanelasDaVisualizacao({
 }) {
   const alvo = janela && janela.tipo !== "nova" ? comuns.visualizacoes.find((v) => v.id === janela.id) : undefined;
   return (
-    <Dialog
-      open={janela !== null}
-      onOpenChange={(aberto) => {
-        if (!aberto) comuns.onFechar();
-      }}
-    >
-      <DialogContent className="max-h-[85dvh] max-w-md overflow-y-auto">
-        {janela?.tipo === "nova" && <FormDaVisualizacao {...comuns} origens={janela.origens} onCriada={onCriada} />}
-        {janela?.tipo === "configurar" &&
-          (alvo ? <FormDaVisualizacao {...comuns} atual={alvo} /> : <VisualizacaoSumiu onFechar={comuns.onFechar} />)}
-        {janela?.tipo === "excluir" &&
-          (alvo ? (
-            <FormExcluirVisualizacao {...comuns} atual={alvo} onExcluida={onExcluida} />
-          ) : (
-            <VisualizacaoSumiu onFechar={comuns.onFechar} />
-          ))}
-      </DialogContent>
-    </Dialog>
+    <JanelaDaCasca aberta={janela !== null} onFechar={comuns.onFechar}>
+      {janela?.tipo === "nova" && <FormDaVisualizacao {...comuns} origens={janela.origens} onCriada={onCriada} />}
+      {janela?.tipo === "configurar" &&
+        (alvo ? <FormDaVisualizacao {...comuns} atual={alvo} /> : <VisualizacaoSumiu onFechar={comuns.onFechar} />)}
+      {janela?.tipo === "excluir" &&
+        (alvo ? (
+          <FormExcluirVisualizacao {...comuns} atual={alvo} onExcluida={onExcluida} />
+        ) : (
+          <VisualizacaoSumiu onFechar={comuns.onFechar} />
+        ))}
+    </JanelaDaCasca>
   );
 }
 
@@ -80,23 +73,24 @@ function VisualizacaoSumiu({ onFechar }: { onFechar: () => void }) {
   const t = useT();
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t("Visualização não encontrada.")}</DialogTitle>
-      </DialogHeader>
-      <DialogFooter>
-        <Button type="button" onClick={onFechar}>
+      <CabecaDaJanela titulo={t("Visualização não encontrada.")} />
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="salvar" onClick={onFechar}>
           {t("Fechar")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </>
   );
 }
 
 /**
  * Nome e QUEM VÊ (princípio do produto: quase tudo tem acesso configurável).
- * Sem `atual` é a janela "Nova visualização", com as origens do rascunho; com
- * `atual` é "Configurações da visualização" (as origens se trocam pelo
- * "Editar origens" do ⋮, no próprio painel).
+ * - Sem `atual` é a janela "Nova visualização", com as origens do rascunho.
+ * - Com `atual` é "Configurações da visualização". As origens se trocam pelo
+ *   "Editar origens" do ⋮, no próprio painel.
+ *
+ * Os dois `radio` de "Quem vê" ficam nativos: o contrato não tem rádio da casca,
+ * e a Clint não mostra esta janela.
  */
 function FormDaVisualizacao({
   atual,
@@ -162,74 +156,76 @@ function FormDaVisualizacao({
   }
 
   return (
-    <form onSubmit={enviar} className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>{atual ? t("Configurações da visualização") : t("Nova visualização")}</DialogTitle>
-        <DialogDescription>{t("Etapas com o mesmo nome viram uma coluna só e somam os cards.")}</DialogDescription>
-      </DialogHeader>
-      <Alerta texto={erro} />
-      <Input
-        autoFocus
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        aria-label={t("Nome da visualização")}
-        placeholder={t("Nome da visualização")}
-        maxLength={NOME_DE_VISUALIZACAO_MAX}
+    <form onSubmit={enviar} className="grid gap-5">
+      <CabecaDaJanela
+        titulo={atual ? t("Configurações da visualização") : t("Nova visualização")}
+        descricao={t("Etapas com o mesmo nome viram uma coluna só e somam os cards.")}
       />
+      <Alerta texto={erro} />
+      <Campo rotulo={t("Nome")} obrigatorio>
+        <CampoDeTexto
+          autoFocus
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          aria-label={t("Nome da visualização")}
+          placeholder={t("Nome da visualização")}
+          maxLength={NOME_DE_VISUALIZACAO_MAX}
+        />
+      </Campo>
       <fieldset className="grid gap-2">
-        <legend className="mb-1 text-sm font-medium">{t("Quem vê")}</legend>
-        <label className="flex items-center gap-2 text-sm">
+        <legend className="mb-2 text-[13px] font-medium text-casca-texto">{t("Quem vê")}</legend>
+        <label className="flex items-center gap-2 text-[13px] text-casca-texto">
           <input
             type="radio"
             name="acesso-da-visualizacao"
             checked={acesso === "todos"}
             onChange={() => setAcesso("todos")}
-            className="accent-accent"
+            className="size-4 accent-casca-marca"
           />
           {t("Toda a organização")}
         </label>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-[13px] text-casca-texto">
           <input
             type="radio"
             name="acesso-da-visualizacao"
             checked={acesso === "escolhidos"}
             onChange={() => setAcesso("escolhidos")}
-            className="accent-accent"
+            className="size-4 accent-casca-marca"
           />
           {t("Só as pessoas escolhidas")}
         </label>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-casca-suave">
           {t("Gerentes e administradores sempre veem. Dentro da visualização, cada pessoa vê só os negócios que já vê em cada origem.")}
         </p>
         {acesso === "escolhidos" &&
           (isLoading ? (
-            <p className="text-xs text-muted-foreground">{t("Carregando…")}</p>
+            <p className="text-xs text-casca-suave">{t("Carregando…")}</p>
           ) : (
-            <ul className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-2">
-              {membros.map((m) => (
-                <li key={m.user_id}>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={pessoas.has(m.user_id)}
-                      onChange={() => alternarPessoa(m.user_id)}
-                      className="size-4 accent-accent"
+            <ul className="grid max-h-48 gap-2 overflow-y-auto rounded-[4px] bg-casca-raia p-3">
+              {membros.map((m) => {
+                const nomeDaPessoa = m.full_name ?? m.email ?? t("Sem nome");
+                return (
+                  <li key={m.user_id}>
+                    <CaixaDaCasca
+                      marcada={pessoas.has(m.user_id)}
+                      aoMudar={() => alternarPessoa(m.user_id)}
+                      rotulo={nomeDaPessoa}
+                      aria-label={nomeDaPessoa}
                     />
-                    {m.full_name ?? m.email ?? t("Sem nome")}
-                  </label>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           ))}
       </fieldset>
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button type="submit" disabled={!podeSalvar}>
+        </BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" enviar disabled={!podeSalvar}>
           {atual ? t("Salvar") : t("Criar visualização")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </form>
   );
 }
@@ -245,18 +241,17 @@ function FormExcluirVisualizacao({
   const [erro, setErro] = useState<string | null>(null);
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t("Excluir «{nome}»?").replace("{nome}", atual.name)}</DialogTitle>
-        <DialogDescription>{t("A visualização sai do painel. Nenhuma origem e nenhum negócio é apagado.")}</DialogDescription>
-      </DialogHeader>
+      <CabecaDaJanela
+        titulo={t("Excluir «{nome}»?").replace("{nome}", atual.name)}
+        descricao={t("A visualização sai do painel. Nenhuma origem e nenhum negócio é apagado.")}
+      />
       <Alerta texto={erro} />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onFechar}>
+      <RodapeDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
+        </BotaoDaJanela>
+        <BotaoDaJanela
+          variante="perigo"
           disabled={excluir.isPending}
           onClick={() =>
             excluir.mutate(atual.id, {
@@ -270,8 +265,8 @@ function FormExcluirVisualizacao({
           }
         >
           {t("Excluir visualização")}
-        </Button>
-      </DialogFooter>
+        </BotaoDaJanela>
+      </RodapeDaJanela>
     </>
   );
 }

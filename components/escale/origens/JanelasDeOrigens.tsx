@@ -1,7 +1,7 @@
 "use client";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Origens } from "@/lib/escale/origens/regras";
 
+import { JanelaDaCasca } from "./JanelaDaCasca";
 import {
   FormAdicionarOrigem,
   FormArquivarOrigem,
@@ -38,9 +38,11 @@ export interface PropsDaJanela {
 }
 
 /**
- * As janelas do painel Origens (fork Escale, Fase 1B): um Dialog só, com o
- * conteúdo da ação pedida pelo `+` ou por um ⋮. Só gerente+ chega aqui — o
- * painel esconde os botões, e as rotas cobram `requireRole("manager")`.
+ * As janelas do painel Origens (fork Escale, Fase 1B; visual da Clint na casca V3).
+ *
+ * É uma janela só (`JanelaDaCasca`), com o conteúdo da ação pedida pelo `+` ou
+ * por um ⋮. Só gerente+ chega aqui: o painel esconde os botões, e as rotas
+ * cobram `requireRole("manager")`.
  */
 export function JanelasDeOrigens({
   janela,
@@ -48,25 +50,18 @@ export function JanelasDeOrigens({
   ...comuns
 }: PropsDaJanela & { janela: Janela | null; onAbrirOrigem: (id: string) => void }) {
   return (
-    <Dialog
-      open={janela !== null}
-      onOpenChange={(aberto) => {
-        if (!aberto) comuns.onFechar();
-      }}
-    >
-      <DialogContent className="max-h-[85dvh] max-w-md overflow-y-auto">
-        {janela?.tipo === "adicionar-origem" && (
-          <FormAdicionarOrigem {...comuns} grupoId={janela.grupoId} onAbrirOrigem={onAbrirOrigem} />
-        )}
-        {janela?.tipo === "adicionar-grupo" && <FormAdicionarGrupo {...comuns} />}
-        {janela?.tipo === "config-grupo" && <FormConfigGrupo {...comuns} id={janela.id} />}
-        {janela?.tipo === "customizar" && <FormCustomizarGrupo {...comuns} id={janela.id} />}
-        {janela?.tipo === "arquivar-grupo" && <FormArquivarGrupo {...comuns} id={janela.id} />}
-        {janela?.tipo === "excluir-grupo" && <FormExcluirGrupo {...comuns} id={janela.id} />}
-        {janela?.tipo === "config-origem" && <FormConfigOrigem {...comuns} id={janela.id} />}
-        {janela?.tipo === "arquivar-origem" && <FormArquivarOrigem {...comuns} id={janela.id} />}
-        {janela?.tipo === "excluir-origem" && <FormExcluirOrigem {...comuns} id={janela.id} />}
-      </DialogContent>
-    </Dialog>
+    <JanelaDaCasca aberta={janela !== null} onFechar={comuns.onFechar}>
+      {janela?.tipo === "adicionar-origem" && (
+        <FormAdicionarOrigem {...comuns} grupoId={janela.grupoId} onAbrirOrigem={onAbrirOrigem} />
+      )}
+      {janela?.tipo === "adicionar-grupo" && <FormAdicionarGrupo {...comuns} />}
+      {janela?.tipo === "config-grupo" && <FormConfigGrupo {...comuns} id={janela.id} />}
+      {janela?.tipo === "customizar" && <FormCustomizarGrupo {...comuns} id={janela.id} />}
+      {janela?.tipo === "arquivar-grupo" && <FormArquivarGrupo {...comuns} id={janela.id} />}
+      {janela?.tipo === "excluir-grupo" && <FormExcluirGrupo {...comuns} id={janela.id} />}
+      {janela?.tipo === "config-origem" && <FormConfigOrigem {...comuns} id={janela.id} />}
+      {janela?.tipo === "arquivar-origem" && <FormArquivarOrigem {...comuns} id={janela.id} />}
+      {janela?.tipo === "excluir-origem" && <FormExcluirOrigem {...comuns} id={janela.id} />}
+    </JanelaDaCasca>
   );
 }
