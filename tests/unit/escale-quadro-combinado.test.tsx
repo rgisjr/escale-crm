@@ -65,6 +65,11 @@ vi.mock("@/components/kanban/RetomarComoNovoNegocioDialog", () => ({
   RetomarComoNovoNegocioDialog: () => null,
 }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (texto: string) => texto }));
+vi.mock("@/hooks/escale/usePrefsDoCard", () => ({ usePrefsDoCard: () => ({ data: null }) }));
+vi.mock("@/hooks/auth/AuthProvider", () => ({
+  useActiveOrg: () => ({ orgId: "org-1", role: "agent" }),
+  useUser: () => ({ id: "u-1" }),
+}));
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
   useAssignableMembers: () => ({ data: [] }),
 }));

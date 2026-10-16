@@ -1,7 +1,9 @@
 "use client";
 import { useRef, useState } from "react";
 
+import { usePrefsDoCard } from "@/hooks/escale/usePrefsDoCard";
 import { useT } from "@/hooks/i18n/useT";
+import { PREFS_PADRAO, type CampoDaCapa } from "@/lib/escale/capa/tipos";
 import { totalDaColuna } from "@/lib/escale/quadro/aparencia";
 import { buildCardInput } from "@/lib/kanban/card-state";
 import type { Stage } from "@/lib/kanban/types";
@@ -26,6 +28,10 @@ export interface ColunaDoFunilNaCascaProps {
   podeRenomear?: boolean;
   onRenomear?: (nome: string) => void;
   aoAdicionar?: (stageId: string) => void;
+  /** Os campos que o "Personalizar cards" pode pôr no card (Fase 1E). */
+  camposDoCard?: readonly CampoDaCapa[];
+  /** O nome da origem (usado pelo Recentes, Task 14). */
+  nomeDaOrigem?: string;
 }
 
 const NENHUM = new Set<string>();
@@ -52,8 +58,10 @@ export function ColunaDoFunilNaCasca({
   podeRenomear = false,
   onRenomear,
   aoAdicionar,
+  camposDoCard,
 }: ColunaDoFunilNaCascaProps) {
   const t = useT();
+  const prefs = usePrefsDoCard().data ?? PREFS_PADRAO;
   const selecionados = selectedLeadIds ?? NENHUM;
   const chance = stage.is_won ? 100 : stage.is_lost ? 0 : (stage.win_probability ?? null);
   const temValor = leads.some((l) => l.value_cents != null);
@@ -105,6 +113,8 @@ export function ColunaDoFunilNaCasca({
           onSelect={aoSelecionar}
           onOpen={onOpen}
           nomes={ownerNames}
+          prefs={prefs}
+          camposDoCard={camposDoCard}
         />
       )}
     />

@@ -1,6 +1,8 @@
 "use client";
 import { CardDaCasca } from "@/components/escale/quadro/CardDaCasca";
 import { ColunaDaCasca } from "@/components/escale/quadro/ColunaDaCasca";
+import { usePrefsDoCard } from "@/hooks/escale/usePrefsDoCard";
+import { PREFS_PADRAO, type CampoDaCapa } from "@/lib/escale/capa/tipos";
 import { totalDaColuna } from "@/lib/escale/quadro/aparencia";
 import type { ColunaCombinada } from "@/lib/escale/visualizacoes/regras";
 import { buildCardInput } from "@/lib/kanban/card-state";
@@ -16,6 +18,8 @@ export interface ContextoDosCards {
   coolingIds: Set<string>;
   reactivations: Map<string, { proposalId: string; expiresAt: string }>;
   pulses: Map<string, number>;
+  /** Os campos que o "Personalizar cards" pode pôr no card: a união das origens (Fase 1E). */
+  camposDoCard: readonly CampoDaCapa[];
 }
 
 /**
@@ -40,6 +44,7 @@ export function ColunaDaVisualizacao({
   onSelectMany: (ids: string[], marcar: boolean) => void;
   onOpen: (leadId: string) => void;
 }) {
+  const prefs = usePrefsDoCard().data ?? PREFS_PADRAO;
   return (
     <ColunaDaCasca
       idDaColuna={coluna.chave}
@@ -72,6 +77,8 @@ export function ColunaDaVisualizacao({
             onOpen={onOpen}
             nomes={contexto.ownerNames}
             origem={origem}
+            prefs={prefs}
+            camposDoCard={contexto.camposDoCard}
           />
         );
       }}
