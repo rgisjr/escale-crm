@@ -9506,7 +9506,7 @@ export const DICIONARIO: Traducoes = {
   // ─── FORK ESCALE · Fase 1E (Task 15): o espanhol que faltava dos textos da fase ───
   "Origem não encontrada.": { es: "Origen no encontrado." },
   "A preferência mudou em outra aba. Abra de novo e salve.": {
-    es: "La preferencia cambió en otra pestaña. Ábrala de nuevo y guarde.",
+    es: "La preferencia cambió en otra pestaña. Ábrela de nuevo y guarda.",
   },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
