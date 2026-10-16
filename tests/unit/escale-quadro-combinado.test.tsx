@@ -8,19 +8,30 @@ import type { BoardData } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 
 const capturado = vi.hoisted(() => ({ onDragEnd: null as ((r: unknown) => void) | null }));
-const movers = vi.hoisted(() => ({ A: vi.fn(), B: vi.fn() }) as Record<string, ReturnType<typeof vi.fn>>);
+const movers = vi.hoisted(
+  () => ({ A: vi.fn(), B: vi.fn() }) as Record<string, ReturnType<typeof vi.fn>>,
+);
 const SEM_PULSOS = vi.hoisted(() => new Map<string, number>());
 
 vi.mock("@hello-pangea/dnd", () => ({
-  DragDropContext: ({ onDragEnd, children }: { onDragEnd: (r: unknown) => void; children: ReactNode }) => {
+  DragDropContext: ({
+    onDragEnd,
+    children,
+  }: {
+    onDragEnd: (r: unknown) => void;
+    children: ReactNode;
+  }) => {
     capturado.onDragEnd = onDragEnd;
     return <div>{children}</div>;
   },
   Droppable: ({ children }: { children: (p: unknown, s: unknown) => ReactNode }) =>
-    children({ innerRef: () => {}, droppableProps: {}, placeholder: null }, { isDraggingOver: false }),
+    children(
+      { innerRef: () => {}, droppableProps: {}, placeholder: null },
+      { isDraggingOver: false },
+    ),
 }));
-vi.mock("@/components/kanban/KanbanCard", () => ({
-  KanbanCard: ({
+vi.mock("@/components/escale/quadro/CardDaCasca", () => ({
+  CardDaCasca: ({
     card,
     lead,
     pipelineId,
@@ -37,17 +48,26 @@ vi.mock("@/components/kanban/KanbanCard", () => ({
   ),
 }));
 vi.mock("@/lib/kanban/card-state", () => ({
-  buildCardInput: (lead: { title: string }, opts: { stageName: string }) => ({ title: lead.title, stageName: opts.stageName }),
+  buildCardInput: (lead: { title: string }, opts: { stageName: string }) => ({
+    title: lead.title,
+    stageName: opts.stageName,
+  }),
 }));
 vi.mock("@/components/kanban/LeadDossier", () => ({
   LeadDossier: ({ pipelineId, stageName }: { pipelineId: string; stageName: string }) => (
     <p>{`dossiê ${pipelineId} ${stageName}`}</p>
   ),
 }));
-vi.mock("@/components/kanban/CamposObrigatoriosDialog", () => ({ CamposObrigatoriosDialog: () => null }));
-vi.mock("@/components/kanban/RetomarComoNovoNegocioDialog", () => ({ RetomarComoNovoNegocioDialog: () => null }));
+vi.mock("@/components/kanban/CamposObrigatoriosDialog", () => ({
+  CamposObrigatoriosDialog: () => null,
+}));
+vi.mock("@/components/kanban/RetomarComoNovoNegocioDialog", () => ({
+  RetomarComoNovoNegocioDialog: () => null,
+}));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (texto: string) => texto }));
-vi.mock("@/hooks/inbox/useAssignableMembers", () => ({ useAssignableMembers: () => ({ data: [] }) }));
+vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
+  useAssignableMembers: () => ({ data: [] }),
+}));
 vi.mock("@/hooks/leads/useAtRiskLeads", () => ({ useAtRiskLeads: () => ({ data: null }) }));
 vi.mock("@/hooks/leads/useReactivations", () => ({ useReactivations: () => ({ data: [] }) }));
 vi.mock("@/hooks/kanban/useBoard", () => ({
@@ -63,9 +83,32 @@ import { toast } from "sonner";
 import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import { QuadroCombinado } from "@/components/escale/visualizacoes/QuadroCombinado";
 
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
+window.HTMLElement.prototype.setPointerCapture = vi.fn();
+window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+globalThis.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 const lead = (id: string, pipeline_id: string, stage_id: string, title: string) =>
-  ({ id, pipeline_id, stage_id, title, position_in_stage: 1000, updated_at: `upd-${id}` }) as unknown as Lead;
-const etapa = (id: string, pipeline_id: string, name: string, position: number) => ({ id, pipeline_id, name, position, color: null });
+  ({
+    id,
+    pipeline_id,
+    stage_id,
+    title,
+    position_in_stage: 1000,
+    updated_at: `upd-${id}`,
+  }) as unknown as Lead;
+const etapa = (id: string, pipeline_id: string, name: string, position: number) => ({
+  id,
+  pipeline_id,
+  name,
+  position,
+  color: null,
+});
 const LEAD_A = lead("l-a", "A", "a1", "Ana");
 const LEAD_B = lead("l-b", "B", "b1", "Bia");
 const QUADROS = [
@@ -83,7 +126,10 @@ const QUADROS = [
 
 const onSelecao = vi.fn();
 
-function renderizar(ordemDosCards?: (a: Lead, b: Lead) => number, cliente: QueryClient = new QueryClient()) {
+function renderizar(
+  ordemDosCards?: (a: Lead, b: Lead) => number,
+  cliente: QueryClient = new QueryClient(),
+) {
   render(
     <QueryClientProvider client={cliente}>
       <QuadroCombinado
@@ -126,9 +172,16 @@ describe("<QuadroCombinado>", () => {
       "Qualificação",
       "Proposta",
     ]);
-    const entrada = document.querySelector('[data-coluna-da-visualizacao="Entrada"]') as HTMLElement;
-    expect(within(entrada).getByRole("button", { name: "Ana — Entrada · Leads" })).toHaveAttribute("data-pipeline", "A");
-    expect(within(entrada).getByRole("button", { name: "Bia — Entrada · Parceiros" })).toHaveAttribute("data-pipeline", "B");
+    const entrada = document.querySelector(
+      '[data-coluna-da-visualizacao="Entrada"]',
+    ) as HTMLElement;
+    expect(within(entrada).getByRole("button", { name: "Ana — Entrada · Leads" })).toHaveAttribute(
+      "data-pipeline",
+      "A",
+    );
+    expect(
+      within(entrada).getByRole("button", { name: "Bia — Entrada · Parceiros" }),
+    ).toHaveAttribute("data-pipeline", "B");
   });
 
   it("soltar numa coluna que a origem do card não tem recusa com aviso e não move", async () => {
@@ -156,9 +209,10 @@ describe("<QuadroCombinado>", () => {
     expect(screen.getByText("dossiê B Entrada")).toBeInTheDocument();
   });
 
-  it("selecionar a coluna inteira marca os cards das duas origens", async () => {
+  it("selecionar a coluna inteira (pelo ⋮ da coluna) marca os cards das duas origens", async () => {
     const user = renderizar();
-    await user.click(screen.getByRole("checkbox", { name: "Selecionar todos em Entrada" }));
+    await user.click(screen.getByRole("button", { name: "Ações da etapa Entrada" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Selecionar todos" }));
     expect(onSelecao).toHaveBeenCalledWith(["l-a", "l-b"]);
   });
 });
@@ -168,11 +222,14 @@ describe("<QuadroCombinado> com ordenação (Fase 1D)", () => {
 
   it("a coluna combinada segue a ordenação escolhida", () => {
     renderizar(PELO_TITULO_DESC);
-    const entrada = document.querySelector('[data-coluna-da-visualizacao="Entrada"]') as HTMLElement;
-    expect(within(entrada).getAllByRole("button", { name: /—/ }).map((b) => b.textContent)).toEqual([
-      "Bia — Entrada · Parceiros",
-      "Ana — Entrada · Leads",
-    ]);
+    const entrada = document.querySelector(
+      '[data-coluna-da-visualizacao="Entrada"]',
+    ) as HTMLElement;
+    expect(
+      within(entrada)
+        .getAllByRole("button", { name: /—/ })
+        .map((b) => b.textContent),
+    ).toEqual(["Bia — Entrada · Parceiros", "Ana — Entrada · Leads"]);
   });
 
   it("arrastar dentro da mesma coluna não move", async () => {
@@ -190,7 +247,11 @@ describe("<QuadroCombinado> com ordenação (Fase 1D)", () => {
     renderizar(PELO_TITULO_DESC, cliente);
     await soltar("l-a", "coluna:Entrada", "coluna:Proposta");
     expect(movers.A).toHaveBeenCalledTimes(1);
-    const chamada = movers.A!.mock.calls[0]![0] as { leadId: string; stageId: string; positionInStage: number };
+    const chamada = movers.A!.mock.calls[0]![0] as {
+      leadId: string;
+      stageId: string;
+      positionInStage: number;
+    };
     expect(chamada).toMatchObject({ leadId: "l-a", stageId: "a2", expectedUpdatedAt: "upd-l-a" });
     expect(chamada.positionInStage).toBeGreaterThan(3000);
   });
