@@ -108,6 +108,12 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "(zero para o gerente), o compartilhado visto por quem vê a origem ou a visualização e ZERO para o vizinho nos dois sentidos, " +
       "só o dono escreve, e as FKs compostas recusam origem de outra organização.",
   },
+  {
+    tabela: "crm_capas_do_card",
+    razao:
+      "tests/invariants/escale-capas-do-card-rls.test.ts — fork Escale (migration 9005): a preferência do card só para a própria pessoa " +
+      "(zero para o gerente e para o vizinho), qualquer papel grava a sua, ninguém escreve a de outra pessoa, uma por pessoa, CHECKs e FK.",
+  },
   { tabela: "jev_router_decisions", razao: "tests/invariants/jev-roteador-decisoes.test.ts — dois tenants por JWT: leitura local, zero do vizinho; anon sem leitura, authenticated sem escrita; poda com piso no banco." },
   { tabela: "golden_candidates", razao: "tests/invariants/golden-candidates.test.ts — dois tenants reais por JWT (agent): leitura positiva local e ZERO do vizinho nos dois sentidos, a tabela inteira sem filtro igual à própria, anon recusado, e insert/update/delete de authenticated sem efeito (só o servidor grava)." },
   { tabela: "jev_observacoes", razao: "tests/invariants/jev-observacoes.test.ts — dois tenants reais por JWT (agent): leitura positiva local e ZERO do vizinho nos dois sentidos, a tabela inteira sem filtro igual à própria, anon recusado, e insert/update/delete de authenticated sem efeito (só o servidor grava)." },
