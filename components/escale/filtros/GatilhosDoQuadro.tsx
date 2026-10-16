@@ -77,7 +77,13 @@ export function GatilhoMaisFiltros({
   onMudar,
   leads,
   settings,
-}: Base & { leads: readonly Lead[]; settings?: Record<string, unknown> }) {
+  rodape,
+}: Base & {
+  leads: readonly Lead[];
+  settings?: Record<string, unknown>;
+  /** FORK ESCALE · Fase 1E (E15): "Filtros salvos" e "Limpar filtros", depois de uma divisória. */
+  rodape?: ReactNode;
+}) {
   const t = useT();
   return (
     <GatilhoComPainel
@@ -96,6 +102,12 @@ export function GatilhoMaisFiltros({
         <Bloco titulo={t("Outros")}>
           <SecaoOutros filtros={filtros} onMudar={onMudar} />
         </Bloco>
+        {rodape ? (
+          <>
+            <div className="my-1 h-px bg-casca-borda" aria-hidden />
+            {rodape}
+          </>
+        ) : null}
       </div>
     </GatilhoComPainel>
   );

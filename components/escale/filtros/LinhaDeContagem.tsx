@@ -4,28 +4,30 @@ import type { ReactNode } from "react";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { partesDaContagem } from "@/lib/escale/quadro/aparencia";
-import { Download, MessageSquare, RefreshCw } from "@/lib/ui/icons-da-casca";
+import { Download, MessageSquare, RefreshCw, Settings } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 /**
  * A LINHA DE CONTAGEM E AÇÕES (fork Escale, Casca V4; 01-010 e o recorte
  * `docs/escale/clint/crops/icons-right.png`): "N oportunidades de **Negócio**"
- * (número real e plural, D14) à esquerda; atualizar, exportar, engrenagem e
- * ajuda à direita. Exportar (1E) e ajuda ficam desligados (D6; PRINTS 16 e 17).
+ * (número real e plural, D14) à esquerda; ordenar, atualizar, exportar, engrenagem
+ * e ajuda à direita. Exportar (1E), a engrenagem (1F) e a ajuda ficam desligados
+ * (D6; PRINTS 15, 16 e 17).
  */
 export function LinhaDeContagem({
   contagem,
   ordemAtiva,
   onAtualizar,
   atualizando = false,
-  engrenagem,
+  ordenar,
   personalizar,
 }: {
   contagem: number;
   ordemAtiva: boolean;
   onAtualizar: () => void;
   atualizando?: boolean;
-  engrenagem: ReactNode;
+  /** FORK ESCALE · Fase 1E (E15): o botão "↑↓ Ordenar", logo antes do atualizar. */
+  ordenar?: ReactNode;
   /** FORK ESCALE · Fase 1E: o ícone "Personalizar cards" (Clint v2), logo depois do atualizar. */
   personalizar?: ReactNode;
 }) {
@@ -51,6 +53,7 @@ export function LinhaDeContagem({
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
+        {ordenar}
         <BotaoDaCasca
           type="button"
           variante="icone"
@@ -73,7 +76,17 @@ export function LinhaDeContagem({
         >
           <Download size={16} aria-hidden />
         </BotaoDaCasca>
-        {engrenagem}
+        {/* FORK ESCALE · Fase 1E (E15): a engrenagem abre a configuração da origem na Clint (print 15). Liga na 1F. */}
+        <BotaoDaCasca
+          type="button"
+          variante="icone"
+          disabled
+          aria-label={t("Configurações da origem")}
+          title={t("Em breve")}
+          className="disabled:pointer-events-auto disabled:cursor-not-allowed"
+        >
+          <Settings size={16} aria-hidden />
+        </BotaoDaCasca>
         <BotaoDaCasca
           type="button"
           variante="icone"

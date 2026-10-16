@@ -115,21 +115,6 @@ describe("<BarraDoQuadro> da casca (Casca V4)", () => {
     expect(onMudar).toHaveBeenCalledWith({ status: ["open", "won"] }, "s-1");
   });
 
-  it("Ordenar mora na engrenagem: monta os critérios e aplica", async () => {
-    const { onMudar, u } = barra();
-    await u.click(screen.getByRole("button", { name: "Configurações do quadro" }));
-    await u.click(screen.getByRole("button", { name: /^Ordenar/ }));
-    expect(screen.getByText("Nenhum critério de ordenação")).toBeInTheDocument();
-    await u.click(screen.getByRole("button", { name: "Adicionar critério" }));
-    await u.click(screen.getByRole("combobox", { name: "Campo 1" }));
-    expect(screen.getByRole("option", { name: "Renda" })).toBeInTheDocument();
-    await u.click(screen.getByRole("option", { name: "Valor do negócio" }));
-    await u.click(screen.getByRole("combobox", { name: "Direção 1" }));
-    await u.click(screen.getByRole("option", { name: "Decrescente" }));
-    await u.click(screen.getByRole("button", { name: "Aplicar" }));
-    expect(onMudar).toHaveBeenCalledWith({ status: ["open"], ordem: ORDEM }, "s-1");
-  });
-
   it("com ordenação ativa, avisa que arrastar dentro da coluna está desligado", () => {
     barra({ status: ["open"], ordem: ORDEM });
     expect(screen.getByText(/Ordenação ativa/)).toBeInTheDocument();
@@ -156,14 +141,6 @@ describe("<BarraDoQuadro> da casca (Casca V4)", () => {
     const personalizar = screen.getAllByRole("button", { name: "Personalizar cards" })[0]!;
     expect(personalizar).toBeEnabled();
     expect(nomes.indexOf("Personalizar cards")).toBe(nomes.indexOf("Atualizar") + 1);
-  });
-
-  it("na engrenagem: os filtros salvos e Limpar filtros (solta o filtro salvo)", async () => {
-    const { onMudar, u } = barra({ status: ["open", "won"], tags: ["vip"], ordem: ORDEM });
-    await u.click(screen.getByRole("button", { name: "Configurações do quadro" }));
-    expect(screen.getByText("filtros salvos")).toBeInTheDocument();
-    await u.click(screen.getByRole("button", { name: /Limpar filtros/ }));
-    expect(onMudar).toHaveBeenCalledWith({ status: ["open", "won"], ordem: ORDEM }, null);
   });
 
   it("o painel único de filtros e os chips saíram: a Clint usa um gatilho por filtro (D4)", () => {
