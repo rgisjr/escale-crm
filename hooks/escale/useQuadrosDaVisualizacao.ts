@@ -26,6 +26,9 @@ export interface QuadrosDaVisualizacao {
   quadros: BoardData[];
   carregando: boolean;
   indisponiveis: string[];
+  /** Relê todas as origens (o botão Atualizar da barra, Fase 1D). */
+  atualizar: () => void;
+  atualizando: boolean;
 }
 
 export function useQuadrosDaVisualizacao(pipelineIds: readonly string[]): QuadrosDaVisualizacao {
@@ -34,6 +37,10 @@ export function useQuadrosDaVisualizacao(pipelineIds: readonly string[]): Quadro
       quadros: resultados.flatMap((r) => (r.data ? [r.data] : [])),
       carregando: resultados.some((r) => r.isPending),
       indisponiveis: resultados.flatMap((r, i) => (r.isError && !r.data ? [pipelineIds[i]!] : [])),
+      atualizar: () => {
+        for (const r of resultados) void r.refetch();
+      },
+      atualizando: resultados.some((r) => r.isFetching),
     }),
     [pipelineIds],
   );

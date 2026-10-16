@@ -13,6 +13,7 @@ import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import type { RecusaDeCampos, RetomadaPendente } from "@/hooks/kanban/useMoveCard";
 import { useAtRiskLeads } from "@/hooks/leads/useAtRiskLeads";
 import { useReactivations } from "@/hooks/leads/useReactivations";
+import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
 import { alternarNaSelecao, cardsDaColuna, montarColunas, planejarSoltura } from "@/lib/escale/visualizacoes/regras";
 import type { BoardData } from "@/lib/kanban/types";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
@@ -46,12 +47,15 @@ export function QuadroCombinado({
   selecionados,
   onSelecao,
   leadInicial,
+  ordemDosCards,
 }: {
   quadros: BoardData[];
   leads: Lead[];
   selecionados: string[];
   onSelecao: (ids: string[]) => void;
   leadInicial?: string | null;
+  /** A ordenação da barra (Fase 1D). Com ela, arrastar só muda de etapa, e o card vai para o fim. */
+  ordemDosCards?: (a: Lead, b: Lead) => number;
 }) {
   const t = useT();
   const qc = useQueryClient();
@@ -125,6 +129,31 @@ export function QuadroCombinado({
       const lead = leads.find((l) => l.id === draggableId);
       const coluna = colunas.find((c) => c.chave === destination.droppableId);
       if (!lead || !coluna) return;
+      const recusar = () =>
+        toast.error(
+          t("A origem «{origem}» não tem a etapa «{etapa}».")
+            .replace("{origem}", quadroDe.get(lead.pipeline_id)?.pipeline.name ?? "")
+            .replace("{etapa}", coluna.nome),
+        );
+
+      // Fase 1D: com ordenação ativa, a posição na coluna é a da ordenação. Mesma
+      // coluna = nada; outra coluna = fim da etapa (inteira, do cache da origem).
+      if (ordemDosCards) {
+        if (source.droppableId === destination.droppableId) return;
+        const stageId = coluna.destinos[lead.pipeline_id];
+        if (!stageId) {
+          recusar();
+          return;
+        }
+        const daOrigem = qc.getQueryData<BoardData>(chaveDoQuadro(lead.pipeline_id))?.leads ?? leads;
+        movers.current.get(lead.pipeline_id)?.({
+          leadId: lead.id,
+          stageId,
+          positionInStage: posicaoNoFimDaEtapa(daOrigem, stageId, lead.id),
+          expectedUpdatedAt: lead.updated_at,
+        });
+        return;
+      }
 
       const destino = coluna.destinos[lead.pipeline_id];
       const etapaInteira = destino
@@ -138,11 +167,7 @@ export function QuadroCombinado({
         etapaInteira,
       });
       if (soltura.tipo === "recusa") {
-        toast.error(
-          t("A origem «{origem}» não tem a etapa «{etapa}».")
-            .replace("{origem}", quadroDe.get(lead.pipeline_id)?.pipeline.name ?? "")
-            .replace("{etapa}", coluna.nome),
-        );
+        recusar();
         return;
       }
       if (soltura.tipo === "nada") return;
@@ -153,7 +178,7 @@ export function QuadroCombinado({
         expectedUpdatedAt: lead.updated_at,
       });
     },
-    [leads, colunas, qc, quadroDe, t],
+    [leads, colunas, qc, quadroDe, t, ordemDosCards],
   );
 
   return (
@@ -175,7 +200,7 @@ export function QuadroCombinado({
             <ColunaDaVisualizacao
               key={coluna.chave}
               coluna={coluna}
-              leads={cardsDaColuna(coluna, leads)}
+              leads={cardsDaColuna(coluna, leads, ordemDosCards)}
               contexto={contexto}
               selecionados={selecionadosSet}
               onSelectMany={selecionarVarios}

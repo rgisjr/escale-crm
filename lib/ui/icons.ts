@@ -156,4 +156,7 @@ export {
   // painel Origens: os cabeçalhos das seções Origens e Visualizações
   SquaresFour,
   FrameCorners,
+  // quadro de negócios (Fase 1D): ordenar e filtros salvos
+  ArrowsDownUp,
+  BookmarkSimple,
 } from "@phosphor-icons/react/dist/ssr";

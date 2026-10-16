@@ -27,6 +27,8 @@ import type { LeadCandidate } from "@/lib/leads/active-lead";
 import { anexarDadosDoContato, type LinhaDoContatoNoQuadro } from "@/lib/kanban/dados-do-contato";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { anexarTarefasAosNegocios, type LinhaDaTarefaNoQuadro } from "@/lib/kanban/tarefas-no-quadro";
+// FORK ESCALE · Fase 1D: o que os filtros e a ordenação do quadro leem.
+import { comDadosDosFiltros } from "@/lib/escale/filtros/ler-dados-do-quadro";
 import { buscaEmLotes } from "@/lib/supabase/em-lotes";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -589,10 +591,23 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
     return fail("internal_error", leadsComTarefas.error, 500, { requestId });
   }
 
-  const leadsComConversa = await withConversas(
+  // FORK ESCALE · Fase 1D: atividades concluídas, nome do contato e a conversa
+  // da capa para os filtros e a ordenação do quadro. No MEIO da cadeia, como as
+  // tarefas: as cercas vigiam withConversas → withMarcadoresDoContato → resposta,
+  // e cada etapa só acrescenta o próprio campo ao lead.
+  const leadsComFiltros = await comDadosDosFiltros(
     supabase,
     (pipeline as Pipeline).organization_id,
     leadsComTarefas.leads,
+  );
+  if (leadsComFiltros.error) {
+    return fail("internal_error", leadsComFiltros.error, 500, { requestId });
+  }
+
+  const leadsComConversa = await withConversas(
+    supabase,
+    (pipeline as Pipeline).organization_id,
+    leadsComFiltros.leads,
   );
   if (leadsComConversa.error) {
     return fail("internal_error", leadsComConversa.error, 500, { requestId });

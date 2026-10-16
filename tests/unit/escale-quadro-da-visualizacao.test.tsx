@@ -21,7 +21,12 @@ vi.mock("@/components/escale/visualizacoes/QuadroCombinado", () => ({
     </ul>
   ),
 }));
-vi.mock("@/components/kanban/FilterBar", () => ({ FilterBar: () => <div>filtros</div> }));
+vi.mock("@/components/escale/filtros/BarraDoQuadro", () => ({
+  BarraDoQuadro: (p: { alvo: { tipo: string; id: string }; contagem: number; onAtualizar: () => void }) => (
+    <button type="button" onClick={p.onAtualizar}>{`barra ${p.alvo.tipo} ${p.alvo.id}: ${p.contagem}`}</button>
+  ),
+}));
+vi.mock("@/hooks/auth/AuthProvider", () => ({ useActiveOrg: () => ({ orgId: "org-1", currency: "BRL" }) }));
 vi.mock("@/components/kanban/BulkActionBar", () => ({
   BulkActionBar: ({ pipelineId, stages, selectedIds }: { pipelineId: string; stages: unknown[]; selectedIds: string[] }) => (
     <p>{`lote ${pipelineId} ${stages.length} ${selectedIds.length}`}</p>
@@ -36,6 +41,7 @@ vi.mock("@/components/kanban/NewLeadDialog", () => ({
 import { useQuadrosDaVisualizacao } from "@/hooks/escale/useQuadrosDaVisualizacao";
 import { LoteDaVisualizacao } from "@/components/escale/visualizacoes/LoteDaVisualizacao";
 import { QuadroDaVisualizacao } from "@/components/escale/visualizacoes/QuadroDaVisualizacao";
+const atualizarOrigens = vi.fn();
 
 const lead = (id: string, pipeline_id: string, status: string) =>
   ({ id, pipeline_id, status, stage_id: `${pipeline_id}1`, tags: [], owner_user_id: null, owner_agent_id: null }) as never;
@@ -59,7 +65,7 @@ const ORIGENS = [
 
 beforeEach(() => {
   busca.atual = "";
-  vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: QUADROS, carregando: false, indisponiveis: [] });
+  vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: QUADROS, carregando: false, indisponiveis: [], atualizar: atualizarOrigens, atualizando: false });
 });
 
 const idsNoQuadro = () =>
@@ -67,8 +73,8 @@ const idsNoQuadro = () =>
 
 describe("<QuadroDaVisualizacao>", () => {
   it("mostra o nome, quantas origens junta e as origens que não abriram para quem olha", () => {
-    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: QUADROS, carregando: false, indisponiveis: ["C"] });
-    render(<QuadroDaVisualizacao nome="Time comercial" origens={ORIGENS} />);
+    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: QUADROS, carregando: false, indisponiveis: ["C"], atualizar: atualizarOrigens, atualizando: false });
+    render(<QuadroDaVisualizacao id="v-1" nome="Time comercial" origens={ORIGENS} />);
     expect(screen.getByRole("heading", { level: 1, name: "Time comercial" })).toBeInTheDocument();
     expect(screen.getByText("Visualização")).toBeInTheDocument();
     expect(screen.getByText("3 origens")).toBeInTheDocument();
@@ -76,19 +82,27 @@ describe("<QuadroDaVisualizacao>", () => {
     expect(useQuadrosDaVisualizacao).toHaveBeenLastCalledWith(["A", "B", "C"]);
   });
 
-  it("os cards das origens vão juntos para o quadro, e o filtro da URL vale em todas", () => {
-    render(<QuadroDaVisualizacao nome="Time" origens={ORIGENS} />);
-    expect(idsNoQuadro()).toEqual(["a-aberto", "a-ganho", "b-aberto"]);
-    busca.atual = "status=open";
-    render(<QuadroDaVisualizacao nome="Time 2" origens={ORIGENS} />);
+  it("os cards das origens vão juntos; abre em Em aberto, e o status da URL vale em todas", () => {
+    render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={ORIGENS} />);
+    expect(idsNoQuadro()).toEqual(["a-aberto", "b-aberto"]);
+    busca.atual = "st=open,won,lost";
+    render(<QuadroDaVisualizacao id="v-1" nome="Time 2" origens={ORIGENS} />);
     expect(Array.from(screen.getAllByRole("list", { name: "quadro" })[1]!.querySelectorAll("li")).map((li) => li.textContent)).toEqual([
       "a-aberto",
+      "a-ganho",
       "b-aberto",
     ]);
   });
 
+  it("a barra é da visualização (alvo dos filtros salvos), conta os cards e Atualizar relê as origens", async () => {
+    render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={ORIGENS} />);
+    const botao = screen.getByRole("button", { name: "barra visualizacao v-1: 2" });
+    await userEvent.setup().click(botao);
+    expect(atualizarOrigens).toHaveBeenCalled();
+  });
+
   it("Novo Lead pergunta em qual origem e abre o formulário com as etapas dela", async () => {
-    render(<QuadroDaVisualizacao nome="Time" origens={ORIGENS} />);
+    render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={ORIGENS} />);
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     await user.click(screen.getByRole("button", { name: /Novo Lead/ }));
     await user.click(await screen.findByRole("menuitem", { name: "Parceiros" }));
@@ -96,13 +110,13 @@ describe("<QuadroDaVisualizacao>", () => {
   });
 
   it("sem origem ativa, explica o que fazer; carregando, avisa", () => {
-    const { unmount } = render(<QuadroDaVisualizacao nome="Time" origens={[]} />);
+    const { unmount } = render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={[]} />);
     expect(
       screen.getByText("Nenhuma origem desta visualização está ativa. Edite as origens pelo ⋮ da visualização."),
     ).toBeInTheDocument();
     unmount();
-    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: [], carregando: true, indisponiveis: [] });
-    render(<QuadroDaVisualizacao nome="Time" origens={ORIGENS} />);
+    vi.mocked(useQuadrosDaVisualizacao).mockReturnValue({ quadros: [], carregando: true, indisponiveis: [], atualizar: atualizarOrigens, atualizando: false });
+    render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={ORIGENS} />);
     expect(screen.getByText("Carregando…")).toBeInTheDocument();
   });
 });

@@ -20,6 +20,8 @@ import { StageColumn } from "./StageColumn";
 import { LeadDossier } from "./LeadDossier";
 import { RetomarComoNovoNegocioDialog } from "./RetomarComoNovoNegocioDialog";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
+// FORK ESCALE · Fase 1D: com ordenação ativa, soltar em outra etapa vai para o fim dela.
+import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
 
 interface KanbanBoardProps {
   pipelineId: string;
@@ -47,9 +49,20 @@ interface KanbanBoardProps {
    * então o cabeçalho fica só leitura para eles.
    */
   podeRenomearEtapa?: boolean;
+  /**
+   * FORK ESCALE · Fase 1D: a ordenação escolhida na barra do quadro (casca
+   * nova). Com ela, a coluna mostra os cards nessa ordem, arrastar DENTRO da
+   * coluna não faz nada (a posição manual não é a ordem da tela) e soltar em
+   * outra etapa põe o card no fim dela. Ausente = a ordem manual de sempre.
+   */
+  ordemDosCards?: (a: Lead, b: Lead) => number;
 }
 
-function groupLeadsByStage(stages: Stage[], leads: Lead[]): Map<string, Lead[]> {
+function groupLeadsByStage(
+  stages: Stage[],
+  leads: Lead[],
+  ordem?: (a: Lead, b: Lead) => number,
+): Map<string, Lead[]> {
   const map = new Map<string, Lead[]>();
   for (const stage of stages) map.set(stage.id, []);
   for (const lead of leads) {
@@ -57,8 +70,9 @@ function groupLeadsByStage(stages: Stage[], leads: Lead[]): Map<string, Lead[]> 
     if (bucket) bucket.push(lead);
   }
   // Already ordered by position_in_stage at fetch time, but be defensive.
+  // FORK ESCALE · Fase 1D: com ordenação escolhida, ela manda.
   for (const list of map.values()) {
-    list.sort((a, b) => a.position_in_stage - b.position_in_stage);
+    list.sort(ordem ?? ((a, b) => a.position_in_stage - b.position_in_stage));
   }
   return map;
 }
@@ -91,6 +105,7 @@ export function KanbanBoard({
   onSelectionChange,
   leadInicial,
   podeRenomearEtapa = false,
+  ordemDosCards,
 }: KanbanBoardProps) {
   const t = useT();
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
@@ -175,8 +190,8 @@ export function KanbanBoard({
 
   const grouped = useMemo(() => {
     if (!data) return null;
-    return groupLeadsByStage(data.stages, data.leads);
-  }, [data]);
+    return groupLeadsByStage(data.stages, data.leads, ordemDosCards);
+  }, [data, ordemDosCards]);
 
   // Um conjunto por vez, e não um card por vez: o board recebe o resultado do
   // gesto já resolvido pela coluna (um card, um intervalo, a etapa inteira). A
@@ -217,6 +232,21 @@ export function KanbanBoard({
       if (!lead) return;
 
       const destStageId = destination.droppableId;
+
+      // FORK ESCALE · Fase 1D: com ordenação ativa, a posição na coluna é a da
+      // ordenação, não a do ponteiro. Mesma coluna = nada; outra coluna = fim da
+      // etapa INTEIRA (o cache sem filtro, o mesmo cuidado da #2545 abaixo).
+      if (ordemDosCards) {
+        if (source.droppableId === destStageId) return;
+        const etapaInteira = qc.getQueryData<BoardData>(chaveDoQuadro(pipelineId))?.leads ?? data.leads;
+        moveCard.mutate({
+          leadId: lead.id,
+          stageId: destStageId,
+          positionInStage: posicaoNoFimDaEtapa(etapaInteira, destStageId, lead.id),
+          expectedUpdatedAt: lead.updated_at,
+        });
+        return;
+      }
       const destList = (grouped.get(destStageId) ?? []).filter(
         (l) => l.id !== draggableId,
       );
@@ -259,7 +289,7 @@ export function KanbanBoard({
         expectedUpdatedAt: lead.updated_at,
       });
     },
-    [data, grouped, moveCard, qc, pipelineId],
+    [data, grouped, moveCard, qc, pipelineId, ordemDosCards],
   );
 
   if (isLoading) {

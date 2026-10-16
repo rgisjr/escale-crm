@@ -2,6 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { PipelinePageClient } from "./_client";
+// FORK ESCALE · Fase 1D: a barra nova do quadro vem com a casca nova.
+import { cookies } from "next/headers";
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +38,16 @@ export default async function PipelinePage({
     .eq("organization_id", activeOrg.orgId)
     .eq("is_archived", false)
     .order("position");
+  // FORK ESCALE · Fase 1D: a barra nova do quadro vem com a casca nova (cookie
+  // `escale_menu=topo`); com a lateral, o quadro continua o do original.
+  const cascaNova = lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo";
   return (
     <PipelinePageClient
       pipelineId={id}
       initialName={pipeline.name}
       role={activeOrg.role}
       funis={funis ?? []}
+      cascaNova={cascaNova}
     />
   );
 }

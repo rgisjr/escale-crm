@@ -60,6 +60,7 @@ vi.mock("@/hooks/kanban/useMoveCard", () => ({
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 import { toast } from "sonner";
+import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import { QuadroCombinado } from "@/components/escale/visualizacoes/QuadroCombinado";
 
 const lead = (id: string, pipeline_id: string, stage_id: string, title: string) =>
@@ -82,10 +83,16 @@ const QUADROS = [
 
 const onSelecao = vi.fn();
 
-function renderizar() {
+function renderizar(ordemDosCards?: (a: Lead, b: Lead) => number, cliente: QueryClient = new QueryClient()) {
   render(
-    <QueryClientProvider client={new QueryClient()}>
-      <QuadroCombinado quadros={QUADROS} leads={[LEAD_A, LEAD_B]} selecionados={[]} onSelecao={onSelecao} />
+    <QueryClientProvider client={cliente}>
+      <QuadroCombinado
+        quadros={QUADROS}
+        leads={[LEAD_A, LEAD_B]}
+        selecionados={[]}
+        onSelecao={onSelecao}
+        ordemDosCards={ordemDosCards}
+      />
     </QueryClientProvider>,
   );
   return userEvent.setup({ pointerEventsCheck: 0 });
@@ -153,5 +160,45 @@ describe("<QuadroCombinado>", () => {
     const user = renderizar();
     await user.click(screen.getByRole("checkbox", { name: "Selecionar todos em Entrada" }));
     expect(onSelecao).toHaveBeenCalledWith(["l-a", "l-b"]);
+  });
+});
+
+describe("<QuadroCombinado> com ordenação (Fase 1D)", () => {
+  const PELO_TITULO_DESC = (a: Lead, b: Lead) => b.title.localeCompare(a.title);
+
+  it("a coluna combinada segue a ordenação escolhida", () => {
+    renderizar(PELO_TITULO_DESC);
+    const entrada = document.querySelector('[data-coluna-da-visualizacao="Entrada"]') as HTMLElement;
+    expect(within(entrada).getAllByRole("button", { name: /—/ }).map((b) => b.textContent)).toEqual([
+      "Bia — Entrada · Parceiros",
+      "Ana — Entrada · Leads",
+    ]);
+  });
+
+  it("arrastar dentro da mesma coluna não move", async () => {
+    renderizar(PELO_TITULO_DESC);
+    await soltar("l-a", "coluna:Entrada", "coluna:Entrada", 1);
+    expect(movers.A).not.toHaveBeenCalled();
+  });
+
+  it("soltar em outra coluna põe o card no fim da etapa inteira da origem dele (inclui card escondido pelo filtro)", async () => {
+    // O cache do quadro A (sem filtro) tem um card escondido na etapa de destino, com posição maior
+    // que qualquer visível. `leads` (filtrado) chega SEM ele: só o cache sabe do fim real da etapa.
+    const escondido = { ...lead("l-oculto", "A", "a2", "Oculto"), position_in_stage: 3000 };
+    const cliente = new QueryClient();
+    cliente.setQueryData(chaveDoQuadro("A"), { ...QUADROS[0], leads: [LEAD_A, escondido] });
+    renderizar(PELO_TITULO_DESC, cliente);
+    await soltar("l-a", "coluna:Entrada", "coluna:Proposta");
+    expect(movers.A).toHaveBeenCalledTimes(1);
+    const chamada = movers.A!.mock.calls[0]![0] as { leadId: string; stageId: string; positionInStage: number };
+    expect(chamada).toMatchObject({ leadId: "l-a", stageId: "a2", expectedUpdatedAt: "upd-l-a" });
+    expect(chamada.positionInStage).toBeGreaterThan(3000);
+  });
+
+  it("origem sem a etapa: recusa com aviso, como sem ordenação", async () => {
+    renderizar(PELO_TITULO_DESC);
+    await soltar("l-a", "coluna:Entrada", "coluna:Qualificação");
+    expect(toast.error).toHaveBeenCalledWith("A origem «Leads» não tem a etapa «Qualificação».");
+    expect(movers.A).not.toHaveBeenCalled();
   });
 });

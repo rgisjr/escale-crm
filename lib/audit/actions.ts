@@ -941,6 +941,10 @@ export const AUDIT_ACTIONS = [
   "pipeline_view.created",
   "pipeline_view.updated",
   "pipeline_view.deleted",
+  // FORK ESCALE · Fase 1D: filtros salvos do quadro (migration 9004).
+  "pipeline_filter.created",
+  "pipeline_filter.updated",
+  "pipeline_filter.deleted",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
