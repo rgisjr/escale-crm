@@ -31,17 +31,29 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TEXTO_MAX = 200;
 const VAZIO: Recentes = { fixados: [], recentes: [] };
 /**
- * A foto vale se é `https:` ou um caminho da própria página (`/api/v1/contacts/…`,
- * o que `fotoDoContato` guarda). `//dominio` e `/\dominio` são de OUTRO domínio e
- * não passam.
+ * A foto vale SÓ se é o caminho que `fotoDoContato` guarda:
+ * `/api/v1/contacts/<uuid>/avatar`, da própria página. Nada de https de outro
+ * domínio, `//dominio`, `javascript:`/`data:` nem tab/quebra de linha no meio
+ * (o navegador tira tab e quebra de linha da URL: uma barra, tab, barra e o domínio viram `//dominio`).
  */
-const FOTO_VALIDA = /^(https:\/\/|\/(?![/\\]))/;
+const FOTO_VALIDA = /^\/api\/v1\/contacts\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/avatar$/i;
 
 export const chaveDosRecentes = (orgId: string, userId: string) =>
   `escale:negocios-recentes:v2:${orgId}:${userId}`;
 
 function textoOuNulo(v: unknown): string | null {
   return typeof v === "string" && v !== "" ? v.slice(0, TEXTO_MAX) : null;
+}
+
+/** Telefone sem espaços nas pontas; em branco vira `null` (o ícone cinza, e não um `tel:` vivo). */
+function telefoneOuNulo(v: unknown): string | null {
+  return typeof v === "string" && v.trim() !== "" ? v.trim().slice(0, TEXTO_MAX) : null;
+}
+
+/** O mesmo negócio duas vezes na mesma lista: fica o primeiro. */
+function semRepetidos(lista: NegocioRecente[]): NegocioRecente[] {
+  const vistos = new Set<string>();
+  return lista.filter((x) => !vistos.has(x.id) && vistos.add(x.id));
 }
 
 function lerItem(item: unknown): NegocioRecente[] {
@@ -55,7 +67,7 @@ function lerItem(item: unknown): NegocioRecente[] {
     typeof titulo === "string" &&
     typeof origem === "string";
   if (!valido) return [];
-  // O `localStorage` não escolhe o que a página carrega: só https ou caminho do próprio site.
+  // O `localStorage` não escolhe o que a página carrega: só o caminho do avatar do próprio site.
   const fotoLida = textoOuNulo(foto);
   return [
     {
@@ -63,7 +75,7 @@ function lerItem(item: unknown): NegocioRecente[] {
       origemId,
       titulo: titulo.slice(0, TEXTO_MAX),
       origem: origem.slice(0, TEXTO_MAX),
-      telefone: textoOuNulo(telefone),
+      telefone: telefoneOuNulo(telefone),
       foto: fotoLida && FOTO_VALIDA.test(fotoLida) ? fotoLida : null,
     },
   ];
@@ -79,9 +91,12 @@ export function lerRecentes(bruto: string | null): Recentes {
   }
   if (!lido || typeof lido !== "object") return VAZIO;
   const { fixados, recentes } = lido as Record<string, unknown>;
-  const fix = (Array.isArray(fixados) ? fixados.flatMap(lerItem) : []).slice(0, FIXADOS_MAX);
+  const fix = semRepetidos(Array.isArray(fixados) ? fixados.flatMap(lerItem) : []).slice(
+    0,
+    FIXADOS_MAX,
+  );
   const ids = new Set(fix.map((x) => x.id));
-  const rec = (Array.isArray(recentes) ? recentes.flatMap(lerItem) : [])
+  const rec = semRepetidos(Array.isArray(recentes) ? recentes.flatMap(lerItem) : [])
     .filter((x) => !ids.has(x.id))
     .slice(0, RECENTES_GUARDADOS);
   return { fixados: fix, recentes: rec };
@@ -129,7 +144,7 @@ export function recenteDoLead(lead: Lead, origem: string): NegocioRecente {
     titulo: lead.title,
     origemId: lead.pipeline_id,
     origem,
-    telefone: lead.contact_phone ?? null,
+    telefone: telefoneOuNulo(lead.contact_phone),
     foto: fotoDoContato(lead),
   };
 }

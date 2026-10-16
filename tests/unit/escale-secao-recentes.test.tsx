@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -115,7 +115,81 @@ describe("<SecaoRecentes>", () => {
     render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Ver detalhes" }));
     expect(screen.queryByRole("link", { name: "Ligar" })).toBeNull();
+    expect(screen.getByRole("img", { name: "Sem telefone" })).toBeInTheDocument();
     expect(screen.getByTitle("Sem telefone")).toBeInTheDocument();
+  });
+
+  it("telefone em branco guardado no navegador não vira link tel: vivo; com espaços nas pontas, vira o número limpo", () => {
+    guardar([r(1, { telefone: "   " }), r(2, { telefone: " +5511999990000 " })]);
+    render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Ver detalhes" })[0]!);
+    expect(screen.queryByRole("link", { name: "Ligar" })).toBeNull();
+    expect(screen.getByRole("img", { name: "Sem telefone" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ver detalhes" }));
+    expect(screen.getByRole("link", { name: "Ligar" })).toHaveAttribute(
+      "href",
+      "tel:+5511999990000",
+    );
+  });
+
+  it("a seta do detalhe aponta (aria-controls) para a caixa do detalhe aberta", () => {
+    guardar([r(1)]);
+    render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
+    const seta = screen.getByRole("button", { name: "Ver detalhes" });
+    expect(seta).not.toHaveAttribute("aria-controls");
+    fireEvent.click(seta);
+    const alvo = screen.getByRole("button", { name: "Esconder detalhes" }).getAttribute("aria-controls");
+    expect(alvo).toBeTruthy();
+    const caixa = document.getElementById(alvo!);
+    expect(caixa).not.toBeNull();
+    expect(caixa).toHaveTextContent("Sem empresa");
+  });
+
+  it("getItem que lança: a seção abre vazia, sem quebrar", () => {
+    guardar([r(1)]);
+    const leitura = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("bloqueado");
+    });
+    try {
+      render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
+      expect(screen.getByText("Você não possui negócios recém trabalhados.")).toBeInTheDocument();
+      expect(screen.queryByRole("link")).toBeNull();
+    } finally {
+      leitura.mockRestore();
+    }
+  });
+
+  it("setItem que lança (cota cheia, aba anônima): fixar e abrir não quebram e a lista fica como estava", () => {
+    guardar([r(1), r(2)]);
+    render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
+    const gravacao = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("cota cheia");
+    });
+    try {
+      fireEvent.click(screen.getAllByRole("button", { name: "Fixar" })[0]!);
+      fireEvent.click(screen.getByRole("link", { name: "Negócio 2" }));
+      expect(nomesDosLinks()).toEqual(["Negócio 1", "Negócio 2"]);
+      expect(screen.queryByRole("separator")).toBeNull();
+    } finally {
+      gravacao.mockRestore();
+    }
+  });
+
+  it("o evento storage (outra aba mudou a lista) atualiza a seção", () => {
+    guardar([r(1)]);
+    render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
+    expect(nomesDosLinks()).toEqual(["Negócio 1"]);
+    act(() => {
+      guardar([r(5), r(1)]);
+      window.dispatchEvent(new StorageEvent("storage", { key: CHAVE }));
+    });
+    expect(nomesDosLinks()).toEqual(["Negócio 5", "Negócio 1"]);
+  });
+
+  it("o mesmo id duas vezes na lista guardada aparece uma vez só", () => {
+    guardar([r(1), r(1), r(2)]);
+    render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
+    expect(nomesDosLinks()).toEqual(["Negócio 1", "Negócio 2"]);
   });
 
   it("só um detalhe fica aberto por vez", () => {
@@ -170,10 +244,11 @@ describe("<SecaoRecentes>", () => {
   });
 
   it("a foto do contato é um quadrado de raio 5; sem foto, o quadrado da inicial", () => {
-    guardar([r(1, { foto: "https://cdn.exemplo.com/a.jpg" }), r(2)]);
+    const avatar = `/api/v1/contacts/${id(7)}/avatar`;
+    guardar([r(1, { foto: avatar }), r(2)]);
     const { container } = render(<SecaoRecentes chave={CHAVE} aberta onAlternar={vi.fn()} />);
     const foto = container.querySelector("img");
-    expect(foto).toHaveAttribute("src", "https://cdn.exemplo.com/a.jpg");
+    expect(foto).toHaveAttribute("src", avatar);
     expect(foto).toHaveClass("size-5", "rounded-[5px]");
     expect(screen.getByText("N", { selector: "span" })).toHaveClass("size-5", "rounded-[5px]");
   });

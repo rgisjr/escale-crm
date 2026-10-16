@@ -74,28 +74,65 @@ describe("os Recentes (Clint superior: LAST_LEADS e PIN_LEAD)", () => {
     expect(linkDoRecente(r(1))).toBe(`/app/pipelines/${ORIGEM}?lead=${id(1)}`);
   });
 
-  it("a foto só vale como https ou caminho da própria página: o navegador não escolhe o que a página carrega", () => {
+  it("a foto só vale como /api/v1/contacts/<uuid>/avatar: o navegador não escolhe o que a página carrega", () => {
+    const AVATAR = `/api/v1/contacts/${id(9)}/avatar`;
+    const fotos = [
+      AVATAR,
+      "https://cdn.exemplo.com/a.jpg",
+      "http://inseguro.exemplo.com/a.jpg",
+      "javascript:alert(1)",
+      "data:image/svg+xml;base64,PHN2Zz4=",
+      "//outro-dominio.com/a.jpg",
+      "/\\outro-dominio.com/a.jpg",
+      "/\t/evil.com/a.jpg",
+      "/\n/evil.com/a.jpg",
+      "/\r/evil.com/a.jpg",
+      "/api/v1/contacts/c-1/avatar",
+      `${AVATAR}\n`,
+      `${AVATAR}?x=//evil.com`,
+      `/api/v1/contacts/${id(9)}/avatar/../../../evil`,
+      "/outro/caminho.jpg",
+    ];
+    const lido = lerRecentes(
+      JSON.stringify({
+        fixados: [],
+        recentes: fotos.map((foto, i) => ({ ...r(i + 1), foto })),
+      }),
+    );
+    expect(lido.recentes.map((x) => x.foto)).toEqual([AVATAR, ...fotos.slice(1).map(() => null)]);
+  });
+
+  it("o telefone lido do navegador ou do negócio perde os espaços das pontas; em branco vira null", () => {
     const lido = lerRecentes(
       JSON.stringify({
         fixados: [],
         recentes: [
-          { ...r(1), foto: "https://cdn.exemplo.com/a.jpg" },
-          { ...r(2), foto: "javascript:alert(1)" },
-          { ...r(3), foto: "http://inseguro.exemplo.com/a.jpg" },
-          { ...r(4), foto: "/api/v1/contacts/c-1/avatar" },
-          { ...r(5), foto: "//outro-dominio.com/a.jpg" },
-          { ...r(6), foto: "/\\outro-dominio.com/a.jpg" },
+          { ...r(1), telefone: "  +5511999990000 " },
+          { ...r(2), telefone: "   " },
+          { ...r(3), telefone: "" },
         ],
       }),
     );
-    expect(lido.recentes.map((x) => x.foto)).toEqual([
-      "https://cdn.exemplo.com/a.jpg",
-      null,
-      null,
-      "/api/v1/contacts/c-1/avatar",
-      null,
-      null,
-    ]);
+    expect(lido.recentes.map((x) => x.telefone)).toEqual(["+5511999990000", null, null]);
+    const lead = negocio("x", { pipeline_id: ORIGEM, contact_phone: "   " } as Partial<Lead>);
+    expect(recenteDoLead(lead, "Vendas").telefone).toBeNull();
+    const comEspaco = negocio("y", {
+      pipeline_id: ORIGEM,
+      contact_phone: " +5511999990000\n",
+    } as Partial<Lead>);
+    expect(recenteDoLead(comEspaco, "Vendas").telefone).toBe("+5511999990000");
+  });
+
+  it("o mesmo id duas vezes na mesma lista entra uma vez só (a primeira)", () => {
+    const lido = lerRecentes(
+      JSON.stringify({
+        fixados: [r(1), { ...r(1), titulo: "Repetido" }],
+        recentes: [r(2), { ...r(2), titulo: "Repetido" }, r(3)],
+      }),
+    );
+    expect(lido.fixados.map((x) => x.titulo)).toEqual(["Negócio 1"]);
+    expect(lido.recentes.map((x) => x.id)).toEqual([id(2), id(3)]);
+    expect(lido.recentes[0]?.titulo).toBe("Negócio 2");
   });
 
   it("recenteDoLead guarda o título, a origem, o telefone e a foto do contato", () => {

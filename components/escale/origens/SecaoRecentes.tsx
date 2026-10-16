@@ -47,10 +47,10 @@ function FotoDoRecente({ r }: { r: NegocioRecente }) {
  * O detalhe aberto (`34a`, `34b`): a origem e, embaixo, "Sem empresa" (não temos
  * empresa: Fase 2) com o telefone à direita. O link `tel:` leva a dica "Ligar".
  */
-function DetalheDoRecente({ r }: { r: NegocioRecente }) {
+function DetalheDoRecente({ r, id }: { r: NegocioRecente; id: string }) {
   const t = useT();
   return (
-    <div className="mx-1 rounded-[6px] bg-surface px-0.5 py-1">
+    <div id={id} className="mx-1 rounded-[6px] bg-surface px-0.5 py-1">
       <p className="flex h-[27px] items-center pl-[67px] text-[10.4px] font-normal text-casca-texto">
         <span className="truncate">{r.origem}</span>
       </p>
@@ -68,7 +68,12 @@ function DetalheDoRecente({ r }: { r: NegocioRecente }) {
             </a>
           </DicaEscura>
         ) : (
-          <span title={t("Sem telefone")} className="ml-auto shrink-0 text-casca-meta">
+          <span
+            role="img"
+            aria-label={t("Sem telefone")}
+            title={t("Sem telefone")}
+            className="ml-auto shrink-0 text-casca-meta"
+          >
             <Phone size={12} aria-hidden />
           </span>
         )}
@@ -100,6 +105,7 @@ function LinhaDoRecente({
   const t = useT();
   const rotuloDoFixo = fixado ? t("Desafixar") : t("Fixar");
   const rotuloDoDetalhe = aberto ? t("Esconder detalhes") : t("Ver detalhes");
+  const idDoDetalhe = `detalhe-do-recente-${r.id}`;
   return (
     <li>
       <div
@@ -158,6 +164,7 @@ function LinhaDoRecente({
             aria-label={rotuloDoDetalhe}
             title={rotuloDoDetalhe}
             aria-expanded={aberto}
+            aria-controls={aberto ? idDoDetalhe : undefined}
             onClick={onDetalhe}
             className={ICONE_DA_LINHA}
           >
@@ -165,7 +172,7 @@ function LinhaDoRecente({
           </button>
         </span>
       </div>
-      {aberto && <DetalheDoRecente r={r} />}
+      {aberto && <DetalheDoRecente r={r} id={idDoDetalhe} />}
     </li>
   );
 }
