@@ -45,3 +45,6 @@ export { Bell, FileText, LogOut, Megaphone, MessageCircleMore, ShieldCheck, Spar
 
 // FORK ESCALE · casca V3 — painel esquerdo de Negócios (menus, cabeçalhos, ícones de grupo, janelas)
 export { ChevronUp, ListChecks, Pencil, Eye, EyeOff, Archive, Trash2, LayoutPanelLeft, SquareDashedKanban, Funnel, Users, Building2, Store, Bookmark, Save, FolderPlus } from "lucide-react";
+
+// Casca V4 (quadro de Negócios): ícones que a V1 ainda não reexportava.
+export { MessageSquare, CheckCheck, User, UserX, ArrowDownUp, SlidersHorizontal } from "lucide-react";
