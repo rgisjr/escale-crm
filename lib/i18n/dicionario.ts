@@ -9190,6 +9190,15 @@ export const DICIONARIO: Traducoes = {
   "Nenhuma conversa ainda.": { es: "Aún no hay conversaciones." },
   "Sem mensagem": { es: "Sin mensaje" },
   "Não consegui carregar as conversas.": { es: "No pude cargar las conversaciones." },
+  // ─── FORK ESCALE · casca igual à Clint (V2: topo, menu da conta, Novo +, Mais, botão de conversas) ───
+  "Ajuda": { es: "Ayuda" },
+  "Atalhos do teclado": { es: "Atajos de teclado" },
+  "Buscar uma tela": { es: "Buscar una pantalla" },
+  "Trocar o tema": { es: "Cambiar el tema" },
+  "Saia do acompanhamento para trocar de organização": { es: "Salga del acompañamiento para cambiar de organización" },
+  "Tema": { es: "Tema" },
+  "Claro": { es: "Claro" },
+  "Escuro": { es: "Oscuro" },
   // ─── FORK ESCALE · origens (grupos de funis, Fase 1A) ───
   "Origens": { es: "Orígenes" },
   "Buscar grupo ou funil": { es: "Buscar grupo o embudo" },

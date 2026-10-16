@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 let caminho = "/app/kanban";
 vi.mock("next/navigation", () => ({ usePathname: () => caminho }));
 vi.mock("@/lib/api/client", () => ({ apiClient: { get: vi.fn() } }));
-vi.mock("@/components/shell/ContadorDaFila", () => ({ ContadorDaFila: () => null }));
+vi.mock("@/components/escale/menu/ContadorDaFilaDaCasca", () => ({
+  ContadorDaFilaDaCasca: ({ limite }: { limite: number }) => <span data-testid="selo-do-fab" data-limite={limite} />,
+}));
 
 import { apiClient } from "@/lib/api/client";
 import { ConversasFlutuante } from "@/components/escale/ConversasFlutuante";
@@ -25,8 +27,16 @@ beforeEach(() => {
   vi.mocked(apiClient.get).mockReset();
 });
 
-describe("<ConversasFlutuante>", () => {
-  it("só busca quando abre, e lista contato, prévia e não lidas", async () => {
+describe("<ConversasFlutuante> (FAB da Clint)", () => {
+  it("círculo de 50px com o selo da fila limitado a +9", () => {
+    renderizar();
+    const botao = screen.getByRole("button", { name: "Conversas recentes" });
+    expect(botao).toHaveClass("size-[50px]", "rounded-full");
+    expect(within(botao).getByTestId("selo-do-fab")).toHaveAttribute("data-limite", "9");
+    expect(botao).not.toHaveAttribute("data-aberto");
+  });
+
+  it("só busca quando abre; aberto, vira X, o selo some e o painel tem o título Conversas", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       data: [
         {
@@ -41,6 +51,11 @@ describe("<ConversasFlutuante>", () => {
     renderizar();
     expect(apiClient.get).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Conversas recentes" }));
+    const botao = screen.getByRole("button", { name: "Conversas recentes" });
+    expect(botao).toHaveAttribute("data-aberto");
+    expect(within(botao).queryByTestId("selo-do-fab")).toBeNull();
+    const painel = screen.getByRole("dialog", { name: "Conversas recentes" });
+    expect(within(painel).getByRole("heading", { name: "Conversas" })).toBeInTheDocument();
     expect(await screen.findByText("Marcos Teixeira")).toBeInTheDocument();
     expect(screen.getByText("Tem CNO aberto já")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
@@ -62,13 +77,13 @@ describe("<ConversasFlutuante>", () => {
     expect(screen.queryByRole("button", { name: "Conversas recentes" })).toBeNull();
   });
 
-  it("sobe acima de peça fixa do rodapé", () => {
-    const { container } = renderizar(80);
-    // jsdom (via cssstyle) reordena os operandos do calc() ao normalizar o
-    // valor armazenado em `style` — "calc(1rem + 80px)" sai como
-    // "calc(80px + 1rem)" mesmo sem nenhuma mudança no componente. A adição é
-    // comutativa, então o efeito visual é idêntico; o teste verifica o valor
-    // já canonicalizado pelo jsdom em vez do literal escrito no componente.
-    expect((container.firstElementChild as HTMLElement).style.bottom).toBe("calc(80px + 1rem)");
+  it("fica a 30px da direita e 36px da base, e sobe acima de peça fixa do rodapé", () => {
+    const { container, unmount } = renderizar(0);
+    const solto = container.firstElementChild as HTMLElement;
+    expect(solto.style.right).toBe("30px");
+    expect(solto.style.bottom).toBe("36px");
+    unmount();
+    const comPeca = renderizar(80).container.firstElementChild as HTMLElement;
+    expect(comPeca.style.bottom).toBe("116px");
   });
 });
