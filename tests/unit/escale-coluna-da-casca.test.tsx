@@ -106,13 +106,15 @@ describe("<ColunaDoFunilNaCasca> (Casca V4)", () => {
   it("'+ Adicionar negócio' nas etapas abertas avisa a etapa; na de ganho não aparece", async () => {
     const aoAdicionar = vi.fn();
     const { u } = coluna({ aoAdicionar });
-    await u.click(screen.getByRole("button", { name: "Adicionar negócio" }));
+    const botao = screen.getByRole("button", { name: "+ Adicionar negócio" });
+    expect(botao).toHaveClass("justify-start");
+    await u.click(botao);
     expect(aoAdicionar).toHaveBeenCalledWith("e1");
   });
 
   it("na etapa de ganho, sem '+ Adicionar negócio'", () => {
     coluna({ stage: etapa({ is_won: true }), aoAdicionar: vi.fn() });
-    expect(screen.queryByRole("button", { name: "Adicionar negócio" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+ Adicionar negócio" })).not.toBeInTheDocument();
   });
 
   it("com menuDaEtapa, o ⋮ da Clint: 'Selecionar todos...' avisa os ids e o número de cards", async () => {

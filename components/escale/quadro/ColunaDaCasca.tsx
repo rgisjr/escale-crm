@@ -6,7 +6,6 @@ import type { GestoDeSelecao } from "@/components/kanban/KanbanCard";
 import { useT } from "@/hooks/i18n/useT";
 import { intervaloDaColuna } from "@/lib/kanban/selecao";
 import type { Lead } from "@/lib/types/leads";
-import { Plus } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 import { MenuDaColuna } from "./MenuDaColuna";
@@ -118,10 +117,10 @@ export function ColunaDaCasca({
               <button
                 type="button"
                 onClick={aoAdicionar}
-                className="flex w-full shrink-0 items-center justify-center gap-1 rounded-casca-gatilho py-1 text-[13px] text-casca-texto-2 hover:bg-surface"
+                className="flex w-full shrink-0 items-center justify-start gap-1 rounded-casca-gatilho px-2 py-1 text-[13px] text-casca-texto-2 hover:bg-surface"
               >
-                <Plus size={14} aria-hidden />
-                {t("Adicionar negócio")}
+                {/* A Clint superior escreve o "+" no texto, alinhado à esquerda (01-010). */}
+                {`+ ${t("Adicionar negócio")}`}
               </button>
             ) : null}
           </div>

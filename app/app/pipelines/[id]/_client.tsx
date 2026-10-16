@@ -87,6 +87,9 @@ export function PipelinePageClient({
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newOpen, setNewOpen] = useState(false);
+  // FORK ESCALE · Fase 1E: a etapa do "+ Adicionar negócio" da coluna (casca nova).
+  const [etapaDoNovo, setEtapaDoNovo] = useState<string | null>(null);
+  const podeCriar = ROLE_RANK[role] >= ROLE_RANK.agent;
   /**
    * A visão do funil (#2770). Quadro é o padrão — é o que todo mundo já
    * conhece, e a aba nova não pode sequestrar a tela de quem só quer mover
@@ -291,7 +294,11 @@ export function PipelinePageClient({
       {data && (
         <NewLeadDialog
           open={newOpen}
-          onOpenChange={setNewOpen}
+          onOpenChange={(aberto) => {
+            setNewOpen(aberto);
+            if (!aberto) setEtapaDoNovo(null);
+          }}
+          etapaInicial={cascaNova ? etapaDoNovo : undefined}
           pipelineId={pipelineId}
           stages={data.stages}
           // #1751: o quadro é a lista que o diálogo confere ANTES de criar —
@@ -352,9 +359,16 @@ export function PipelinePageClient({
           // FORK ESCALE · Casca V4: na casca nova, a coluna e o card da Clint; o
           // "+ Adicionar negócio" da coluna abre o mesmo "Novo negócio" do botão.
           aparencia={cascaNova ? "casca" : undefined}
-          aoAdicionarNegocio={cascaNova ? () => setNewOpen(true) : undefined}
+          aoAdicionarNegocio={
+            cascaNova && podeCriar
+              ? (stageId) => {
+                  setEtapaDoNovo(stageId);
+                  setNewOpen(true);
+                }
+              : undefined
+          }
           // FORK ESCALE · Fase 1E: o ⋮ da etapa (lote pede agent, como a rota).
-          podeSelecionarNaEtapa={cascaNova && ROLE_RANK[role] >= ROLE_RANK.agent}
+          podeSelecionarNaEtapa={cascaNova && podeCriar}
         />
       )}
       <BulkActionBar

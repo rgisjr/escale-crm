@@ -73,7 +73,8 @@ vi.mock("@/components/kanban/KanbanBoard", () => ({
     leads: Array<{ id: string }>;
     ordemDosCards?: unknown;
     aparencia?: string;
-    aoAdicionarNegocio?: unknown;
+    aoAdicionarNegocio?: (stageId: string) => void;
+    podeSelecionarNaEtapa?: boolean;
   }) => (
     <div>
       <p>{`etapas: ${p.stages.map((s) => s.name).join(", ")}`}</p>
@@ -81,6 +82,10 @@ vi.mock("@/components/kanban/KanbanBoard", () => ({
       <p>{`ordem: ${typeof p.ordemDosCards}`}</p>
       <p>{`aparencia: ${p.aparencia ?? "original"}`}</p>
       <p>{`adicionar: ${typeof p.aoAdicionarNegocio}`}</p>
+      <p>{`selecionar: ${String(p.podeSelecionarNaEtapa)}`}</p>
+      <button type="button" onClick={() => p.aoAdicionarNegocio?.("e-2")}>
+        adicionar na e-2
+      </button>
     </div>
   ),
 }));
@@ -92,10 +97,12 @@ vi.mock("@/components/escale/filtros/BarraDoQuadro", () => ({
 vi.mock("@/components/kanban/FilterBar", () => ({ FilterBar: () => <p>barra do original</p> }));
 vi.mock("@/components/kanban/BulkActionBar", () => ({ BulkActionBar: () => null }));
 vi.mock("@/components/kanban/NewLeadDialog", () => ({
-  NewLeadDialog: ({ open }: { open: boolean }) => (open ? <p>novo negócio aberto</p> : null),
+  NewLeadDialog: ({ open, etapaInicial }: { open: boolean; etapaInicial?: string | null }) =>
+    open ? <p>{`novo negócio aberto na etapa ${etapaInicial ?? "padrão"}`}</p> : null,
 }));
 vi.mock("@/components/kanban/CalendarioDoFunil", () => ({ CalendarioDoFunil: () => null }));
 
+import type { Role } from "@/lib/auth/types";
 import { PipelinePageClient } from "@/app/app/pipelines/[id]/_client";
 
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -107,12 +114,16 @@ const DOIS_FUNIS = [
   { id: "p-1", name: "Vendas" },
   { id: "p-2", name: "Pós-venda" },
 ];
-const abrir = (cascaNova: boolean, funis = [{ id: "p-1", name: "Vendas" }]) =>
+const abrir = (
+  cascaNova: boolean,
+  funis = [{ id: "p-1", name: "Vendas" }],
+  role: Role = "agent",
+) =>
   render(
     <PipelinePageClient
       pipelineId="p-1"
       initialName="Vendas"
-      role="agent"
+      role={role}
       funis={funis}
       cascaNova={cascaNova}
     />,
@@ -181,6 +192,18 @@ describe("a página do funil com a casca nova (Fase 1D)", () => {
   it("com a casca, 'Negócio +' abre o Novo negócio de sempre", async () => {
     abrir(true);
     await userEvent.setup().click(screen.getByRole("button", { name: /^Negócio/ }));
-    expect(screen.getByText("novo negócio aberto")).toBeInTheDocument();
+    expect(screen.getByText("novo negócio aberto na etapa padrão")).toBeInTheDocument();
+  });
+
+  it("'+ Adicionar negócio' da coluna abre o Novo negócio já na etapa dela", async () => {
+    abrir(true);
+    await userEvent.setup().click(screen.getByRole("button", { name: "adicionar na e-2" }));
+    expect(screen.getByText("novo negócio aberto na etapa e-2")).toBeInTheDocument();
+  });
+
+  it("viewer: sem '+ Adicionar negócio' e sem seleção por etapa", () => {
+    abrir(true, undefined, "viewer");
+    expect(screen.getByText("adicionar: undefined")).toBeInTheDocument();
+    expect(screen.getByText("selecionar: false")).toBeInTheDocument();
   });
 });
