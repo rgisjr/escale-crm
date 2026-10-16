@@ -22,6 +22,9 @@ vi.mock("@/hooks/escale/usePrefsDoCard", () => ({
 vi.mock("@/components/escale/filtros/MenuDeFiltrosSalvos", () => ({
   MenuDeFiltrosSalvos: () => <p>filtros salvos</p>,
 }));
+vi.mock("@/components/escale/filtros/ExportarCards", () => ({
+  ExportarCards: () => <button type="button">Exportar</button>,
+}));
 
 import { BarraDoQuadro, type BarraDoQuadroProps } from "@/components/escale/filtros/BarraDoQuadro";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
@@ -126,9 +129,27 @@ describe("<BarraDoQuadro> da casca (Casca V4)", () => {
     expect(onAtualizar).toHaveBeenCalled();
   });
 
-  it("Exportar e Ajuda aparecem como na Clint, desligados", () => {
+  it("sem a prop exportacao, não há ícone de Exportar (Visualização, abaixo de gerente)", () => {
     barra();
-    expect(screen.getByRole("button", { name: "Exportar" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Exportar" })).toBeNull();
+  });
+
+  it("com exportacao, o ícone de Exportar aparece na linha de contagem (Fase 1E)", () => {
+    barra(
+      { status: ["open"] },
+      {
+        exportacao: {
+          origem: { id: "p-1", nome: "Vendas" },
+          leads: [negocio("l1")],
+          stages: [],
+        },
+      },
+    );
+    expect(screen.getByRole("button", { name: "Exportar" })).toBeInTheDocument();
+  });
+
+  it("Ajuda aparece como na Clint, desligada", () => {
+    barra();
     expect(screen.getByRole("button", { name: "Ajuda" })).toBeDisabled();
   });
 

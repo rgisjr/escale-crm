@@ -9478,6 +9478,18 @@ export const DICIONARIO: Traducoes = {
   "{n} contato criado": { es: "{n} contacto creado" },
   "{n} contatos criados": { es: "{n} contactos creados" },
   "Linha {linha}: {motivo}": { es: "Fila {linha}: {motivo}" },
+  // ─── FORK ESCALE · Fase 1E (Task 13): Exportar pelo ícone da linha de contagem (a Task 15 acrescenta o resto) ───
+  "Exportar {n} Negócio": { es: "Exportar {n} Negocio" },
+  "Exportar {n} Negócios": { es: "Exportar {n} Negocios" },
+  "Nenhum negócio para exportar.": { es: "Ningún negocio para exportar." },
+  "Confirme sua ação": { es: "Confirma tu acción" },
+  "Tem certeza que deseja exportar os negócios dessa origem?": {
+    es: "¿Seguro que deseas exportar los negocios de este origen?",
+  },
+  "Os negócios foram exportados com sucesso.": { es: "Los negocios se exportaron con éxito." },
+  "Falha ao exportar os negócios, tente novamente ou chame o suporte.": {
+    es: "Error al exportar los negocios, inténtalo de nuevo o contacta con soporte.",
+  },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },

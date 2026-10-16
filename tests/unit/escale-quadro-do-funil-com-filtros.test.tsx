@@ -90,8 +90,15 @@ vi.mock("@/components/kanban/KanbanBoard", () => ({
   ),
 }));
 vi.mock("@/components/escale/filtros/BarraDoQuadro", () => ({
-  BarraDoQuadro: (p: { contagem: number; onAtualizar: () => void }) => (
-    <button type="button" onClick={p.onAtualizar}>{`barra nova: ${p.contagem}`}</button>
+  BarraDoQuadro: (p: {
+    contagem: number;
+    onAtualizar: () => void;
+    exportacao?: { leads: unknown[] };
+  }) => (
+    <>
+      <button type="button" onClick={p.onAtualizar}>{`barra nova: ${p.contagem}`}</button>
+      <p>{`exportar: ${p.exportacao ? p.exportacao.leads.length : "não"}`}</p>
+    </>
   ),
 }));
 vi.mock("@/components/kanban/FilterBar", () => ({ FilterBar: () => <p>barra do original</p> }));
@@ -225,5 +232,13 @@ describe("a página do funil com a casca nova (Fase 1D)", () => {
     abrir(true, undefined, "viewer");
     expect(screen.getByText("adicionar: undefined")).toBeInTheDocument();
     expect(screen.getByText("selecionar: false")).toBeInTheDocument();
+  });
+
+  it("Fase 1E: gerente exporta o recorte da tela; agente não (a rota pede manager)", () => {
+    const { unmount } = abrir(true, undefined, "manager");
+    expect(screen.getByText("exportar: 1")).toBeInTheDocument();
+    unmount();
+    abrir(true, undefined, "agent");
+    expect(screen.getByText("exportar: não")).toBeInTheDocument();
   });
 });

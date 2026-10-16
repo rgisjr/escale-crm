@@ -11,6 +11,7 @@ import { Search, X } from "@/lib/ui/icons-da-casca";
 
 import { BotaoOrdenar } from "./BotaoOrdenar";
 import { CLASSE_DA_LINHA_DO_MENU } from "./controles";
+import { ExportarCards, type ExportacaoDoQuadro } from "./ExportarCards";
 import { FiltroDeData } from "./FiltroDeData";
 import {
   GatilhoDeCampos,
@@ -36,6 +37,8 @@ export interface BarraDoQuadroProps {
   contagem: number;
   onAtualizar: () => void;
   atualizando?: boolean;
+  /** Fase 1E: o que o ícone Exportar leva; ausente = sem ícone (Visualização, abaixo de gerente). */
+  exportacao?: ExportacaoDoQuadro;
 }
 
 const ESPERA_DA_BUSCA_MS = 250;
@@ -57,6 +60,7 @@ export function BarraDoQuadro({
   contagem,
   onAtualizar,
   atualizando = false,
+  exportacao,
 }: BarraDoQuadroProps) {
   const t = useT();
   // Muda só quando os filtros vêm de fora da digitação (filtro salvo, limpar):
@@ -131,6 +135,8 @@ export function BarraDoQuadro({
         atualizando={atualizando}
         // FORK ESCALE · Fase 1E: o ícone "Personalizar cards", logo depois do atualizar.
         personalizar={<PersonalizarCards campos={campos} />}
+        // FORK ESCALE · Fase 1E: o ícone Exportar (gerente ou acima, só no funil).
+        exportar={exportacao ? <ExportarCards {...exportacao} /> : undefined}
         // FORK ESCALE · Fase 1E (E15): "Ordenar" é botão da linha de contagem; a engrenagem fica para a 1F.
         ordenar={
           <BotaoOrdenar

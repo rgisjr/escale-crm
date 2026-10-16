@@ -4,15 +4,15 @@ import type { ReactNode } from "react";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { partesDaContagem } from "@/lib/escale/quadro/aparencia";
-import { Download, MessageSquare, RefreshCw, Settings } from "@/lib/ui/icons-da-casca";
+import { MessageSquare, RefreshCw, Settings } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 /**
  * A LINHA DE CONTAGEM E AÇÕES (fork Escale, Casca V4; 01-010 e o recorte
  * `docs/escale/clint/crops/icons-right.png`): "N oportunidades de **Negócio**"
  * (número real e plural, D14) à esquerda; ordenar, atualizar, exportar, engrenagem
- * e ajuda à direita. Exportar (1E), a engrenagem (1F) e a ajuda ficam desligados
- * (D6; PRINTS 15, 16 e 17).
+ * e ajuda à direita. Exportar (Fase 1E) só para gerente ou acima no funil; a
+ * engrenagem (1F) e a ajuda seguem desligadas (D6; PRINTS 15 e 17).
  */
 export function LinhaDeContagem({
   contagem,
@@ -21,6 +21,7 @@ export function LinhaDeContagem({
   atualizando = false,
   ordenar,
   personalizar,
+  exportar,
 }: {
   contagem: number;
   ordemAtiva: boolean;
@@ -30,6 +31,8 @@ export function LinhaDeContagem({
   ordenar?: ReactNode;
   /** FORK ESCALE · Fase 1E: o ícone "Personalizar cards" (Clint v2), logo depois do atualizar. */
   personalizar?: ReactNode;
+  /** Fase 1E: o `ExportarCards`; ausente = sem ícone (Visualização, abaixo de gerente). */
+  exportar?: ReactNode;
 }) {
   const t = useT();
   const { antes, depois } = partesDaContagem(
@@ -65,17 +68,7 @@ export function LinhaDeContagem({
           <RefreshCw size={17} aria-hidden className={cn(atualizando && "animate-spin")} />
         </BotaoDaCasca>
         {personalizar}
-        <BotaoDaCasca
-          type="button"
-          variante="icone"
-          disabled
-          aria-label={t("Exportar")}
-          title={t("Em breve")}
-          // O BotaoDaCasca desligado tem `pointer-events-none`; sem o `auto`, a dica "Em breve" não apareceria.
-          className="disabled:pointer-events-auto disabled:cursor-not-allowed disabled:text-[#BDBDBD]"
-        >
-          <Download size={16} aria-hidden />
-        </BotaoDaCasca>
+        {exportar}
         {/* FORK ESCALE · Fase 1E (E15): a engrenagem abre a configuração da origem na Clint (print 15). Liga na 1F. */}
         <BotaoDaCasca
           type="button"

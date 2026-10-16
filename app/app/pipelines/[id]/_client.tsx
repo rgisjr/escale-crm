@@ -345,6 +345,17 @@ export function PipelinePageClient({
           contagem={recorte?.leads.length ?? 0}
           onAtualizar={() => void refetch()}
           atualizando={isFetching}
+          // FORK ESCALE · Fase 1E: Exportar, para gerente ou acima (a rota pede manager).
+          exportacao={
+            data && recorte && ROLE_RANK[role] >= ROLE_RANK.manager
+              ? {
+                  origem: { id: pipelineId, nome: nomeAtual },
+                  leads: recorte.leads,
+                  stages: data.stages,
+                  settings: data.pipeline.settings,
+                }
+              : undefined
+          }
         />
       ) : (
         <FilterBar

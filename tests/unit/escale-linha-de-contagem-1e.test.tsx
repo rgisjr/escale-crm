@@ -20,6 +20,9 @@ vi.mock("@/hooks/escale/usePrefsDoCard", () => ({
 vi.mock("@/components/escale/filtros/MenuDeFiltrosSalvos", () => ({
   MenuDeFiltrosSalvos: () => <p>filtros salvos</p>,
 }));
+vi.mock("@/components/escale/filtros/ExportarCards", () => ({
+  ExportarCards: () => <button type="button" aria-label="Exportar" />,
+}));
 
 import { BarraDoQuadro, type BarraDoQuadroProps } from "@/components/escale/filtros/BarraDoQuadro";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
@@ -49,6 +52,8 @@ function barra(filtros: FiltrosDoQuadro = { status: ["open"] }) {
     campos: CAMPOS,
     contagem: 21,
     onAtualizar: vi.fn(),
+    // Fase 1E (Task 13): o ícone Exportar só existe com a prop (gerente ou acima, no funil).
+    exportacao: { origem: { id: "p-1", nome: "Vendas" }, leads: [], stages: [] },
   };
   render(<BarraDoQuadro {...props} />);
   return { ...props, u: userEvent.setup({ pointerEventsCheck: 0 }) };
