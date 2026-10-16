@@ -39,3 +39,6 @@ export {
   Sparkles,
 } from "lucide-react";
 export type { LucideIcon } from "lucide-react";
+
+// V2 — topo da casca: ✦, menu da conta, Novo +, botão de conversas
+export { Bell, FileText, LogOut, Megaphone, MessageCircleMore, ShieldCheck, Sparkle, UserPlus, X } from "lucide-react";
