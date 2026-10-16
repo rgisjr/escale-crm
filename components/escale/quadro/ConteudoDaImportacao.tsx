@@ -537,22 +537,39 @@ const recusada = (texto: string, e: { linha: number; motivo: string }) =>
 
 export function PassoPronto({ resumo }: { resumo: ResumoDaImportacao }) {
   const t = useT();
+  const concluida = resumo.criados > 0;
   return (
     <ColunaCentral largura="max-w-[640px]">
       <div className="text-center">
-        <span
-          aria-hidden
-          className="mx-auto mb-3 grid size-11 place-items-center rounded-full bg-[#2FB36B] text-white"
-        >
-          <Check size={22} strokeWidth={3} />
-        </span>
-        <h2 className={TITULO}>{t("Importação concluída")}</h2>
-        <p className="mt-3 text-[15px] leading-6 font-medium text-casca-texto">
-          {contar(resumo.criados, t("{n} negócio criado"), t("{n} negócios criados"))}
-        </p>
-        <p className="text-[15px] leading-6 font-medium text-casca-texto">
-          {contar(resumo.contatos_criados, t("{n} contato criado"), t("{n} contatos criados"))}
-        </p>
+        {concluida ? (
+          <span
+            aria-hidden
+            data-testid="importacao-concluida"
+            className="mx-auto mb-3 grid size-11 place-items-center rounded-full bg-[#2FB36B] text-white"
+          >
+            <Check size={22} strokeWidth={3} />
+          </span>
+        ) : (
+          <span
+            aria-hidden
+            className="mx-auto mb-3 grid size-11 place-items-center rounded-full bg-[#F4F4F7] text-[#86858F]"
+          >
+            <CircleMinus size={22} />
+          </span>
+        )}
+        <h2 className={TITULO}>
+          {concluida ? t("Importação concluída") : t("Nenhum negócio foi importado.")}
+        </h2>
+        {concluida ? (
+          <p className="mt-3 text-[15px] leading-6 font-medium text-casca-texto">
+            {contar(resumo.criados, t("{n} negócio criado"), t("{n} negócios criados"))}
+          </p>
+        ) : null}
+        {concluida || resumo.contatos_criados > 0 ? (
+          <p className="text-[15px] leading-6 font-medium text-casca-texto">
+            {contar(resumo.contatos_criados, t("{n} contato criado"), t("{n} contatos criados"))}
+          </p>
+        ) : null}
       </div>
       {resumo.erros.length > 0 ? (
         <ul className="mt-6 max-h-48 divide-y divide-[#ECEBF1] overflow-y-auto rounded-[8px] border border-[#ECEBF1]">

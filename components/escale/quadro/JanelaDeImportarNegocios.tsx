@@ -1,6 +1,6 @@
 "use client";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import {
@@ -105,12 +105,16 @@ function JanelaAberta({
   const [tags, setTags] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [resumo, setResumo] = useState<ResumoDaImportacao | null>(null);
+  /** Qual escolha de arquivo é a mais nova: a leitura antiga que termina depois é ignorada. */
+  const escolhaAtual = useRef(0);
 
   const rotulos = [t("Arquivo"), t("Mapeamento"), t("Configurações"), t("Prévia e confirmação")];
   const numero = passo === "pronto" ? rotulos.length + 1 : passo;
 
   async function escolherArquivo(escolhido: File) {
+    const minhaEscolha = ++escolhaAtual.current;
     const lido = await lerArquivoCsv(escolhido, t);
+    if (minhaEscolha !== escolhaAtual.current) return;
     if ("erro" in lido) {
       setArquivo(null);
       setErroDoArquivo(lido.erro);
@@ -137,10 +141,19 @@ function JanelaAberta({
       form.append("pipeline_id", pipelineId);
       form.append("stage_id", etapa);
       const res = await fetch("/api/v1/leads/import", { method: "POST", body: form });
-      const json = (await res.json()) as {
-        data?: ResumoDaImportacao;
-        error?: { message?: string };
-      };
+      // Um proxy (502, 413) responde HTML, não JSON: o corpo ilegível vira mensagem clara, não exceção.
+      const json = await res
+        .json()
+        .then((corpo: unknown) => corpo as { data?: ResumoDaImportacao; error?: { message?: string } })
+        .catch(() => null);
+      if (!json) {
+        toast.error(
+          res.status === 413
+            ? t("O arquivo CSV excede o limite máximo de 5 MB.")
+            : t("Não consegui enviar o arquivo."),
+        );
+        return;
+      }
       if (!res.ok || !json.data) {
         toast.error(json.error?.message ?? t("Não consegui ler essa planilha."));
         return;
@@ -198,7 +211,12 @@ function JanelaAberta({
 
   function rodape(): ReactNode {
     const voltar = (para: 1 | 2 | 3) => (
-      <button type="button" onClick={() => setPasso(para)} className={BOTAO_DE_CONTORNO}>
+      <button
+        type="button"
+        disabled={enviando}
+        onClick={() => setPasso(para)}
+        className={cn(BOTAO_DE_CONTORNO, "disabled:pointer-events-none disabled:opacity-45")}
+      >
         {t("Voltar")}
       </button>
     );

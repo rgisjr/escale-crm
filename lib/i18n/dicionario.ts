@@ -9478,6 +9478,7 @@ export const DICIONARIO: Traducoes = {
   "{n} contato criado": { es: "{n} contacto creado" },
   "{n} contatos criados": { es: "{n} contactos creados" },
   "Linha {linha}: {motivo}": { es: "Fila {linha}: {motivo}" },
+  "Nenhum negócio foi importado.": { es: "No se importó ningún negocio." },
   // ─── FORK ESCALE · Fase 1E (Task 13): Exportar pelo ícone da linha de contagem (a Task 15 acrescenta o resto) ───
   "Exportar {n} Negócio": { es: "Exportar {n} Negocio" },
   "Exportar {n} Negócios": { es: "Exportar {n} Negocios" },

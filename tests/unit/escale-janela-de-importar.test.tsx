@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -209,8 +209,11 @@ describe("a janela Importar negócios (Clint v2, 4 passos)", () => {
     expect(screen.queryByText("vip", { selector: "[data-tag-escolhida] span" })).toBeNull();
   });
 
-  async function ateOPasso4(user: ReturnType<typeof userEvent.setup>) {
-    escolherArquivo(csv("Contato,Celular\nAna,11988887777"));
+  async function ateOPasso4(
+    user: ReturnType<typeof userEvent.setup>,
+    conteudo = "Contato,Celular\nAna,11988887777",
+  ) {
+    escolherArquivo(csv(conteudo));
     await screen.findByText("Pronto para mapear");
     await continuar(user);
     await continuar(user);
@@ -294,6 +297,180 @@ describe("a janela Importar negócios (Clint v2, 4 passos)", () => {
     expect(aoImportar).not.toHaveBeenCalled();
     expect(screen.getByText("Confira e confirme a importação")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Confirmar e importar/ })).toBeEnabled();
+  });
+
+  const RESPOSTA_OK = {
+    ok: true,
+    json: async () => ({
+      data: { total_linhas: 1, criados: 1, contatos_criados: 1, erros: [], colunas_ignoradas: [] },
+    }),
+  };
+
+  it("o proxy responde HTML (502): toast claro, sem quebrar, e a janela segue no passo 4", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<'");
+      },
+    });
+    const user = abrir();
+    await ateOPasso4(user);
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Não consegui enviar o arquivo."));
+    expect(aoImportar).not.toHaveBeenCalled();
+    expect(screen.getByText("Confira e confirme a importação")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Confirmar e importar/ })).toBeEnabled();
+  });
+
+  it("o proxy corta o envio grande (413, HTML): a mensagem é a do limite de tamanho", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 413,
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<'");
+      },
+    });
+    const user = abrir();
+    await ateOPasso4(user);
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("O arquivo CSV excede o limite máximo de 5 MB."),
+    );
+  });
+
+  it("200 com corpo que não é JSON não conta como importação", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<'");
+      },
+    });
+    const user = abrir();
+    await ateOPasso4(user);
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Não consegui enviar o arquivo."));
+    expect(aoImportar).not.toHaveBeenCalled();
+    expect(screen.queryByText("Importação concluída")).toBeNull();
+  });
+
+  it("o fetch rejeita (rede caiu): toast de falha de envio e o botão volta a ligar", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    const user = abrir();
+    await ateOPasso4(user);
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Não consegui enviar o arquivo."));
+    expect(aoImportar).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Confirmar e importar/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Voltar" })).toBeEnabled();
+  });
+
+  it("Voltar fica desligado enquanto o arquivo está sendo enviado", async () => {
+    let responder: (v: unknown) => void = () => {};
+    fetchMock.mockReturnValue(new Promise((r) => (responder = r)));
+    const user = abrir();
+    await ateOPasso4(user);
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Voltar" })).toBeDisabled());
+    expect(screen.getByRole("button", { name: /Confirmar e importar/ })).toBeDisabled();
+    responder(RESPOSTA_OK);
+    expect(await screen.findByText("1 negócio criado")).toBeInTheDocument();
+  });
+
+  it("nenhum negócio criado: sem o check verde e sem 'Importação concluída'; fica o resumo das recusas", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          total_linhas: 2,
+          criados: 0,
+          contatos_criados: 0,
+          erros: [
+            { linha: 2, motivo: "Valor inválido." },
+            { linha: 3, motivo: "Sem nome." },
+          ],
+          colunas_ignoradas: [],
+        },
+      }),
+    });
+    const user = abrir();
+    await ateOPasso4(user);
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    expect(await screen.findByText("Nenhum negócio foi importado.")).toBeInTheDocument();
+    expect(screen.queryByText("Importação concluída")).toBeNull();
+    expect(screen.queryByTestId("importacao-concluida")).toBeNull();
+    expect(screen.getByText("Linha 2: Valor inválido.")).toBeInTheDocument();
+    expect(screen.getByText("Linha 3: Sem nome.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fechar" })).toBeInTheDocument();
+  });
+
+  it("com negócios criados, o check verde e 'Importação concluída' aparecem", async () => {
+    fetchMock.mockResolvedValue(RESPOSTA_OK);
+    const user = abrir();
+    await ateOPasso4(user);
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    expect(await screen.findByText("Importação concluída")).toBeInTheDocument();
+    expect(screen.getByTestId("importacao-concluida")).toBeInTheDocument();
+    expect(screen.queryByText("Nenhum negócio foi importado.")).toBeNull();
+  });
+
+  it("exatamente 500 linhas de dados passam (501 já é recusado acima)", async () => {
+    abrir();
+    const linhas = ["nome", ...Array.from({ length: 500 }, (_, i) => `Negócio ${i}`)].join("\n");
+    escolherArquivo(csv(linhas));
+    expect(await screen.findByText("Pronto para mapear")).toBeInTheDocument();
+    expect(screen.queryByText("A planilha passa de 500 linhas. Divida em arquivos menores.")).toBeNull();
+    expect(screen.getByRole("button", { name: /Continuar/ })).toBeEnabled();
+  });
+
+  it("BOM, CRLF, ponto e vírgula e célula com várias linhas chegam inteiros ao envio", async () => {
+    fetchMock.mockResolvedValue(RESPOSTA_OK);
+    const user = abrir();
+    await ateOPasso4(user, '﻿Contato;Celular\r\n"Ana\nSouza";11988887777\r\nBia;1177776666\r\n');
+    await user.click(screen.getByRole("button", { name: /Confirmar e importar/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const init = fetchMock.mock.calls[0]![1] as { body: FormData };
+    const texto = await (init.body.get("file") as File).text();
+    expect(texto).toBe(
+      'nome do contato,telefone\r\n"Ana\nSouza",11988887777\r\nBia,1177776666\r\n',
+    );
+  });
+
+  it("fechar e reabrir a janela começa do zero, no passo 1, sem o arquivo anterior", async () => {
+    const propriedades = {
+      onFechar,
+      pipelineId: "p-1",
+      nomeDaOrigem: "Vendas",
+      etapas: ETAPAS,
+      tagsDoQuadro: ["vip"],
+      aoImportar,
+    };
+    const { rerender } = render(<JanelaDeImportarNegocios aberta {...propriedades} />);
+    escolherArquivo(csv("nome\nAna", "primeiro.csv"));
+    expect(await screen.findByText("primeiro.csv")).toBeInTheDocument();
+    rerender(<JanelaDeImportarNegocios aberta={false} {...propriedades} />);
+    expect(screen.queryByText("primeiro.csv")).toBeNull();
+    rerender(<JanelaDeImportarNegocios aberta {...propriedades} />);
+    expect(screen.getByText("Escolha o arquivo .CSV para criar negócios")).toBeInTheDocument();
+    expect(screen.queryByText("primeiro.csv")).toBeNull();
+    expect(screen.getByRole("button", { name: /Continuar/ })).toBeDisabled();
+  });
+
+  it("uma escolha antiga que termina depois da nova é ignorada", async () => {
+    abrir();
+    const lento = csv("nome\nAna", "lento.csv");
+    let liberar: () => void = () => {};
+    const bytes = new TextEncoder().encode("nome\nAna").buffer;
+    lento.arrayBuffer = () => new Promise<ArrayBuffer>((r) => (liberar = () => r(bytes)));
+    escolherArquivo(lento);
+    escolherArquivo(csv("nome\nBia", "rapido.csv"));
+    expect(await screen.findByText("rapido.csv")).toBeInTheDocument();
+    await act(async () => {
+      liberar();
+    });
+    expect(screen.getByText("rapido.csv")).toBeInTheDocument();
+    expect(screen.queryByText("lento.csv")).toBeNull();
   });
 
   it("Voltar anda um passo", async () => {
