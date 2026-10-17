@@ -59,7 +59,7 @@ export function ChipsDoCard({ lead }: { lead: Lead }) {
   );
 }
 
-function ChipDaTag({ tag }: { tag: string }) {
+export function ChipDaTag({ tag }: { tag: string }) {
   const { fundo, texto } = coresDaTag(useCorDaEtiqueta(tag));
   return (
     <span
