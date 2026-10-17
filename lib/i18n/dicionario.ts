@@ -5280,6 +5280,7 @@ export const DICIONARIO: Traducoes = {
   "Data de início": { es: "Fecha de inicio" },
   "Data de fim": { es: "Fecha de fin" },
   "Limpar": { es: "Limpiar" },
+  "Limpar tudo": { es: "Limpiar todo" },
   "Recurso": { es: "Recurso" },
   "Nenhum evento encontrado": { es: "No se encontraron eventos" },
   "Ajuste os filtros para ver entradas do audit log.": {

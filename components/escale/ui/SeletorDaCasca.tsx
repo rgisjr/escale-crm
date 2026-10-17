@@ -38,6 +38,11 @@ export type SeletorDaCascaProps<V extends string> = {
   "aria-label": string;
   vazio?: string;
   buscaAPartirDe?: number;
+  /**
+   * "janela" (Fase 1F, F18): o react-select da Clint na janela da origem, sem
+   * busca, com contorno e escolhida azuis. "filtro" (o padrão) é o da V1.
+   */
+  aparencia?: "filtro" | "janela";
   /** Fase 1E: o gatilho desligado (a origem da importação, que é a do quadro). */
   desabilitado?: boolean;
   /** Fase 1E: a dica do gatilho (o motivo de estar desligado). */
@@ -100,7 +105,8 @@ export function SeletorDaCasca<V extends string>({
   aoMudar,
   "aria-label": rotuloAcessivel,
   vazio,
-  buscaAPartirDe = BUSCA_A_PARTIR_DE,
+  aparencia = "filtro",
+  buscaAPartirDe = aparencia === "janela" ? Number.POSITIVE_INFINITY : BUSCA_A_PARTIR_DE,
   desabilitado = false,
   dica,
   className,
@@ -176,6 +182,7 @@ export function SeletorDaCasca<V extends string>({
           className={cn(
             "flex h-11 w-full items-center justify-between gap-2 rounded-[4px] bg-casca-raia px-3 text-left text-[13px] transition-colors duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-casca-marca",
             atual ? "text-casca-texto" : "text-casca-suave",
+            aparencia === "janela" && aberto && "ring-1 ring-(--escale-seletor-foco)",
             desabilitado && "cursor-not-allowed opacity-70",
             className,
           )}
@@ -225,7 +232,12 @@ export function SeletorDaCasca<V extends string>({
                 onClick={() => escolher(linha)}
                 className={cn(
                   "flex min-h-[34px] items-center rounded-[2px] px-3 text-[11px] text-casca-texto",
-                  indice === ativo && "bg-casca-marca-suave text-casca-marca",
+                  aparencia === "janela"
+                    ? cn(
+                        indice === ativo && "bg-(--escale-seletor-hover)",
+                        linha.valor === valor && "bg-(--escale-seletor-foco) text-white",
+                      )
+                    : indice === ativo && "bg-casca-marca-suave text-casca-marca",
                   linha.desabilitada ? "cursor-not-allowed opacity-30" : "cursor-pointer",
                 )}
               >

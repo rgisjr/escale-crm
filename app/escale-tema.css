@@ -28,6 +28,14 @@
 
 @font-face {
   font-family: "Escale Poppins";
+  src: url("./fonts/poppins-300-latin.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Escale Poppins";
   src: url("./fonts/poppins-400-latin.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -233,4 +241,55 @@ body:has([data-escale-casca]) {
   --escale-painel-hover: #2a2d3d;
   --escale-salvar: #35efb3;
   --escale-salvar-texto: #2f2c5d;
+}
+
+/* ─── FORK ESCALE · Fase 1F (configurações da origem) ───
+   Cores da Clint que NÃO são a marca e que só a janela da origem e a pílula do
+   prazo no card usam. "medido" = estilo calculado na Clint em 16/10
+   (docs/clint/prints-1f). O resto é o padrão do react-select ou do código da
+   Clint e espera a conferência visual contra o print citado. Lidas por valor
+   arbitrário, como as da V3. */
+body:has([data-escale-casca]) {
+  --escale-prazo-ok-fundo: transparent; /* medido, P16 */
+  --escale-prazo-ok-texto: #686d86; /* medido */
+  --escale-prazo-ok-borda: #d1d5db; /* medido */
+  --escale-prazo-atencao-fundo: #fffbeb; /* medido */
+  --escale-prazo-atencao-texto: #d97706; /* medido */
+  --escale-prazo-atencao-borda: #fde68a; /* conferir no P16 */
+  --escale-prazo-critico-fundo: #fef2f2; /* medido */
+  --escale-prazo-critico-texto: #dc2626; /* medido */
+  --escale-prazo-critico-borda: #fecaca; /* conferir no P16 */
+  --escale-ponto-atencao: #f5b800; /* código da Clint; conferir no P18 */
+  --escale-ponto-critico: #f43f5e; /* código da Clint; conferir no P18 */
+  --escale-seletor-foco: #2684ff; /* react-select, P02 */
+  --escale-seletor-hover: #deebff; /* react-select, P13 */
+  --escale-chip: #e6e6e6; /* react-select; conferir no P07 */
+  --escale-alternancia: #f1f1f4; /* conferir no P12 */
+  --escale-alternancia-ativa: #597eff; /* medido, P12 */
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --escale-prazo-ok-fundo: transparent;
+  --escale-prazo-ok-texto: #a1a5b8;
+  --escale-prazo-ok-borda: #4b5068;
+  --escale-prazo-atencao-fundo: #3d3210;
+  --escale-prazo-atencao-texto: #fcd34d;
+  --escale-prazo-atencao-borda: #6b5313;
+  --escale-prazo-critico-fundo: #3d1515;
+  --escale-prazo-critico-texto: #fca5a5;
+  --escale-prazo-critico-borda: #6b2020;
+  --escale-ponto-atencao: #f5b800;
+  --escale-ponto-critico: #f43f5e;
+  --escale-seletor-foco: #4c8dff;
+  --escale-seletor-hover: #23324d;
+  --escale-chip: #3a3e52;
+  --escale-alternancia: #2a2d3d;
+  --escale-alternancia-ativa: #7d98ff;
+}
+
+/* F17: dentro da janela da origem, os textos dos campos, seletores, listas e
+   chips têm o peso 300 da Clint (medido no P01). Só aqui: as outras telas da
+   casca seguem com 400 até a revisão visual de cada uma. */
+body:has([data-escale-casca]) [data-escale-janela-da-origem] :is(input, [role="combobox"], [role="listbox"], [role="option"], [data-chip]) {
+  font-weight: 300;
 }

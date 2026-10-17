@@ -121,6 +121,7 @@ describe("tema Escale", () => {
   it("as fontes do @font-face existem no repositório e são woff2 de verdade", () => {
     const urls = [...CSS.matchAll(/url\("\.\/(fonts\/[^"]+)"\)/g)].map((m) => m[1]!);
     expect(urls).toEqual([
+      "fonts/poppins-300-latin.woff2",
       "fonts/poppins-400-latin.woff2",
       "fonts/poppins-500-latin.woff2",
       "fonts/poppins-600-latin.woff2",
@@ -133,12 +134,12 @@ describe("tema Escale", () => {
     }
   });
 
-  it("a casca usa a Poppins da Clint, só nos pesos 400, 500 e 600", () => {
+  it("a casca usa a Poppins da Clint, nos pesos 300 (só a janela da origem, F17 da 1F), 400, 500 e 600", () => {
     expect(CLARO["--font-atkinson"]).toMatch(/^"Escale Poppins",/);
     const pesos = [...CSS.matchAll(/font-family:\s*"Escale Poppins";[^}]*?font-weight:\s*(\d+);/g)].map(
       (m) => m[1],
     );
-    expect(pesos).toEqual(["400", "500", "600"]);
+    expect(pesos).toEqual(["300", "400", "500", "600"]);
     expect(CSS).not.toContain("Figtree");
   });
 
