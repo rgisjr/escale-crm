@@ -22,8 +22,10 @@ import { AcoesDaFicha } from "./AcoesDaFicha";
 import { CabecalhoDaFicha } from "./CabecalhoDaFicha";
 import { ConteudoDaAba } from "./ConteudoDaAba";
 import { ContadorDeNegocios } from "./ContadorDeNegocios";
+import { DonoDaFicha } from "./DonoDaFicha";
 import { MenuDaFicha } from "./MenuDaFicha";
 import { ProximoNegocio } from "./ProximoNegocio";
+import { StatusDaFicha } from "./StatusDaFicha";
 import { TopoDaFicha } from "./TopoDaFicha";
 
 /**
@@ -110,10 +112,12 @@ export function FichaDoNegocio({ negocioId, origem, grupo, negociosDoContato }: 
       />
       <CabecalhoDaFicha
         lead={ficha.lead}
-        // C7 e C6 (a Task 9 põe o status e o dono entre os dois).
+        // C7, C4, C5 e C6, na ordem da Clint (01-017 e print 01).
         direita={
           <>
             <ContadorDeNegocios total={negociosDoContato} contatoId={ficha.lead.contact_id} />
+            <StatusDaFicha lead={ficha.lead} stages={ficha.stages} pipelineId={origem.id} />
+            <DonoDaFicha lead={ficha.lead} pipelineId={origem.id} />
             <MenuDaFicha lead={ficha.lead} pipelineId={origem.id} stages={ficha.stages} leads={ficha.leadsDoRecorte} />
           </>
         }

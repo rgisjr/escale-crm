@@ -266,6 +266,10 @@ body:has([data-escale-casca]) {
   --escale-chip: #e6e6e6; /* react-select; conferir no P07 */
   --escale-alternancia: #f1f1f4; /* conferir no P12 */
   --escale-alternancia-ativa: #597eff; /* medido, P12 */
+  /* Fase 1G (N7, Q10): Ganho e Perdido do cabeçalho do negócio. green.fg e
+     red.fg do tema da Clint (green.700 e red.700 do Chakra). */
+  --escale-status-ganho: #15803d;
+  --escale-status-perdido: #b91c1c;
 }
 
 [data-theme="dark"] body:has([data-escale-casca]) {
@@ -285,6 +289,8 @@ body:has([data-escale-casca]) {
   --escale-chip: #3a3e52;
   --escale-alternancia: #2a2d3d;
   --escale-alternancia-ativa: #7d98ff;
+  --escale-status-ganho: #86efac;
+  --escale-status-perdido: #fca5a5;
 }
 
 /* F17: dentro da janela da origem, os textos dos campos, seletores, listas e

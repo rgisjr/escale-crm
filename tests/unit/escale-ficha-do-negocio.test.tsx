@@ -31,6 +31,8 @@ vi.mock("@/components/escale/negocio/ProximoNegocio", () => ({
   ProximoNegocio: () => <span data-testid="proximo" />,
 }));
 vi.mock("@/components/escale/negocio/MenuDaFicha", () => ({ MenuDaFicha: () => <span data-testid="menu" /> }));
+vi.mock("@/components/escale/negocio/StatusDaFicha", () => ({ StatusDaFicha: () => <span data-testid="status" /> }));
+vi.mock("@/components/escale/negocio/DonoDaFicha", () => ({ DonoDaFicha: () => <span data-testid="dono" /> }));
 vi.mock("@/components/escale/negocio/AcoesDaFicha", () => ({ AcoesDaFicha: () => <span data-testid="acoes" /> }));
 
 import { FichaDoNegocio } from "@/components/escale/negocio/FichaDoNegocio";
@@ -157,6 +159,8 @@ describe("<FichaDoNegocio>", () => {
       "Em breve",
     );
     expect(screen.getByTestId("menu")).toBeInTheDocument();
+    expect(screen.getByTestId("status")).toBeInTheDocument();
+    expect(screen.getByTestId("dono")).toBeInTheDocument();
     expect(screen.getByTestId("acoes")).toBeInTheDocument();
   });
 
