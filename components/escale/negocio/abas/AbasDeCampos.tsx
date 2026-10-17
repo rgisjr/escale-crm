@@ -29,25 +29,19 @@ export function AbaContato({ lead }: { lead: Lead }) {
   );
 }
 
-/** Os oito campos da empresa na Clint (print 03). A empresa do negócio é da 1H (C12, Q6). */
-const CAMPOS_DA_EMPRESA = [
-  "Nome da empresa",
-  "Site",
-  "Cidade",
-  "Estado",
-  "Categoria",
-  "Segmento",
-  "Número de funcionários",
-  "CNPJ",
-] as const;
-
 export function AbaEmpresa() {
   const t = useT();
-  const campos = CAMPOS_DA_EMPRESA.map((rotulo) => ({
-    chave: rotulo,
-    rotulo: t(rotulo),
-    valor: null,
-  }));
+  /** Os oito campos da empresa na Clint (print 03). A empresa do negócio é da 1H (C12, Q6). */
+  const campos = [
+    { chave: "Nome da empresa", rotulo: t("Nome da empresa"), valor: null },
+    { chave: "Site", rotulo: t("Site"), valor: null },
+    { chave: "Cidade", rotulo: t("Cidade"), valor: null },
+    { chave: "Estado", rotulo: t("Estado"), valor: null },
+    { chave: "Categoria", rotulo: t("Categoria"), valor: null },
+    { chave: "Segmento", rotulo: t("Segmento"), valor: null },
+    { chave: "Número de funcionários", rotulo: t("Número de funcionários"), valor: null },
+    { chave: "CNPJ", rotulo: t("CNPJ"), valor: null },
+  ];
   return (
     <CamposDaFicha
       icone={<Building2 size={16} />}
