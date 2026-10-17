@@ -16,6 +16,7 @@ import { useActiveOrg } from "@/hooks/auth/AuthProvider";
 import { useFiltrosDoQuadro } from "@/hooks/escale/useFiltrosDoQuadro";
 import { useQuadrosDaVisualizacao } from "@/hooks/escale/useQuadrosDaVisualizacao";
 import { useT } from "@/hooks/i18n/useT";
+import { moedaDaOrigem } from "@/lib/escale/configuracoes/tipos";
 import { recortarQuadro } from "@/lib/escale/filtros/aplicar";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
@@ -62,7 +63,8 @@ export function QuadroDaVisualizacao({
     () =>
       quadros.map((q) => ({
         quadro: q,
-        ...recortarQuadro(q, filtros, { moeda: orgAtiva?.currency ?? null, campos }),
+        // Fase 1F: cada origem filtra o valor na própria moeda.
+        ...recortarQuadro(q, filtros, { moeda: moedaDaOrigem(q.pipeline.settings) ?? orgAtiva?.currency ?? null, campos }),
       })),
     [quadros, filtros, orgAtiva?.currency, campos],
   );
