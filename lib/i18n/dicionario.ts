@@ -9726,6 +9726,40 @@ export const DICIONARIO: Traducoes = {
   "Informe um valor entre 1 e 525600.": { es: "Indica un valor entre 1 y 525600." },
   "Informe um valor entre 1 e 365.": { es: "Indica un valor entre 1 y 365." },
 
+  // ─── FORK ESCALE · configurações da origem (Fase 1F, igual à Clint) ───
+  // Textos da Clint: o espanhol é o dela. Os nossos seguem "tú".
+  "Não é possível alterar o grupo de uma origem de integração.": {
+    es: "No se puede cambiar el grupo de un origen de integración.",
+  },
+  "O motivo de perda foi salvo com sucesso!": { es: "¡Motivo de pérdida guardado con éxito!" },
+  "Esta origem atingiu o limite de {max} regras de campo obrigatório. Remova algumas para poder salvar.":
+    {
+      es: "Esta origen ha alcanzado el límite de {max} reglas de campo obligatorio. Elimina algunas para poder guardar.",
+    },
+  "Informe um valor entre {min} e {max}.": { es: "Ingresa un valor entre {min} y {max}." },
+  "Selecionar campo": { es: "Seleccionar campo" },
+  "Campos obrigatórios pendentes": { es: "Campos obligatorios pendientes" },
+  "Para mover para {stage}, preencha os campos abaixo.": {
+    es: "Para pasar a {stage}, rellena los campos siguientes.",
+  },
+  "Preencha os campos abaixo para mover este negócio.": {
+    es: "Rellene los campos siguientes para tramitar este asunto.",
+  },
+  "Preencha os campos abaixo para alterar o status deste negócio.": {
+    es: "Rellene los campos siguientes para cambiar el estado de este asunto.",
+  },
+  "Salvar e mover": { es: "Guardar y mover" },
+  "Salvar e alterar status": { es: "Guardar y cambiar el estado" },
+  "Salvar e criar": { es: "Guardar y crear" },
+  // Textos nossos.
+  "Só administrador muda motivos de perda e campos obrigatórios.": {
+    es: "Solo el administrador cambia los motivos de pérdida y los campos obligatorios.",
+  },
+  "Uma origem tem no máximo 50 motivos de perda.": {
+    es: "Un origen tiene como máximo 50 motivos de pérdida.",
+  },
+  "Para avançar desta etapa, preencha:": { es: "Para avanzar desde esta etapa, completa:" },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
