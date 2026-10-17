@@ -146,6 +146,25 @@ describe("fn_escale_lista_de_contatos", () => {
 
 describe("crm_colunas_das_listas", () => {
   const COLUNAS = `'{"itens":[]}'::jsonb`;
+  const ORG_B = "e5ca1e00-9101-4000-8000-0000000000e1";
+  const USER_B = "e5ca1e00-9101-4000-8000-0000000000e2";
+
+  it("o vizinho (outra organização) não lê a preferência de ninguém daqui (controle positivo: a dona lê)", () => {
+    sql(`
+      insert into auth.users (id, email) values ('${USER_B}', 'escale-colunas-b@invariant.test') on conflict do nothing;
+      insert into public.organizations (id, slug, legal_name, display_name)
+        values ('${ORG_B}', 'escale-colunas-b', 'Escale Colunas Org B', 'Escale CLB') on conflict do nothing;
+      insert into public.user_organizations (user_id, organization_id, role, accepted_at)
+        values ('${USER_B}', '${ORG_B}', 'admin', now()) on conflict do nothing;
+      delete from public.crm_colunas_das_listas where organization_id = '${GOV_ORG}';
+      insert into public.crm_colunas_das_listas (organization_id, user_id, lista, colunas)
+        values ('${GOV_ORG}', '${GOV_AGENT_A}', 'contatos', ${COLUNAS});
+    `);
+    const q = `select count(*) from public.crm_colunas_das_listas where organization_id = '${GOV_ORG}'`;
+    expect(countAs(GOV_AGENT_A, q)).toBe(1);
+    expect(countAs(USER_B, q)).toBe(0);
+    expect(countAs(GOV_MANAGER, q)).toBe(0);
+  });
 
   it("a pessoa grava e lê a sua; outra pessoa não lê nem muda", () => {
     sql(`delete from public.crm_colunas_das_listas where organization_id = '${GOV_ORG}';`);

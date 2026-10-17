@@ -115,6 +115,12 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "(zero para o gerente e para o vizinho), qualquer papel grava a sua, ninguém escreve a de outra pessoa, uma por pessoa, CHECKs e FK.",
   },
   {
+    tabela: "crm_colunas_das_listas",
+    razao:
+      "tests/invariants/escale-lista-de-contatos.test.ts — fork Escale (migration 9101): as colunas da lista só para a própria pessoa " +
+      "(zero para o gerente e para o vizinho), qualquer papel grava a sua, ninguém escreve a de outra, uma por pessoa, CHECKs e FK.",
+  },
+  {
     tabela: "crm_campos_do_negocio",
     razao:
       "tests/invariants/escale-campos-do-crm.test.ts — fork Escale (migration 9006): todo membro lê, só administrador escreve " +
