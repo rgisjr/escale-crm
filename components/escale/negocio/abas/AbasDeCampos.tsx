@@ -1,14 +1,24 @@
 "use client";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 import { usePermission } from "@/hooks/auth/AuthProvider";
+import { useContact } from "@/hooks/contacts/useContact";
+import { useGravarContato } from "@/hooks/escale/useGravarContato";
 import { useT } from "@/hooks/i18n/useT";
 import { useEditLead } from "@/hooks/kanban/useUpdateLead";
+import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import { dadosDeFiltro } from "@/lib/escale/filtros/dados-do-quadro";
-import type { CampoEditavel } from "@/lib/escale/negocio/campos";
+import {
+  CHAVE_EMAIL,
+  CHAVE_NOME,
+  CHAVE_TELEFONE,
+  patchDoContato,
+  type CampoEditavel,
+} from "@/lib/escale/negocio/campos";
 import type { Pipeline } from "@/lib/kanban/types";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
+import { TIPOS_DE_LINK, chaveDoLink, lerLinks } from "@/lib/leads/links-de-contato";
 import { MOEDA_PADRAO } from "@/lib/money";
 import { camposVisiveis } from "@/lib/schemas/mostrar-quando";
 import type { Lead } from "@/lib/types/leads";
@@ -20,35 +30,100 @@ import { CamposDaFicha, ROTA_DE_GERENCIAR_CAMPOS } from "./CamposDaFicha";
 
 const CHAVE_DO_VALOR = "valor";
 
-export function AbaContato({ lead }: { lead: Lead }) {
+export function AbaContato({ lead, pipeline }: { lead: Lead; pipeline: Pipeline }) {
   const t = useT();
+  if (!lead.contact_id) {
+    return (
+      <>
+        <CamposDaFicha
+          icone={<User size={16} />}
+          titulo={t("Campos de contato")}
+          tipo="contato"
+          campos={[]}
+        />
+        <p className="px-4 text-[13px] text-casca-suave">{t("Este negócio não tem contato.")}</p>
+      </>
+    );
+  }
+  return <ContatoEditavel contactId={lead.contact_id} lead={lead} pipeline={pipeline} />;
+}
+
+function ContatoEditavel({
+  contactId,
+  lead,
+  pipeline,
+}: {
+  contactId: string;
+  lead: Lead;
+  pipeline: Pipeline;
+}) {
+  const t = useT();
+  const administra = usePermission("settings.write");
+  const { data } = useContact(contactId);
+  const { gravar } = useGravarContato(contactId, pipeline.id);
+  const contato = data?.data ?? null;
+  const camposDoContato = useMemo(() => contato?.custom_fields ?? {}, [contato]);
+  const links = lerLinks(camposDoContato);
+
   const campos: CampoEditavel[] = [
     {
-      chave: "nome",
+      chave: CHAVE_NOME,
       rotulo: t("Nome"),
       tipo: "text",
-      valor: dadosDeFiltro(lead)?.contato_nome?.trim() || null,
+      valor: contato?.name ?? dadosDeFiltro(lead)?.contato_nome ?? null,
     },
     {
-      chave: "telefone",
+      chave: CHAVE_TELEFONE,
       rotulo: t("Telefone"),
-      tipo: "text",
-      valor: lead.contact_phone?.trim() || null,
+      tipo: "phone",
+      valor: phoneForDisplay(contato?.phone_number ?? lead.contact_phone) || null,
     },
-    { chave: "email", rotulo: t("Email"), tipo: "text", valor: lead.contact_email?.trim() || null },
-    ...(lead.contact_links ?? []).map((l, i) => ({
-      chave: `link-${i}`,
-      rotulo: l.tipo,
-      tipo: "text" as const,
-      valor: l.href,
+    {
+      chave: CHAVE_EMAIL,
+      rotulo: t("Email"),
+      tipo: "email",
+      valor: contato?.email ?? lead.contact_email ?? null,
+    },
+    ...TIPOS_DE_LINK.map((tipo) => ({
+      chave: chaveDoLink(tipo.id),
+      rotulo: t(tipo.rotulo),
+      tipo: "url" as const,
+      valor: links[tipo.id] ?? null,
     })),
+    ...camposDoCrm(pipeline, camposDoContato),
   ];
+
+  const aoSalvar = useCallback(
+    async (chave: string, valor: unknown) => {
+      // O schema do original não aceita apagar telefone nem e-mail (Q4): explica e não grava.
+      if (chave === CHAVE_EMAIL && valor == null) {
+        throw new Error(t("Para apagar o e-mail, use a ficha do contato."));
+      }
+      if (chave === CHAVE_TELEFONE && valor == null) {
+        throw new Error(t("Para apagar o telefone, use a ficha do contato."));
+      }
+      // O PATCH do contato substitui `custom_fields`: o patch já leva o objeto inteiro.
+      const patch = patchDoContato({ custom_fields: camposDoContato }, chave, valor);
+      if (!patch) return;
+      try {
+        await gravar(patch);
+        toast.success(t("As alterações foram salvas com sucesso."));
+      } catch {
+        // O `useUpdateContact` já mostra o toast do erro da API (showApiError).
+        throw new Error(t("Ocorreu um erro ao salvar o campo"));
+      }
+    },
+    [camposDoContato, gravar, t],
+  );
+
   return (
     <CamposDaFicha
       icone={<User size={16} />}
       titulo={t("Campos de contato")}
       tipo="contato"
       campos={campos}
+      aoSalvar={aoSalvar}
+      gerenciarHref={administra ? ROTA_DE_GERENCIAR_CAMPOS : null}
     />
   );
 }

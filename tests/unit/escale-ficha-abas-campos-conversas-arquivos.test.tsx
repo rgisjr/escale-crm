@@ -11,6 +11,22 @@ vi.mock("@/hooks/kanban/useUpdateLead", () => ({
 const permissao = vi.hoisted(() => ({ pode: true }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => permissao.pode }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const contato = vi.hoisted(() => ({
+  data: {
+    data: {
+      id: "c1",
+      name: "Ana",
+      email: "ana@b.co",
+      phone_number: "+5543998031566",
+      tags: ["vip"],
+      custom_fields: { cargo: "CEO", link_instagram: "https://instagram.com/ana" },
+    },
+  },
+  isLoading: false,
+}));
+vi.mock("@/hooks/contacts/useContact", () => ({ useContact: () => contato }));
+const gravar = vi.hoisted(() => ({ gravar: vi.fn(async () => undefined) }));
+vi.mock("@/hooks/escale/useGravarContato", () => ({ useGravarContato: () => gravar }));
 
 import { AbaArquivos } from "@/components/escale/negocio/abas/AbaArquivos";
 import { AbaConversas } from "@/components/escale/negocio/abas/AbaConversas";
@@ -43,9 +59,6 @@ const PIPELINE = {
     ],
   },
 } as unknown as Pipeline;
-
-const linhaDe = (rotulo: string) =>
-  screen.getByText(rotulo, { selector: "dt" }).parentElement as HTMLElement;
 
 describe("aba Negócio (print 04, C14)", () => {
   beforeEach(() => {
@@ -142,14 +155,54 @@ describe("aba Negócio (print 04, C14)", () => {
   });
 });
 
-describe("abas Contato e Empresa (prints 02 e 03)", () => {
-  it("Contato: nome, telefone e e-mail do contato do negócio", () => {
-    render(<AbaContato lead={LEAD} />);
+describe("aba Contato (print 02, C10)", () => {
+  beforeEach(() => gravar.gravar.mockClear());
+
+  it("Nome, Telefone (para exibição), Email, os links e os campos do CRM, cada um num input", () => {
+    render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
     expect(screen.getByRole("heading", { name: "Campos de contato" })).toBeInTheDocument();
-    expect(within(linhaDe("Telefone")).getByText("+55 43 99803 1566")).toBeInTheDocument();
-    expect(within(linhaDe("Email")).getByText("Clique aqui para adicionar")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nome" })).toHaveValue("Ana");
+    expect(screen.getByRole("textbox", { name: "Telefone" })).toHaveValue("+5543998031566");
+    expect(screen.getByRole("textbox", { name: "Email" })).toHaveValue("ana@b.co");
+    expect(screen.getByRole("textbox", { name: "Instagram" })).toHaveValue(
+      "https://instagram.com/ana",
+    );
+    expect(screen.getByRole("textbox", { name: "Site" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Notas" })).toHaveValue("");
   });
 
+  it("editar o nome grava name; um campo do CRM grava custom_fields INTEIRO; o telefone vai canônico", async () => {
+    render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
+    const nome = screen.getByRole("textbox", { name: "Nome" });
+    await userEvent.clear(nome);
+    await userEvent.type(nome, "Ana Nunes{Enter}");
+    expect(gravar.gravar).toHaveBeenCalledWith({ name: "Ana Nunes" });
+    await userEvent.type(screen.getByRole("textbox", { name: "Notas" }), "VIP{Enter}");
+    expect(gravar.gravar).toHaveBeenLastCalledWith({
+      custom_fields: { cargo: "CEO", link_instagram: "https://instagram.com/ana", notas: "VIP" },
+    });
+    const tel = screen.getByRole("textbox", { name: "Telefone" });
+    await userEvent.clear(tel);
+    await userEvent.type(tel, "(43) 3222-3344{Enter}");
+    expect(gravar.gravar).toHaveBeenLastCalledWith({ phone_number: "+554332223344" });
+  });
+
+  it("apagar o e-mail não grava e explica (Q4)", async () => {
+    render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
+    await userEvent.clear(screen.getByRole("textbox", { name: "Email" }));
+    await userEvent.keyboard("{Enter}");
+    expect(gravar.gravar).not.toHaveBeenCalled();
+    expect(screen.getByText("Para apagar o e-mail, use a ficha do contato.")).toBeInTheDocument();
+  });
+
+  it("negócio sem contato: a moldura só leitura com o aviso", () => {
+    render(<AbaContato lead={{ ...LEAD, contact_id: null } as Lead} pipeline={PIPELINE} />);
+    expect(screen.getByText("Este negócio não tem contato.")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Nome" })).toBeNull();
+  });
+});
+
+describe("aba Empresa (print 03)", () => {
   it("Empresa: os oito campos da Clint, vazios até a 1H vincular a empresa (Q6)", () => {
     render(<AbaEmpresa />);
     expect(screen.getByRole("heading", { name: "Campos de empresa" })).toBeInTheDocument();
