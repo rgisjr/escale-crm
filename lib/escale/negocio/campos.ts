@@ -62,7 +62,10 @@ export function reaisDeTexto(texto: string): number | null {
   const limpo = texto.replace(/[^\d,.-]/g, "");
   if (!limpo) return null;
   // "1.500,50" → "1500.50"; "1500" → "1500"; "1,5" → "1.5".
-  const normalizado = limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : limpo;
+  // Sem vírgula, ponto seguido de exatamente 3 dígitos (em grupos) é milhar: "1.500" → 1500.
+  const temMilhar = !limpo.includes(",") && /^-?\d{1,3}(\.\d{3})+$/.test(limpo);
+  const normalizado =
+    limpo.includes(",") || temMilhar ? limpo.replace(/\./g, "").replace(",", ".") : limpo;
   const n = Number(normalizado);
   return Number.isFinite(n) ? n : null;
 }

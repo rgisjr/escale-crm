@@ -99,6 +99,23 @@ describe("o que vai para o banco", () => {
     expect(textoDeReais(1500.5)).toBe("1.500,50");
   });
 
+  it("moeda: sem vírgula, ponto seguido de 3 dígitos é separador de milhar", () => {
+    expect(reaisDeTexto("1.500")).toBe(1500);
+    expect(reaisDeTexto("12.345")).toBe(12345);
+    expect(reaisDeTexto("1.500.000")).toBe(1500000);
+    expect(reaisDeTexto("R$ 1.500")).toBe(1500);
+    expect(reaisDeTexto("1.500,50")).toBe(1500.5);
+    expect(reaisDeTexto("1.500.000,5")).toBe(1500000.5);
+    // continuam decimais
+    expect(reaisDeTexto("1,5")).toBe(1.5);
+    expect(reaisDeTexto("1500,50")).toBe(1500.5);
+    expect(reaisDeTexto("10.5")).toBe(10.5);
+    expect(reaisDeTexto("10.50")).toBe(10.5);
+    expect(valorParaGravar("currency", "1.500")).toEqual({ ok: true, valor: 1500 });
+    expect(valorParaGravar("currency", "1.500.000")).toEqual({ ok: true, valor: 1500000 });
+    expect(valorParaGravar("currency", "abc")).toEqual({ ok: false, erro: "Digite um valor." });
+  });
+
   it("valorParaGravar por tipo: vazio vira null; número e moeda viram número; data vira ISO", () => {
     expect(valorParaGravar("text", "  Ana ")).toEqual({ ok: true, valor: "Ana" });
     expect(valorParaGravar("text", "   ")).toEqual({ ok: true, valor: null });
