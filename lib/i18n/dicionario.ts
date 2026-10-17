@@ -9524,6 +9524,17 @@ export const DICIONARIO: Traducoes = {
     es: "Otra persona cambió los campos mientras esta pantalla estaba abierta. Recarga la página para ver la versión actual.",
   },
 
+  // ─── FORK ESCALE · configurações da origem (Fase 1F, rota: erros do banco) ───
+  "Só gerente ou administrador muda as configurações da origem.": {
+    es: "Solo un gerente o administrador cambia la configuración del origen.",
+  },
+  "Outra pessoa está salvando ao mesmo tempo. Tente de novo.": {
+    es: "Otra persona está guardando al mismo tiempo. Inténtalo de nuevo.",
+  },
+  "Alguma configuração não é válida. Revise e tente de novo.": {
+    es: "Alguna configuración no es válida. Revísala e inténtalo de nuevo.",
+  },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
