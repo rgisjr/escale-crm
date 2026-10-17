@@ -44,6 +44,12 @@ import { cn } from "@/lib/utils";
  * esconde Excluir sem `DEAL_DELETE`). Mudar origem é o "Levar para outro funil"
  * do original (Q9). Excluir é a mesma ação em lote do card e volta ao quadro.
  */
+/** Item desligado do Radix (div com data-disabled): apagado, sem hover de ativo. */
+const ITEM_DESLIGADO = cn(
+  ITEM_DO_MENU,
+  "data-[disabled]:cursor-not-allowed data-[disabled]:text-casca-meta data-[disabled]:hover:bg-transparent data-[disabled]:hover:text-casca-meta",
+);
+
 const ITEM_VERMELHO = cn(
   ITEM_DO_MENU,
   "text-casca-alerta hover:text-casca-alerta focus-visible:text-casca-alerta data-[highlighted]:text-casca-alerta",
@@ -87,7 +93,7 @@ export function MenuDaFicha({
                 </Link>
               </MenuPrimitive.Item>
             ) : (
-              <MenuPrimitive.Item disabled title={t("Sem contato")} className={ITEM_DO_MENU}>
+              <MenuPrimitive.Item disabled title={t("Sem contato")} className={ITEM_DESLIGADO}>
                 <User size={14} aria-hidden />
                 {t("Visualizar contato")}
               </MenuPrimitive.Item>
@@ -104,7 +110,7 @@ export function MenuDaFicha({
                 {t("Mudar origem")}
               </MenuPrimitive.Item>
             ) : null}
-            <MenuPrimitive.Item disabled title={t("Em breve")} className={ITEM_DO_MENU}>
+            <MenuPrimitive.Item disabled title={t("Em breve")} className={ITEM_DESLIGADO}>
               <StickyNote size={14} aria-hidden />
               {t("Nova nota")}
             </MenuPrimitive.Item>
@@ -128,10 +134,15 @@ export function MenuDaFicha({
         stages={stages}
         contactId={lead.contact_id}
         leads={leads}
+        // O contador "N Negócios" é contado no servidor: refaz a página.
+        onCreated={() => router.refresh()}
       />
       <MoveToOtherPipelineDialog
         open={mudar}
-        onOpenChange={setMudar}
+        onOpenChange={(aberto) => {
+          setMudar(aberto);
+          if (!aberto) router.refresh();
+        }}
         leadId={lead.id}
         pipelineId={pipelineId}
       />

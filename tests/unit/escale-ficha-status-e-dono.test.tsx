@@ -75,7 +75,7 @@ beforeEach(() => {
 describe("status (C4)", () => {
   it("o menu da Clint: Aberto (atual), Ganho e Perdido; Ganho grava o ganho", async () => {
     render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
       "Aberto",
       "Ganho",
@@ -87,7 +87,7 @@ describe("status (C4)", () => {
 
   it("Perdido pede o motivo ao lado e só grava ao escolher", async () => {
     render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Perdido" }));
     expect(grava.perder).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("combobox", { name: "Selecione o motivo da perda" }));
@@ -101,11 +101,11 @@ describe("status (C4)", () => {
   it("perdido: mostra 'Perdido' e o motivo (desligado, Q4); Aberto reabre na primeira etapa aberta", async () => {
     const perdido = { ...ABERTO, status: "lost", lost_reason: "Preço" } as Lead;
     render(<StatusDaFicha lead={perdido} stages={ETAPAS} pipelineId="o1" />);
-    expect(screen.getByRole("button", { name: "Status do negócio" })).toHaveTextContent("Perdido");
+    expect(screen.getByRole("button", { name: /^Status do negócio/ })).toHaveTextContent("Perdido");
     expect(screen.getByRole("combobox", { name: "Selecione o motivo da perda" })).toHaveTextContent(
       "Preço",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Aberto" }));
     expect(grava.mover).toHaveBeenCalledWith({
       leadId: "n1",
@@ -119,7 +119,7 @@ describe("status (C4)", () => {
     render(
       <StatusDaFicha lead={{ ...ABERTO, status: "won" } as Lead} stages={ETAPAS} pipelineId="o1" />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Aberto" }));
     expect(grava.mover).toHaveBeenCalledWith(expect.objectContaining({ stageId: "e2" }));
   });
@@ -127,7 +127,7 @@ describe("status (C4)", () => {
   it("origem sem motivos cadastrados: oferece os canônicos e grava o escolhido", async () => {
     motivosDoFunil.lista = [];
     render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Perdido" }));
     await userEvent.click(screen.getByRole("combobox", { name: "Selecione o motivo da perda" }));
     expect(screen.getByRole("option", { name: "Preço" })).toBeInTheDocument();
@@ -151,7 +151,7 @@ describe("status (C4)", () => {
 
   it("escolher o status atual não grava nada", async () => {
     render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Aberto" }));
     expect(grava.ganhar).not.toHaveBeenCalled();
     expect(grava.perder).not.toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe("status (C4)", () => {
   it("sem permissão: desligado, com o texto da Clint", () => {
     permissao.pode = false;
     render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
-    const gatilho = screen.getByRole("button", { name: "Status do negócio" });
+    const gatilho = screen.getByRole("button", { name: /^Status do negócio/ });
     expect(gatilho).toBeDisabled();
     expect(gatilho).toHaveAttribute(
       "title",

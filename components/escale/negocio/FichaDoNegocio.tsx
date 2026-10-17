@@ -122,17 +122,18 @@ export function FichaDoNegocio({
           <>
             <ContadorDeNegocios total={negociosDoContato} contatoId={ficha.lead.contact_id} />
             <StatusDaFicha
-              key={ficha.lead.id}
+              key={`status-${ficha.lead.id}`}
               lead={ficha.lead}
               stages={ficha.stages}
               pipelineId={origem.id}
             />
-            <DonoDaFicha key={ficha.lead.id} lead={ficha.lead} pipelineId={origem.id} />
+            <DonoDaFicha key={`dono-${ficha.lead.id}`} lead={ficha.lead} pipelineId={origem.id} />
             <MenuDaFicha
               lead={ficha.lead}
               pipelineId={origem.id}
               stages={ficha.stages}
-              leads={ficha.leadsDoRecorte}
+              // O aviso de "já tem negócio aberto" olha o funil inteiro, como o quadro.
+              leads={ficha.leadsDoQuadro}
             />
           </>
         }

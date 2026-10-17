@@ -2,9 +2,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const nav = vi.hoisted(() => ({ push: vi.fn(), busca: "st=open" }));
+const nav = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), busca: "st=open" }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: nav.push, replace: vi.fn() }),
+  useRouter: () => ({ push: nav.push, replace: vi.fn(), refresh: nav.refresh }),
   useSearchParams: () => new URLSearchParams(nav.busca),
 }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
@@ -15,8 +15,24 @@ vi.mock("@/hooks/kanban/useBulkAction", () => ({
   useBulkAction: () => ({ mutate: lote.mutate, isPending: false }),
 }));
 vi.mock("@/components/kanban/NewLeadDialog", () => ({
-  NewLeadDialog: ({ open, contactId }: { open: boolean; contactId?: string | null }) =>
-    open ? <p>novo negócio para {contactId}</p> : null,
+  NewLeadDialog: ({
+    open,
+    contactId,
+    leads,
+    onCreated,
+  }: {
+    open: boolean;
+    contactId?: string | null;
+    leads: unknown[];
+    onCreated?: () => void;
+  }) =>
+    open ? (
+      <div>
+        <p>novo negócio para {contactId}</p>
+        <p>funil com {leads.length} negócios</p>
+        <button onClick={onCreated}>simular criado</button>
+      </div>
+    ) : null,
 }));
 vi.mock("@/components/kanban/MoveToOtherPipelineDialog", () => ({
   MoveToOtherPipelineDialog: ({ open }: { open: boolean }) =>
@@ -40,6 +56,7 @@ const LEAD = {
 
 beforeEach(() => {
   nav.push.mockReset();
+  nav.refresh.mockReset();
   lote.mutate.mockReset();
   permissao.pode = true;
 });
@@ -100,6 +117,22 @@ describe("o ⋮ do cabeçalho (C6, print 09)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Ações do negócio" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Mudar origem" }));
     expect(screen.getByText("levar para outra origem")).toBeInTheDocument();
+  });
+
+  it("Novo negócio recebe o funil inteiro e, ao criar, refaz a página (contador do servidor)", async () => {
+    render(<MenuDaFicha lead={LEAD} pipelineId="o1" stages={[]} leads={[LEAD, LEAD]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Ações do negócio" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Novo negócio" }));
+    expect(screen.getByText("funil com 2 negócios")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "simular criado" }));
+    expect(nav.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("itens desligados ficam apagados e sem hover de ativo", async () => {
+    await abrir();
+    const nota = screen.getByRole("menuitem", { name: "Nova nota" });
+    expect(nota.className).toContain("data-[disabled]:text-casca-meta");
+    expect(nota.className).toContain("data-[disabled]:hover:bg-transparent");
   });
 
   it("Excluir pede confirmação com o texto da Clint e volta ao quadro com os filtros", async () => {

@@ -134,7 +134,7 @@ export function StatusDaFicha({
         <DropdownMenuTrigger asChild disabled={!pode || ocupado}>
           <button
             type="button"
-            aria-label={t("Status do negócio")}
+            aria-label={`${t("Status do negócio")}: ${t(atual.rotulo)}`}
             title={
               !pode
                 ? t("As permissões de usuários não permitem você trocar de status.")
