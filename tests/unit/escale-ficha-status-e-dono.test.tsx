@@ -1,10 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 const permissao = vi.hoisted(() => ({ pode: true }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => permissao.pode }));
+const captura = vi.hoisted(() => ({ onRetomada: (_r: unknown) => {} }));
+const motivosDoFunil = vi.hoisted(() => ({ lista: ["Preço", "Sem retorno"] as string[] }));
 const grava = vi.hoisted(() => ({
   ganhar: vi.fn(),
   perder: vi.fn(),
@@ -17,10 +19,13 @@ vi.mock("@/hooks/kanban/useUpdateLead", () => ({
   useEditLead: () => ({ mutate: grava.editar, isPending: false }),
 }));
 vi.mock("@/hooks/kanban/useMoveCard", () => ({
-  useMoveCard: () => ({ mutate: grava.mover, isPending: false }),
+  useMoveCard: (_funil: string, opcoes: { onRetomada: (r: unknown) => void }) => {
+    captura.onRetomada = opcoes.onRetomada;
+    return { mutate: grava.mover, isPending: false };
+  },
 }));
 vi.mock("@/hooks/kanban/useMotivosDePerdaDoFunil", () => ({
-  useMotivosDePerdaDoFunil: () => ["Preço", "Sem retorno"],
+  useMotivosDePerdaDoFunil: () => motivosDoFunil.lista,
 }));
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
   useAssignableMembers: () => ({
@@ -34,7 +39,9 @@ vi.mock("@/hooks/kanban/useAssignableAgents", () => ({
   useAssignableAgents: () => ({ data: [{ agent_id: "a1", name: "Kaio IA", version_number: 3 }] }),
 }));
 vi.mock("@/components/kanban/RetomarComoNovoNegocioDialog", () => ({
-  RetomarComoNovoNegocioDialog: () => null,
+  RetomarComoNovoNegocioDialog: (p: { leadId: string; stageId: string }) => (
+    <div data-testid="retomada">{`${p.leadId}|${p.stageId}`}</div>
+  ),
 }));
 
 import { DonoDaFicha } from "@/components/escale/negocio/DonoDaFicha";
@@ -62,6 +69,7 @@ const ABERTO = {
 beforeEach(() => {
   for (const f of Object.values(grava)) f.mockReset();
   permissao.pode = true;
+  motivosDoFunil.lista = ["Preço", "Sem retorno"];
 });
 
 describe("status (C4)", () => {
@@ -116,6 +124,47 @@ describe("status (C4)", () => {
     expect(grava.mover).toHaveBeenCalledWith(expect.objectContaining({ stageId: "e2" }));
   });
 
+  it("origem sem motivos cadastrados: oferece os canônicos e grava o escolhido", async () => {
+    motivosDoFunil.lista = [];
+    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Perdido" }));
+    await userEvent.click(screen.getByRole("combobox", { name: "Selecione o motivo da perda" }));
+    expect(screen.getByRole("option", { name: "Preço" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Levado para outro funil" })).toBeNull();
+    await userEvent.click(screen.getByRole("option", { name: "Sem resposta do cliente" }));
+    expect(grava.perder).toHaveBeenCalledWith(
+      { leadId: "n1", lostReason: "no_response" },
+      expect.anything(),
+    );
+  });
+
+  it("perdido com motivo canônico: mostra o rótulo, desligado e com a dica de reabrir", () => {
+    motivosDoFunil.lista = [];
+    const perdido = { ...ABERTO, status: "lost", lost_reason: "moved_to_another_pipeline" } as Lead;
+    render(<StatusDaFicha lead={perdido} stages={ETAPAS} pipelineId="o1" />);
+    const seletor = screen.getByRole("combobox", { name: "Selecione o motivo da perda" });
+    expect(seletor).toHaveTextContent("Levado para outro funil");
+    expect(seletor).toBeDisabled();
+    expect(seletor).toHaveAttribute("title", "Para trocar o motivo, reabra o negócio.");
+  });
+
+  it("escolher o status atual não grava nada", async () => {
+    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Status do negócio" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Aberto" }));
+    expect(grava.ganhar).not.toHaveBeenCalled();
+    expect(grava.perder).not.toHaveBeenCalled();
+    expect(grava.mover).not.toHaveBeenCalled();
+  });
+
+  it("a recusa de retomada do motor abre a janela 'Retomar como novo negócio'", () => {
+    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    expect(screen.queryByTestId("retomada")).toBeNull();
+    act(() => captura.onRetomada({ leadId: "n1", stageId: "e2" }));
+    expect(screen.getByTestId("retomada")).toHaveTextContent("n1|e2");
+  });
+
   it("sem permissão: desligado, com o texto da Clint", () => {
     permissao.pode = false;
     render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
@@ -140,6 +189,12 @@ describe("dono (C5, print 10)", () => {
     expect(screen.getByText("Alterar usuário", { selector: "h5" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("option", { name: "Henrique" }));
     expect(grava.editar).toHaveBeenCalledWith({ leadId: "n1", patch: { owner_user_id: "u2" } });
+  });
+
+  it("os grupos 'Pessoas' e 'Agentes de IA'", async () => {
+    await abrir();
+    expect(screen.getByText("Pessoas")).toBeInTheDocument();
+    expect(screen.getByText("Agentes de IA")).toBeInTheDocument();
   });
 
   it("agente de IA e 'Sem responsável' (Q5)", async () => {

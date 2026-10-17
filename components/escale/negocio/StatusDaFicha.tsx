@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import * as MenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { toast } from "sonner";
 
 import { CAIXA_DO_MENU, ITEM_DO_MENU } from "@/components/escale/quadro/estilos-do-menu";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
@@ -11,6 +12,8 @@ import { useT } from "@/hooks/i18n/useT";
 import { useMotivosDePerdaDoFunil } from "@/hooks/kanban/useMotivosDePerdaDoFunil";
 import { useMoveCard, type RetomadaPendente } from "@/hooks/kanban/useMoveCard";
 import { useLoseLead, useWinLead } from "@/hooks/kanban/useUpdateLead";
+import { opcoesDeMotivoDePerda } from "@/lib/leads/motivos-de-perda-do-funil";
+import { rotuloDoMotivoDePerda } from "@/lib/schemas/leads";
 import { etapaParaReabrir, type StatusDoNegocio } from "@/lib/escale/negocio/regras";
 import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
@@ -100,22 +103,30 @@ export function StatusDaFicha({
       return;
     }
     const etapa = etapaParaReabrir(stages, lead.status);
-    if (etapa)
-      mover.mutate({
-        leadId: lead.id,
-        stageId: etapa,
-        positionInStage: 0,
-        expectedUpdatedAt: lead.updated_at,
-      });
+    if (!etapa) {
+      toast.error(t("Não há etapa aberta para reabrir este negócio."));
+      return;
+    }
+    mover.mutate({
+      leadId: lead.id,
+      stageId: etapa,
+      positionInStage: 0,
+      expectedUpdatedAt: lead.updated_at,
+    });
   };
 
   const perdido = lead.status === "lost";
-  const opcoesDoMotivo = [
-    ...new Set([...(lead.lost_reason ? [lead.lost_reason] : []), ...motivos]),
-  ].map((m) => ({
-    valor: m,
-    rotulo: m,
+  // Como a janela "Perder negócio" do original: o funil manda na lista; sem
+  // motivos cadastrados valem os canônicos (rótulo traduzido).
+  const opcoesBase = opcoesDeMotivoDePerda(motivos).map((o) => ({
+    valor: o.valor,
+    rotulo: o.doFunil ? o.valor : t(rotuloDoMotivoDePerda(o.valor)),
   }));
+  const atualDoMotivo = lead.lost_reason;
+  const opcoesDoMotivo =
+    atualDoMotivo && !opcoesBase.some((o) => o.valor === atualDoMotivo)
+      ? [{ valor: atualDoMotivo, rotulo: t(rotuloDoMotivoDePerda(atualDoMotivo)) }, ...opcoesBase]
+      : opcoesBase;
 
   return (
     <div className="flex items-center gap-3">
@@ -125,7 +136,11 @@ export function StatusDaFicha({
             type="button"
             aria-label={t("Status do negócio")}
             title={
-              pode ? undefined : t("As permissões de usuários não permitem você trocar de status.")
+              !pode
+                ? t("As permissões de usuários não permitem você trocar de status.")
+                : ocupado
+                  ? t("Salvando…")
+                  : undefined
             }
             onMouseEnter={() => setPairando(true)}
             onMouseLeave={() => setPairando(false)}
@@ -176,7 +191,13 @@ export function StatusDaFicha({
           vazioSoNoGatilho
           aria-label={t("Selecione o motivo da perda")}
           desabilitado={perdido || perder.isPending}
-          dica={perdido ? t("Para trocar o motivo, reabra o negócio.") : undefined}
+          dica={
+            perdido
+              ? t("Para trocar o motivo, reabra o negócio.")
+              : perder.isPending
+                ? t("Salvando…")
+                : undefined
+          }
           aoMudar={(motivo) => {
             if (motivo)
               perder.mutate(

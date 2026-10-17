@@ -46,7 +46,12 @@ export interface FichaDoNegocioProps {
   negociosDoContato: number;
 }
 
-export function FichaDoNegocio({ negocioId, origem, grupo, negociosDoContato }: FichaDoNegocioProps) {
+export function FichaDoNegocio({
+  negocioId,
+  origem,
+  grupo,
+  negociosDoContato,
+}: FichaDoNegocioProps) {
   const t = useT();
   const router = useRouter();
   const busca = useSearchParams();
@@ -116,9 +121,19 @@ export function FichaDoNegocio({ negocioId, origem, grupo, negociosDoContato }: 
         direita={
           <>
             <ContadorDeNegocios total={negociosDoContato} contatoId={ficha.lead.contact_id} />
-            <StatusDaFicha lead={ficha.lead} stages={ficha.stages} pipelineId={origem.id} />
-            <DonoDaFicha lead={ficha.lead} pipelineId={origem.id} />
-            <MenuDaFicha lead={ficha.lead} pipelineId={origem.id} stages={ficha.stages} leads={ficha.leadsDoRecorte} />
+            <StatusDaFicha
+              key={ficha.lead.id}
+              lead={ficha.lead}
+              stages={ficha.stages}
+              pipelineId={origem.id}
+            />
+            <DonoDaFicha key={ficha.lead.id} lead={ficha.lead} pipelineId={origem.id} />
+            <MenuDaFicha
+              lead={ficha.lead}
+              pipelineId={origem.id}
+              stages={ficha.stages}
+              leads={ficha.leadsDoRecorte}
+            />
           </>
         }
       />

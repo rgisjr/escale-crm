@@ -70,11 +70,13 @@ export function DonoDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
         <button
           type="button"
           aria-label={t("Alterar usuário")}
-          disabled={!pode}
+          disabled={!pode || editar.isPending}
           title={
-            pode
-              ? (dono.name ?? t("Sem responsável"))
-              : t("As permissões de usuários não permitem você trocar de dono")
+            !pode
+              ? t("As permissões de usuários não permitem você trocar de dono")
+              : editar.isPending
+                ? t("Salvando…")
+                : (dono.name ?? t("Sem responsável"))
           }
           className="rounded-full disabled:pointer-events-auto disabled:cursor-not-allowed"
         >
@@ -94,6 +96,8 @@ export function DonoDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
           aoMudar={mudar}
           vazio={t("Selecione um usuário")}
           aria-label={t("Selecione um usuário")}
+          desabilitado={editar.isPending}
+          dica={editar.isPending ? t("Salvando…") : undefined}
         />
       </PainelSuspenso>
     </Popover>
