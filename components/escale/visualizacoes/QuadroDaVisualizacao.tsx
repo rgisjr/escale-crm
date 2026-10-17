@@ -1,5 +1,5 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { BarraDoQuadro } from "@/components/escale/filtros/BarraDoQuadro";
@@ -24,6 +24,7 @@ import { settingsDaVisualizacao } from "@/lib/escale/visualizacoes/regras";
 
 import { LoteDaVisualizacao } from "./LoteDaVisualizacao";
 import { QuadroCombinado } from "./QuadroCombinado";
+import { rotaDoNegocio } from "@/lib/escale/negocio/regras";
 
 /**
  * A PÁGINA DE UMA VISUALIZAÇÃO (fork Escale, Fases 1C e 1D; visual da Clint na
@@ -45,6 +46,7 @@ export function QuadroDaVisualizacao({
 }) {
   const t = useT();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { filtros, filtroSalvoId, mudar } = useFiltrosDoQuadro();
   const orgAtiva = useActiveOrg();
 
@@ -163,6 +165,8 @@ export function QuadroDaVisualizacao({
           selecionados={selecionados}
           onSelecao={setSelecionados}
           leadInicial={searchParams.get("lead")}
+          // Fase 1G (N3, Q13): o card da Visualização também abre a ficha do negócio.
+          aoAbrirNegocio={(id) => router.push(rotaDoNegocio(id, searchParams.toString()))}
           ordemDosCards={ordemDosCards}
         />
       )}

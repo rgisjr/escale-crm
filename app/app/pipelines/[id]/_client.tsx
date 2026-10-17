@@ -56,6 +56,8 @@ import { MenuNegocioMais } from "@/components/escale/quadro/MenuNegocioMais";
 import { JanelaDeImportarNegocios } from "@/components/escale/quadro/JanelaDeImportarNegocios";
 // FORK ESCALE · Fase 1F: a engrenagem abre as configurações da origem (F20).
 import { useEngrenagemDaOrigem } from "@/lib/escale/configuracoes/abrir";
+// FORK ESCALE · Fase 1G: o card da casca abre a ficha do negócio.
+import { rotaDoNegocio } from "@/lib/escale/negocio/regras";
 
 export function PipelinePageClient({
   pipelineId,
@@ -434,6 +436,8 @@ export function PipelinePageClient({
                 }
               : undefined
           }
+          // FORK ESCALE · Fase 1G (N3): na casca, o card abre a ficha (com os filtros do quadro na URL).
+          aoAbrirNegocio={cascaNova ? (id) => router.push(rotaDoNegocio(id, searchParams.toString())) : undefined}
         />
       )}
       <BulkActionBar

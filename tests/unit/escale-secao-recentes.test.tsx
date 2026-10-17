@@ -76,7 +76,7 @@ describe("<SecaoRecentes>", () => {
     expect(screen.getAllByRole("link")).toHaveLength(5);
     expect(screen.getAllByRole("link")[0]).toHaveAttribute(
       "href",
-      `/app/pipelines/${ORIGEM}?lead=${id(1)}`,
+      `/app/negocios/${id(1)}`,
     );
     fireEvent.click(screen.getByRole("button", { name: "Ver mais" }));
     expect(screen.getAllByRole("link")).toHaveLength(7);
