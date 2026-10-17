@@ -9745,6 +9745,12 @@ export const DICIONARIO: Traducoes = {
   "Preencha os campos abaixo para mover este negócio.": {
     es: "Rellene los campos siguientes para tramitar este asunto.",
   },
+  "Para criar o negócio em {stage}, preencha os campos abaixo.": {
+    es: "Para crear el negocio en {stage}, rellena los campos siguientes.",
+  },
+  "Preencha os campos abaixo para criar o negócio.": {
+    es: "Rellena los campos siguientes para crear el negocio.",
+  },
   "Preencha os campos abaixo para alterar o status deste negócio.": {
     es: "Rellene los campos siguientes para cambiar el estado de este asunto.",
   },

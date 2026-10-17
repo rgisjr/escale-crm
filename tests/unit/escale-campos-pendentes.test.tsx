@@ -73,6 +73,33 @@ describe("JanelaDeCamposPendentes", () => {
       screen.getByText("Preencha os campos abaixo para alterar o status deste negócio."),
     ).toBeTruthy();
   });
+
+  it("aceita número e moeda no formato brasileiro e recusa data que não existe", () => {
+    const fn = vi.fn();
+    render(
+      <JanelaDeCamposPendentes
+        aberta
+        modo="mover"
+        recusa={{
+          args: ARGS,
+          faltando: [
+            { chave: "valor", rotulo: "Valor", tipo: "currency" },
+            { chave: "prazo", rotulo: "Prazo", tipo: "date" },
+          ],
+        }}
+        onConfirmar={fn}
+        onFechar={vi.fn()}
+      />,
+    );
+    const salvar = screen.getByRole("button", { name: "Salvar e mover" }) as HTMLButtonElement;
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "R$ 1.250,50" } });
+    fireEvent.change(screen.getByLabelText("Prazo"), { target: { value: "31/02/2026" } });
+    expect(salvar.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Prazo"), { target: { value: "28/02/2026" } });
+    expect(salvar.disabled).toBe(false);
+    fireEvent.click(salvar);
+    expect(fn).toHaveBeenCalledWith({ customFields: { valor: 1250.5, prazo: "2026-02-28" } });
+  });
 });
 
 const PIPE = "44444444-4444-4444-8444-444444444444";

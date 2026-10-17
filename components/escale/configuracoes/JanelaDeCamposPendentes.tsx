@@ -16,17 +16,23 @@ import type { RecusaDeCampos } from "@/hooks/kanban/useMoveCard";
 
 export type ModoDosPendentes = "mover" | "status" | "criar";
 
-/** dd/mm/aaaa → aaaa-mm-dd (como o dossiê grava data); inválido = null. */
-function dataIso(texto: string): string | null {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto.trim());
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+/** "1.250,00", "R$ 1250" e "12,5" viram número; o que não for número vira NaN. */
+function numeroBr(texto: string): number {
+  const limpo = texto.replace(/R\$|\s/g, "");
+  return Number(limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : limpo);
 }
 
-/**
- * CAMPOS OBRIGATÓRIOS PENDENTES (Fase 1F; `RequiredFieldsModal` da Clint).
- * Não grava nada: devolve os valores para quem abriu reenviar a MESMA ação
- * (mover com `custom_fields`, ou gravar e então mudar o status).
- */
+/** dd/mm/aaaa → aaaa-mm-dd (como o dossiê grava data); inexistente (31/02) = null. */
+function dataIso(texto: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto.trim());
+  if (!m) return null;
+  const [dia, mes, ano] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const data = new Date(Date.UTC(ano, mes - 1, dia));
+  const existe =
+    data.getUTCFullYear() === ano && data.getUTCMonth() === mes - 1 && data.getUTCDate() === dia;
+  return existe ? `${m[3]}-${m[2]}-${m[1]}` : null;
+}
+
 type Valores = { customFields: Record<string, unknown>; wonReason?: string };
 
 type PropsDaJanela = {
@@ -39,6 +45,11 @@ type PropsDaJanela = {
   onConfirmar: (valores: Valores) => void;
 };
 
+/**
+ * CAMPOS OBRIGATÓRIOS PENDENTES (Fase 1F; `RequiredFieldsModal` da Clint).
+ * Não grava nada: devolve os valores para quem abriu reenviar a MESMA ação
+ * (mover com `custom_fields`, ou gravar e então mudar o status).
+ */
 export function JanelaDeCamposPendentes(props: PropsDaJanela) {
   const { recusa, aberta, onFechar } = props;
   // O corpo guarda o que a pessoa digitou. Ele nasce de novo a cada abertura (o
@@ -67,8 +78,7 @@ function CorpoDosPendentes({
     if (tipo === "boolean") return true;
     const v = (valores[chave] ?? "").trim();
     if (!v) return false;
-    if (tipo === "number" || tipo === "currency")
-      return Number.isFinite(Number(v.replace(",", ".")));
+    if (tipo === "number" || tipo === "currency") return Number.isFinite(numeroBr(v));
     if (tipo === "date") return dataIso(v) !== null;
     return true;
   };
@@ -82,8 +92,7 @@ function CorpoDosPendentes({
       const v = (valores[c.chave] ?? "").trim();
       if (c.chave === "won_reason") wonReason = v;
       else if (c.tipo === "boolean") customFields[c.chave] = valores[c.chave] === "true";
-      else if (c.tipo === "number" || c.tipo === "currency")
-        customFields[c.chave] = Number(v.replace(",", "."));
+      else if (c.tipo === "number" || c.tipo === "currency") customFields[c.chave] = numeroBr(v);
       else if (c.tipo === "date") customFields[c.chave] = dataIso(v);
       else customFields[c.chave] = v;
     }
@@ -101,7 +110,7 @@ function CorpoDosPendentes({
             )
           : t("Preencha os campos abaixo para criar o negócio.")
         : etapa
-          ? t("Para mover para {stage}, preencha os campos abaixo.").replace("{stage}", etapa)
+          ? t("Para mover para {stage}, preencha os campos abaixo.").replace("{stage}", () => etapa)
           : t("Preencha os campos abaixo para mover este negócio.");
   const botao =
     modo === "status"
