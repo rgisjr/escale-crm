@@ -2,7 +2,9 @@
 import { useEffect } from "react";
 
 import { useBoard } from "@/hooks/kanban/useBoard";
-import { useMoveCard, type RecusaDeCampos, type RetomadaPendente } from "@/hooks/kanban/useMoveCard";
+import type { RecusaDeCampos, RetomadaPendente } from "@/hooks/kanban/useMoveCard";
+// Fase 1F: o arrasto confere o "ao sair" da etapa antes do move, como no funil.
+import { useMoverComCamposDaEtapa } from "@/hooks/escale/useMoverComCamposDaEtapa";
 
 export type Mover = (args: RecusaDeCampos["args"]) => void;
 
@@ -29,10 +31,10 @@ export function MotorDaOrigem({
   onRetomada: (pipelineId: string, retomada: RetomadaPendente) => void;
 }) {
   const { pulses } = useBoard(pipelineId);
-  const { mutate } = useMoveCard(pipelineId, {
+  const { mutate } = useMoverComCamposDaEtapa(pipelineId, {
     onCamposFaltando: (recusa) => onCamposFaltando(pipelineId, recusa),
     onRetomada: (retomada) => onRetomada(pipelineId, retomada),
-  });
+  }, { conferir: true });
 
   useEffect(() => {
     onMover(pipelineId, mutate);

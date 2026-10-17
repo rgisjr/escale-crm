@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { CamposObrigatoriosDialog } from "@/components/kanban/CamposObrigatoriosDialog";
+// Fase 1F: o modal de campos pendentes é o da Clint.
+import { JanelaDeCamposPendentes } from "@/components/escale/configuracoes/JanelaDeCamposPendentes";
 import { LeadDossier } from "@/components/kanban/LeadDossier";
 import { RetomarComoNovoNegocioDialog } from "@/components/kanban/RetomarComoNovoNegocioDialog";
 import { useT } from "@/hooks/i18n/useT";
@@ -253,13 +254,16 @@ export function QuadroCombinado({
         />
       )}
 
-      <CamposObrigatoriosDialog
-        open={recusa !== null}
-        onOpenChange={(aberto) => {
-          if (!aberto) setRecusa(null);
-        }}
+      <JanelaDeCamposPendentes
+        aberta={recusa !== null}
+        onFechar={() => setRecusa(null)}
         recusa={recusa?.recusa ?? null}
-        isPending={false}
+        modo="mover"
+        etapa={
+          recusa
+            ? quadroDe.get(recusa.pipelineId)?.stages.find((s) => s.id === recusa.recusa.args.stageId)?.name
+            : undefined
+        }
         onConfirmar={({ customFields, wonReason }) => {
           if (!recusa) return;
           const { pipelineId, recusa: pendente } = recusa;
