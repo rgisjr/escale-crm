@@ -329,13 +329,15 @@ function PipelineEditor({
   const [retomaComoNovo, setRetomaComoNovo] = useState(
     modoDeReabertura(pipeline.settings) === "novo_negocio",
   );
-  const [fields, setFields] = useState<CustomFieldDef[]>(camposDoFunil(pipeline.settings));
+  // FORK ESCALE · Fase 1F-a: `settings` à parte (a cerca do vocabulário lê o que fica entre `>` e `<`).
+  const settingsDoFunil = pipeline.settings;
+  const [fields, setFields] = useState<CustomFieldDef[]>(camposDoFunil(settingsDoFunil));
   // FORK ESCALE · Fase 1F-a: os campos são do CRM. `carregados` são as definições
   // que vieram do banco (ou do último salvar). As chaves que estão aqui e não
   // estão mais na lista ao salvar são apagadas do catálogo (de toda origem);
   // campo criado depois que a tela abriu não está aqui, então não é apagado. O
   // servidor também as recebe, para não desfazer o que outro administrador mudou.
-  const [carregados, setCarregados] = useState<CustomFieldDef[]>(() => camposDoFunil(pipeline.settings));
+  const [carregados, setCarregados] = useState<CustomFieldDef[]>(() => camposDoFunil(settingsDoFunil));
   const [isPending, startTransition] = useTransition();
 
   function handleSave() {
