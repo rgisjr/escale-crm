@@ -9557,6 +9557,51 @@ export const DICIONARIO: Traducoes = {
     es: "Alguna configuración no es válida. Revísala e inténtalo de nuevo.",
   },
 
+  // ─── FORK ESCALE · Fase 1F (Task 7): Configurações Gerais ───
+  "Configure aqui a sua origem de dados.": {
+    es: "Configura aquí tu origen de datos.",
+  },
+  "Origem de dados, são fontes de geração de contatos, elas podem ser manuais (cadastro individual e/ou importação) ou automáticas (formulários e/ou integrações com ferramentas como Eduzz/Hotmart).": {
+    es: "Los orígenes de datos son fuentes de generación de contactos. Pueden ser manuales (registro individual y/o importación) o automáticos (formularios y/o integraciones con herramientas como Eduzz/Hotmart).",
+  },
+  "Nome é um campo obrigatório!": { es: "¡Nombre es un campo obligatorio!" },
+  "Adicione um grupo": { es: "Agrega un grupo" },
+  "Novo grupo": { es: "Nuevo grupo" },
+  "Visualização de negócios": { es: "Visualización de negocios" },
+  "Usuários visualizam todos os negócios": {
+    es: "Los usuarios ven todos los negocios",
+  },
+  "Usuários visualizam apenas seus negócios": {
+    es: "Los usuarios ven solo sus negocios",
+  },
+  "Usuários visualizam seus negócios e sem dono": {
+    es: "Los usuarios ven sus negocios y los que no tienen dueño",
+  },
+  "Em breve: quem vê os negócios de cada origem chega na fase 1J. Até lá, vale a regra da organização.": {
+    es: "Próximamente: quién ve los negocios de cada origen llega en la fase 1J. Hasta entonces, vale la regla de la organización.",
+  },
+  "Moeda da origem": { es: "Moneda del origen" },
+  "Selecione o tipo de moeda que você quer apenas para essa origem.": {
+    es: "Selecciona el tipo de moneda que quieres solo para este origen.",
+  },
+  "Real (BRL)": { es: "Real (BRL)" },
+  "Dólar Americano (USD)": { es: "Dólar estadounidense (USD)" },
+  "Euro (EUR)": { es: "Euro (EUR)" },
+  "Peso Mexicano (MXN)": { es: "Peso mexicano (MXN)" },
+  "Kwanza (AOA)": { es: "Kwanza (AOA)" },
+  "Configure uma tag para ser aplicada a todos os contatos que entram nesta origem.": {
+    es: "Configura una etiqueta para aplicarla a todos los contactos que entran en este origen.",
+  },
+  "Nova tag": { es: "Nueva etiqueta" },
+  "Adicione uma tag": { es: "Agrega una etiqueta" },
+  "Tirar a tag": { es: "Quitar la etiqueta" },
+  "A tag «cliente» é do sistema. Escolha outra.": {
+    es: "La etiqueta «cliente» es del sistema. Elige otra.",
+  },
+  "Uma origem tem no máximo 10 tags padrão.": {
+    es: "Un origen tiene como máximo 10 etiquetas predeterminadas.",
+  },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },

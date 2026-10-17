@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 
 import { AbaDeEtapas } from "./AbaDeEtapas";
 import { EmBreve } from "./EmBreve";
+import { SecaoGerais } from "./SecaoGerais";
 
 export type SubabaDaOrigem =
   | "gerais"
@@ -162,7 +163,7 @@ export function JanelaDaOrigem({
     if (atual.emBreve) return <EmBreve titulo={atual.rotulo} texto={atual.emBreve} />;
     switch (atual.id) {
       case "gerais":
-        return <div>{/* SECAO_GERAIS */}</div>;
+        return <SecaoGerais {...props} origens={origens} onOrigens={onOrigens} />;
       case "motivos":
         return <div>{/* SECAO_MOTIVOS */}</div>;
       case "campos":
