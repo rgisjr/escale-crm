@@ -19,7 +19,7 @@ import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
 import { useContact } from "@/hooks/contacts/useContact";
 import { useContactTagVocabulary } from "@/hooks/contacts/useContactTagVocabulary";
-import { useGravarContato } from "@/hooks/escale/useGravarContato";
+import { ContatoNaoCarregado, useGravarContato } from "@/hooks/escale/useGravarContato";
 import { useT } from "@/hooks/i18n/useT";
 import { normalizarTag } from "@/lib/contacts/tag-normalizada";
 import { MAX_TAGS_DO_CONTATO } from "@/lib/escale/negocio/campos";
@@ -33,6 +33,11 @@ import { Plus, Search, X } from "@/lib/ui/icons-da-casca";
  * O painel lista as tags do vocabulário que faltam e oferece "Criar «texto»"
  * quando não há correspondência. O × do chip pede confirmação. As tags são do
  * CONTATO (`contacts.tags`, `text[]`), gravadas inteiras pelo PATCH do contato.
+ *
+ * Revisão final do PR A: a lista nova é montada sobre o contato MAIS RECENTE do
+ * cache, na hora de enviar (duas tags seguidas não se desfazem); antes de o
+ * contato carregar nada se edita; o erro da API já vira toast no hook. Quem
+ * monta põe `key` com o id do negócio.
  */
 // Referência estável: o `?? []` novo a cada render desfaria o `useMemo` da lista.
 const SEM_TAGS: string[] = [];
@@ -41,9 +46,10 @@ export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
   const t = useT();
   const org = useActiveOrg();
   const contactId = lead.contact_id ?? "";
-  const { data } = useContact(contactId);
+  const { data, isError } = useContact(contactId);
   const { gravar } = useGravarContato(contactId, pipelineId);
   const vocabulario = useContactTagVocabulary(org?.orgId ?? null).data ?? SEM_TAGS;
+  const carregado = Boolean(data?.data);
   const tags = data?.data?.tags ?? lead.contact_tags ?? SEM_TAGS;
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
@@ -56,12 +62,14 @@ export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
   );
   const podeCriar = termo !== "" && !vocabulario.includes(termo) && !tags.includes(termo);
 
-  async function gravarTags(novas: string[]) {
+  /** `montar` recebe as tags do contato mais recente e devolve a lista nova. */
+  async function gravarTags(montar: (atuais: string[]) => string[]) {
     try {
-      await gravar({ tags: novas });
-      toast.success(t("As alterações foram salvas com sucesso."));
-    } catch {
-      toast.error(t("Ocorreu um erro ao salvar o campo"));
+      const enviou = await gravar((atual) => ({ tags: montar(atual.tags ?? []) }));
+      if (enviou) toast.success(t("As alterações foram salvas com sucesso."));
+    } catch (err) {
+      // O erro da API já vira toast no `useUpdateContact` (showApiError).
+      if (err instanceof ContatoNaoCarregado) toast.error(t("Não consegui carregar o contato."));
     }
   }
   async function adicionar(tag: string) {
@@ -69,17 +77,26 @@ export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
     setBusca("");
     if (tags.length >= MAX_TAGS_DO_CONTATO)
       return toast.error(t("O contato já tem o máximo de 20 tags."));
-    await gravarTags([...tags, tag]);
+    await gravarTags((atuais) =>
+      atuais.includes(tag) || atuais.length >= MAX_TAGS_DO_CONTATO ? atuais : [...atuais, tag],
+    );
   }
 
   const semContato = !lead.contact_id;
+  const desligado = semContato || !carregado;
+  const motivo = semContato
+    ? t("Este negócio não tem contato.")
+    : isError
+      ? t("Não consegui carregar o contato.")
+      : t("Carregando…");
   const gatilho = tags.length ? (
     <BotaoDaCasca
       variante="icone"
       tamanho="sm"
       aria-label={t("Adicionar tags")}
-      title={t("Adicionar tags")}
-      disabled={semContato}
+      title={desligado ? motivo : t("Adicionar tags")}
+      disabled={desligado}
+      className="disabled:pointer-events-auto disabled:cursor-not-allowed"
     >
       <Plus aria-hidden />
     </BotaoDaCasca>
@@ -87,8 +104,8 @@ export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
     <BotaoDaCasca
       variante="texto"
       tamanho="sm"
-      disabled={semContato}
-      title={semContato ? t("Este negócio não tem contato.") : undefined}
+      disabled={desligado}
+      title={desligado ? motivo : undefined}
       className="disabled:pointer-events-auto disabled:cursor-not-allowed"
     >
       {t("+ Adicionar tags")}
@@ -104,8 +121,10 @@ export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
             <button
               type="button"
               aria-label={`${t("Remover a tag")} ${tag}`}
+              disabled={desligado}
+              title={desligado ? motivo : undefined}
               onClick={() => setRemovendo(tag)}
-              className="-ml-1 grid size-4 place-items-center rounded-full text-casca-suave hover:text-casca-texto"
+              className="-ml-1 grid size-4 place-items-center rounded-full text-casca-suave hover:text-casca-texto disabled:pointer-events-auto disabled:cursor-not-allowed"
             >
               <X size={12} aria-hidden />
             </button>
@@ -185,7 +204,7 @@ export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
               onClick={() => {
                 const tag = removendo;
                 setRemovendo(null);
-                if (tag) void gravarTags(tags.filter((x) => x !== tag));
+                if (tag) void gravarTags((atuais) => atuais.filter((x) => x !== tag));
               }}
             >
               {t("Remover")}

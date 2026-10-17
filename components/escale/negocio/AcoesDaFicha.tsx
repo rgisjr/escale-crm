@@ -108,7 +108,8 @@ export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: str
       >
         <Bell aria-hidden />
       </BotaoDaCasca>
-      <TagsDaFicha lead={lead} pipelineId={pipelineId} />
+      {/* A `key` zera a busca e o pedido de remover ao trocar de negócio. */}
+      <TagsDaFicha key={`tags-${lead.id}`} lead={lead} pipelineId={pipelineId} />
     </div>
   );
 }

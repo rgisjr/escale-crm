@@ -25,7 +25,8 @@ export function CabecalhoDaFicha({
       <div className="flex min-w-0 items-center gap-3">
         <FotoDaFicha lead={lead} />
         {/* Print 01: o lápis (12px) fica a ~9px do fim do nome; o botão de 24px já traz 6px de respiro. */}
-        <NomeDaFicha lead={lead} pipelineId={pipelineId} />
+        {/* A `key` zera o rascunho ao trocar de negócio (como StatusDaFicha e DonoDaFicha). */}
+        <NomeDaFicha key={`nome-${lead.id}`} lead={lead} pipelineId={pipelineId} />
       </div>
       {direita ? <div className="flex shrink-0 items-center gap-3">{direita}</div> : null}
     </div>

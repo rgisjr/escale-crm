@@ -2,6 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as ModuloDoGravar from "@/hooks/escale/useGravarContato";
+
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({ useActiveOrg: () => ({ orgId: "org1" }) }));
@@ -9,8 +11,27 @@ const contato = vi.hoisted(() => ({
   data: { data: { id: "c1", name: "Ana", tags: ["vip"], custom_fields: {} } },
 }));
 vi.mock("@/hooks/contacts/useContact", () => ({ useContact: () => contato }));
-const gravar = vi.hoisted(() => ({ gravar: vi.fn(async () => undefined) }));
-vi.mock("@/hooks/escale/useGravarContato", () => ({ useGravarContato: () => gravar }));
+// O `gravar` de verdade monta o patch sobre o contato MAIS RECENTE do cache (`base`).
+const gravar = vi.hoisted(() => {
+  const enviado = vi.fn();
+  const base = { atual: null as Record<string, unknown> | null };
+  return {
+    enviado,
+    base,
+    gravar: vi.fn(async (entrada: unknown) => {
+      const patch =
+        typeof entrada === "function"
+          ? (entrada as (c: unknown) => unknown)(base.atual ?? contato.data.data)
+          : entrada;
+      if (patch) enviado(patch);
+      return Boolean(patch);
+    }),
+  };
+});
+vi.mock("@/hooks/escale/useGravarContato", async (original) => ({
+  ...(await original<typeof ModuloDoGravar>()),
+  useGravarContato: () => gravar,
+}));
 const editar = vi.hoisted(() => ({ mutateAsync: vi.fn(async () => ({})) }));
 vi.mock("@/hooks/kanban/useUpdateLead", () => ({
   useEditLead: () => ({ mutateAsync: editar.mutateAsync }),
@@ -19,7 +40,12 @@ vi.mock("@/hooks/contacts/useContactTagVocabulary", () => ({
   useContactTagVocabulary: () => ({ data: ["vip", "quente", "frio"] }),
 }));
 
+import { toast } from "sonner";
+
+import { AcoesDaFicha } from "@/components/escale/negocio/AcoesDaFicha";
+import { CabecalhoDaFicha } from "@/components/escale/negocio/CabecalhoDaFicha";
 import { NomeDaFicha } from "@/components/escale/negocio/NomeDaFicha";
+import { ContatoNaoCarregado } from "@/hooks/escale/useGravarContato";
 import { TagsDaFicha } from "@/components/escale/negocio/TagsDaFicha";
 import type { Lead } from "@/lib/types/leads";
 
@@ -34,7 +60,10 @@ const LEAD = {
 
 beforeEach(() => {
   gravar.gravar.mockClear();
+  gravar.enviado.mockClear();
+  gravar.base.atual = null;
   editar.mutateAsync.mockClear();
+  vi.mocked(toast.error).mockClear();
 });
 
 describe("o nome (N5)", () => {
@@ -49,12 +78,12 @@ describe("o nome (N5)", () => {
     expect(input).toHaveAttribute("maxlength", "80");
     await userEvent.clear(input);
     await userEvent.type(input, "Ana Nunes{Enter}");
-    expect(gravar.gravar).toHaveBeenCalledWith({ name: "Ana Nunes" });
+    expect(gravar.enviado).toHaveBeenCalledWith({ name: "Ana Nunes" });
     expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Editar nome" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Nome do contato" }), "X{Escape}");
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(gravar.gravar).toHaveBeenCalledTimes(1);
+    expect(gravar.enviado).toHaveBeenCalledTimes(1);
   });
 
   it("vazio ou igual só cancela; ✓ e ✕ têm os nomes da Clint", async () => {
@@ -62,12 +91,12 @@ describe("o nome (N5)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Editar nome" }));
     expect(screen.getByRole("button", { name: "Salvar nome" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Salvar nome" }));
-    expect(gravar.gravar).not.toHaveBeenCalled();
+    expect(gravar.enviado).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Editar nome" }));
     await userEvent.clear(screen.getByRole("textbox", { name: "Nome do contato" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(gravar.gravar).not.toHaveBeenCalled();
+    expect(gravar.enviado).not.toHaveBeenCalled();
   });
 
   it("negócio sem contato grava o título do negócio", async () => {
@@ -106,7 +135,7 @@ describe("as tags (N6)", () => {
     const painel = await screen.findByRole("listbox", { name: "Adicione uma tag" });
     expect(within(painel).queryByRole("option", { name: "vip" })).toBeNull();
     await userEvent.click(within(painel).getByRole("option", { name: "quente" }));
-    expect(gravar.gravar).toHaveBeenCalledWith({ tags: ["vip", "quente"] });
+    expect(gravar.enviado).toHaveBeenCalledWith({ tags: ["vip", "quente"] });
   });
 
   it("texto sem correspondência oferece 'Criar «texto»', normalizado", async () => {
@@ -117,7 +146,7 @@ describe("as tags (N6)", () => {
       "  Morno ",
     );
     await userEvent.click(screen.getByRole("option", { name: "Criar «morno»" }));
-    expect(gravar.gravar).toHaveBeenCalledWith({ tags: ["vip", "morno"] });
+    expect(gravar.enviado).toHaveBeenCalledWith({ tags: ["vip", "morno"] });
   });
 
   it("o × do chip pede confirmação e grava sem a tag", async () => {
@@ -125,7 +154,7 @@ describe("as tags (N6)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remover a tag vip" }));
     expect(await screen.findByText("Deseja remover esta tag do contato?")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Remover" }));
-    expect(gravar.gravar).toHaveBeenCalledWith({ tags: [] });
+    expect(gravar.enviado).toHaveBeenCalledWith({ tags: [] });
   });
 
   it("negócio sem contato: o botão fica desligado", () => {
@@ -141,5 +170,95 @@ describe("as tags (N6)", () => {
     const botao = screen.getByRole("button", { name: "+ Adicionar tags" });
     expect(botao).toBeDisabled();
     expect(botao).toHaveAttribute("title", "Este negócio não tem contato.");
+  });
+});
+
+describe("revisão final do PR A", () => {
+  const OUTRO = {
+    ...LEAD,
+    id: "n2",
+    contact_id: "c2",
+    title: "Bruno",
+    contact_tags: ["vip"],
+    filtros_escale: { contato_nome: "Bruno" },
+  } as unknown as Lead;
+
+  // I6: o estado do nome e das tags é do negócio aberto, não sobrevive à troca.
+  it("trocar de negócio fecha a edição do nome e o pedido de remover tag", async () => {
+    const { rerender } = render(<CabecalhoDaFicha lead={LEAD} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Editar nome" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Nome do contato" }), "X");
+    rerender(<CabecalhoDaFicha lead={OUTRO} pipelineId="o1" />);
+    expect(screen.queryByRole("textbox", { name: "Nome do contato" })).toBeNull();
+    expect(screen.getByRole("heading", { level: 1, name: "Bruno" })).toBeInTheDocument();
+
+    const acoes = render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Remover a tag vip" }));
+    expect(await screen.findByText("Deseja remover esta tag do contato?")).toBeInTheDocument();
+    acoes.rerender(<AcoesDaFicha lead={OUTRO} pipelineId="o1" />);
+    expect(screen.queryByText("Deseja remover esta tag do contato?")).toBeNull();
+  });
+
+  it("o erro da API ao salvar o nome vira um toast só (o do hook)", async () => {
+    gravar.gravar.mockRejectedValueOnce(new Error("500"));
+    render(<NomeDaFicha lead={LEAD} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Editar nome" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Nome do contato" }), "X{Enter}");
+    expect(gravar.gravar).toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    // A edição continua aberta para tentar de novo.
+    expect(screen.getByRole("textbox", { name: "Nome do contato" })).toBeInTheDocument();
+  });
+
+  it("negócio sem contato: título de 1 caractere não é enviado (o schema pede 2)", async () => {
+    render(
+      <NomeDaFicha
+        lead={{ ...LEAD, contact_id: null, filtros_escale: {} } as unknown as Lead}
+        pipelineId="o1"
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Editar nome" }));
+    const input = screen.getByRole("textbox", { name: "Nome do contato" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "A{Enter}");
+    expect(editar.mutateAsync).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("O título precisa ter pelo menos 2 caracteres.");
+  });
+
+  it("as tags são montadas sobre o contato mais recente, não sobre as do render", async () => {
+    gravar.base.atual = { id: "c1", tags: ["vip", "quente"] };
+    render(<TagsDaFicha lead={LEAD} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar tags" }));
+    const painel = await screen.findByRole("listbox", { name: "Adicione uma tag" });
+    await userEvent.click(within(painel).getByRole("option", { name: "frio" }));
+    expect(gravar.enviado).toHaveBeenCalledWith({ tags: ["vip", "quente", "frio"] });
+  });
+
+  it("erro ao gravar a tag: sem toast duplicado; contato não carregado avisa", async () => {
+    gravar.gravar.mockRejectedValueOnce(new Error("500"));
+    render(<TagsDaFicha lead={LEAD} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar tags" }));
+    await userEvent.click(
+      within(await screen.findByRole("listbox", { name: "Adicione uma tag" })).getByRole(
+        "option",
+        { name: "quente" },
+      ),
+    );
+    expect(toast.error).not.toHaveBeenCalled();
+    gravar.gravar.mockRejectedValueOnce(new ContatoNaoCarregado());
+    await userEvent.click(screen.getByRole("button", { name: "Remover a tag vip" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Remover" }));
+    expect(toast.error).toHaveBeenCalledWith("Não consegui carregar o contato.");
+  });
+
+  it("enquanto o contato não carrega, as tags não se editam", () => {
+    const salvo = contato.data;
+    (contato as { data: unknown }).data = undefined;
+    render(<TagsDaFicha lead={LEAD} pipelineId="o1" />);
+    contato.data = salvo;
+    const botao = screen.getByRole("button", { name: "Adicionar tags" });
+    expect(botao).toBeDisabled();
+    expect(botao).toHaveAttribute("title", "Carregando…");
+    expect(screen.getByRole("button", { name: "Remover a tag vip" })).toBeDisabled();
   });
 });

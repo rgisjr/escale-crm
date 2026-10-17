@@ -17,8 +17,12 @@ import { Check, Pencil, X } from "@/lib/ui/icons-da-casca";
  * caracteres, "Nome do contato"; ✓ "Salvar nome" e ✕; Enter salva, Esc
  * cancela; vazio ou igual só cancela. Grava o NOME DO CONTATO (é ele que o
  * card e o cabeçalho mostram); em negócio sem contato, o título do negócio.
+ * O erro da API já vira toast no hook (showApiError); aqui não se repete.
+ * Quem monta põe `key` com o id do negócio: o rascunho não passa para outro.
  */
 const MAX_NOME = 80;
+// O schema do negócio pede título com pelo menos 2 caracteres (o do contato, 1).
+const MIN_TITULO_DO_NEGOCIO = 2;
 
 export function NomeDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: string }) {
   const t = useT();
@@ -39,6 +43,10 @@ export function NomeDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
   async function salvar() {
     const nome = texto.trim();
     if (!nome || nome === atual) return cancelar();
+    if (!lead.contact_id && nome.length < MIN_TITULO_DO_NEGOCIO) {
+      toast.error(t("O título precisa ter pelo menos 2 caracteres."));
+      return;
+    }
     setSalvando(true);
     try {
       if (lead.contact_id) await gravar({ name: nome });
@@ -46,7 +54,7 @@ export function NomeDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
       toast.success(t("Nome atualizado."));
       setEditando(false);
     } catch {
-      toast.error(t("Não foi possível atualizar o nome. Tente novamente."));
+      // O toast do erro já saiu no hook (showApiError); a edição fica aberta para tentar de novo.
     } finally {
       setSalvando(false);
     }
