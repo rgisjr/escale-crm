@@ -20,17 +20,22 @@ export function CabecalhoDaFicha({ lead, direita }: { lead: Lead; direita?: Reac
     <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-casca-borda px-6">
       <div className="flex min-w-0 items-center gap-3">
         <FotoDaFicha lead={lead} />
-        <h1 className="truncate text-[15px] font-normal text-casca-texto">{tituloDoCard(lead)}</h1>
-        <BotaoDaCasca
-          variante="icone"
-          tamanho="sm"
-          disabled
-          title={t("Em breve")}
-          aria-label={t("Editar nome")}
-          className="disabled:pointer-events-auto disabled:cursor-not-allowed"
-        >
-          <Pencil aria-hidden />
-        </BotaoDaCasca>
+        {/* Print 01: o lápis (12px) fica a ~9px do fim do nome; o botão de 24px já traz 6px de respiro. */}
+        <div className="flex min-w-0 items-center gap-[3px]">
+          <h1 className="truncate text-[15px] font-normal text-casca-texto">
+            {tituloDoCard(lead)}
+          </h1>
+          <BotaoDaCasca
+            variante="icone"
+            tamanho="sm"
+            disabled
+            title={t("Em breve")}
+            aria-label={t("Editar nome")}
+            className="disabled:pointer-events-auto disabled:cursor-not-allowed [&_svg]:size-3!"
+          >
+            <Pencil aria-hidden />
+          </BotaoDaCasca>
+        </div>
       </div>
       {direita ? <div className="flex shrink-0 items-center gap-3">{direita}</div> : null}
     </div>

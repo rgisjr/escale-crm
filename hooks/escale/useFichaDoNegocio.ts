@@ -45,7 +45,8 @@ export function useFichaDoNegocio(negocioId: string, origemId: string, busca: Bu
     [data?.pipeline.settings],
   );
   return useMemo((): Ficha => {
-    if (error) return { estado: "erro" };
+    // Um refetch que falha com o quadro em cache não apaga a ficha.
+    if (error && !data) return { estado: "erro" };
     if (isLoading || !data) return { estado: "carregando" };
     const lead = data.leads.find((l) => l.id === negocioId);
     if (!lead) return { estado: "sumiu" };

@@ -99,6 +99,31 @@ describe("useFichaDoNegocio", () => {
     const pronto = renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current;
     expect(pronto.estado === "pronto" && pronto.lead.id).toBe("n1");
   });
+
+  it("refetch que falha com o quadro em cache mantém a ficha pronta", () => {
+    quadro.estado = { data: QUADRO, isLoading: false, error: new Error("rede") };
+    const ficha = renderHook(() => useFichaDoNegocio("n1", "o1", new URLSearchParams())).result
+      .current;
+    expect(ficha.estado).toBe("pronto");
+  });
+
+  it("corta pela moeda da origem antes da moeda da organização", () => {
+    const busca = new URLSearchParams({ f: JSON.stringify({ valor: { min: 1 } }) });
+    const emDolar = { ...LEAD, currency: "USD", value_cents: 500 };
+    const recorte = (settings: unknown) => {
+      quadro.estado = {
+        data: { ...QUADRO, pipeline: { ...QUADRO.pipeline, settings }, leads: [emDolar] },
+        isLoading: false,
+        error: null,
+      };
+      const f = renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current;
+      return f.estado === "pronto" ? f.leadsDoRecorte.length : -1;
+    };
+    // Organização em BRL: sem moeda na origem, o negócio em USD fica fora do filtro de valor.
+    expect(recorte({})).toBe(0);
+    // Com a origem em USD, a moeda dela vale antes da da organização.
+    expect(recorte({ escale_moeda: "USD" })).toBe(1);
+  });
 });
 
 describe("<FichaDoNegocio>", () => {
@@ -144,6 +169,15 @@ describe("<FichaDoNegocio>", () => {
     expect(screen.getByText("conteúdo atividades")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Histórico" }));
     expect(nav.replace).toHaveBeenCalledWith("/app/negocios/n1?foo=1&aba=historico", {
+      scroll: false,
+    });
+  });
+
+  it("trocar de aba mantém o pe da URL", async () => {
+    nav.busca = "foo=1&pe=abc";
+    render(<FichaDoNegocio {...PROPS} />);
+    await userEvent.click(screen.getByRole("tab", { name: "Contato" }));
+    expect(nav.replace).toHaveBeenCalledWith("/app/negocios/n1?foo=1&aba=contato&pe=abc", {
       scroll: false,
     });
   });
