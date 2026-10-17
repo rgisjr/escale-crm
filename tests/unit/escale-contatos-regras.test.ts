@@ -57,6 +57,9 @@ describe("telefone", () => {
     expect(telefoneE164("55", "(64) 99944-6816")).toBe("+5564999446816");
     expect(telefoneE164("55", "123")).toBeNull();
     expect(telefoneE164("55", "")).toBeNull();
+    expect(telefoneE164("55", "+55 64 99944-6816")).toBe("+5564999446816");
+    expect(telefoneE164("55", "064 99944-6816")).toBe("+5564999446816");
+    expect(telefoneE164("55", "99944681")).toBeNull();
     expect(telefoneE164("1", "2025550123")).toBe("+12025550123");
   });
 });

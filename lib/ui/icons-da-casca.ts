@@ -59,4 +59,4 @@ export { CircleMinus, CircleX, CloudUpload, Columns2, Flag, Upload } from "lucid
 export { Shuffle, CircleSlash, ReceiptText, CirclePlus, TriangleAlert, ArrowRight, ClipboardList } from "lucide-react";
 
 // Fase 2A (lista de contatos)
-export { AtSign, GripVertical } from "lucide-react";
+export { AtSign, ChevronsUpDown, GripVertical } from "lucide-react";

@@ -86,7 +86,7 @@ export function JanelaNovoContato({
     try {
       if (emailLimpo) {
         const achados = await apiClient.get<{ data: Array<{ email: string | null }> }>(
-          `/api/v1/contacts?search=${encodeURIComponent(emailLimpo)}&limit=5`,
+          `/api/v1/contacts?search=${encodeURIComponent(emailLimpo)}&limit=100`,
         );
         if (achados.data.some((c) => c.email?.toLowerCase() === emailLimpo.toLowerCase())) {
           setErro(t("Email já cadastrado"));
@@ -118,7 +118,7 @@ export function JanelaNovoContato({
           const negocio = await apiClient.post<{ data: { id: string } }>("/api/v1/leads", {
             pipeline_id: destino.origemId,
             stage_id: destino.etapaId,
-            title: nomeLimpo,
+            title: nomeLimpo.length >= 2 ? nomeLimpo : t("Novo negócio"),
             contact_id: contatoId,
             source: "manual",
           });

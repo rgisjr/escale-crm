@@ -65,8 +65,11 @@ export function formatarTelefone(e164: string | null | undefined): string {
 
 /** País + número digitado → E.164 (o que o motor aceita), ou null se não fecha 8–15 dígitos. */
 export function telefoneE164(ddi: string, numero: string): string | null {
-  const digitos = numero.replace(/\D/g, "");
+  let digitos = numero.replace(/\D/g, "").replace(/^0+/, "");
+  // Quem digita o código do país dentro do número (+55 64 …) não pode duplicá-lo.
+  if (ddi === "55" && digitos.startsWith("55") && digitos.length >= 12) digitos = digitos.slice(2);
   if (!digitos) return null;
+  if (ddi === "55" && digitos.length !== 10 && digitos.length !== 11) return null;
   const completo = `${ddi}${digitos}`;
   if (completo.length < 8 || completo.length > 15) return null;
   if (digitos.length < 8) return null;
