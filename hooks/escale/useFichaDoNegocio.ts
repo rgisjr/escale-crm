@@ -29,6 +29,8 @@ export interface FichaCarregada {
   stages: Stage[];
   /** Os negócios do quadro depois dos filtros da URL (o próximo negócio anda neles). */
   leadsDoRecorte: Lead[];
+  /** Todos os negócios do funil, sem filtro (a checagem de duplicidade do "Novo negócio"). */
+  leadsDoQuadro: Lead[];
   ordem: ((a: Lead, b: Lead) => number) | undefined;
   atualizar: () => void;
 }
@@ -61,6 +63,7 @@ export function useFichaDoNegocio(negocioId: string, origemId: string, busca: Bu
       pipeline: data.pipeline,
       stages: data.stages,
       leadsDoRecorte: recorte.leads,
+      leadsDoQuadro: data.leads,
       ordem: comparadorDaOrdem(filtros.ordem, campos),
       atualizar: () => void refetch(),
     };

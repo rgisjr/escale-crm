@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,6 +31,18 @@ vi.mock("@/components/escale/negocio/ConteudoDaAba", () => ({
 
 vi.mock("@/components/escale/negocio/ProximoNegocio", () => ({
   ProximoNegocio: () => <span data-testid="proximo" />,
+}));
+vi.mock("@/components/escale/negocio/MenuDaFicha", () => ({
+  MenuDaFicha: () => <span data-testid="menu" />,
+}));
+vi.mock("@/components/escale/negocio/StatusDaFicha", () => ({
+  StatusDaFicha: () => <span data-testid="status" />,
+}));
+vi.mock("@/components/escale/negocio/DonoDaFicha", () => ({
+  DonoDaFicha: () => <span data-testid="dono" />,
+}));
+vi.mock("@/components/escale/negocio/AcoesDaFicha", () => ({
+  AcoesDaFicha: () => <span data-testid="acoes" />,
 }));
 
 import { FichaDoNegocio } from "@/components/escale/negocio/FichaDoNegocio";
@@ -123,10 +137,17 @@ describe("useFichaDoNegocio", () => {
       const f = renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current;
       return f.estado === "pronto" ? f.leadsDoRecorte.length : -1;
     };
+    const doQuadro = () => {
+      const f = renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current;
+      return f.estado === "pronto" ? f.leadsDoQuadro.length : -1;
+    };
     // Organização em BRL: sem moeda na origem, o negócio em USD fica fora do filtro de valor.
     expect(recorte({})).toBe(0);
     // Com a origem em USD, a moeda dela vale antes da da organização.
     expect(recorte({ escale_moeda: "USD" })).toBe(1);
+    // O funil inteiro (duplicidade do Novo negócio) não passa pelos filtros.
+    recorte({});
+    expect(doQuadro()).toBe(1);
   });
 });
 
@@ -154,6 +175,10 @@ describe("<FichaDoNegocio>", () => {
       "title",
       "Em breve",
     );
+    expect(screen.getByTestId("menu")).toBeInTheDocument();
+    expect(screen.getByTestId("status")).toBeInTheDocument();
+    expect(screen.getByTestId("dono")).toBeInTheDocument();
+    expect(screen.getByTestId("acoes")).toBeInTheDocument();
   });
 
   it("as sete abas da Clint, Atividades por padrão, e trocar de aba vai na URL", async () => {
@@ -225,5 +250,16 @@ describe("<FichaDoNegocio>", () => {
     quadro.estado = { data: undefined, isLoading: false, error: new Error("x") };
     render(<FichaDoNegocio {...PROPS} />);
     expect(screen.getByText("Não consegui carregar este negócio.")).toBeInTheDocument();
+  });
+});
+
+describe("C9: nada da ficha cobre o botão flutuante", () => {
+  it("a ficha não tem peça fixa nem cortina", () => {
+    const fonte = readFileSync(
+      join(__dirname, "..", "..", "components/escale/negocio/FichaDoNegocio.tsx"),
+      "utf8",
+    );
+    expect(fonte).not.toMatch(/fixed/);
+    expect(fonte).not.toMatch(/Sheet|Dialog/);
   });
 });

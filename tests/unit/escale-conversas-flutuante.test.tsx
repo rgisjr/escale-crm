@@ -86,4 +86,10 @@ describe("<ConversasFlutuante> (FAB da Clint)", () => {
     const comPeca = renderizar(80).container.firstElementChild as HTMLElement;
     expect(comPeca.style.bottom).toBe("116px");
   });
+
+  it("Fase 1G (C9): aparece por cima da ficha do negócio, que é página e não tem cortina", () => {
+    caminho = "/app/negocios/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1";
+    renderizar();
+    expect(screen.getByRole("button", { name: "Conversas recentes" })).toBeInTheDocument();
+  });
 });

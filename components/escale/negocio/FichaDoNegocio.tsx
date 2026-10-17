@@ -18,9 +18,14 @@ import { tituloDoCard } from "@/lib/escale/quadro/aparencia";
 import { recenteDoLead } from "@/lib/escale/recentes/regras";
 
 import { AbasDaFicha } from "./AbasDaFicha";
+import { AcoesDaFicha } from "./AcoesDaFicha";
 import { CabecalhoDaFicha } from "./CabecalhoDaFicha";
 import { ConteudoDaAba } from "./ConteudoDaAba";
+import { ContadorDeNegocios } from "./ContadorDeNegocios";
+import { DonoDaFicha } from "./DonoDaFicha";
+import { MenuDaFicha } from "./MenuDaFicha";
 import { ProximoNegocio } from "./ProximoNegocio";
+import { StatusDaFicha } from "./StatusDaFicha";
 import { TopoDaFicha } from "./TopoDaFicha";
 
 /**
@@ -41,7 +46,12 @@ export interface FichaDoNegocioProps {
   negociosDoContato: number;
 }
 
-export function FichaDoNegocio({ negocioId, origem, grupo }: FichaDoNegocioProps) {
+export function FichaDoNegocio({
+  negocioId,
+  origem,
+  grupo,
+  negociosDoContato,
+}: FichaDoNegocioProps) {
   const t = useT();
   const router = useRouter();
   const busca = useSearchParams();
@@ -105,7 +115,31 @@ export function FichaDoNegocio({ negocioId, origem, grupo }: FichaDoNegocioProps
           />
         }
       />
-      <CabecalhoDaFicha lead={ficha.lead} />
+      <CabecalhoDaFicha
+        lead={ficha.lead}
+        // C7, C4, C5 e C6, na ordem da Clint (01-017 e print 01).
+        direita={
+          <>
+            <ContadorDeNegocios total={negociosDoContato} contatoId={ficha.lead.contact_id} />
+            <StatusDaFicha
+              key={`status-${ficha.lead.id}`}
+              lead={ficha.lead}
+              stages={ficha.stages}
+              pipelineId={origem.id}
+            />
+            <DonoDaFicha key={`dono-${ficha.lead.id}`} lead={ficha.lead} pipelineId={origem.id} />
+            <MenuDaFicha
+              lead={ficha.lead}
+              pipelineId={origem.id}
+              stages={ficha.stages}
+              // O aviso de "já tem negócio aberto" olha o funil inteiro, como o quadro.
+              leads={ficha.leadsDoQuadro}
+            />
+          </>
+        }
+      />
+      {/* C3: as ações rápidas e as tags. */}
+      <AcoesDaFicha lead={ficha.lead} />
       <AbasDaFicha
         valor={aba}
         // FORK ESCALE · Fase 1G: trocar de aba só muda a URL (sem ir ao servidor).
