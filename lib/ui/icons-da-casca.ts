@@ -63,3 +63,25 @@ export { AtSign, ChevronsUpDown, GripVertical } from "lucide-react";
 
 // Fase 1G (ficha do negócio): nota, mudar origem, campos de negócio, modo espião e o vazio de Conversas.
 export { StickyNote, ArrowRightLeft, Target, Glasses, MessagesSquare } from "lucide-react";
+
+// Fase 1H (ficha do negócio, abas): spinner e check do salvar, nota, arquivos, conversas e histórico.
+export {
+  Loader2,
+  CircleCheck,
+  NotebookPen,
+  File,
+  FileImage,
+  FileSpreadsheet,
+  FileAudio,
+  FileVideo,
+  FileArchive,
+  Paperclip,
+  Zap,
+  CalendarDays,
+  Bot,
+  Merge,
+  Send,
+  MousePointerClick,
+  Link2,
+  ExternalLink,
+} from "lucide-react";
