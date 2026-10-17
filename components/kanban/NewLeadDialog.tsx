@@ -39,6 +39,8 @@ import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { Contact } from "@/lib/types/contacts";
 import { EcoDoValor } from "./EcoDoValor";
 import { SeletorDeContato } from "./SeletorDeContato";
+// FORK ESCALE · Fase 1F: a moeda da origem (o banco já faz o negócio nascer nela, 9007).
+import { useMoedaDaOrigem } from "@/hooks/escale/useMoedaDaOrigem";
 
 interface FormShape {
   title: string;
@@ -95,7 +97,9 @@ export function NewLeadDialog({
   const t = useT();
   const org = useActiveOrg();
   // Negócio NOVO nasce na moeda da organização (createLeadHandler).
-  const moedaDoValor = org?.currency ?? MOEDA_PADRAO;
+  // FORK ESCALE · Fase 1F: ou na da origem, se ela tiver uma.
+  const moedaDaOrigem = useMoedaDaOrigem(pipelineId);
+  const moedaDoValor = moedaDaOrigem ?? org?.currency ?? MOEDA_PADRAO;
   const create = useCreateLead(pipelineId);
   const initialStage = useMemo(() => defaultStageId(stages), [stages]);
   // Quem abre o diálogo já sabendo o contato (Inbox) não escolhe de novo.

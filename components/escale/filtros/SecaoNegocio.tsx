@@ -6,6 +6,7 @@ import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import type { FiltrosDoQuadro } from "@/lib/escale/filtros/tipos";
+import { moedaDaOrigem } from "@/lib/escale/configuracoes/tipos";
 import { categoriaDoMotivo } from "@/lib/leads/motivos-de-perda-do-funil";
 import { MOEDA_PADRAO, simboloDaMoeda } from "@/lib/money";
 import { ROTULO_DO_MOTIVO_CANONICO } from "@/lib/schemas/leads";
@@ -36,7 +37,8 @@ export function SecaoNegocio({
 }) {
   const t = useT();
   const org = useActiveOrg();
-  const moeda = simboloDaMoeda(org?.currency ?? MOEDA_PADRAO);
+  // Fase 1F: no funil, o símbolo é o da origem; na Visualização, `settings` não traz moeda e fica o da organização.
+  const moeda = simboloDaMoeda(moedaDaOrigem(settings) ?? org?.currency ?? MOEDA_PADRAO);
 
   // As opções vêm do que ESTÁ no quadro (a regra do `FilterBar` do original).
   const motivos = useMemo(

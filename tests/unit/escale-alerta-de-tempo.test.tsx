@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -61,5 +64,17 @@ describe("PrazoDoCard (B16)", () => {
     expect(screen.getByText("4d").closest("[data-prazo]")).toBeNull();
     render(<PrazoDoCard lead={lead(E1)} horasNaEtapa={9} tempo="7h" />);
     expect(screen.getByText("7h")).toBeInTheDocument();
+  });
+});
+
+describe("o card da casca usa o prazo", () => {
+  const fonte = () => readFileSync(join(__dirname, "..", "..", "components/escale/quadro/PecasDoCard.tsx"), "utf8");
+
+  it("RodapeDoCard troca o relógio pelo PrazoDoCard", () => {
+    expect(fonte()).toContain("<PrazoDoCard lead={lead} horasNaEtapa={card.hoursInStage} tempo={idade} />");
+  });
+
+  it("a pílula fica no lugar da idade: some com 'Idade do negócio' desligada (F21)", () => {
+    expect(fonte()).toMatch(/\{itens\.idade && idade \? \(\s*\/\/ Fase 1F[^\n]*\n\s*<PrazoDoCard /);
   });
 });

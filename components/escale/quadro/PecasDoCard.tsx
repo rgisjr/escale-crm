@@ -2,6 +2,8 @@
 import Link from "next/link";
 import type { MouseEvent } from "react";
 
+// Fase 1F: o tempo na etapa vira a pílula do alerta quando a origem tem regra.
+import { PrazoDoCard } from "@/components/escale/configuracoes/PilulaDoPrazo";
 import { AbrirConversaDoLead, temAlvoParaAbrir } from "@/components/kanban/AbrirConversaDoLead";
 import { useCorDaEtiqueta } from "@/components/tags/CoresDasEtiquetas";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,7 +28,6 @@ import { InstagramLogo, MessengerLogo, WhatsappLogo } from "@/lib/ui/icons";
 import {
   CheckCheck,
   CheckCircle2,
-  Clock,
   Mail,
   MessageCircle,
   Phone,
@@ -333,10 +334,8 @@ export function RodapeDoCard({
           </span>
         )}
         {itens.idade && idade ? (
-          <span title={t("Tempo na etapa")} className="flex items-center gap-1">
-            <Clock size={12} aria-hidden />
-            {idade}
-          </span>
+          // Fase 1F (B16, F21): com regra de alerta na origem do card, o tempo vira a pílula.
+          <PrazoDoCard lead={lead} horasNaEtapa={card.hoursInStage} tempo={idade} />
         ) : null}
       </span>
     </div>

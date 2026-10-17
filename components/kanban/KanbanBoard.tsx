@@ -6,7 +6,11 @@ import { useT } from "@/hooks/i18n/useT";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { chaveDoQuadro, useBoard } from "@/hooks/kanban/useBoard";
-import { useMoveCard, type RecusaDeCampos, type RetomadaPendente } from "@/hooks/kanban/useMoveCard";
+import type { RecusaDeCampos, RetomadaPendente } from "@/hooks/kanban/useMoveCard";
+// FORK ESCALE · Fase 1F: o arrasto confere o "ao sair" da etapa (só na casca) antes do move.
+import { useMoverComCamposDaEtapa } from "@/hooks/escale/useMoverComCamposDaEtapa";
+// FORK ESCALE · Fase 1F: na casca, o modal de campos pendentes é o da Clint.
+import { JanelaDeCamposPendentes } from "@/components/escale/configuracoes/JanelaDeCamposPendentes";
 import { useRenameStage } from "@/hooks/kanban/useRenameStage";
 import { CamposObrigatoriosDialog } from "./CamposObrigatoriosDialog";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
@@ -150,10 +154,10 @@ export function KanbanBoard({
   // esta opção só troca o destino do erro.
   const [recusaDeCampos, setRecusaDeCampos] = useState<RecusaDeCampos | null>(null);
   const [retomada, setRetomada] = useState<RetomadaPendente | null>(null);
-  const moveCard = useMoveCard(pipelineId, {
+  const moveCard = useMoverComCamposDaEtapa(pipelineId, {
     onCamposFaltando: setRecusaDeCampos,
     onRetomada: setRetomada,
-  });
+  }, { conferir: aparencia === "casca" });
   const { data: members } = useAssignableMembers(true);
   const ownerNames = useMemo(
     () => new Map((members ?? []).map((m) => [m.user_id, m.full_name])),
@@ -456,24 +460,46 @@ export function KanbanBoard({
         />
       )}
 
-      <CamposObrigatoriosDialog
-        open={recusaDeCampos !== null}
-        onOpenChange={(aberto) => {
-          if (!aberto) setRecusaDeCampos(null);
-        }}
-        recusa={recusaDeCampos}
-        isPending={moveCard.isPending}
-        onConfirmar={({ customFields, wonReason }) => {
-          if (!recusaDeCampos) return;
-          const { args } = recusaDeCampos;
-          setRecusaDeCampos(null);
-          moveCard.mutate({
-            ...args,
-            customFields,
-            ...(wonReason !== undefined ? { wonReason } : {}),
-          });
-        }}
-      />
+      {/* FORK ESCALE · Fase 1F: na casca, o modal da Clint; na lateral, o de sempre. */}
+      {aparencia === "casca" ? (
+        <JanelaDeCamposPendentes
+          aberta={recusaDeCampos !== null}
+          onFechar={() => setRecusaDeCampos(null)}
+          recusa={recusaDeCampos}
+          modo="mover"
+          etapa={data?.stages.find((s) => s.id === recusaDeCampos?.args.stageId)?.name}
+          ocupado={moveCard.isPending}
+          onConfirmar={({ customFields, wonReason }) => {
+            if (!recusaDeCampos) return;
+            const { args } = recusaDeCampos;
+            setRecusaDeCampos(null);
+            moveCard.mutate({
+              ...args,
+              customFields,
+              ...(wonReason !== undefined ? { wonReason } : {}),
+            });
+          }}
+        />
+      ) : (
+        <CamposObrigatoriosDialog
+          open={recusaDeCampos !== null}
+          onOpenChange={(aberto) => {
+            if (!aberto) setRecusaDeCampos(null);
+          }}
+          recusa={recusaDeCampos}
+          isPending={moveCard.isPending}
+          onConfirmar={({ customFields, wonReason }) => {
+            if (!recusaDeCampos) return;
+            const { args } = recusaDeCampos;
+            setRecusaDeCampos(null);
+            moveCard.mutate({
+              ...args,
+              customFields,
+              ...(wonReason !== undefined ? { wonReason } : {}),
+            });
+          }}
+        />
+      )}
       {retomada && (
         <RetomarComoNovoNegocioDialog
           open

@@ -47,6 +47,8 @@ import { useFiltrosDoQuadro } from "@/hooks/escale/useFiltrosDoQuadro";
 import { recortarQuadro } from "@/lib/escale/filtros/aplicar";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
+// FORK ESCALE · Fase 1F: o filtro de valor compara na moeda da origem.
+import { moedaDaOrigem } from "@/lib/escale/configuracoes/tipos";
 // FORK ESCALE · Casca V4: o cabeçalho da Clint na casca nova (o quadro troca coluna e card pela prop `aparencia`).
 import { CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
 // FORK ESCALE · Fase 1E: o menu "Negócio +" e a janela "Importar negócios" (casca nova).
@@ -129,7 +131,11 @@ export function PipelinePageClient({
   const recorte = useMemo(
     () =>
       cascaNova && data
-        ? recortarQuadro(data, filtrosEscale.filtros, { moeda: orgAtiva?.currency ?? null, campos: camposDoQuadro })
+        ? recortarQuadro(data, filtrosEscale.filtros, {
+            // FORK ESCALE · Fase 1F: o filtro de valor usa a moeda da origem.
+            moeda: moedaDaOrigem(data.pipeline.settings) ?? orgAtiva?.currency ?? null,
+            campos: camposDoQuadro,
+          })
         : null,
     [cascaNova, data, filtrosEscale.filtros, orgAtiva?.currency, camposDoQuadro],
   );

@@ -153,7 +153,7 @@ export function CardDaCasca({
               onPointerDown={parar}
               className="absolute top-1 right-10 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
             >
-              <KanbanCardActions lead={lead} pipelineId={pipelineId} />
+              <KanbanCardActions lead={lead} pipelineId={pipelineId} casca />
             </div>
           </div>
 

@@ -32,14 +32,18 @@ import { usePermission } from "@/hooks/auth/AuthProvider";
 import { LoseLeadDialog } from "./LoseLeadDialog";
 import { MoveToOtherPipelineDialog } from "./MoveToOtherPipelineDialog";
 import { EditLeadDialog } from "./EditLeadDialog";
+// FORK ESCALE · Fase 1F: ganhar, perder e levar para outro funil conferem o "ao sair" da etapa (só na casca).
+import { usePortaoAoSair } from "@/hooks/escale/usePortaoAoSair";
 import type { Lead } from "@/lib/types/leads";
 
 interface KanbanCardActionsProps {
   lead: Lead;
   pipelineId: string;
+  /** FORK ESCALE · Fase 1F: o card da casca confere o "ao sair" antes de encerrar. */
+  casca?: boolean;
 }
 
-export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) {
+export function KanbanCardActions({ lead, pipelineId, casca }: KanbanCardActionsProps) {
   const t = useT();
   const [loseOpen, setLoseOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -47,6 +51,8 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const winMutation = useWinLead(pipelineId);
   const editMutation = useEditLead(pipelineId);
+  // FORK ESCALE · Fase 1F: o portão do "ao sair" (ver usePortaoAoSair).
+  const portao = usePortaoAoSair(pipelineId, lead, { ativo: casca === true });
   // Excluir um card é a mesma ação da barra de seleção, com um id só: mesma
   // rota, mesmo gate de papel, mesmo evento e auditoria.
   const bulk = useBulkAction(pipelineId);
@@ -168,14 +174,14 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
           <DropdownMenuItem
             disabled={winMutation.isPending}
             onSelect={() => {
-              winMutation.mutate({ leadId: lead.id });
+              portao.antes("won", () => winMutation.mutate({ leadId: lead.id }));
             }}
           >
             {t("Marcar como ganho")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => {
-              setLoseOpen(true);
+              portao.antes("lost", () => setLoseOpen(true));
             }}
           >
             {t("Marcar como perdido")}
@@ -189,7 +195,7 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
           {canAssign && (
             <DropdownMenuItem
               onSelect={() => {
-                setMoveOpen(true);
+                portao.antes("lost", () => setMoveOpen(true));
               }}
             >
               {t("Levar para outro funil")}
@@ -263,6 +269,8 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* FORK ESCALE · Fase 1F: os campos pendentes, dentro da barreira de clique. */}
+      {portao.janela}
       <LoseLeadDialog
         open={loseOpen}
         onOpenChange={setLoseOpen}
