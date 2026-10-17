@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 
 import { AbaDeEtapas } from "./AbaDeEtapas";
 import { EmBreve } from "./EmBreve";
+import { SecaoCampos } from "./SecaoCampos";
 import { SecaoGerais } from "./SecaoGerais";
 import { SecaoMotivos } from "./SecaoMotivos";
 
@@ -168,7 +169,7 @@ export function JanelaDaOrigem({
       case "motivos":
         return <SecaoMotivos {...props} />;
       case "campos":
-        return <div>{/* SECAO_CAMPOS */}</div>;
+        return <SecaoCampos {...props} />;
       case "alerta":
         return <div>{/* SECAO_ALERTA */}</div>;
       default:

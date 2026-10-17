@@ -9620,6 +9620,48 @@ export const DICIONARIO: Traducoes = {
     es: "Para continuar, selecciona al menos un motivo de pérdida.",
   },
 
+  // ─── FORK ESCALE · Fase 1F (Task 8): Campos obrigatórios ───
+  "Defina campos que devem ser preenchidos para sair de uma etapa, para entrar em uma etapa, ou ao alterar o status para Ganho ou Perdido.":
+    {
+      es: "Define los campos que deben completarse para salir de una etapa, para entrar en una etapa o al cambiar el estado a Ganado o Perdido.",
+    },
+  "Só administrador muda os campos obrigatórios. Você vê as regras como elas estão.": {
+    es: "Solo el administrador cambia los campos obligatorios. Ves las reglas tal como están.",
+  },
+  "Ainda não há campos personalizados no CRM.": {
+    es: "Todavía no hay campos personalizados en el CRM.",
+  },
+  "Criar campos em Configurações › Funis": { es: "Crear campos en Configuración › Embudos" },
+  "Nenhum campo obrigatório configurado.": { es: "Ningún campo obligatorio configurado." },
+  "Ao sair": { es: "Al salir" },
+  "Ao entrar": { es: "Al entrar" },
+  "Ao sair: precisa estar preenchido para o negócio avançar desta etapa (próxima etapa, ganho, perda ou outro funil). Ao entrar: precisa estar preenchido para o negócio entrar na etapa.":
+    {
+      es: "Al salir: debe estar completo para que el negocio avance de esta etapa (siguiente etapa, ganado, perdido u otro embudo). Al entrar: debe estar completo para que el negocio entre en la etapa.",
+    },
+  Etapas: { es: "Etapas" },
+  "Etapas às quais a regra se aplica": { es: "Etapas a las que se aplica la regla" },
+  "Selecione para exigir este campo ao marcar como Ganho ou Perdido": {
+    es: "Selecciona para exigir este campo al marcar como Ganado o Perdido",
+  },
+  "Todas as etapas": { es: "Todas las etapas" },
+  "Nenhuma etapa": { es: "Ninguna etapa" },
+  "Nenhum status": { es: "Ningún estado" },
+  "Remover a regra de": { es: "Quitar la regla de" },
+  "Adicionar campo obrigatório": { es: "Agregar campo obligatorio" },
+  "Selecione ao menos uma etapa": { es: "Selecciona al menos una etapa" },
+  "Selecione ao menos uma etapa ou status": { es: "Selecciona al menos una etapa o estado" },
+  "Selecione ao menos uma etapa ou status para cada campo.": {
+    es: "Selecciona al menos una etapa o estado para cada campo.",
+  },
+  "Este campo já possui uma regra deste tipo.": {
+    es: "Este campo ya tiene una regla de este tipo.",
+  },
+  "Esse campo não existe mais no CRM. Feche e abra de novo.": {
+    es: "Ese campo ya no existe en el CRM. Cierra y abre de nuevo.",
+  },
+  "Escolha etapas desta origem.": { es: "Elige etapas de este origen." },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
