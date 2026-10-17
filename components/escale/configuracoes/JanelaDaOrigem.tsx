@@ -188,7 +188,9 @@ export function JanelaDaOrigem({
           // Com alteração por salvar, clicar na cortina não fecha: o rascunho não se perde. Esc e Cancelar fecham.
           onPointerDownOutside={(e) => podeSalvar && e.preventDefault()}
           onInteractOutside={(e) => podeSalvar && e.preventDefault()}
-          className="ds-modal fixed inset-x-2 top-1/2 z-50 flex max-h-[calc(100dvh-100px)] -translate-y-1/2 flex-col overflow-hidden rounded-[12px] bg-surface text-casca-texto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]"
+          // A animação do `ds-modal` termina deslocada -50% na horizontal (feita para quem centraliza com
+          // `left: 50%`). Esta janela ocupa a largura toda, então zera o deslocamento: senão meia janela some à esquerda.
+          className="ds-modal fixed inset-x-2 top-1/2 z-50 flex max-h-[calc(100dvh-100px)] -translate-y-1/2 flex-col overflow-hidden rounded-[12px] bg-surface text-casca-texto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] [--ds-modal-x:0px]"
         >
           <TooltipProvider delayDuration={150}>
             <div className="px-[26px] pt-[22px]">
