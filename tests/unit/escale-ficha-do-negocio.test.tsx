@@ -27,6 +27,10 @@ vi.mock("@/components/escale/negocio/ConteudoDaAba", () => ({
   ConteudoDaAba: ({ aba }: { aba: string }) => <p>conteúdo {aba}</p>,
 }));
 
+vi.mock("@/components/escale/negocio/ProximoNegocio", () => ({
+  ProximoNegocio: () => <span data-testid="proximo" />,
+}));
+
 import { FichaDoNegocio } from "@/components/escale/negocio/FichaDoNegocio";
 import { useFichaDoNegocio } from "@/hooks/escale/useFichaDoNegocio";
 
@@ -131,6 +135,7 @@ describe("<FichaDoNegocio>", () => {
     render(<FichaDoNegocio {...PROPS} />);
     const caminho = screen.getByRole("navigation", { name: "Caminho do negócio" });
     expect(caminho).toHaveTextContent("INSS Vendas");
+    expect(screen.getByTestId("proximo")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Leads INSS Whatsapp" })).toHaveAttribute(
       "href",
       "/app/pipelines/o1?foo=1",

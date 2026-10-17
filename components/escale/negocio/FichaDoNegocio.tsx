@@ -20,6 +20,7 @@ import { recenteDoLead } from "@/lib/escale/recentes/regras";
 import { AbasDaFicha } from "./AbasDaFicha";
 import { CabecalhoDaFicha } from "./CabecalhoDaFicha";
 import { ConteudoDaAba } from "./ConteudoDaAba";
+import { ProximoNegocio } from "./ProximoNegocio";
 import { TopoDaFicha } from "./TopoDaFicha";
 
 /**
@@ -91,7 +92,19 @@ export function FichaDoNegocio({ negocioId, origem, grupo }: FichaDoNegocioProps
   const migalhas = migalhasDoNegocio({ grupo, origem, negocio: tituloDoCard(ficha.lead), qs });
   return (
     <div className={ALTURA} data-ficha-do-negocio={ficha.lead.id}>
-      <TopoDaFicha migalhas={migalhas} />
+      <TopoDaFicha
+        migalhas={migalhas}
+        // C8: o próximo negócio da etapa, na ordem e nos filtros do quadro.
+        direita={
+          <ProximoNegocio
+            lead={ficha.lead}
+            etapas={ficha.stages}
+            leads={ficha.leadsDoRecorte}
+            ordem={ficha.ordem}
+            aba={aba}
+          />
+        }
+      />
       <CabecalhoDaFicha lead={ficha.lead} />
       <AbasDaFicha
         valor={aba}
