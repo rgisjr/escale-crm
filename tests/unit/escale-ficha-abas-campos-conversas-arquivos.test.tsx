@@ -25,7 +25,21 @@ const contato = vi.hoisted(() => ({
   isLoading: false,
 }));
 vi.mock("@/hooks/contacts/useContact", () => ({ useContact: () => contato }));
-const gravar = vi.hoisted(() => ({ gravar: vi.fn(async () => undefined) }));
+// O `gravar` de verdade monta o patch sobre o contato do cache; o mock monta sobre o do `useContact`.
+const gravar = vi.hoisted(() => {
+  const enviado = vi.fn();
+  return {
+    enviado,
+    gravar: vi.fn(async (entrada: unknown) => {
+      const patch =
+        typeof entrada === "function"
+          ? (entrada as (c: unknown) => unknown)(contato.data.data)
+          : entrada;
+      if (patch) enviado(patch);
+      return Boolean(patch);
+    }),
+  };
+});
 vi.mock("@/hooks/escale/useGravarContato", () => ({ useGravarContato: () => gravar }));
 
 import { AbaArquivos } from "@/components/escale/negocio/abas/AbaArquivos";
@@ -99,6 +113,30 @@ describe("aba Negócio (print 04, C14)", () => {
     });
   });
 
+  // Revisão final: o schema do negócio recusa valor negativo (422) — a tela explica antes.
+  it("Valor negativo não é enviado e mostra o motivo", async () => {
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    const valor = screen.getByRole("textbox", { name: "Valor" });
+    await userEvent.clear(valor);
+    await userEvent.type(valor, "-5{Enter}");
+    expect(editar.mutateAsync).not.toHaveBeenCalled();
+    expect(await screen.findByText("O valor não pode ser negativo.")).toBeInTheDocument();
+  });
+
+  // Revisão final (I5): um campo do CRM chamado `valor` não vira o Valor do negócio.
+  it("campo do CRM com chave valor grava em custom_fields", async () => {
+    const comValor = {
+      ...PIPELINE,
+      settings: { fields: [{ key: "valor", label: "Valor do contrato", type: "text" }] },
+    } as unknown as Pipeline;
+    render(<AbaNegocio lead={LEAD} pipeline={comValor} />);
+    await userEvent.type(screen.getByRole("textbox", { name: "Valor do contrato" }), "X{Enter}");
+    expect(editar.mutateAsync).toHaveBeenCalledWith({
+      leadId: "n1",
+      patch: { custom_fields: { valor: "X" } },
+    });
+  });
+
   it("Ocultar vazios esconde os sem valor, lembra no localStorage e mostra o aviso da Clint", async () => {
     render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
     await userEvent.click(screen.getByRole("button", { name: "Ocultar vazios" }));
@@ -156,7 +194,7 @@ describe("aba Negócio (print 04, C14)", () => {
 });
 
 describe("aba Contato (print 02, C10)", () => {
-  beforeEach(() => gravar.gravar.mockClear());
+  beforeEach(() => gravar.enviado.mockClear());
 
   it("Nome, Telefone (para exibição), Email, os links e os campos do CRM, cada um num input", () => {
     render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
@@ -176,22 +214,22 @@ describe("aba Contato (print 02, C10)", () => {
     const nome = screen.getByRole("textbox", { name: "Nome" });
     await userEvent.clear(nome);
     await userEvent.type(nome, "Ana Nunes{Enter}");
-    expect(gravar.gravar).toHaveBeenCalledWith({ name: "Ana Nunes" });
+    expect(gravar.enviado).toHaveBeenCalledWith({ name: "Ana Nunes" });
     await userEvent.type(screen.getByRole("textbox", { name: "Notas" }), "VIP{Enter}");
-    expect(gravar.gravar).toHaveBeenLastCalledWith({
+    expect(gravar.enviado).toHaveBeenLastCalledWith({
       custom_fields: { cargo: "CEO", link_instagram: "https://instagram.com/ana", notas: "VIP" },
     });
     const tel = screen.getByRole("textbox", { name: "Telefone" });
     await userEvent.clear(tel);
     await userEvent.type(tel, "(43) 3222-3344{Enter}");
-    expect(gravar.gravar).toHaveBeenLastCalledWith({ phone_number: "+554332223344" });
+    expect(gravar.enviado).toHaveBeenLastCalledWith({ phone_number: "+554332223344" });
   });
 
   it("apagar o e-mail não grava e explica (Q4)", async () => {
     render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
     await userEvent.clear(screen.getByRole("textbox", { name: "Email" }));
     await userEvent.keyboard("{Enter}");
-    expect(gravar.gravar).not.toHaveBeenCalled();
+    expect(gravar.enviado).not.toHaveBeenCalled();
     expect(screen.getByText("Para apagar o e-mail, use a ficha do contato.")).toBeInTheDocument();
   });
 

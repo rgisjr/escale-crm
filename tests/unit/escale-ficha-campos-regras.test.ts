@@ -9,6 +9,7 @@ import {
   patchDoContato,
   reaisDeTexto,
   telefoneParaGravar,
+  textoDeNumero,
   textoDeReais,
   valorParaGravar,
   valorParaLeitura,
@@ -140,28 +141,81 @@ describe("o que vai para o banco", () => {
 
 describe("patch do contato (N4)", () => {
   const contato = { custom_fields: { cargo: "CEO", link_site: "https://a.com" } };
+  const coluna = (chave: string) => ({ chave, origem: "coluna" as const });
+  const link = (chave: string) => ({ chave, origem: "link" as const });
+  const crm = (chave: string) => ({ chave, origem: "crm" as const });
   it("nome, telefone e e-mail vão nas colunas; o resto em custom_fields INTEIRO", () => {
-    expect(patchDoContato(contato, "nome", "Ana")).toEqual({ name: "Ana" });
-    expect(patchDoContato(contato, "telefone", "+5543998031566")).toEqual({
+    expect(patchDoContato(contato, coluna("nome"), "Ana")).toEqual({ name: "Ana" });
+    expect(patchDoContato(contato, coluna("telefone"), "+5543998031566")).toEqual({
       phone_number: "+5543998031566",
     });
-    expect(patchDoContato(contato, "email", "a@b.co")).toEqual({ email: "a@b.co" });
-    expect(patchDoContato(contato, "cargo", "CTO")).toEqual({
+    expect(patchDoContato(contato, coluna("email"), "a@b.co")).toEqual({ email: "a@b.co" });
+    expect(patchDoContato(contato, crm("cargo"), "CTO")).toEqual({
       custom_fields: { cargo: "CTO", link_site: "https://a.com" },
     });
   });
   it("um link vai pela chave link_<tipo>, normalizado; vazio apaga a chave", () => {
-    expect(patchDoContato(contato, "link_instagram", "https://instagram.com/ana")).toEqual({
+    expect(patchDoContato(contato, link("link_instagram"), "https://instagram.com/ana")).toEqual({
       custom_fields: {
         cargo: "CEO",
         link_site: "https://a.com",
         link_instagram: "https://instagram.com/ana",
       },
     });
-    expect(patchDoContato(contato, "link_site", null)).toEqual({ custom_fields: { cargo: "CEO" } });
+    expect(patchDoContato(contato, link("link_site"), null)).toEqual({
+      custom_fields: { cargo: "CEO" },
+    });
   });
   it("e-mail e telefone vazios não geram patch", () => {
-    expect(patchDoContato(contato, "email", null)).toBeNull();
-    expect(patchDoContato(contato, "telefone", "")).toBeNull();
+    expect(patchDoContato(contato, coluna("email"), null)).toBeNull();
+    expect(patchDoContato(contato, coluna("telefone"), "")).toBeNull();
+  });
+
+  // Revisão final (I5): o roteamento é pela ORIGEM do campo, nunca pelo texto da chave.
+  it("campo do CRM com chave valor/nome/telefone/email/link_x vai para custom_fields", () => {
+    for (const chave of ["valor", "nome", "telefone", "email", "link_x", "link_site"]) {
+      expect(patchDoContato(contato, crm(chave), "texto livre")).toEqual({
+        custom_fields: { ...contato.custom_fields, [chave]: "texto livre" },
+      });
+    }
+  });
+  it("só as chaves do catálogo de links passam pelo ramo do link", () => {
+    expect(patchDoContato(contato, link("link_x"), "https://a.com")).toBeNull();
+  });
+});
+
+describe("número (revisão final, I3)", () => {
+  it("mostra no formato brasileiro e volta igual", () => {
+    expect(textoDeNumero(12.5)).toBe("12,5");
+    expect(textoDeNumero(1500)).toBe("1.500");
+    expect(textoDeNumero(-1.5)).toBe("-1,5");
+    for (const n of [12.5, 1500, -1.5, 1234.5, 0.25, 1500000]) {
+      expect(valorParaGravar("number", textoDeNumero(n))).toEqual({ ok: true, valor: n });
+    }
+  });
+  it("ponto com 3 dígitos é milhar; ponto decimal sem vírgula continua decimal", () => {
+    expect(valorParaGravar("number", "1.500")).toEqual({ ok: true, valor: 1500 });
+    expect(valorParaGravar("number", "12.5")).toEqual({ ok: true, valor: 12.5 });
+    expect(valorParaGravar("number", "-1.5")).toEqual({ ok: true, valor: -1.5 });
+    expect(valorParaGravar("number", "1.500,25")).toEqual({ ok: true, valor: 1500.25 });
+    expect(valorParaGravar("number", "12abc")).toEqual({ ok: false, erro: "Digite um número." });
+  });
+  it("a leitura do número também é brasileira", () => {
+    expect(valorParaLeitura("number", undefined, 1234.5, t)).toBe("1.234,5");
+  });
+});
+
+describe("telefone sem DDD (revisão final)", () => {
+  it("sem '+', só 10–11 dígitos (ou 12–13 começando com 55) valem", () => {
+    expect(telefoneParaGravar("998031566")).toEqual({
+      ok: false,
+      erro: "O telefone informado está inválido.",
+    });
+    expect(telefoneParaGravar("98031566")).toEqual({
+      ok: false,
+      erro: "O telefone informado está inválido.",
+    });
+    expect(telefoneParaGravar("5543998031566")).toEqual({ ok: true, valor: "+5543998031566" });
+    expect(telefoneParaGravar("+1 415 555 0100")).toEqual({ ok: true, valor: "+14155550100" });
   });
 });

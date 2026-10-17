@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useT } from "@/hooks/i18n/useT";
@@ -23,7 +23,12 @@ import { EditorDeCampo } from "./EditorDeCampo";
  * "Ocultar/Mostrar vazios" (por tipo, no localStorage; a flag da Clint é
  * invertida: o padrão é mostrar tudo) e "Gerenciar campos" (link para a tela de
  * campos, só para quem administra). A busca filtra pelo rótulo. Com `aoSalvar`,
- * cada linha é o `EditorDeCampo`; sem ele (Empresa), a caixa é só leitura.
+ * cada linha é o `EditorDeCampo`; sem ele (Empresa, ou o contato ainda não
+ * carregado), a caixa é só leitura.
+ *
+ * "Ocultar vazios" começa desligado e o localStorage é lido depois de montar:
+ * ler o navegador no inicializador do `useState` desencontra o primeiro render
+ * do HTML do servidor (guarda `hidratacao-useState-nao-le-o-navegador`).
  */
 export type TipoDaMoldura = "contato" | "empresa" | "negocio";
 
@@ -39,21 +44,35 @@ export function CamposDaFicha({
   aoSalvar,
   moeda,
   gerenciarHref,
+  dicaDoVazio,
+  aviso,
 }: {
   icone: ReactNode;
   titulo: string;
   tipo: TipoDaMoldura;
   campos: CampoEditavel[];
-  aoSalvar?: (chave: string, valor: unknown) => Promise<void>;
+  aoSalvar?: (campo: CampoEditavel, valor: unknown) => Promise<void>;
   moeda?: string;
   /** O link de "Gerenciar campos"; `null` = desligado (sem permissão); `undefined` = "Em breve" (Empresa). */
   gerenciarHref?: string | null;
+  /** A dica da caixa só leitura vazia; `undefined` = "Em breve"; `null` = sem dica. */
+  dicaDoVazio?: string | null;
+  /** Uma linha embaixo da faixa (o contato que não carregou, por exemplo). */
+  aviso?: string;
 }) {
   const t = useT();
   const [busca, setBusca] = useState("");
-  const [ocultarVazios, setOcultarVazios] = useState(() =>
-    lerOcultarVazios(typeof window === "undefined" ? null : window.localStorage, tipo),
-  );
+  const [ocultarVazios, setOcultarVazios] = useState(false);
+  useEffect(() => {
+    let guardado = false;
+    try {
+      guardado = lerOcultarVazios(window.localStorage, tipo);
+    } catch {
+      // Sem acesso ao localStorage (modo privado, SecurityError): vale o padrão.
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a escolha guardada só existe no navegador, depois de montar
+    setOcultarVazios(guardado);
+  }, [tipo]);
   const visiveis = useMemo(
     () => filtrarCampos(campos, busca, ocultarVazios),
     [campos, busca, ocultarVazios],
@@ -118,6 +137,7 @@ export function CamposDaFicha({
           )}
         </div>
       </div>
+      {aviso ? <p className="mt-3 px-1 text-[13px] text-destructive">{aviso}</p> : null}
       <div className="mt-4 flex rounded-lg border border-casca-borda">
         <nav
           aria-label={t("Grupos de campos")}
@@ -154,7 +174,7 @@ export function CamposDaFicha({
             <dl className="px-9 py-4">
               {visiveis.map((c) => (
                 <div
-                  key={c.chave}
+                  key={`${c.origem ?? "crm"}:${c.chave}`}
                   className="grid grid-cols-[275px_1fr] items-center border-b border-casca-borda py-2 last:border-b-0"
                 >
                   <dt className="text-[13px] font-medium text-casca-texto">
@@ -170,10 +190,13 @@ export function CamposDaFicha({
                       <EditorDeCampo
                         campo={c}
                         moeda={moeda}
-                        aoSalvar={(valor) => aoSalvar(c.chave, valor)}
+                        aoSalvar={(valor) => aoSalvar(c, valor)}
                       />
                     ) : (
-                      <CaixaSoLeitura campo={c} />
+                      <CaixaSoLeitura
+                        campo={c}
+                        dica={dicaDoVazio === undefined ? t("Em breve") : dicaDoVazio}
+                      />
                     )}
                   </dd>
                 </div>
@@ -198,14 +221,14 @@ export function CamposDaFicha({
   );
 }
 
-/** A caixa da 1G (só leitura), usada onde ainda não se edita (Empresa, Q2). */
-function CaixaSoLeitura({ campo }: { campo: CampoEditavel }) {
+/** A caixa da 1G (só leitura), usada onde ainda não se edita (Empresa, Q2; contato carregando). */
+function CaixaSoLeitura({ campo, dica }: { campo: CampoEditavel; dica: string | null }) {
   const t = useT();
   const texto = valorParaLeitura(campo.tipo, campo.opcoes, campo.valor, t);
   const lista = campo.tipo === "select" || campo.tipo === "multiselect";
   return (
     <div
-      title={texto ? undefined : t("Em breve")}
+      title={texto ? undefined : (dica ?? undefined)}
       className={cn(
         "flex h-8 items-center justify-between rounded-md bg-casca-busca px-3 text-[13px]",
         texto ? "text-casca-texto" : "text-casca-meta",

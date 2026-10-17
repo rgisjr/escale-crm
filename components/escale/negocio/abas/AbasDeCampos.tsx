@@ -59,33 +59,38 @@ function ContatoEditavel({
 }) {
   const t = useT();
   const administra = usePermission("settings.write");
-  const { data } = useContact(contactId);
+  const { data, isError } = useContact(contactId);
   const { gravar } = useGravarContato(contactId, pipeline.id);
   const contato = data?.data ?? null;
+  const carregado = contato !== null;
   const camposDoContato = useMemo(() => contato?.custom_fields ?? {}, [contato]);
   const links = lerLinks(camposDoContato);
 
   const campos: CampoEditavel[] = [
     {
       chave: CHAVE_NOME,
+      origem: "coluna",
       rotulo: t("Nome"),
       tipo: "text",
       valor: contato?.name ?? dadosDeFiltro(lead)?.contato_nome ?? null,
     },
     {
       chave: CHAVE_TELEFONE,
+      origem: "coluna",
       rotulo: t("Telefone"),
       tipo: "phone",
       valor: phoneForDisplay(contato?.phone_number ?? lead.contact_phone) || null,
     },
     {
       chave: CHAVE_EMAIL,
+      origem: "coluna",
       rotulo: t("Email"),
       tipo: "email",
       valor: contato?.email ?? lead.contact_email ?? null,
     },
     ...TIPOS_DE_LINK.map((tipo) => ({
       chave: chaveDoLink(tipo.id),
+      origem: "link" as const,
       rotulo: t(tipo.rotulo),
       tipo: "url" as const,
       valor: links[tipo.id] ?? null,
@@ -94,35 +99,39 @@ function ContatoEditavel({
   ];
 
   const aoSalvar = useCallback(
-    async (chave: string, valor: unknown) => {
+    async (campo: CampoEditavel, valor: unknown) => {
+      // Sem o contato não há base para o `custom_fields` inteiro (revisão final, C1).
+      if (!carregado) throw new Error(t("Não consegui carregar o contato."));
       // O schema do original não aceita apagar telefone nem e-mail (Q4): explica e não grava.
-      if (chave === CHAVE_EMAIL && valor == null) {
+      if (campo.origem === "coluna" && campo.chave === CHAVE_EMAIL && valor == null) {
         throw new Error(t("Para apagar o e-mail, use a ficha do contato."));
       }
-      if (chave === CHAVE_TELEFONE && valor == null) {
+      if (campo.origem === "coluna" && campo.chave === CHAVE_TELEFONE && valor == null) {
         throw new Error(t("Para apagar o telefone, use a ficha do contato."));
       }
-      // O PATCH do contato substitui `custom_fields`: o patch já leva o objeto inteiro.
-      const patch = patchDoContato({ custom_fields: camposDoContato }, chave, valor);
-      if (!patch) return;
       try {
-        await gravar(patch);
-        toast.success(t("As alterações foram salvas com sucesso."));
+        // O PATCH do contato substitui `custom_fields`: o patch é montado sobre o
+        // contato mais recente, na hora de enviar, e leva o objeto inteiro.
+        const enviou = await gravar((atual) => patchDoContato(atual, campo, valor));
+        if (enviou) toast.success(t("As alterações foram salvas com sucesso."));
       } catch {
         // O `useUpdateContact` já mostra o toast do erro da API (showApiError).
         throw new Error(t("Ocorreu um erro ao salvar o campo"));
       }
     },
-    [camposDoContato, gravar, t],
+    [carregado, gravar, t],
   );
 
+  // Carregando ou com erro: a moldura só leitura, sem nenhum editor (C1).
   return (
     <CamposDaFicha
       icone={<User size={16} />}
       titulo={t("Campos de contato")}
       tipo="contato"
       campos={campos}
-      aoSalvar={aoSalvar}
+      aoSalvar={carregado ? aoSalvar : undefined}
+      dicaDoVazio={null}
+      aviso={!carregado && isError ? t("Não consegui carregar o contato.") : undefined}
       gerenciarHref={administra ? ROTA_DE_GERENCIAR_CAMPOS : null}
     />
   );
@@ -161,6 +170,7 @@ export function camposDoCrm(pipeline: Pipeline, valores: Record<string, unknown>
   const defs = camposDoFunil(pipeline.settings ?? null);
   return camposVisiveis(defs, valores).map((def) => ({
     chave: def.key,
+    origem: "crm" as const,
     rotulo: def.label,
     tipo: def.type,
     valor: valores[def.key],
@@ -176,6 +186,7 @@ export function AbaNegocio({ lead, pipeline }: { lead: Lead; pipeline: Pipeline 
   const campos: CampoEditavel[] = [
     {
       chave: CHAVE_DO_VALOR,
+      origem: "coluna",
       rotulo: t("Valor"),
       tipo: "currency",
       valor: lead.value_cents == null ? null : lead.value_cents / 100,
@@ -184,12 +195,17 @@ export function AbaNegocio({ lead, pipeline }: { lead: Lead; pipeline: Pipeline 
   ];
 
   const aoSalvar = useCallback(
-    async (chave: string, valor: unknown) => {
+    async (campo: CampoEditavel, valor: unknown) => {
+      const ehValor = campo.origem === "coluna" && campo.chave === CHAVE_DO_VALOR;
+      // O schema do negócio recusa valor negativo (422): explica antes de enviar.
+      if (ehValor && typeof valor === "number" && valor < 0) {
+        throw new Error(t("O valor não pode ser negativo."));
+      }
       // `custom_fields` é mesclado no banco (fn_lead_anotar_campos): vai só a chave que mudou.
-      const patch =
-        chave === CHAVE_DO_VALOR
-          ? { value_cents: valor == null ? null : Math.round(Number(valor) * 100) }
-          : { custom_fields: { [chave]: valor } };
+      // O roteamento é pela origem: um campo do CRM chamado `valor` vai para `custom_fields`.
+      const patch = ehValor
+        ? { value_cents: valor == null ? null : Math.round(Number(valor) * 100) }
+        : { custom_fields: { [campo.chave]: valor } };
       try {
         await editar.mutateAsync({ leadId: lead.id, patch });
         toast.success(t("As alterações foram salvas com sucesso."));

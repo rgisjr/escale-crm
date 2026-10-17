@@ -123,6 +123,83 @@ describe("outros tipos", () => {
     expect(input).toHaveAttribute("title", "Este campo não pode ser editado aqui.");
   });
 
+  // Revisão final (I2): a seleção é local; a segunda marcação não perde a primeira.
+  it("múltipla: marcar A e B depressa grava os dois, um depois do outro", async () => {
+    const chamadas: unknown[] = [];
+    let soltar: () => void = () => undefined;
+    const aoSalvar = vi.fn(async (v: unknown) => {
+      chamadas.push(v);
+      if (chamadas.length === 1) await new Promise<void>((r) => (soltar = r));
+    });
+    render(
+      <EditorDeCampo
+        campo={{
+          chave: "m",
+          rotulo: "Interesses",
+          tipo: "multiselect",
+          valor: [],
+          opcoes: [
+            { value: "a", label: "A" },
+            { value: "b", label: "B" },
+          ],
+        }}
+        aoSalvar={aoSalvar}
+      />,
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: "Interesses" }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: "A" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "B" }));
+    // A segunda espera a primeira terminar (fila), e leva as duas marcações.
+    expect(chamadas).toEqual([["a"]]);
+    await act(async () => soltar());
+    await vi.waitFor(() => expect(chamadas).toEqual([["a"], ["a", "b"]]));
+  });
+
+  // Revisão final (I3): número em formato brasileiro, ida e volta.
+  it("número: 12.5 aparece 12,5 e volta 12,5; 1.500 é mil e quinhentos", async () => {
+    const aoSalvar = vi.fn(async () => undefined);
+    render(
+      <EditorDeCampo
+        campo={{ chave: "n", rotulo: "Quantidade", tipo: "number", valor: 12.5 }}
+        aoSalvar={aoSalvar}
+      />,
+    );
+    const input = screen.getByRole("textbox", { name: "Quantidade" });
+    expect(input).toHaveValue("12,5");
+    await userEvent.type(input, "0{Enter}");
+    expect(aoSalvar).toHaveBeenLastCalledWith(12.5);
+    await userEvent.clear(input);
+    await userEvent.type(input, "1.500{Enter}");
+    expect(aoSalvar).toHaveBeenLastCalledWith(1500);
+  });
+
+  // Revisão final (I4): Enter sem mudança não grava nada.
+  it("Enter sem mudar o valor não grava", async () => {
+    const aoSalvar = vi.fn(async () => undefined);
+    render(<EditorDeCampo campo={texto("CEO")} aoSalvar={aoSalvar} />);
+    await userEvent.click(screen.getByRole("textbox", { name: "Cargo" }));
+    await userEvent.keyboard("{Enter}");
+    const vazio = { ...texto(null), chave: "c2", rotulo: "Vazio" };
+    render(<EditorDeCampo campo={vazio} aoSalvar={aoSalvar} />);
+    await userEvent.click(screen.getByRole("textbox", { name: "Vazio" }));
+    await userEvent.keyboard("{Enter}");
+    expect(aoSalvar).not.toHaveBeenCalled();
+  });
+
+  // Revisão final: o valor normalizado igual ao gravado não deixa Cancelar/Salvar na tela.
+  it("depois de salvar, Cancelar e Salvar somem mesmo quando o valor gravado não muda", async () => {
+    const aoSalvar = vi.fn(async () => undefined);
+    render(<EditorDeCampo campo={texto("CEO")} aoSalvar={aoSalvar} />);
+    const input = screen.getByRole("textbox", { name: "Cargo" });
+    await userEvent.type(input, " ");
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeInTheDocument();
+    await userEvent.keyboard("{Enter}");
+    expect(aoSalvar).toHaveBeenCalledWith("CEO");
+    await screen.findByLabelText("Salvo");
+    expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
+    expect(input).toHaveValue("CEO");
+  });
+
   it("o check some depois de 1s", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const aoSalvar = vi.fn(async () => undefined);

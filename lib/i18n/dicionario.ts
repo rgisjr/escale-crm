@@ -9907,6 +9907,7 @@ export const DICIONARIO: Traducoes = {
   "Este negócio não tem contato.": { es: "Este negocio no tiene contacto." },
   "Nome atualizado.": { es: "Nombre actualizado." },
   "Não foi possível atualizar o nome. Tente novamente.": { es: "No se pudo actualizar el nombre. Inténtalo de nuevo." },
+  "O valor não pode ser negativo.": { es: "El valor no puede ser negativo." },
   "+ Adicionar tags": { es: "+ Agregar etiquetas" },
   "Nenhuma tag correspondente": { es: "Ninguna etiqueta coincide" },
   "Remover a tag": { es: "Quitar la etiqueta" },

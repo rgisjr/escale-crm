@@ -12,15 +12,31 @@
  */
 import type { CustomFieldType } from "@/components/contacts/CustomFieldsEditor";
 import type { ContactPatch } from "@/lib/schemas/contacts";
-import { PREFIXO_DA_CHAVE, normalizarLink } from "@/lib/leads/links-de-contato";
+import {
+  TIPOS_DE_LINK,
+  aplicarLinks,
+  chaveDoLink,
+  lerLinks,
+  normalizarLink,
+} from "@/lib/leads/links-de-contato";
 
 export type TipoDeCampoDaFicha = CustomFieldType;
+
+/**
+ * De onde o campo vem — e, por isso, para onde ele grava. O roteamento é por
+ * aqui e NUNCA pelo texto da chave: a chave de um campo do CRM só precisa casar
+ * `^[a-z][a-z0-9_]*$`, então um campo chamado `valor`, `nome` ou `link_x` é
+ * possível e tem que ir para `custom_fields` como qualquer outro.
+ */
+export type OrigemDoCampo = "coluna" | "link" | "crm";
 
 export interface CampoEditavel {
   chave: string;
   rotulo: string;
   tipo: TipoDeCampoDaFicha;
   valor: unknown;
+  /** Sem origem = campo do CRM (`custom_fields`). */
+  origem?: OrigemDoCampo;
   opcoes?: { value: string; label: string }[];
   /** Fase 1F: o campo é exigido nesta etapa ("Campo obrigatório nesta etapa"). */
   obrigatorioNaEtapa?: boolean;
@@ -58,16 +74,33 @@ export function textoDeReais(valor: number): string {
   return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function reaisDeTexto(texto: string): number | null {
-  const limpo = texto.replace(/[^\d,.-]/g, "");
+/**
+ * Número escrito em português → número. "1.500,50" → 1500.5; "1,5" → 1.5.
+ * Sem vírgula, ponto seguido de exatamente 3 dígitos (em grupos) é milhar
+ * ("1.500" → 1500); qualquer outro ponto sem vírgula é decimal ("12.5" → 12.5).
+ */
+function numeroDoTextoLimpo(limpo: string): number | null {
   if (!limpo) return null;
-  // "1.500,50" → "1500.50"; "1500" → "1500"; "1,5" → "1.5".
-  // Sem vírgula, ponto seguido de exatamente 3 dígitos (em grupos) é milhar: "1.500" → 1500.
   const temMilhar = !limpo.includes(",") && /^-?\d{1,3}(\.\d{3})+$/.test(limpo);
   const normalizado =
     limpo.includes(",") || temMilhar ? limpo.replace(/\./g, "").replace(",", ".") : limpo;
   const n = Number(normalizado);
   return Number.isFinite(n) ? n : null;
+}
+
+export function reaisDeTexto(texto: string): number | null {
+  return numeroDoTextoLimpo(texto.replace(/[^\d,.-]/g, ""));
+}
+
+/** O número como a caixa mostra: formato brasileiro, sem cortar casas ("12,5", "1.500"). */
+export function textoDeNumero(valor: number): string {
+  return valor.toLocaleString("pt-BR", { maximumFractionDigits: 20 });
+}
+
+/** O texto da caixa de número → número. Recusa letra no meio ("12abc"). */
+export function numeroDeTexto(texto: string): number | null {
+  const limpo = texto.replace(/\s/g, "");
+  return /^-?[\d.,]+$/.test(limpo) ? numeroDoTextoLimpo(limpo) : null;
 }
 
 export function dataBrDeIso(iso: string): string {
@@ -109,6 +142,8 @@ export function valorParaLeitura(
       return typeof bruto === "string" ? dataBrDeIso(bruto) : String(bruto);
     case "currency":
       return typeof bruto === "number" ? textoDeReais(bruto) : String(bruto);
+    case "number":
+      return typeof bruto === "number" ? textoDeNumero(bruto) : String(bruto);
     default:
       return String(bruto);
   }
@@ -122,8 +157,8 @@ export function valorParaGravar(tipo: TipoDeCampoDaFicha, texto: string): ValorP
   if (!limpo) return { ok: true, valor: null };
   switch (tipo) {
     case "number": {
-      const n = Number(limpo.replace(/\./g, "").replace(",", "."));
-      return Number.isFinite(n) ? { ok: true, valor: n } : { ok: false, erro: "Digite um número." };
+      const n = numeroDeTexto(limpo);
+      return n === null ? { ok: false, erro: "Digite um número." } : { ok: true, valor: n };
     }
     case "currency": {
       const n = reaisDeTexto(limpo);
@@ -154,17 +189,26 @@ export function valorParaGravar(tipo: TipoDeCampoDaFicha, texto: string): ValorP
 
 export type TelefoneParaGravar = { ok: true; valor: string } | { ok: false; erro: string };
 
-/** Canônico `+DDI…` (o `PHONE_REGEX` do original: `^\+\d{8,15}$`). */
+/**
+ * Canônico `+DDI…` (o `PHONE_REGEX` do original: `^\+\d{8,15}$`). Com "+", vale
+ * o que vier (8 a 15 dígitos). Sem "+", só o número brasileiro completo: 10 ou
+ * 11 dígitos (DDD + número, ganha +55) ou 12 ou 13 começando com 55. Um número
+ * sem DDD (8 ou 9 dígitos) é recusado — antes virava `+998031566`.
+ */
 export function telefoneParaGravar(texto: string): TelefoneParaGravar {
   const limpo = texto.trim();
   if (!limpo) return { ok: false, erro: "Para apagar o telefone, use a ficha do contato." };
   const digitos = limpo.replace(/\D/g, "");
   const comDdi = limpo.startsWith("+")
-    ? digitos
+    ? /^\d{8,15}$/.test(digitos)
+      ? digitos
+      : null
     : digitos.length === 10 || digitos.length === 11
       ? `55${digitos}`
-      : digitos;
-  return /^\d{8,15}$/.test(comDdi)
+      : (digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")
+        ? digitos
+        : null;
+  return comDdi
     ? { ok: true, valor: `+${comDdi}` }
     : { ok: false, erro: "O telefone informado está inválido." };
 }
@@ -196,25 +240,34 @@ export function lerOcultarVazios(
 }
 
 /**
- * O PATCH do contato para UMA chave. `custom_fields` vai inteiro (o handler do
- * original substitui o objeto). E-mail e telefone vazios não geram patch (o
- * schema não aceita apagar; Q4).
+ * O PATCH do contato para UM campo, roteado pela ORIGEM dele (nunca pelo texto
+ * da chave). `custom_fields` vai inteiro (o handler do original substitui o
+ * objeto), montado sobre o contato que `contato` traz — por isso quem chama
+ * passa o contato MAIS RECENTE, não o do último render. E-mail e telefone
+ * vazios não geram patch (o schema não aceita apagar; Q4). O link só toca as
+ * chaves `link_<tipo>` do catálogo, pelo `aplicarLinks` (o mesmo do dossiê).
  */
 export function patchDoContato(
   contato: { custom_fields: Record<string, unknown> | null | undefined },
-  chave: string,
+  campo: { chave: string; origem?: OrigemDoCampo },
   valor: unknown,
 ): ContactPatch | null {
-  if (chave === CHAVE_NOME) return campoVazio(valor) ? null : { name: String(valor) };
-  if (chave === CHAVE_TELEFONE) return campoVazio(valor) ? null : { phone_number: String(valor) };
-  if (chave === CHAVE_EMAIL) return campoVazio(valor) ? null : { email: String(valor) };
-  const atual = { ...(contato.custom_fields ?? {}) };
-  if (chave.startsWith(PREFIXO_DA_CHAVE)) {
-    const url = campoVazio(valor) ? null : normalizarLink(String(valor));
-    if (url) atual[chave] = url;
-    else delete atual[chave];
-    return { custom_fields: atual };
+  const { chave, origem = "crm" } = campo;
+  if (origem === "coluna") {
+    if (campoVazio(valor)) return null;
+    if (chave === CHAVE_NOME) return { name: String(valor) };
+    if (chave === CHAVE_TELEFONE) return { phone_number: String(valor) };
+    if (chave === CHAVE_EMAIL) return { email: String(valor) };
+    return null;
   }
+  if (origem === "link") {
+    const tipo = TIPOS_DE_LINK.find(({ id }) => chaveDoLink(id) === chave)?.id;
+    if (!tipo) return null;
+    const url = campoVazio(valor) ? null : normalizarLink(String(valor));
+    const links = { ...lerLinks(contato.custom_fields), [tipo]: url ?? "" };
+    return { custom_fields: aplicarLinks(contato.custom_fields, links) };
+  }
+  const atual = { ...(contato.custom_fields ?? {}) };
   if (campoVazio(valor)) delete atual[chave];
   else atual[chave] = valor;
   return { custom_fields: atual };

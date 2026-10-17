@@ -8,6 +8,7 @@ import { useT } from "@/hooks/i18n/useT";
 import {
   dataBrDeIso,
   simboloDaMoeda,
+  textoDeNumero,
   textoDeReais,
   valorParaGravar,
   type CampoEditavel,
@@ -22,6 +23,12 @@ import { cn } from "@/lib/utils";
  * Enter salva; Esc e Cancelar voltam ao valor gravado; sair do campo não
  * salva. Depois de salvar, o ✓ verde por 1s. Lista, múltipla e Sim/Não gravam
  * ao escolher. `aoSalvar` rejeita com a mensagem que vai para a tela.
+ *
+ * Revisão final do PR A: as gravações do campo vão em FILA (uma de cada vez,
+ * na ordem); a múltipla guarda a seleção aqui dentro, para a segunda marcação
+ * não partir da lista antiga enquanto a primeira ainda está no servidor; Enter
+ * sem mudança não grava; e, depois de salvar, a caixa mostra o valor gravado
+ * (sem Cancelar/Salvar) mesmo quando o normalizado é igual ao que já havia.
  */
 const CAIXA =
   "h-8 w-full rounded-md bg-casca-busca px-3 text-[13px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca disabled:cursor-not-allowed disabled:text-casca-meta";
@@ -45,35 +52,64 @@ export function EditorDeCampo({
   const [texto, setTexto] = useState(gravado);
   const [estado, setEstado] = useState<Estado>({ fase: "parado" });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fila = useRef<Promise<unknown>>(Promise.resolve());
+  const pendentes = useRef(0);
+  const gravadosDaMultipla = Array.isArray(campo.valor) ? campo.valor.map(String) : [];
+  const chaveDaMultipla = JSON.stringify(gravadosDaMultipla);
+  const [selecao, setSelecao] = useState<string[]>(gravadosDaMultipla);
 
   // O valor que chega do servidor (tempo real, outra aba) vence o rascunho parado.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- o valor gravado muda por fora (tempo real) e o rascunho parado o acompanha
     setTexto(gravado);
   }, [gravado]);
+  // A múltipla acompanha o servidor só quando não há gravação dela no caminho.
+  useEffect(() => {
+    if (pendentes.current === 0) setSelecao(JSON.parse(chaveDaMultipla) as string[]);
+  }, [chaveDaMultipla]);
   useEffect(() => () => clearTimeout(timer.current ?? undefined), []);
 
-  async function gravar(valor: unknown) {
+  /** Põe a gravação na fila do campo. Devolve se deu certo. */
+  function gravar(valor: unknown): Promise<boolean> {
+    clearTimeout(timer.current ?? undefined);
+    pendentes.current += 1;
     setEstado({ fase: "salvando" });
-    try {
-      await aoSalvar(valor);
-      setEstado({ fase: "salvo" });
-      timer.current = setTimeout(() => setEstado({ fase: "parado" }), CHECK_POR_MS);
-    } catch (err) {
-      setEstado({
-        fase: "erro",
-        erro:
-          err instanceof Error && err.message
-            ? err.message
-            : t("Ocorreu um erro ao salvar o campo"),
-      });
-    }
+    const vez = fila.current.then(async () => {
+      try {
+        await aoSalvar(valor);
+        return true;
+      } catch (err) {
+        setEstado({
+          fase: "erro",
+          erro:
+            err instanceof Error && err.message
+              ? err.message
+              : t("Ocorreu um erro ao salvar o campo"),
+        });
+        return false;
+      } finally {
+        pendentes.current -= 1;
+      }
+    });
+    fila.current = vez;
+    return vez.then((ok) => {
+      if (ok && pendentes.current === 0) {
+        setEstado({ fase: "salvo" });
+        timer.current = setTimeout(() => setEstado({ fase: "parado" }), CHECK_POR_MS);
+      }
+      return ok;
+    });
   }
 
   function salvarTexto() {
+    if (texto === gravado) return;
     const resultado = valorParaGravar(campo.tipo, texto);
     if (!resultado.ok) return setEstado({ fase: "erro", erro: t(resultado.erro) });
-    void gravar(resultado.valor);
+    void gravar(resultado.valor).then((ok) => {
+      // O normalizado pode ser igual ao gravado ("CEO " → "CEO"): aí o valor de
+      // fora não muda e o rascunho ficaria com Cancelar/Salvar na tela.
+      if (ok) setTexto(textoDoValor({ ...campo, valor: resultado.valor }));
+    });
   }
 
   function cancelar() {
@@ -123,17 +159,19 @@ export function EditorDeCampo({
   }
 
   if (campo.tipo === "multiselect") {
-    const valores = Array.isArray(campo.valor) ? campo.valor.map(String) : [];
     return (
       <Moldura estado={estado}>
         <SeletorMultiploDaCasca
-          valores={valores}
+          valores={selecao}
           opcoes={(campo.opcoes ?? []).map((o) => ({ valor: o.value, rotulo: o.label }))}
           vazio={t("Clique aqui para adicionar")}
           aria-label={campo.rotulo}
           desabilitado={campo.travado}
           dica={dica}
-          aoMudar={(v) => void gravar(v.length ? v : null)}
+          aoMudar={(v) => {
+            setSelecao(v);
+            void gravar(v.length ? v : null);
+          }}
         />
       </Moldura>
     );
@@ -216,6 +254,7 @@ function textoDoValor(campo: CampoEditavel): string {
   const v = campo.valor;
   if (v === null || v === undefined || v === "") return "";
   if (campo.tipo === "currency" && typeof v === "number") return textoDeReais(v);
+  if (campo.tipo === "number" && typeof v === "number") return textoDeNumero(v);
   if (campo.tipo === "date" && typeof v === "string") return dataBrDeIso(v);
   return String(v);
 }
