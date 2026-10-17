@@ -841,6 +841,12 @@ const HOSTS_DECLARADOS: Record<string, EntradaDeHost> = {
     motivo:
       "endpoint oficial da Google Meet REST API (`POST /v2/spaces`, em `lib/agenda/google/transport.ts`): é o DESTINO do request que cria a sala de reunião com acesso aberto (#2063), com o token da própria organização. Diferente de `meet.google.com` — que é o LINK de convite, e por isso entra como PLATAFORMA em CONFERÊNCIA —, este é host que o produto BUSCA: trocar pelo domínio do revendedor faria a chamada não chegar a lugar nenhum, e a sala nunca seria criada.",
   },
+  // ── lista de contatos da casca (Fase 2A): o link do Instagram do contato ──
+  "instagram.com": {
+    categoria: "PLATAFORMA",
+    motivo:
+      "link do perfil que `lib/escale/contatos/regras.ts` monta a partir do @usuario digitado na janela Novo contato e desmonta para mostrar o @ na coluna da lista. O código não chama o host; quem abre o perfil é o navegador de quem clica. Trocar pelo domínio do revendedor não abriria perfil nenhum.",
+  },
   // ── localização compartilhada: o link que abre o pino do cliente ──
   "maps.google.com": {
     categoria: "PLATAFORMA",
@@ -1216,6 +1222,10 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // CONSOLE — o link "Onde pegar a chave" da tela de Credenciais.
       "console.typesafe.ai",
       "deskcomm.app",
+      // Decisão escrita, Fase 2A: o link do perfil que a janela Novo contato monta a
+      // partir do @usuario (`lib/escale/contatos/regras.ts`). Mesma natureza do
+      // `maps.google.com`: o produto não fala com o host, o navegador de quem clica abre.
+      "instagram.com",
       // Link que abre o pino que o CLIENTE mandou (`lib/messaging/localizacao.ts`).
       // Mesma natureza do `wa.me` abaixo: o produto não fala com o host, quem
       // abre é o celular do atendente. Crescimento escrito, como a regra pede.
