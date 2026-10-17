@@ -18,8 +18,10 @@ import {
   alternarCampo,
   alternarCanal,
   alternarItem,
+  camposDeOutraOrigem,
   canaisLigados,
   chaveDoCampo,
+  limparCamposSemOrigem,
   ocupados,
   prefsIguais,
   type CampoDaCapa,
@@ -54,6 +56,8 @@ interface Linha {
   nome: string;
   Icone?: LucideIcon;
   ligado: boolean;
+  /** Texto cinza depois do rótulo (campo que só existe em outra origem). */
+  sufixo?: string;
   bloqueio?: string;
   aoMudar: () => void;
 }
@@ -69,20 +73,30 @@ const semAcento = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLow
  * "PERSONALIZAR CARDS" (fork Escale, Fase 1E; 01-019 e o código `vf` da Clint).
  * À esquerda, a busca e os grupos com interruptores; à direita, o card de
  * verdade com um exemplo. Salvar só liga quando algo mudou. Vale em todas as
- * origens da pessoa.
+ * origens da pessoa: `campos` são os da origem de agora; `catalogo`, os de todas
+ * (`undefined` = ainda não sei, e então nada é solto). O campo escolhido que já
+ * não existe em origem nenhuma é solto ao abrir e ao salvar; o que só existe em
+ * outra origem aparece ligado, com "de outra origem", para a pessoa desligar.
  */
 export function JanelaPersonalizarCards({
   prefs,
   campos,
+  catalogo,
   onFechar,
 }: {
   prefs: PrefsDoCard;
   campos: readonly CampoDaCapa[];
+  catalogo?: readonly CampoDaCapa[];
   onFechar: () => void;
 }) {
   const t = useT();
   const salvar = useSalvarPrefsDoCard();
-  const [rascunho, setRascunho] = useState(prefs);
+  const [inicial] = useState(() => (catalogo ? limparCamposSemOrigem(prefs, catalogo) : prefs));
+  const [rascunho, setRascunho] = useState(inicial);
+  const deOutraOrigem = useMemo(
+    () => (catalogo ? camposDeOutraOrigem(inicial, campos, catalogo) : []),
+    [inicial, campos, catalogo],
+  );
   const [busca, setBusca] = useState("");
   const [abertos, setAbertos] = useState<ReadonlySet<string>>(() => new Set(["contato"]));
   const cheio = ocupados(rascunho) >= CAMPOS_MAX;
@@ -98,13 +112,15 @@ export function JanelaPersonalizarCards({
     bloqueio: emBreve ? t("Em breve") : !rascunho.itens[i] && cheio ? LIMITE : undefined,
     aoMudar: () => setRascunho((p) => alternarItem(p, i)),
   });
-  const campo = (c: CampoDaCapa): Linha => {
+  const campo = (c: CampoDaCapa, deOutra = false): Linha => {
     const ligado = rascunho.campos.some((x) => chaveDoCampo(x) === chaveDoCampo(c));
     const rotulo = c.deInterface ? t(c.rotulo) : c.rotulo;
+    const sufixo = deOutra ? t("de outra origem") : undefined;
     return {
       chave: chaveDoCampo(c),
       rotulo,
-      nome: rotulo,
+      nome: sufixo ? `${rotulo} (${sufixo})` : rotulo,
+      sufixo,
       ligado,
       bloqueio: !ligado && cheio ? LIMITE : undefined,
       aoMudar: () => setRascunho((p) => alternarCampo(p, c)),
@@ -130,7 +146,7 @@ export function JanelaPersonalizarCards({
       titulo: t("Contato"),
       linhas: [
         item("ultimaMensagem", t("Prévia da última mensagem"), MessageSquare),
-        ...campos.filter((c) => c.entidade === "contato").map(campo),
+        ...campos.filter((c) => c.entidade === "contato").map((c) => campo(c)),
       ],
     },
     {
@@ -147,7 +163,8 @@ export function JanelaPersonalizarCards({
         item("dono", t("Dono do negócio"), Users),
         item("atividades", t("Atividades"), CheckCircle2),
         item("tags", t("Tags"), Tag),
-        ...campos.filter((c) => c.entidade === "negocio").map(campo),
+        ...campos.filter((c) => c.entidade === "negocio").map((c) => campo(c)),
+        ...deOutraOrigem.map((c) => campo(c, true)),
       ],
     },
     {
@@ -171,6 +188,7 @@ export function JanelaPersonalizarCards({
     .filter((g) => g.linhas.length > 0);
   const exemplo = useMemo(() => negocioDeExemplo(t, campos), [t, campos]);
   const mudou = !prefsIguais(rascunho, prefs);
+  const paraSalvar = catalogo ? limparCamposSemOrigem(rascunho, catalogo) : rascunho;
 
   return (
     <DialogPrimitive.Root open onOpenChange={(aberta) => !aberta && onFechar()}>
@@ -291,7 +309,7 @@ export function JanelaPersonalizarCards({
               type="button"
               disabled={!mudou || salvar.isPending}
               onClick={() =>
-                salvar.mutate(rascunho, {
+                salvar.mutate(paraSalvar, {
                   onSuccess: () => {
                     toast.success(t("Preferências salvas"));
                     onFechar();
@@ -334,7 +352,10 @@ function LinhaDoGrupo({ linha }: { linha: Linha }): ReactNode {
           className={linha.ligado ? "text-casca-marca" : "text-[#5A5964]"}
         />
       ) : null}
-      <span className="min-w-0 flex-1 truncate">{linha.rotulo}</span>
+      <span className="min-w-0 flex-1 truncate">
+        {linha.rotulo}
+        {linha.sufixo ? <span className="ml-1.5 text-[#5A5964]">{linha.sufixo}</span> : null}
+      </span>
       {linha.bloqueio ? (
         <Tooltip>
           <TooltipTrigger asChild>

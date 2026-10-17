@@ -30,20 +30,53 @@ window.HTMLElement.prototype.releasePointerCapture = vi.fn();
 import { JanelaPersonalizarCards } from "@/components/escale/capa/JanelaPersonalizarCards";
 import { PersonalizarCards } from "@/components/escale/capa/PersonalizarCards";
 import { ApiError } from "@/lib/api/types";
-import { CAMPOS_MAX, PREFS_PADRAO, camposDaCapa } from "@/lib/escale/capa/tipos";
+import {
+  CAMPOS_MAX,
+  PREFS_PADRAO,
+  camposDaCapa,
+  type CampoDaCapa,
+} from "@/lib/escale/capa/tipos";
 
 const CAMPOS = camposDaCapa([{ fields: [{ key: "renda", label: "Renda", type: "number" }] }]);
+// O catálogo de TODAS as origens: a atual (Renda) e outra (Plano, Cidade).
+const CATALOGO = camposDaCapa([
+  { fields: [{ key: "renda", label: "Renda", type: "number" }] },
+  {
+    fields: [
+      { key: "plano", label: "Plano", type: "text" },
+      { key: "cidade", label: "Cidade", type: "text" },
+    ],
+  },
+]);
+const PLANO = { entidade: "negocio" as const, chave: "plano" };
+const CIDADE = { entidade: "negocio" as const, chave: "cidade" };
+const FANTASMA = { entidade: "negocio" as const, chave: "apagado" };
 const onFechar = vi.fn();
 
-function janela(prefs = PREFS_PADRAO) {
+function janela(prefs = PREFS_PADRAO, catalogo?: readonly CampoDaCapa[]) {
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}
     >
-      <JanelaPersonalizarCards prefs={prefs} campos={CAMPOS} onFechar={onFechar} />
+      <JanelaPersonalizarCards
+        prefs={prefs}
+        campos={CAMPOS}
+        catalogo={catalogo}
+        onFechar={onFechar}
+      />
     </QueryClientProvider>,
   );
   return userEvent.setup({ pointerEventsCheck: 0 });
+}
+
+const ROTA_DOS_CAMPOS = "/api/v1/capas-do-card/campos";
+/** A rota das prefs e a do catálogo respondem pela URL; `campos: null` = a rota do catálogo falha. */
+function responder(prefs: unknown, campos: CampoDaCapa[] | null = CATALOGO) {
+  api.get.mockImplementation(async (url: string) => {
+    if (url !== ROTA_DOS_CAMPOS) return { data: { prefs } };
+    if (campos === null) throw new ApiError(500, "internal", undefined, "r", "Falha no catálogo.");
+    return { data: { campos } };
+  });
 }
 
 function icone() {
@@ -166,15 +199,13 @@ describe("canais no limite de 3 (01-019)", () => {
 
 describe("<PersonalizarCards> (ícone de ajustes)", () => {
   it("o ponto da marca aparece quando a preferência difere do padrão", async () => {
-    api.get.mockResolvedValue({
-      data: { prefs: { ...PREFS_PADRAO, itens: { ...PREFS_PADRAO.itens, tags: false } } },
-    });
+    responder({ ...PREFS_PADRAO, itens: { ...PREFS_PADRAO.itens, tags: false } });
     icone();
     expect(await screen.findByTestId("ponto-da-capa")).toBeInTheDocument();
   });
 
   it("sem preferência gravada, ou igual ao padrão, não há ponto", async () => {
-    api.get.mockResolvedValue({ data: { prefs: PREFS_PADRAO } });
+    responder(PREFS_PADRAO);
     icone();
     await waitFor(() => expect(api.get).toHaveBeenCalled());
     await waitFor(() =>
@@ -187,7 +218,10 @@ describe("<PersonalizarCards> (ícone de ajustes)", () => {
   });
 
   it("se a leitura da preferência falha, o clique mostra o erro e a janela não abre", async () => {
-    api.get.mockRejectedValue(new ApiError(500, "internal", undefined, "r", "Falha ao ler."));
+    api.get.mockImplementation(async (url: string) => {
+      if (url === ROTA_DOS_CAMPOS) return { data: { campos: CATALOGO } };
+      throw new ApiError(500, "internal", undefined, "r", "Falha ao ler.");
+    });
     const user = icone();
     await waitFor(() => expect(api.get).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Personalizar cards" }));
@@ -197,7 +231,10 @@ describe("<PersonalizarCards> (ícone de ajustes)", () => {
 
   it("enquanto carrega, o ícone fica aria-busy e a janela abre quando chega", async () => {
     let chega: (v: unknown) => void = () => {};
-    api.get.mockReturnValue(new Promise((r) => (chega = r)));
+    const pronta = new Promise((r) => (chega = r));
+    api.get.mockImplementation(async (url: string) =>
+      url === ROTA_DOS_CAMPOS ? { data: { campos: CATALOGO } } : pronta,
+    );
     const user = icone();
     const botao = screen.getByRole("button", { name: "Personalizar cards" });
     expect(botao).toHaveAttribute("aria-busy", "true");
@@ -205,6 +242,106 @@ describe("<PersonalizarCards> (ícone de ajustes)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     chega({ data: { prefs: PREFS_PADRAO } });
     expect(await screen.findByRole("dialog", { name: "Personalizar cards" })).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("campos de outra origem (a preferência vale em todas as origens)", () => {
+  const comFantasma = { ...PREFS_PADRAO, campos: [FANTASMA] };
+
+  it("ao abrir, solta o campo que nenhuma origem tem mais: libera o lugar e deixa Salvar ligado", async () => {
+    const quatro = [1, 2, 3, 4].map((n) => ({ entidade: "negocio" as const, chave: `x${n}` }));
+    const user = janela({ ...PREFS_PADRAO, campos: quatro }, CATALOGO);
+    await user.click(screen.getByRole("button", { name: /Negócio/ }));
+    const renda = screen.getByRole("switch", { name: "Renda" });
+    expect(renda).toBeEnabled();
+    expect(screen.getByText(/prévia Maria Silva/)).toHaveTextContent("campos 0");
+    await user.click(renda);
+    await user.click(screen.getByRole("button", { name: "Salvar preferência" }));
+    await waitFor(() => expect(onFechar).toHaveBeenCalled());
+    expect(api.put).toHaveBeenCalledWith("/api/v1/capas-do-card", {
+      prefs: { ...PREFS_PADRAO, campos: [{ entidade: "negocio", chave: "renda" }] },
+    });
+  });
+
+  it("limpar sozinho já é uma mudança a salvar, e o que é salvo não leva o campo solto", async () => {
+    const user = janela(comFantasma, CATALOGO);
+    const salvar = screen.getByRole("button", { name: "Salvar preferência" });
+    expect(salvar).toBeEnabled();
+    await user.click(salvar);
+    await waitFor(() => expect(onFechar).toHaveBeenCalled());
+    expect(api.put).toHaveBeenCalledWith("/api/v1/capas-do-card", { prefs: PREFS_PADRAO });
+  });
+
+  it("sem catálogo (carregando ou com erro) nada é solto", async () => {
+    const user = janela(comFantasma, undefined);
+    expect(screen.getByRole("button", { name: "Salvar preferência" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /Negócio/ }));
+    await user.click(screen.getByRole("switch", { name: "Tags" }));
+    await user.click(screen.getByRole("button", { name: "Salvar preferência" }));
+    await waitFor(() => expect(onFechar).toHaveBeenCalled());
+    expect(api.put).toHaveBeenCalledWith("/api/v1/capas-do-card", {
+      prefs: { ...comFantasma, itens: { ...PREFS_PADRAO.itens, tags: false } },
+    });
+  });
+
+  it("o escolhido que existe em outra origem aparece ligado, com 'de outra origem', e dá para desligar", async () => {
+    const user = janela({ ...PREFS_PADRAO, campos: [PLANO] }, CATALOGO);
+    await user.click(screen.getByRole("button", { name: /Negócio/ }));
+    expect(screen.getByText("de outra origem")).toBeInTheDocument();
+    const plano = screen.getByRole("switch", { name: /Plano/ });
+    expect(plano).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: /Negócio/ })).toHaveTextContent("6");
+    await user.click(plano);
+    expect(screen.getByRole("switch", { name: /Plano/ })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: /Negócio/ })).toHaveTextContent("5");
+    await user.click(screen.getByRole("button", { name: "Salvar preferência" }));
+    await waitFor(() => expect(onFechar).toHaveBeenCalled());
+    expect(api.put).toHaveBeenCalledWith("/api/v1/capas-do-card", { prefs: PREFS_PADRAO });
+  });
+
+  it("os de outra origem entram na conta do limite, e desligar um libera o lugar", async () => {
+    // 6 itens ligados + Plano, Cidade (de outra origem) = 8; Renda liga (9) e Email liga (10).
+    const user = janela({ ...PREFS_PADRAO, campos: [PLANO, CIDADE] }, CATALOGO);
+    await user.click(screen.getByRole("button", { name: /Negócio/ }));
+    await user.click(screen.getByRole("switch", { name: "Renda" }));
+    await user.click(screen.getByRole("switch", { name: "Email" }));
+    expect(CAMPOS_MAX).toBe(10);
+    const telefone = screen.getByRole("switch", { name: "Telefone" });
+    expect(telefone).toBeDisabled();
+    expect(telefone).toHaveAttribute("title", "Limite de 10 campos atingido");
+    await user.click(screen.getByRole("switch", { name: /Plano/ }));
+    expect(screen.getByRole("switch", { name: "Telefone" })).toBeEnabled();
+  });
+
+  it("o que não está escolhido e é de outra origem não é oferecido", async () => {
+    const user = janela(PREFS_PADRAO, CATALOGO);
+    await user.click(screen.getByRole("button", { name: /Negócio/ }));
+    expect(screen.getByRole("switch", { name: "Renda" })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /Plano/ })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /Cidade/ })).toBeNull();
+    expect(screen.queryByText("de outra origem")).toBeNull();
+  });
+});
+
+describe("<PersonalizarCards> com o catálogo das origens", () => {
+  it("espera o catálogo, busca na rota de campos e abre sem o campo que não existe mais", async () => {
+    responder({ ...PREFS_PADRAO, campos: [FANTASMA, PLANO] });
+    const user = icone();
+    await user.click(screen.getByRole("button", { name: "Personalizar cards" }));
+    expect(await screen.findByRole("dialog", { name: "Personalizar cards" })).toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith(ROTA_DOS_CAMPOS);
+    await user.click(screen.getByRole("button", { name: /Negócio/ }));
+    expect(screen.getByRole("switch", { name: /Plano/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "Salvar preferência" })).toBeEnabled();
+  });
+
+  it("se o catálogo falha, a janela abre mesmo assim e não solta nada", async () => {
+    responder({ ...PREFS_PADRAO, campos: [FANTASMA] }, null);
+    const user = icone();
+    await user.click(screen.getByRole("button", { name: "Personalizar cards" }));
+    expect(await screen.findByRole("dialog", { name: "Personalizar cards" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar preferência" })).toBeDisabled();
     expect(toast.error).not.toHaveBeenCalled();
   });
 });
