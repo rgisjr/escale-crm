@@ -135,8 +135,8 @@ export function desafixar(estado: Recentes, id: string): Recentes {
   };
 }
 
-/** O deep link do quadro (`?lead=`): abre o negócio no quadro da origem dele. */
-export const linkDoRecente = (r: NegocioRecente) => `/app/pipelines/${r.origemId}?lead=${r.id}`;
+/** Fase 1G (N3): o Recente abre a ficha do negócio (os Recentes só existem com a casca). */
+export const linkDoRecente = (r: NegocioRecente) => `/app/negocios/${r.id}`;
 
 export function recenteDoLead(lead: Lead, origem: string): NegocioRecente {
   return {

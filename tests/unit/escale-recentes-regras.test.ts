@@ -71,7 +71,8 @@ describe("os Recentes (Clint superior: LAST_LEADS e PIN_LEAD)", () => {
     expect(lido.fixados.map((x) => x.id)).toEqual([id(1)]);
     expect(lido.recentes.map((x) => x.id)).toEqual([id(3)]);
     expect(chaveDosRecentes("org-1", "u-1")).toBe("escale:negocios-recentes:v2:org-1:u-1");
-    expect(linkDoRecente(r(1))).toBe(`/app/pipelines/${ORIGEM}?lead=${id(1)}`);
+    // Fase 1G (N3): o Recente abre a ficha do negócio.
+    expect(linkDoRecente(r(1))).toBe(`/app/negocios/${id(1)}`);
   });
 
   it("a foto só vale como /api/v1/contacts/<uuid>/avatar: o navegador não escolhe o que a página carrega", () => {

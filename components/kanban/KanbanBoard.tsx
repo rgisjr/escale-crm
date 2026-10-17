@@ -85,6 +85,11 @@ interface KanbanBoardProps {
    * aberto abre o dossiê dele. Sem ela, o contrato do original: o estado local manda.
    */
   aoFecharDossie?: () => void;
+  /**
+   * FORK ESCALE · Fase 1G (N3): na casca, o card abre a ficha do negócio (tela
+   * própria) em vez do dossiê. Ausente = o dossiê de sempre.
+   */
+  aoAbrirNegocio?: (leadId: string) => void;
 }
 
 function groupLeadsByStage(
@@ -139,6 +144,7 @@ export function KanbanBoard({
   aoAdicionarNegocio,
   podeSelecionarNaEtapa = false,
   aoFecharDossie,
+  aoAbrirNegocio,
 }: KanbanBoardProps) {
   const t = useT();
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
@@ -412,7 +418,8 @@ export function KanbanBoard({
               canonicalTags={canonicalTags}
               selectedLeadIds={selectedLeadIds}
               onSelectMany={handleSelectMany}
-              onOpen={setDossieId}
+              // FORK ESCALE · Fase 1G (N3): na casca, o card abre a ficha do negócio.
+              onOpen={aoAbrirNegocio ?? setDossieId}
               podeRenomear={podeRenomearEtapa}
               onRenomear={(nome) => renameStage.mutate({ stageId: stage.id, name: nome })}
               aoAdicionar={aoAdicionarNegocio}

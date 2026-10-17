@@ -57,3 +57,6 @@ export { CircleMinus, CircleX, CloudUpload, Columns2, Flag, Upload } from "lucid
 
 // Fase 1F (configurações da origem): ícones do menu interno, do alerta e das regras.
 export { Shuffle, CircleSlash, ReceiptText, CirclePlus, TriangleAlert, ArrowRight, ClipboardList } from "lucide-react";
+
+// Fase 1G (ficha do negócio): nota, mudar origem, campos de negócio, modo espião e o vazio de Conversas.
+export { StickyNote, ArrowRightLeft, Target, Glasses, MessagesSquare } from "lucide-react";
