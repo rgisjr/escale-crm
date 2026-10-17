@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { useConversaNovaComEscolhaDeCanal } from "@/components/channels/SeletorDeCanalParaConversa";
 import { ChipDaTag } from "@/components/escale/quadro/PecasDoCard";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import {
@@ -14,7 +15,8 @@ import {
 import { AtSign, Mail, MessageCircle, Phone } from "@/lib/ui/icons-da-casca";
 
 const MAXIMO_DE_TAGS = 6;
-const dataBr = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR") : "—");
+const dataNoIdioma = (iso: string | null, tag: string) =>
+  iso ? new Date(iso).toLocaleDateString(tag) : "—";
 
 /** Telefone com ligar e WhatsApp no hover da linha, e-mail e Instagram embaixo (Clint `n:contact`). */
 export function CelulaContato({ linha }: { linha: LinhaDeContato }) {
@@ -153,6 +155,8 @@ const ROTULO_DO_STATUS = {
 /** As colunas extras ("Colunas" e "Campos do contato" do 03-002). */
 export function CelulaExtra({ item, linha }: { item: ItemDeColuna; linha: LinhaDeContato }) {
   const t = useT();
+  const tag = useTagDeIdioma();
+  const dataBr = (iso: string | null) => dataNoIdioma(iso, tag);
   const texto = (v: string) => <span className="text-[12px] text-casca-texto">{v}</span>;
   if (item.tipo === "nativa") {
     if (item.chave === "status") return texto(t(ROTULO_DO_STATUS[linha.status]));
