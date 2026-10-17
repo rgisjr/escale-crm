@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -281,5 +284,20 @@ describe("<JanelasDeOrigens> — outra origem não herda o rascunho", () => {
     await waitFor(() =>
       expect(screen.getByRole("textbox", { name: "Nome da origem" })).toHaveValue("Outra"),
     );
+  });
+});
+
+describe("<JanelaDaOrigem> — posição na tela", () => {
+  it("a animação do ds-modal não empurra a janela meia largura para a esquerda", () => {
+    // O keyframe `ds-modal-entra` (app/globals.css) termina em `translate: var(--ds-modal-x, -50%) …`
+    // e fica valendo depois da animação. Os modais do original centralizam com `left: 50%`;
+    // esta janela ocupa a largura toda (`inset-x-2`), então zera o deslocamento horizontal.
+    const fonte = readFileSync(
+      join(__dirname, "..", "..", "components/escale/configuracoes/JanelaDaOrigem.tsx"),
+      "utf8",
+    );
+    const classe = /className="(ds-modal [^"]*)"/.exec(fonte)?.[1] ?? "";
+    expect(classe).toContain("inset-x-2");
+    expect(classe).toContain("[--ds-modal-x:0px]");
   });
 });
