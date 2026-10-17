@@ -1,7 +1,16 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
+
+const editar = vi.hoisted(() => ({ mutateAsync: vi.fn(async () => ({})) }));
+vi.mock("@/hooks/kanban/useUpdateLead", () => ({
+  useEditLead: () => ({ mutateAsync: editar.mutateAsync, isPending: false }),
+}));
+const permissao = vi.hoisted(() => ({ pode: true }));
+vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => permissao.pode }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { AbaArquivos } from "@/components/escale/negocio/abas/AbaArquivos";
 import { AbaConversas } from "@/components/escale/negocio/abas/AbaConversas";
@@ -38,8 +47,14 @@ const PIPELINE = {
 const linhaDe = (rotulo: string) =>
   screen.getByText(rotulo, { selector: "dt" }).parentElement as HTMLElement;
 
-describe("aba Negócio (print 04)", () => {
-  it("Valor e os campos do CRM num grupo só, 'Informações Gerais', só leitura", () => {
+describe("aba Negócio (print 04, C14)", () => {
+  beforeEach(() => {
+    editar.mutateAsync.mockClear();
+    permissao.pode = true;
+    window.localStorage.clear();
+  });
+
+  it("Valor e os campos do CRM num grupo só, cada um num input; a lista com ▾", () => {
     render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
     expect(screen.getByRole("heading", { name: "Campos de negócio" })).toBeInTheDocument();
     expect(
@@ -47,18 +62,83 @@ describe("aba Negócio (print 04)", () => {
         "Informações Gerais",
       ),
     ).toHaveAttribute("aria-current", "true");
-    expect(within(linhaDe("Valor")).getByText(/R\$\s1\.500/)).toBeInTheDocument();
-    expect(within(linhaDe("origem_organico")).getByText("Google")).toBeInTheDocument();
-    expect(within(linhaDe("Notas")).getByText("Clique aqui para adicionar")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Valor" })).toHaveValue("1.500,00");
+    expect(screen.getByRole("combobox", { name: "origem_organico" })).toHaveTextContent("Google");
+    expect(screen.getByRole("textbox", { name: "Notas" })).toHaveAttribute(
+      "placeholder",
+      "Clique aqui para adicionar",
+    );
   });
 
-  it("Ocultar vazios, Gerenciar campos e a busca são da 1H: desligados, com 'Em breve'", () => {
+  it("editar o Valor grava value_cents; editar um campo grava só aquela chave", async () => {
     render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
-    for (const nome of ["Ocultar vazios", "Gerenciar campos"]) {
-      expect(screen.getByRole("button", { name: nome })).toBeDisabled();
-      expect(screen.getByRole("button", { name: nome })).toHaveAttribute("title", "Em breve");
-    }
-    expect(screen.getByPlaceholderText("Pesquisar campos...")).toBeDisabled();
+    const valor = screen.getByRole("textbox", { name: "Valor" });
+    await userEvent.clear(valor);
+    await userEvent.type(valor, "2.000,50{Enter}");
+    expect(editar.mutateAsync).toHaveBeenCalledWith({
+      leadId: "n1",
+      patch: { value_cents: 200050 },
+    });
+    await userEvent.type(screen.getByRole("textbox", { name: "Notas" }), "Ligar amanhã{Enter}");
+    expect(editar.mutateAsync).toHaveBeenLastCalledWith({
+      leadId: "n1",
+      patch: { custom_fields: { notas: "Ligar amanhã" } },
+    });
+  });
+
+  it("Ocultar vazios esconde os sem valor, lembra no localStorage e mostra o aviso da Clint", async () => {
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    await userEvent.click(screen.getByRole("button", { name: "Ocultar vazios" }));
+    expect(screen.queryByRole("textbox", { name: "Notas" })).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Valor" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mostrar vazios" })).toBeInTheDocument();
+    expect(screen.getByText("Porque não vejo alguns campos?")).toHaveAttribute(
+      "title",
+      'Os campos vazios estão sendo ocultados. Você pode clicar no canto superior direito dessa aba para "Mostrar campos vazios".',
+    );
+    expect(window.localStorage.getItem("escale_campos_vazios_negocio")).toBe("1");
+  });
+
+  it("Pesquisar campos filtra pelo rótulo; sem resultado, 'Nenhum campo encontrado'", async () => {
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    await userEvent.type(screen.getByRole("searchbox", { name: "Pesquisar campos..." }), "nota");
+    expect(screen.getByRole("textbox", { name: "Notas" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Valor" })).toBeNull();
+    await userEvent.type(screen.getByRole("searchbox", { name: "Pesquisar campos..." }), "xyz");
+    expect(screen.getByText("Nenhum campo encontrado")).toBeInTheDocument();
+  });
+
+  it("Gerenciar campos leva à tela de campos para quem administra; para os outros fica desligado", () => {
+    const { unmount } = render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    expect(screen.getByRole("link", { name: "Gerenciar campos" })).toHaveAttribute(
+      "href",
+      "/app/settings/tenant/pipelines",
+    );
+    unmount();
+    permissao.pode = false;
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    const botao = screen.getByRole("button", { name: "Gerenciar campos" });
+    expect(botao).toBeDisabled();
+    expect(botao).toHaveAttribute("title", "Só quem administra a conta gerencia os campos.");
+  });
+
+  it("um campo condicional escondido não aparece (camposVisiveis)", () => {
+    const comCondicional = {
+      ...PIPELINE,
+      settings: {
+        fields: [
+          ...(PIPELINE.settings as { fields: unknown[] }).fields,
+          {
+            key: "cnpj",
+            label: "CNPJ",
+            type: "text",
+            mostrar_quando: { campo: "origem_organico", operador: "igual", valor: "meta" },
+          },
+        ],
+      },
+    } as unknown as Pipeline;
+    render(<AbaNegocio lead={LEAD} pipeline={comCondicional} />);
+    expect(screen.queryByRole("textbox", { name: "CNPJ" })).toBeNull();
   });
 });
 
