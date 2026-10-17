@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -233,5 +235,16 @@ describe("<FichaDoNegocio>", () => {
     quadro.estado = { data: undefined, isLoading: false, error: new Error("x") };
     render(<FichaDoNegocio {...PROPS} />);
     expect(screen.getByText("Não consegui carregar este negócio.")).toBeInTheDocument();
+  });
+});
+
+describe("C9: nada da ficha cobre o botão flutuante", () => {
+  it("a ficha não tem peça fixa nem cortina", () => {
+    const fonte = readFileSync(
+      join(__dirname, "..", "..", "components/escale/negocio/FichaDoNegocio.tsx"),
+      "utf8",
+    );
+    expect(fonte).not.toMatch(/fixed/);
+    expect(fonte).not.toMatch(/Sheet|Dialog/);
   });
 });
