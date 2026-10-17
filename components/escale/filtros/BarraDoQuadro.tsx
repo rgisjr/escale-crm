@@ -39,6 +39,10 @@ export interface BarraDoQuadroProps {
   atualizando?: boolean;
   /** Fase 1E: o que o ícone Exportar leva; ausente = sem ícone (Visualização, abaixo de gerente). */
   exportacao?: ExportacaoDoQuadro;
+  /** Fase 1F (F20): a engrenagem abre as configurações da origem (gerente ou acima, só no funil). */
+  aoConfigurar?: () => void;
+  /** Fase 1F: a dica da engrenagem desligada; ausente = "Em breve". */
+  dicaDaEngrenagem?: string;
 }
 
 const ESPERA_DA_BUSCA_MS = 250;
@@ -61,6 +65,8 @@ export function BarraDoQuadro({
   onAtualizar,
   atualizando = false,
   exportacao,
+  aoConfigurar,
+  dicaDaEngrenagem,
 }: BarraDoQuadroProps) {
   const t = useT();
   // Muda só quando os filtros vêm de fora da digitação (filtro salvo, limpar):
@@ -137,7 +143,7 @@ export function BarraDoQuadro({
         personalizar={<PersonalizarCards campos={campos} />}
         // FORK ESCALE · Fase 1E: o ícone Exportar (gerente ou acima, só no funil).
         exportar={exportacao ? <ExportarCards {...exportacao} /> : undefined}
-        // FORK ESCALE · Fase 1E (E15): "Ordenar" é botão da linha de contagem; a engrenagem fica para a 1F.
+        // FORK ESCALE · Fase 1E (E15): "Ordenar" é botão da linha de contagem.
         ordenar={
           <BotaoOrdenar
             ordem={filtros.ordem}
@@ -145,6 +151,9 @@ export function BarraDoQuadro({
             onAplicar={(ordem) => mudar({ ...filtros, ordem })}
           />
         }
+        // Fase 1F (F20): a engrenagem da Clint abre as configurações da origem.
+        configurar={aoConfigurar}
+        dicaDaEngrenagem={dicaDaEngrenagem}
       />
     </div>
   );

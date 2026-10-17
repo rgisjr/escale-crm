@@ -1,11 +1,12 @@
 "use client";
+// Fase 1F: a janela grande da Clint (01-013).
+import { JanelaDaOrigem } from "@/components/escale/configuracoes/JanelaDaOrigem";
 import type { Origens } from "@/lib/escale/origens/regras";
 
 import { JanelaDaCasca } from "./JanelaDaCasca";
 import {
   FormAdicionarOrigem,
   FormArquivarOrigem,
-  FormConfigOrigem,
   FormExcluirOrigem,
 } from "./JanelasDaOrigem";
 import {
@@ -49,6 +50,7 @@ export function JanelasDeOrigens({
   onAbrirOrigem,
   ...comuns
 }: PropsDaJanela & { janela: Janela | null; onAbrirOrigem: (id: string) => void }) {
+  if (janela?.tipo === "config-origem") return <JanelaDaOrigem {...comuns} id={janela.id} />;
   return (
     <JanelaDaCasca aberta={janela !== null} onFechar={comuns.onFechar}>
       {janela?.tipo === "adicionar-origem" && (
@@ -59,7 +61,6 @@ export function JanelasDeOrigens({
       {janela?.tipo === "customizar" && <FormCustomizarGrupo {...comuns} id={janela.id} />}
       {janela?.tipo === "arquivar-grupo" && <FormArquivarGrupo {...comuns} id={janela.id} />}
       {janela?.tipo === "excluir-grupo" && <FormExcluirGrupo {...comuns} id={janela.id} />}
-      {janela?.tipo === "config-origem" && <FormConfigOrigem {...comuns} id={janela.id} />}
       {janela?.tipo === "arquivar-origem" && <FormArquivarOrigem {...comuns} id={janela.id} />}
       {janela?.tipo === "excluir-origem" && <FormExcluirOrigem {...comuns} id={janela.id} />}
     </JanelaDaCasca>

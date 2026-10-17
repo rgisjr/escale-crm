@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * `docs/escale/clint/crops/icons-right.png`): "N oportunidades de **Negócio**"
  * (número real e plural, D14) à esquerda; ordenar, atualizar, exportar, engrenagem
  * e ajuda à direita. Exportar (Fase 1E) só para gerente ou acima no funil; a
- * engrenagem (1F) e a ajuda seguem desligadas (D6; PRINTS 15 e 17).
+ * engrenagem abre as configurações da origem (Fase 1F, print 15); a ajuda segue desligada (D6).
  */
 export function LinhaDeContagem({
   contagem,
@@ -22,6 +22,8 @@ export function LinhaDeContagem({
   ordenar,
   personalizar,
   exportar,
+  configurar,
+  dicaDaEngrenagem,
 }: {
   contagem: number;
   ordemAtiva: boolean;
@@ -33,6 +35,10 @@ export function LinhaDeContagem({
   personalizar?: ReactNode;
   /** Fase 1E: o `ExportarCards`; ausente = sem ícone (Visualização, abaixo de gerente). */
   exportar?: ReactNode;
+  /** Fase 1F (F20): abre as configurações da origem. Ausente = engrenagem desligada. */
+  configurar?: () => void;
+  /** Fase 1F: a dica da engrenagem desligada ("Sem permissão"); ausente = "Em breve". */
+  dicaDaEngrenagem?: string;
 }) {
   const t = useT();
   const { antes, depois } = partesDaContagem(
@@ -69,13 +75,14 @@ export function LinhaDeContagem({
         </BotaoDaCasca>
         {personalizar}
         {exportar}
-        {/* FORK ESCALE · Fase 1E (E15): a engrenagem abre a configuração da origem na Clint (print 15). Liga na 1F. */}
+        {/* Fase 1F (F20): a engrenagem abre as configurações da origem, como na Clint (print 15 da 1E). */}
         <BotaoDaCasca
           type="button"
           variante="icone"
-          disabled
+          disabled={!configurar}
+          onClick={configurar}
           aria-label={t("Configurações da origem")}
-          title={t("Em breve")}
+          title={configurar ? t("Configurações da origem") : (dicaDaEngrenagem ?? t("Em breve"))}
           className="disabled:pointer-events-auto disabled:cursor-not-allowed"
         >
           <Settings size={16} aria-hidden />

@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAtualizarVisualizacao } from "@/hooks/escale/useVisualizacoes";
 import { useT } from "@/hooks/i18n/useT";
+import { useAoAbrirConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/abrir";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
 import { filtrarArvore, funilDoCaminho, montarOrigens, type Origens } from "@/lib/escale/origens/regras";
 import {
@@ -144,6 +145,8 @@ export function PainelOrigens({
   const [busca, setBusca] = useState("");
   const [novoEm, setNovoEm] = useState<string | null>(null);
   const [janela, setJanela] = useState<Janela | null>(null);
+  // Fase 1F (F20): a engrenagem do quadro abre a mesma janela do ⋮ "Configurações".
+  useAoAbrirConfiguracoesDaOrigem((id) => setJanela({ tipo: "config-origem", id }));
   const [selecao, setSelecao] = useState<Selecao | null>(null);
   const [erroDaSelecao, setErroDaSelecao] = useState<string | null>(null);
   const [janelaDaVisualizacao, setJanelaDaVisualizacao] = useState<JanelaDaVisualizacao | null>(null);

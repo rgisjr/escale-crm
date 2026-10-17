@@ -124,28 +124,6 @@ describe("janelas da origem", () => {
     expect(onOrigens).toHaveBeenCalledWith(ORIGENS);
   });
 
-  it("Configurações da origem renomeia, troca o grupo e torna padrão", async () => {
-    const { user } = abrir({ tipo: "config-origem", id: "f-nayara" });
-    const nome = screen.getByRole("textbox", { name: "Nome da origem" });
-    await user.clear(nome);
-    await user.type(nome, "Nayara 2026");
-    await user.click(screen.getByRole("combobox", { name: "Grupo" }));
-    await user.click(await screen.findByRole("option", { name: "Parcerias" }));
-    await user.click(screen.getByRole("checkbox", { name: /Tornar esta a origem padrão/ }));
-    await user.click(screen.getByRole("button", { name: "Salvar" }));
-    await vi.waitFor(() =>
-      expect(apiClient.put).toHaveBeenCalledWith("/api/v1/pipelines/f-nayara/grupo", { group_id: "g-vazio" }),
-    );
-    expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipelines/f-nayara", { name: "Nayara 2026" });
-    expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipelines/f-nayara", { is_default: true });
-  });
-
-  it("a origem padrão não mostra a caixa de tornar padrão", () => {
-    abrir({ tipo: "config-origem", id: "f-leads" });
-    expect(screen.getByText("Esta é a origem padrão da organização.")).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox")).toBeNull();
-  });
-
   it("Arquivar origem usa o arquivamento do original e relê as origens", async () => {
     const { user } = abrir({ tipo: "arquivar-origem", id: "f-nayara" });
     await user.click(screen.getByRole("button", { name: "Arquivar" }));
@@ -179,13 +157,6 @@ describe("casca V3 — janelas no visual do modal da Clint (01-013)", () => {
   it("Excluir é o botão vermelho da casca", () => {
     abrir({ tipo: "excluir-grupo", id: "g-vazio" });
     expect(screen.getByRole("button", { name: "Excluir grupo" })).toHaveClass("bg-casca-alerta");
-  });
-
-  it("Configurações da origem usa o seletor e a caixinha da casca, nada nativo", () => {
-    abrir({ tipo: "config-origem", id: "f-nayara" });
-    expect(screen.getByRole("combobox", { name: "Grupo" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /Tornar esta a origem padrão/ })).not.toBeChecked();
-    expect(document.querySelector('input[type="checkbox"], select')).toBeNull();
   });
 
   it("Customizar mostra a paleta nas cores da Clint; o tom gravado continua o da paleta", () => {

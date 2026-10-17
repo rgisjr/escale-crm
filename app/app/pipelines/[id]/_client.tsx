@@ -52,6 +52,8 @@ import { CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
 // FORK ESCALE · Fase 1E: o menu "Negócio +" e a janela "Importar negócios" (casca nova).
 import { MenuNegocioMais } from "@/components/escale/quadro/MenuNegocioMais";
 import { JanelaDeImportarNegocios } from "@/components/escale/quadro/JanelaDeImportarNegocios";
+// FORK ESCALE · Fase 1F: a engrenagem abre as configurações da origem (F20).
+import { abrirConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/abrir";
 
 export function PipelinePageClient({
   pipelineId,
@@ -358,6 +360,9 @@ export function PipelinePageClient({
                 }
               : undefined
           }
+          // FORK ESCALE · Fase 1F (F20): a engrenagem abre as configurações da origem (a janela é de gerente ou acima).
+          aoConfigurar={ROLE_RANK[role] >= ROLE_RANK.manager ? () => abrirConfiguracoesDaOrigem(pipelineId) : undefined}
+          dicaDaEngrenagem={t("Sem permissão")}
         />
       ) : (
         <FilterBar
