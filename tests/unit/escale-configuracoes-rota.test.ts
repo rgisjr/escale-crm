@@ -26,6 +26,9 @@ const E2 = "aaaaaaaa-0000-4000-8000-000000000002";
 const EG = "aaaaaaaa-0000-4000-8000-000000000003";
 const ARQUIVADA = "aaaaaaaa-0000-4000-8000-000000000009";
 
+const LIDO_EM = "2026-10-17T12:00:00.000000+00:00";
+const ALTERADO_EM = "2026-10-17T12:00:05.000000+00:00";
+
 const SETTINGS = {
   fields: [{ key: "proposta", label: "Proposta", type: "text" }],
   lost_reasons: ["Preço", "Sumiu"],
@@ -36,21 +39,33 @@ function banco(
   opts: {
     org?: string;
     writeError?: (n: number, table: string) => { code: string; message: string } | null;
+    readError?: (
+      table: string,
+      filtros: Array<[string, unknown]>,
+    ) => { code: string; message: string } | null;
+    settings?: Record<string, unknown>;
   } = {},
 ) {
+  // `funilRow` não tem `updated_at` (o dublê é de outras rotas): a coluna entra por cima.
+  const comCarimbo = (row: ReturnType<typeof funilRow>) =>
+    ({ ...row, updated_at: LIDO_EM }) as ReturnType<typeof funilRow>;
   return makeDb({
     pipelines: [
-      funilRow({
-        id: PIPE,
-        name: "Pedidos",
-        settings: SETTINGS,
-        organization_id: opts.org ?? ORG_ID,
-      }),
-      funilRow({
-        id: "55555555-5555-4555-8555-555555555555",
-        name: "Outra",
-        settings: { lost_reasons: ["Concorrente"] },
-      }),
+      comCarimbo(
+        funilRow({
+          id: PIPE,
+          name: "Pedidos",
+          settings: opts.settings ?? SETTINGS,
+          organization_id: opts.org ?? ORG_ID,
+        }),
+      ),
+      comCarimbo(
+        funilRow({
+          id: "55555555-5555-4555-8555-555555555555",
+          name: "Outra",
+          settings: { lost_reasons: ["Concorrente"] },
+        }),
+      ),
     ],
     stages: [
       etapa({ id: E2, name: "Proposta", position: 2 }),
@@ -59,7 +74,18 @@ function banco(
       etapa({ id: ARQUIVADA, name: "Velha", position: 4, is_archived: true }),
     ],
     writeError: opts.writeError,
+    readError: opts.readError,
   });
+}
+
+/** Troca o carimbo da origem na terceira leitura, depois de a rota já ter lido a primeira. */
+function outraGravacaoNoMeio(db: ReturnType<typeof banco>) {
+  return (table: string, filtros: Array<[string, unknown]>) => {
+    if (table === "crm_pipelines" && !filtros.some(([c]) => c === "id")) {
+      for (const linha of db.tabelas.crm_pipelines) linha.updated_at = ALTERADO_EM;
+    }
+    return null;
+  };
 }
 
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -164,6 +190,85 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
         metadata: { secoes: ["gerais"], via: "escale" },
       }),
     );
+  });
+
+  it("a gravação é condicional ao updated_at lido e audita uma vez só", async () => {
+    const db = banco();
+    const res = await PATCH(pedido("PATCH", GERAIS_VAZIO), ctx(PIPE));
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    expect(escrita?.filtros).toContainEqual(["updated_at", LIDO_EM]);
+    expect(audit).toHaveBeenCalledTimes(1);
+  });
+
+  it("gerente que manda só o alerta grava (a trava de administrador não barra a seção)", async () => {
+    const db = banco();
+    const res = await PATCH(
+      pedido("PATCH", {
+        alerta: {
+          geral: { atencao: 1, atencao_unidade: "horas", critico: 2, critico_unidade: "horas" },
+          etapas: {},
+        },
+      }),
+      ctx(PIPE),
+    );
+    expect(res.status).toBe(200);
+    expect(db.escritas.filter((e) => e.table === "crm_pipelines")).toHaveLength(1);
+    expect(audit).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { secoes: ["alerta"], via: "escale" } }),
+    );
+  });
+
+  it("salvar os gerais não apaga as regras de campos nem o alerta que já estavam no settings", async () => {
+    const guardados = {
+      ...SETTINGS,
+      escale_ao_sair: { proposta: [E1] },
+      escale_alerta_tempo: {
+        geral: { atencao: 1, atencao_unidade: "horas", critico: 2, critico_unidade: "horas" },
+        etapas: {},
+      },
+    };
+    const db = banco({ settings: guardados });
+    const res = await PATCH(
+      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: [] } }),
+      ctx(PIPE),
+    );
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    const gravado = (escrita?.patch as { settings: Record<string, unknown> }).settings;
+    expect(gravado.escale_ao_sair).toEqual(guardados.escale_ao_sair);
+    expect(gravado.escale_alerta_tempo).toEqual(guardados.escale_alerta_tempo);
+    expect(gravado.escale_moeda).toBe("USD");
+  });
+
+  it("outra gravação no meio (updated_at mudou): 409 de tentar de novo, nada gravado e nada auditado", async () => {
+    const db: ReturnType<typeof banco> = banco({
+      readError: (table, filtros) => outraGravacaoNoMeio(db)(table, filtros),
+    });
+    const res = await PATCH(
+      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: [] } }),
+      ctx(PIPE),
+    );
+    expect(res.status).toBe(409);
+    expect(((await corpo(res)) as { error?: { code?: string } }).error?.code).toBe("state_conflict");
+    const alvo = db.tabelas.crm_pipelines.find((l) => l.id === PIPE);
+    expect(alvo?.settings).toEqual(SETTINGS);
+    expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("o update que não acha linha (origem apagada no meio ou RLS filtrando) é 409, sem auditoria", async () => {
+    const db: ReturnType<typeof banco> = banco({
+      readError: (table, filtros) => {
+        if (table === "crm_pipelines" && !filtros.some(([c]) => c === "id")) {
+          db.tabelas.crm_pipelines.splice(0);
+        }
+        return null;
+      },
+    });
+    const res = await PATCH(pedido("PATCH", GERAIS_VAZIO), ctx(PIPE));
+    expect(res.status).toBe(409);
+    expect(db.escritas.filter((e) => e.table === "crm_pipelines")).toHaveLength(1);
+    expect(audit).not.toHaveBeenCalled();
   });
 
   it("várias seções no mesmo pedido saem num update só e a auditoria lista todas", async () => {

@@ -11,7 +11,9 @@
  * `crm_pipelines_manager_write`). Só as chaves das seções mudam
  * (`aplicarConfiguracoes`); `settings.fields` é a projeção do catálogo do CRM
  * (1F-a) e só ganha o `obrigatorio_em` novo. A `organization_id` vem da sessão e
- * entra no filtro da leitura e da escrita.
+ * entra no filtro da leitura e da escrita. A gravação é condicional ao
+ * `updated_at` lido (409 se outra gravação passou na frente) e, sem exatamente
+ * uma linha gravada, a rota não audita.
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -29,6 +31,7 @@ import {
   secoesDoPatch,
 } from "@/lib/escale/configuracoes/gravar";
 import {
+  conflitoDeGravacao,
   falhaInesperada,
   lerOrigemDaConfiguracao,
   respostaDoErroDeGravacao,
@@ -124,11 +127,16 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   });
   if (!veredito.ok) return fail("unprocessable_entity", t(veredito.erro), 422, { requestId });
 
-  const { error } = await supabase
+  // O `settings` vai inteiro: a gravação só vale se a origem ainda estiver com o
+  // `updated_at` lido (senão apagaria o que outra pessoa salvou no meio) e se
+  // exatamente uma linha mudou (RLS ou origem apagada devolvem zero, sem erro).
+  const { data: gravadas, error } = await supabase
     .from("crm_pipelines")
     .update({ settings: veredito.settings })
     .eq("id", id)
-    .eq("organization_id", orgId);
+    .eq("organization_id", orgId)
+    .eq("updated_at", origem.pipeline.updated_at)
+    .select("id");
   if (error)
     return respostaDoErroDeGravacao(
       error,
@@ -136,6 +144,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
       t,
       requestId,
     );
+  if (!Array.isArray(gravadas) || gravadas.length !== 1) return conflitoDeGravacao(t, requestId);
 
   void audit({
     action: "pipeline.config_updated",

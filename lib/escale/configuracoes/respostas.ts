@@ -48,6 +48,16 @@ export function falhaInesperada(
 }
 
 /**
+ * 409 de "tente de novo": outra gravação passou na frente (deadlock, falha de
+ * serialização ou o `updated_at` da origem mudou entre a leitura e a escrita).
+ */
+export function conflitoDeGravacao(t: Traduzir, requestId: string): Response {
+  return fail("state_conflict", t("Outra pessoa está salvando ao mesmo tempo. Tente de novo."), 409, {
+    requestId,
+  });
+}
+
+/**
  * O erro do `update` do `settings`, nomeado. 42501 (RLS): quem pede não é
  * gerente. 40P01 (deadlock) e 40001 (serialização): duas pessoas salvando ao
  * mesmo tempo (os gatilhos do catálogo de campos travam a organização). 23514:
@@ -67,14 +77,7 @@ export function respostaDoErroDeGravacao(
       { requestId },
     );
   }
-  if (erro.code === "40P01" || erro.code === "40001") {
-    return fail(
-      "state_conflict",
-      t("Outra pessoa está salvando ao mesmo tempo. Tente de novo."),
-      409,
-      { requestId },
-    );
-  }
+  if (erro.code === "40P01" || erro.code === "40001") return conflitoDeGravacao(t, requestId);
   if (erro.code === "23514") {
     return fail(
       "unprocessable_entity",
@@ -93,6 +96,8 @@ export interface OrigemLida {
     group_id: string | null;
     is_default: boolean;
     settings: unknown;
+    /** A versão lida: a gravação só vale se a origem ainda estiver com este carimbo. */
+    updated_at: string;
   };
   /** Só as etapas vivas (não arquivadas), na ordem do quadro. */
   etapas: EtapaDaOrigem[];
@@ -114,7 +119,7 @@ export async function lerOrigemDaConfiguracao(
   const [funil, etapas, todas] = await Promise.all([
     supabase
       .from("crm_pipelines")
-      .select("id, name, group_id, is_default, settings")
+      .select("id, name, group_id, is_default, settings, updated_at")
       .eq("id", pipelineId)
       .eq("organization_id", orgId)
       .maybeSingle(),
@@ -137,7 +142,11 @@ export async function lerOrigemDaConfiguracao(
     group_id?: string | null;
     is_default?: boolean;
     settings?: unknown;
+    updated_at?: unknown;
   };
+  if (typeof p.updated_at !== "string") {
+    return { ok: false, erro: "banco", causa: { message: "crm_pipelines.updated_at ausente" } };
+  }
   const linhas = (etapas.data ?? []) as Array<{
     id: string;
     name: string;
@@ -153,6 +162,7 @@ export async function lerOrigemDaConfiguracao(
       group_id: p.group_id ?? null,
       is_default: p.is_default === true,
       settings: p.settings ?? null,
+      updated_at: p.updated_at,
     },
     etapas: linhas.map((e) => ({
       id: e.id,
