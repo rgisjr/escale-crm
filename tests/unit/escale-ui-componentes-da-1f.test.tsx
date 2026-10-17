@@ -197,3 +197,104 @@ describe("BandeiraDaMoeda", () => {
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 });
+
+describe("dicas dos controles desligados (regra do projeto)", () => {
+  it("AlternanciaDaCasca: as opções desligadas levam o title", () => {
+    render(
+      <AlternanciaDaCasca
+        valor="ao_sair"
+        aoMudar={vi.fn()}
+        aria-label="Quando"
+        desabilitada
+        dica="Só administrador muda."
+        opcoes={[
+          { valor: "ao_sair", rotulo: "Ao sair" },
+          { valor: "ao_entrar", rotulo: "Ao entrar" },
+        ]}
+      />,
+    );
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveAttribute("title", "Só administrador muda.");
+    }
+  });
+
+  it("AlternanciaDaCasca: ligada, não leva title", () => {
+    render(
+      <AlternanciaDaCasca
+        valor="ao_sair"
+        aoMudar={vi.fn()}
+        aria-label="Quando"
+        dica="Só administrador muda."
+        opcoes={[{ valor: "ao_sair", rotulo: "Ao sair" }]}
+      />,
+    );
+    expect(screen.getByRole("radio")).not.toHaveAttribute("title");
+  });
+
+  it("SeletorMultiploDaCasca: desligado com dica leva o title", () => {
+    render(
+      <SeletorMultiploDaCasca
+        valores={[]}
+        aoMudar={vi.fn()}
+        aria-label="Status"
+        vazio="Nenhum status"
+        desabilitado
+        dica="Motivo."
+        opcoes={[{ valor: "ganho", rotulo: "Ganho" }]}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveAttribute("title", "Motivo.");
+  });
+});
+
+describe("SeletorDaCasca com vazioSoNoGatilho", () => {
+  it("o gatilho mostra o vazio, a lista começa na primeira opção real e nada vem marcado", async () => {
+    render(
+      <SeletorDaCasca
+        valor=""
+        aoMudar={vi.fn()}
+        aria-label="Campo"
+        vazio="Adicionar campo"
+        vazioSoNoGatilho
+        opcoes={[
+          { valor: "a", rotulo: "Alfa" },
+          { valor: "b", rotulo: "Beta" },
+        ]}
+      />,
+    );
+    const gatilho = screen.getByRole("combobox", { name: "Campo" });
+    expect(gatilho).toHaveTextContent("Adicionar campo");
+    await usuario().click(gatilho);
+    const opcoes = await screen.findAllByRole("option");
+    expect(opcoes.map((o) => o.textContent)).toEqual(["Alfa", "Beta"]);
+    expect(opcoes.some((o) => o.getAttribute("aria-selected") === "true")).toBe(false);
+    expect(screen.getByRole("listbox")).toHaveAttribute("aria-activedescendant", opcoes[0]!.id);
+  });
+
+  it("a largura mínima de 200px do painel vale só para o filtro; a janela segue o gatilho (P19)", async () => {
+    const { unmount } = render(
+      <SeletorDaCasca
+        valor="a"
+        aoMudar={vi.fn()}
+        aria-label="Unidade"
+        aparencia="janela"
+        opcoes={[{ valor: "a", rotulo: "Horas" }]}
+      />,
+    );
+    await usuario().click(screen.getByRole("combobox", { name: "Unidade" }));
+    const painelJanela = (await screen.findByRole("listbox")).parentElement!;
+    expect(painelJanela.className).not.toContain("min-w-[200px]");
+    unmount();
+    render(
+      <SeletorDaCasca
+        valor="a"
+        aoMudar={vi.fn()}
+        aria-label="Unidade"
+        opcoes={[{ valor: "a", rotulo: "Horas" }]}
+      />,
+    );
+    await usuario().click(screen.getByRole("combobox", { name: "Unidade" }));
+    const painelFiltro = (await screen.findByRole("listbox")).parentElement!;
+    expect(painelFiltro.className).toContain("min-w-[200px]");
+  });
+});

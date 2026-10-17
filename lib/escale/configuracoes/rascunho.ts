@@ -8,6 +8,7 @@ import type { MudancaDeOrigem } from "@/hooks/escale/useOrigens";
 import type { MoedaServida } from "@/lib/money";
 
 import {
+  MAXIMO_POR_UNIDADE,
   erroDoLimite,
   type AlertaDeTempo,
   type LimiteDeTempo,
@@ -89,26 +90,37 @@ function limiteDaTela(l: LimiteNaTela): LimiteDeTempo {
   };
 }
 
+/**
+ * O erro de um limite como a pessoa o vê: texto que não é número cai no teto da
+ * UNIDADE escolhida, e a regra geral vazia não fala de "exceção".
+ */
+function erroDoLimiteNaTela(l: LimiteDeTempo, ehGeral: boolean): string | null {
+  for (const [valor, unidade] of [
+    [l.atencao, l.atencao_unidade],
+    [l.critico, l.critico_unidade],
+  ] as const) {
+    if (valor !== null && Number.isNaN(valor)) {
+      return `Informe um valor entre 1 e ${MAXIMO_POR_UNIDADE[unidade]}.`;
+    }
+  }
+  if (ehGeral && l.atencao === null && l.critico === null) {
+    return "Preencha pelo menos um limite da regra geral ou remova-a antes de salvar.";
+  }
+  return erroDoLimite(l);
+}
+
 export function alertaDaTela(
   a: AlertaNaTela,
 ): { ok: true; alerta: AlertaDeTempo } | { ok: false; erro: string; etapa: string | null } {
   const geral = a.geral ? limiteDaTela(a.geral) : null;
   if (geral) {
-    const erro =
-      erroDoLimite(geral) ??
-      (Number.isNaN(geral.atencao) || Number.isNaN(geral.critico)
-        ? "Informe um valor entre 1 e 8760."
-        : null);
+    const erro = erroDoLimiteNaTela(geral, true);
     if (erro) return { ok: false, erro, etapa: null };
   }
   const etapas: Record<string, LimiteDeTempo> = {};
   for (const x of a.excecoes) {
     const l = limiteDaTela(x.limite);
-    const erro =
-      erroDoLimite(l) ??
-      (Number.isNaN(l.atencao) || Number.isNaN(l.critico)
-        ? "Informe um valor entre 1 e 8760."
-        : null);
+    const erro = erroDoLimiteNaTela(l, false);
     if (erro) return { ok: false, erro, etapa: x.etapa };
     etapas[x.etapa] = l;
   }
@@ -122,7 +134,7 @@ export function pedidoDoSalvar(
   config: ConfiguracoesDaOrigem,
 ):
   | { ok: true; mudancaDaOrigem: MudancaDeOrigem; patch: PatchDasConfiguracoes | null }
-  | { ok: false; erro: string; secao: SecaoDasConfiguracoes } {
+  | { ok: false; erro: string; secao: SecaoDasConfiguracoes; etapa?: string } {
   const inicial = rascunhoInicial(config);
   if (r.gerais.nome.trim() === "")
     return { ok: false, erro: "Nome é um campo obrigatório!", secao: "gerais" };
@@ -161,7 +173,11 @@ export function pedidoDoSalvar(
   }
   if (!igual(r.alerta, inicial.alerta)) {
     const lido = alertaDaTela(r.alerta);
-    if (!lido.ok) return { ok: false, erro: lido.erro, secao: "alerta" };
+    if (!lido.ok) {
+      // `etapa` só vale com mais de uma exceção: é como a tela diz QUAL falhou.
+      const etapa = lido.etapa && r.alerta.excecoes.length > 1 ? lido.etapa : undefined;
+      return { ok: false, erro: lido.erro, secao: "alerta", ...(etapa ? { etapa } : {}) };
+    }
     patch.alerta = lido.alerta;
   }
   return { ok: true, mudancaDaOrigem, patch: Object.keys(patch).length > 0 ? patch : null };

@@ -203,4 +203,29 @@ describe("rascunho da janela", () => {
       etapa: E2,
     });
   });
+
+  it("alerta da tela: regra geral vazia tem texto próprio, sem falar de exceção", () => {
+    expect(
+      alertaDaTela({ geral: { ...LIMITE_NOVO, atencao: "", critico: "" }, excecoes: [] }),
+    ).toEqual({
+      ok: false,
+      erro: "Preencha pelo menos um limite da regra geral ou remova-a antes de salvar.",
+      etapa: null,
+    });
+  });
+
+  it("alerta da tela: texto que não é número usa o teto da unidade escolhida", () => {
+    expect(
+      alertaDaTela({
+        geral: { ...LIMITE_NOVO, atencao: "abc", atencao_unidade: "dias" },
+        excecoes: [],
+      }),
+    ).toMatchObject({ ok: false, erro: "Informe um valor entre 1 e 365.", etapa: null });
+    expect(
+      alertaDaTela({
+        geral: null,
+        excecoes: [{ etapa: E2, limite: { ...LIMITE_NOVO, critico: "x", critico_unidade: "minutos" } }],
+      }),
+    ).toMatchObject({ ok: false, erro: "Informe um valor entre 1 e 525600.", etapa: E2 });
+  });
 });

@@ -43,6 +43,11 @@ export type SeletorDaCascaProps<V extends string> = {
    * busca, com contorno e escolhida azuis. "filtro" (o padrão) é o da V1.
    */
   aparencia?: "filtro" | "janela";
+  /**
+   * Fase 1F (P11): o `vazio` aparece só no gatilho; a lista não ganha a linha
+   * vazia e abre direto na primeira opção (a lista de campos obrigatórios da Clint).
+   */
+  vazioSoNoGatilho?: boolean;
   /** Fase 1E: o gatilho desligado (a origem da importação, que é a do quadro). */
   desabilitado?: boolean;
   /** Fase 1E: a dica do gatilho (o motivo de estar desligado). */
@@ -61,6 +66,7 @@ function montarLinhas<V extends string>(
   opcoes: readonly OpcaoDoSeletor<V>[],
   busca: string,
   vazio: string | undefined,
+  comLinhaVazia: boolean,
 ): Linha<V>[] {
   const todas: Linha<V>[] = opcoes.map((o) => ({
     valor: o.valor,
@@ -79,7 +85,7 @@ function montarLinhas<V extends string>(
       return linha ? [linha] : [];
     });
   }
-  return vazio === undefined ? todas : [{ valor: "", rotulo: vazio, desabilitada: false }, ...todas];
+  return vazio === undefined || !comLinhaVazia ? todas : [{ valor: "", rotulo: vazio, desabilitada: false }, ...todas];
 }
 
 function proximaHabilitada<V extends string>(linhas: readonly Linha<V>[], de: number, passo: 1 | -1): number {
@@ -105,6 +111,7 @@ export function SeletorDaCasca<V extends string>({
   aoMudar,
   "aria-label": rotuloAcessivel,
   vazio,
+  vazioSoNoGatilho = false,
   aparencia = "filtro",
   buscaAPartirDe = aparencia === "janela" ? Number.POSITIVE_INFINITY : BUSCA_A_PARTIR_DE,
   desabilitado = false,
@@ -119,7 +126,11 @@ export function SeletorDaCasca<V extends string>({
   const [ativo, setAtivo] = useState(-1);
 
   const comBusca = opcoes.length >= buscaAPartirDe;
-  const linhas = useMemo(() => montarLinhas(opcoes, busca, vazio), [opcoes, busca, vazio]);
+  const comLinhaVazia = !vazioSoNoGatilho;
+  const linhas = useMemo(
+    () => montarLinhas(opcoes, busca, vazio, comLinhaVazia),
+    [opcoes, busca, vazio, comLinhaVazia],
+  );
   const atual = opcoes.find((o) => o.valor === valor);
   const textoDoGatilho = atual ? atual.rotulo : (vazio ?? t("Selecione…"));
   const idDoAtivo = linhas[ativo] ? `${id}-op-${ativo}` : undefined;
@@ -128,7 +139,7 @@ export function SeletorDaCasca<V extends string>({
     setAberto(proximo);
     if (!proximo) return;
     setBusca("");
-    const iniciais = montarLinhas(opcoes, "", vazio);
+    const iniciais = montarLinhas(opcoes, "", vazio, comLinhaVazia);
     const selecionada = iniciais.findIndex((l) => l.valor === valor && !l.desabilitada);
     setAtivo(selecionada >= 0 ? selecionada : proximaHabilitada(iniciais, 0, 1));
   }
@@ -158,7 +169,7 @@ export function SeletorDaCasca<V extends string>({
 
   function buscar(texto: string) {
     setBusca(texto);
-    setAtivo(proximaHabilitada(montarLinhas(opcoes, texto, vazio), 0, 1));
+    setAtivo(proximaHabilitada(montarLinhas(opcoes, texto, vazio, comLinhaVazia), 0, 1));
   }
 
   return (
@@ -191,7 +202,13 @@ export function SeletorDaCasca<V extends string>({
           <ChevronDown aria-hidden className="size-3.5 shrink-0 text-casca-chevron" />
         </button>
       </PopoverTrigger>
-      <PainelSuspenso className="w-(--radix-popover-trigger-width) min-w-[200px] p-1" onKeyDown={teclar}>
+      <PainelSuspenso
+        className={cn(
+          "w-(--radix-popover-trigger-width) p-1",
+          aparencia === "filtro" && "min-w-[200px]",
+        )}
+        onKeyDown={teclar}
+      >
         {comBusca ? (
           <div className="relative mb-1">
             <input

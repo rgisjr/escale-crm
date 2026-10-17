@@ -146,7 +146,8 @@ export function JanelaDaOrigem({
     setErro(null);
     const pedido = pedidoDoSalvar(rascunho, config);
     if (!pedido.ok) {
-      setErro(t(pedido.erro));
+      const etapa = config.etapas.find((e) => e.id === pedido.etapa)?.name;
+      setErro(etapa ? `${etapa}: ${t(pedido.erro)}` : t(pedido.erro));
       setSubaba(pedido.secao);
       return;
     }

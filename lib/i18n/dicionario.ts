@@ -9628,6 +9628,14 @@ export const DICIONARIO: Traducoes = {
   "Só administrador muda os campos obrigatórios. Você vê as regras como elas estão.": {
     es: "Solo el administrador cambia los campos obligatorios. Ves las reglas tal como están.",
   },
+  "Só administrador muda os campos obrigatórios.": {
+    es: "Solo el administrador cambia los campos obligatorios.",
+  },
+  "O status só vale em Ao sair.": { es: "El estado solo vale en Al salir." },
+  "Esta origem atingiu o limite de 50 regras de campo obrigatório. Remova algumas para poder salvar.":
+    {
+      es: "Este origen alcanzó el límite de 50 reglas de campo obligatorio. Quita algunas para poder guardar.",
+    },
   "Ainda não há campos personalizados no CRM.": {
     es: "Todavía no hay campos personalizados en el CRM.",
   },
@@ -9668,7 +9676,7 @@ export const DICIONARIO: Traducoes = {
   "passou de crítico": { es: "superó el límite crítico" },
   "Defina quanto tempo um negócio pode ficar parado em cada etapa antes de receber destaque visual no Kanban.":
     {
-      es: "Define cuánto tiempo puede estar detenido un negocio en cada etapa antes de recibir un destaque visual en el Kanban.",
+      es: "Define cuánto tiempo puede estar detenido un negocio en cada etapa antes de recibir un resaltado visual en el Kanban.",
     },
   "A regra geral vale para todas as etapas do funil. Crie exceções só para etapas com ritmo diferente.":
     {
@@ -9710,6 +9718,9 @@ export const DICIONARIO: Traducoes = {
   },
   "Preencha pelo menos um limite na exceção ou remova-a antes de salvar.": {
     es: "Completa al menos un límite en la excepción o quítala antes de guardar.",
+  },
+  "Preencha pelo menos um limite da regra geral ou remova-a antes de salvar.": {
+    es: "Completa al menos un límite de la regla general o quítala antes de guardar.",
   },
   "Informe um valor entre 1 e 8760.": { es: "Indica un valor entre 1 y 8760." },
   "Informe um valor entre 1 e 525600.": { es: "Indica un valor entre 1 y 525600." },

@@ -36,6 +36,18 @@ describe("PrazoDoCard (B16)", () => {
     comQuadro(REGRA, <PrazoDoCard lead={lead(E1)} horasNaEtapa={2} tempo="2h" />);
     expect(screen.getByText("2h").closest("[data-prazo]")).toHaveAttribute("data-prazo", "ok");
   });
+  it("passou da atenção e abaixo do crítico fica âmbar", () => {
+    comQuadro(REGRA, <PrazoDoCard lead={lead(E1)} horasNaEtapa={5} tempo="5h" />);
+    const pilula = screen.getByText("5h").closest("[data-prazo]");
+    expect(pilula).toHaveAttribute("data-prazo", "atencao");
+    expect(pilula).toHaveAttribute("title", "Tempo na etapa: passou de atenção");
+  });
+  it("passou da atenção e abaixo do crítico fica âmbar", () => {
+    comQuadro(REGRA, <PrazoDoCard lead={lead(E1)} horasNaEtapa={5} tempo="5h" />);
+    const pilula = screen.getByText("5h").closest("[data-prazo]");
+    expect(pilula).toHaveAttribute("data-prazo", "atencao");
+    expect(pilula).toHaveAttribute("title", "Tempo na etapa: passou de atenção");
+  });
   it("passou do crítico fica vermelho, com nome acessível", () => {
     comQuadro(REGRA, <PrazoDoCard lead={lead(E1)} horasNaEtapa={9} tempo="9h" />);
     const pilula = screen.getByText("9h").closest("[data-prazo]");

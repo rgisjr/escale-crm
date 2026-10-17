@@ -95,7 +95,7 @@ describe("Campos obrigatórios", () => {
     expect(screen.getByRole("button", { name: "Remover a regra de Closer" })).toBeInTheDocument();
   });
 
-  it("adicionar campo, trocar para Durante, escolher Todas as etapas e Perdido, e salvar", async () => {
+  it("adicionar campo, trocar para Ao sair, escolher Todas as etapas e Perdido, e salvar", async () => {
     const user = await abrirCampos();
     await user.click(screen.getByRole("combobox", { name: "Adicionar campo obrigatório" }));
     await user.click(await screen.findByRole("option", { name: "Proposta" }));
@@ -167,5 +167,156 @@ describe("Campos obrigatórios", () => {
     const grupo = within(lista).getByText("Negócio");
     expect(grupo.className).toContain("uppercase");
     expect(within(lista).getByRole("option", { name: "Proposta" })).toBeInTheDocument();
+  });
+
+  it("o gerente: os controles desligados trazem o motivo no title", async () => {
+    await abrirCampos({ ...CONFIG, podeAdministrar: false });
+    const motivo = "Só administrador muda os campos obrigatórios.";
+    for (const radio of screen.getAllByRole("radio"))
+      expect(radio).toHaveAttribute("title", motivo);
+    expect(screen.getByRole("combobox", { name: "Etapas — Closer" })).toHaveAttribute(
+      "title",
+      motivo,
+    );
+    expect(screen.getByRole("combobox", { name: "Status — Closer" })).toHaveAttribute(
+      "title",
+      motivo,
+    );
+  });
+
+  it("administrador: o Status de uma regra Ao entrar diz por que está desligado", async () => {
+    await abrirCampos();
+    expect(screen.getByRole("combobox", { name: "Status — Closer" })).toHaveAttribute(
+      "title",
+      "O status só vale em Ao sair.",
+    );
+    expect(screen.getByRole("combobox", { name: "Etapas — Closer" })).not.toHaveAttribute("title");
+  });
+
+  it("a lista de adicionar começa direto no grupo NEGÓCIO, sem a linha vazia selecionada (P11)", async () => {
+    const user = await abrirCampos();
+    await user.click(screen.getByRole("combobox", { name: "Adicionar campo obrigatório" }));
+    const lista = await screen.findByRole("listbox");
+    expect(
+      within(lista)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Closer", "Proposta"]);
+    expect(within(lista).queryByRole("option", { selected: true })).toBeNull();
+    expect(lista.firstElementChild).toHaveAttribute("role", "group");
+  });
+
+  it("quatro colunas iguais, com a lixeira dentro da quarta, ao lado do Status (P12, P14)", async () => {
+    await abrirCampos();
+    const status = screen.getByRole("combobox", { name: "Status — Closer" });
+    const lixeira = screen.getByRole("button", { name: "Remover a regra de Closer" });
+    const linha = lixeira.closest(".grid-cols-4");
+    expect(linha).not.toBeNull();
+    expect(linha!.children).toHaveLength(4);
+    expect(linha!.children[3]).toContainElement(status);
+    expect(linha!.children[3]).toContainElement(lixeira);
+    const cabeca = screen.getByText("Campo").parentElement!;
+    expect(cabeca).toHaveClass("grid-cols-4");
+    expect(cabeca.children).toHaveLength(4);
+  });
+
+  it("no erro da linha, a mensagem fica sob as colunas Etapas e Status, na mesma grade", async () => {
+    const user = await abrirCampos();
+    await user.click(screen.getByRole("combobox", { name: "Adicionar campo obrigatório" }));
+    await user.click(await screen.findByRole("option", { name: "Proposta" }));
+    const erro = screen.getByText("Selecione ao menos uma etapa ou status");
+    expect(erro.closest(".grid-cols-4")).not.toBeNull();
+  });
+
+  it("com 50 regras, o seletor de adicionar fica desligado e diz o limite do servidor", async () => {
+    const regras = Array.from({ length: 50 }, (_, i) => ({
+      campo: `campo-${i}`,
+      quando: "ao_entrar" as const,
+      etapas: [E2],
+      status: [],
+    }));
+    await abrirCampos({ ...CONFIG, regras });
+    const seletor = screen.getByRole("combobox", { name: "Adicionar campo obrigatório" });
+    expect(seletor).toBeDisabled();
+    expect(seletor).toHaveAttribute(
+      "title",
+      "Esta origem atingiu o limite de 50 regras de campo obrigatório. Remova algumas para poder salvar.",
+    );
+  });
+
+  it("o gerente: os controles desligados trazem o motivo no title", async () => {
+    await abrirCampos({ ...CONFIG, podeAdministrar: false });
+    const motivo = "Só administrador muda os campos obrigatórios.";
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveAttribute("title", motivo);
+    }
+    expect(screen.getByRole("combobox", { name: "Etapas — Closer" })).toHaveAttribute(
+      "title",
+      motivo,
+    );
+    expect(screen.getByRole("combobox", { name: "Status — Closer" })).toHaveAttribute(
+      "title",
+      motivo,
+    );
+  });
+
+  it("administrador: o Status de uma regra Ao entrar diz por que está desligado", async () => {
+    await abrirCampos();
+    expect(screen.getByRole("combobox", { name: "Status — Closer" })).toHaveAttribute(
+      "title",
+      "O status só vale em Ao sair.",
+    );
+    expect(screen.getByRole("combobox", { name: "Etapas — Closer" })).not.toHaveAttribute("title");
+  });
+
+  it("a lista de adicionar começa direto no grupo NEGÓCIO, sem a linha vazia selecionada (P11)", async () => {
+    const user = await abrirCampos();
+    await user.click(screen.getByRole("combobox", { name: "Adicionar campo obrigatório" }));
+    const lista = await screen.findByRole("listbox");
+    expect(
+      within(lista)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Closer", "Proposta"]);
+    expect(within(lista).queryByRole("option", { selected: true })).toBeNull();
+    expect(lista.firstElementChild).toHaveAttribute("role", "group");
+  });
+
+  it("quatro colunas iguais, com a lixeira dentro da quarta, ao lado do Status (P12, P14)", async () => {
+    await abrirCampos();
+    const status = screen.getByRole("combobox", { name: "Status — Closer" });
+    const lixeira = screen.getByRole("button", { name: "Remover a regra de Closer" });
+    const linha = lixeira.closest(".grid-cols-4");
+    expect(linha).not.toBeNull();
+    expect(linha!.children).toHaveLength(4);
+    expect(linha!.children[3]).toContainElement(status);
+    expect(linha!.children[3]).toContainElement(lixeira);
+    const cabeca = screen.getByText("Campo").parentElement!;
+    expect(cabeca).toHaveClass("grid-cols-4");
+    expect(cabeca.children).toHaveLength(4);
+  });
+
+  it("o erro da linha fica na mesma grade de quatro colunas", async () => {
+    const user = await abrirCampos();
+    await user.click(screen.getByRole("combobox", { name: "Adicionar campo obrigatório" }));
+    await user.click(await screen.findByRole("option", { name: "Proposta" }));
+    const erro = screen.getByText("Selecione ao menos uma etapa ou status");
+    expect(erro.parentElement).toHaveClass("grid-cols-4");
+  });
+
+  it("com 50 regras, o seletor de adicionar fica desligado e diz o limite do servidor", async () => {
+    const regras = Array.from({ length: 50 }, (_, i) => ({
+      campo: `campo-${i}`,
+      quando: "ao_entrar" as const,
+      etapas: [E2],
+      status: [],
+    }));
+    await abrirCampos({ ...CONFIG, regras });
+    const seletor = screen.getByRole("combobox", { name: "Adicionar campo obrigatório" });
+    expect(seletor).toBeDisabled();
+    expect(seletor).toHaveAttribute(
+      "title",
+      "Esta origem atingiu o limite de 50 regras de campo obrigatório. Remova algumas para poder salvar.",
+    );
   });
 });

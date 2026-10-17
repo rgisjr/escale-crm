@@ -12,12 +12,15 @@ export function AlternanciaDaCasca<V extends string>({
   aoMudar,
   "aria-label": rotulo,
   desabilitada = false,
+  dica,
 }: {
   valor: V;
   opcoes: { valor: V; rotulo: string }[];
   aoMudar: (v: V) => void;
   "aria-label": string;
   desabilitada?: boolean;
+  /** O motivo de estar desligada (o `title` de cada lado). */
+  dica?: string;
 }) {
   return (
     <div role="radiogroup" aria-label={rotulo} className="inline-flex items-center gap-1">
@@ -30,6 +33,7 @@ export function AlternanciaDaCasca<V extends string>({
             role="radio"
             aria-checked={ativa}
             disabled={desabilitada}
+            title={desabilitada ? dica : undefined}
             onClick={() => aoMudar(o.valor)}
             className={cn(
               "h-[26px] rounded-[5px] border px-2 text-[11px] whitespace-nowrap transition disabled:cursor-not-allowed disabled:opacity-60",

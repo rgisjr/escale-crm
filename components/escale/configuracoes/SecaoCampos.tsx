@@ -6,7 +6,7 @@ import { AlternanciaDaCasca } from "@/components/escale/ui/AlternanciaDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { SeletorMultiploDaCasca } from "@/components/escale/ui/SeletorMultiploDaCasca";
 import { useT } from "@/hooks/i18n/useT";
-import { errosDasRegras, type RegraDeCampo } from "@/lib/escale/configuracoes/campos";
+import { MAX_REGRAS, errosDasRegras, type RegraDeCampo } from "@/lib/escale/configuracoes/campos";
 import { TODAS_AS_ETAPAS } from "@/lib/escale/configuracoes/tipos";
 import { CirclePlus, ClipboardList, Trash2 } from "@/lib/ui/icons-da-casca";
 
@@ -30,6 +30,8 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
     { valor: "ganho" as const, rotulo: t("Ganho") },
     { valor: "perdido" as const, rotulo: t("Perdido") },
   ];
+  const noLimite = regras.length >= MAX_REGRAS;
+  const motivoDoGerente = t("Só administrador muda os campos obrigatórios.");
   const rotuloDo = (campo: string) => config.campos.find((c) => c.campo === campo)?.rotulo ?? campo;
   const trocar = (i: number, parcial: Partial<RegraDeCampo>) =>
     mudar((r) => ({ ...r, regras: r.regras.map((x, j) => (j === i ? { ...x, ...parcial } : x)) }));
@@ -68,9 +70,9 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
             </div>
           ) : (
             <div>
-              <div className="flex items-center gap-3 border-b border-casca-borda pb-2">
-                <span className={`flex-[3] ${coluna}`}>{t("Campo")}</span>
-                <span className={`flex flex-[3] items-center gap-1 ${coluna}`}>
+              <div className="grid grid-cols-4 items-center gap-3 border-b border-casca-borda pb-2">
+                <span className={coluna}>{t("Campo")}</span>
+                <span className={`flex items-center gap-1 ${coluna}`}>
                   {t("Quando")}
                   <AjudaDaCasca
                     texto={t(
@@ -78,32 +80,32 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
                     )}
                   />
                 </span>
-                <span className={`flex flex-[4] items-center gap-1 ${coluna}`}>
+                <span className={`flex items-center gap-1 ${coluna}`}>
                   {t("Etapas")}
                   <AjudaDaCasca texto={t("Etapas às quais a regra se aplica")} />
                 </span>
-                <span className={`flex flex-[3] items-center gap-1 ${coluna}`}>
+                <span className={`flex items-center gap-1 ${coluna}`}>
                   {t("Status")}
                   <AjudaDaCasca
                     texto={t("Selecione para exigir este campo ao marcar como Ganho ou Perdido")}
                   />
                 </span>
-                <span className="flex-1" />
               </div>
               {regras.map((regra, i) => {
                 const rotulo = rotuloDo(regra.campo);
                 return (
                   <div key={`${regra.campo}-${i}`} className="border-b border-casca-borda py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-[3]">
+                    <div className="grid grid-cols-4 items-center gap-3">
+                      <div>
                         <p className="text-[12px] font-medium text-casca-texto">{rotulo}</p>
                         <p className="text-[10px] text-casca-suave">{t("Negócio")}</p>
                       </div>
-                      <div className="flex-[3]">
+                      <div>
                         <AlternanciaDaCasca
                           aria-label={`${t("Quando")} — ${rotulo}`}
                           valor={regra.quando}
                           desabilitada={!pode}
+                          dica={pode ? undefined : motivoDoGerente}
                           aoMudar={(quando) =>
                             trocar(i, {
                               quando,
@@ -116,7 +118,7 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
                           ]}
                         />
                       </div>
-                      <div className="flex-[4]">
+                      <div className="w-[88%] min-w-0">
                         <SeletorMultiploDaCasca
                           aria-label={`${t("Etapas")} — ${rotulo}`}
                           valores={regra.etapas}
@@ -124,20 +126,22 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
                           exclusiva={TODAS_AS_ETAPAS}
                           vazio={t("Nenhuma etapa")}
                           desabilitado={!pode}
+                          dica={motivoDoGerente}
                           aoMudar={(etapas) => trocar(i, { etapas })}
                         />
                       </div>
-                      <div className="flex-[3]">
-                        <SeletorMultiploDaCasca
-                          aria-label={`${t("Status")} — ${rotulo}`}
-                          valores={regra.status}
-                          opcoes={opcoesDeStatus}
-                          vazio={t("Nenhum status")}
-                          desabilitado={!pode || regra.quando === "ao_entrar"}
-                          aoMudar={(status) => trocar(i, { status })}
-                        />
-                      </div>
-                      <div className="flex flex-1 justify-center">
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <SeletorMultiploDaCasca
+                            aria-label={`${t("Status")} — ${rotulo}`}
+                            valores={regra.status}
+                            opcoes={opcoesDeStatus}
+                            vazio={t("Nenhum status")}
+                            desabilitado={!pode || regra.quando === "ao_entrar"}
+                            dica={pode ? t("O status só vale em Ao sair.") : motivoDoGerente}
+                            aoMudar={(status) => trocar(i, { status })}
+                          />
+                        </div>
                         {pode ? (
                           <button
                             type="button"
@@ -145,7 +149,7 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
                             onClick={() =>
                               mudar((r) => ({ ...r, regras: r.regras.filter((_, j) => j !== i) }))
                             }
-                            className="text-casca-alerta hover:brightness-90"
+                            className="shrink-0 text-casca-alerta hover:brightness-90"
                           >
                             <Trash2 size={16} aria-hidden />
                           </button>
@@ -153,9 +157,8 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
                       </div>
                     </div>
                     {erros[i] ? (
-                      <div className="mt-1 flex gap-3">
-                        <span className="flex-[6]" />
-                        <span className="flex-[8] text-[10px] text-casca-alerta">
+                      <div className="mt-1 grid grid-cols-4 gap-3">
+                        <span className="col-span-2 col-start-3 text-[10px] text-casca-alerta">
                           {t(erros[i]!)}
                         </span>
                       </div>
@@ -179,6 +182,15 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
                   aparencia="janela"
                   valor=""
                   vazio={t("Adicionar campo obrigatório")}
+                  vazioSoNoGatilho
+                  desabilitado={noLimite}
+                  dica={
+                    noLimite
+                      ? t(
+                          "Esta origem atingiu o limite de 50 regras de campo obrigatório. Remova algumas para poder salvar.",
+                        )
+                      : undefined
+                  }
                   opcoes={config.campos.map((c) => ({
                     valor: c.campo,
                     rotulo: c.rotulo,

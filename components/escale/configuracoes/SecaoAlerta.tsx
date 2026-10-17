@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { CampoDeTexto } from "@/components/escale/origens/JanelaDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
@@ -26,11 +26,19 @@ const caixa =
   "flex items-center gap-3 rounded-[8px] border border-casca-borda px-4 py-3 text-[12px] text-casca-suave";
 
 /** "● Limite de atenção" / "● Limite crítico" (P18): o ponto colorido e o rótulo 11px. */
-function RotuloDoLimite({ tipo }: { tipo: "atencao" | "critico" }) {
+function RotuloDoLimite({
+  tipo,
+  centralizado = false,
+}: {
+  tipo: "atencao" | "critico";
+  centralizado?: boolean;
+}) {
   const t = useT();
   const atencao = tipo === "atencao";
   return (
-    <span className="flex items-center gap-1.5 text-[11px] text-casca-texto">
+    <span
+      className={`flex items-center gap-1.5 text-[11px] text-casca-texto ${centralizado ? "justify-center" : ""}`}
+    >
       <span
         aria-hidden
         className={`size-[7px] rounded-full ${atencao ? "bg-(--escale-ponto-atencao)" : "bg-(--escale-ponto-critico)"}`}
@@ -73,12 +81,12 @@ function LadoDoLimite({
           inputMode="numeric"
           value={valor[chave]}
           placeholder={t("Valor")}
-          onChange={(e) => onMudar({ ...valor, [chave]: e.target.value })}
+          onChange={(e) => onMudar({ ...valor, [chave]: e.target.value.replace(/\D/g, "") })}
           aria-label={`${atencao ? t("Limite de atenção") : t("Limite crítico")} — ${onde}`}
           className="h-11 pl-9 text-[11.9px] font-light"
         />
       </div>
-      <div className="w-[120px] shrink-0">
+      <div className="w-[128px] shrink-0">
         <SeletorDaCasca
           aparencia="janela"
           valor={valor[chaveDaUnidade]}
@@ -123,6 +131,7 @@ export function SecaoAlerta({ config, rascunho, mudar }: PropsDaSecao) {
   const t = useT();
   const [previa, setPrevia] = useState(false);
   const [escolhendo, setEscolhendo] = useState(false);
+  const idDaPrevia = useId();
   const { geral, excecoes } = rascunho.alerta;
   const abertas = config.etapas.filter((e) => !e.is_won && !e.is_lost);
   const livres = abertas.filter((e) => !excecoes.some((x) => x.etapa === e.id));
@@ -160,7 +169,8 @@ export function SecaoAlerta({ config, rascunho, mudar }: PropsDaSecao) {
             onMouseLeave={() => setPrevia(false)}
             onFocus={() => setPrevia(true)}
             onBlur={() => setPrevia(false)}
-            className="flex h-8 items-center gap-1.5 rounded-[5px] border border-casca-marca-media px-3 text-[12px] text-casca-marca"
+            aria-describedby={previa ? idDaPrevia : undefined}
+            className="flex h-8 items-center gap-1.5 rounded-[5px] border border-casca-marca-media px-3 text-[12px] text-casca-marca transition-colors hover:bg-casca-marca-suave focus-visible:bg-casca-marca-suave focus-visible:outline-hidden"
           >
             <Eye size={14} aria-hidden />
             {t("Como aparece no card")}
@@ -168,6 +178,7 @@ export function SecaoAlerta({ config, rascunho, mudar }: PropsDaSecao) {
           {previa ? (
             <div
               role="tooltip"
+              id={idDaPrevia}
               className="absolute top-[calc(100%+6px)] right-0 z-30 w-[240px] rounded-[8px] bg-surface p-3 shadow-casca-painel"
             >
               <p className="mb-2 text-[10px] font-semibold tracking-wider text-casca-suave uppercase">
@@ -310,11 +321,11 @@ export function SecaoAlerta({ config, rascunho, mudar }: PropsDaSecao) {
             <div className="flex items-center gap-4 pb-2">
               <span className="w-[150px] shrink-0" />
               <span className="min-w-[200px] flex-1">
-                <RotuloDoLimite tipo="atencao" />
+                <RotuloDoLimite tipo="atencao" centralizado />
               </span>
               <span className="w-[14px] shrink-0" />
               <span className="min-w-[200px] flex-1">
-                <RotuloDoLimite tipo="critico" />
+                <RotuloDoLimite tipo="critico" centralizado />
               </span>
               <span className="w-4 shrink-0" />
             </div>

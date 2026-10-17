@@ -21,6 +21,7 @@ export function SeletorMultiploDaCasca<V extends string>({
   vazio,
   desabilitado = false,
   exclusiva,
+  dica,
 }: {
   valores: readonly V[];
   opcoes: { valor: V; rotulo: string }[];
@@ -29,6 +30,8 @@ export function SeletorMultiploDaCasca<V extends string>({
   vazio: string;
   desabilitado?: boolean;
   exclusiva?: V;
+  /** O motivo de estar desligado (o `title` do gatilho). */
+  dica?: string;
 }) {
   const [aberto, setAberto] = useState(false);
   const nomes = opcoes.filter((o) => valores.includes(o.valor)).map((o) => o.rotulo);
@@ -48,6 +51,7 @@ export function SeletorMultiploDaCasca<V extends string>({
           aria-label={rotulo}
           aria-expanded={aberto}
           disabled={desabilitado}
+          title={desabilitado ? dica : undefined}
           className={cn(
             "flex h-10 w-full items-center gap-2 rounded-[5px] px-3 text-left text-[11px] transition disabled:cursor-not-allowed disabled:opacity-60",
             aberto ? "bg-casca-escuro font-medium text-white" : "bg-casca-raia text-casca-texto",
