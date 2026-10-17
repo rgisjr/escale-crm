@@ -9406,7 +9406,6 @@ export const DICIONARIO: Traducoes = {
     es: "Este es un ejemplo. Tus cambios aparecen en el kanban después de guardar.",
   },
   "Preferências salvas": { es: "Preferencias guardadas" },
-  "de outra origem": { es: "de otro origen" },
   "Salvar preferência": { es: "Guardar preferencia" },
   "Maria Silva": { es: "Maria Silva" },
   "Exemplo": { es: "Ejemplo" },

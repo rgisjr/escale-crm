@@ -1,9 +1,9 @@
 /**
  * GET /api/v1/capas-do-card/campos — o catálogo dos campos personalizados do
  * NEGÓCIO de todas as origens que a pessoa enxerga (fork Escale, Fase 1E). A
- * janela "Personalizar cards" vale em todas as origens, e o campo mora numa
- * delas (`settings.fields`): com o catálogo ela solta o que foi apagado de todas
- * e mostra, para desligar, o que só existe em outra origem.
+ * janela "Personalizar cards" vale em todas as origens, e os campos são do CRM
+ * (catálogo da organização, migration 9006; `settings.fields` de toda origem é a
+ * projeção dele): com o catálogo ela solta o campo que foi apagado do CRM.
  *
  * Qualquer papel (a leitura do quadro é de todos). A RLS de `crm_pipelines` e o
  * filtro de organização limitam as origens; só as chaves e os rótulos dos campos

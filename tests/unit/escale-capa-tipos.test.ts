@@ -7,7 +7,6 @@ import {
   alternarCanal,
   alternarItem,
   camposDaCapa,
-  camposDeOutraOrigem,
   canaisLigados,
   diferemDoPadrao,
   lerPrefs,
@@ -97,10 +96,8 @@ describe("a preferência do card (forma da Clint)", () => {
   });
 });
 
-describe("campos de outra origem (a preferência vale em todas as origens)", () => {
+describe("campo apagado do CRM (a preferência vale em todas as origens)", () => {
   const CATALOGO = camposDaCapa([SETTINGS, { fields: [{ key: "cidade", label: "Cidade", type: "text" }] }]);
-  const DA_ORIGEM = camposDaCapa([{ fields: [{ key: "cidade", label: "Cidade", type: "text" }] }]);
-  const PLANO = { entidade: "negocio" as const, chave: "plano" };
   const CIDADE = { entidade: "negocio" as const, chave: "cidade" };
   const EMAIL = { entidade: "contato" as const, chave: "email" };
   const FANTASMA = { entidade: "negocio" as const, chave: "apagado" };
@@ -117,11 +114,5 @@ describe("campos de outra origem (a preferência vale em todas as origens)", () 
     const p: PrefsDoCard = { ...PREFS_PADRAO, campos: [RENDA, EMAIL] };
     expect(limparCamposSemOrigem(p, CATALOGO)).toBe(p);
     expect(limparCamposSemOrigem(p, []).campos).toEqual([EMAIL]);
-  });
-
-  it("os de outra origem: escolhidos no negócio, no catálogo e fora da origem atual", () => {
-    const p: PrefsDoCard = { ...PREFS_PADRAO, campos: [RENDA, PLANO, CIDADE, FANTASMA, EMAIL] };
-    expect(camposDeOutraOrigem(p, DA_ORIGEM, CATALOGO).map((c) => c.chave)).toEqual(["renda", "plano"]);
-    expect(camposDeOutraOrigem(PREFS_PADRAO, DA_ORIGEM, CATALOGO)).toEqual([]);
   });
 });
