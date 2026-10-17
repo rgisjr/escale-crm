@@ -227,6 +227,13 @@ export const CAMPOS_COPIAVEIS_NA_RETOMADA = [
   "owner_agent_id",
 ] as const;
 
+/**
+ * FORK ESCALE · Fase 1F-a: os campos são do CRM (catálogo da organização,
+ * `crm_campos_do_negocio`, migration 9006). `settings.fields` de cada origem é a
+ * projeção do catálogo inteiro, então o teto passa a ser o da organização.
+ */
+export const CAMPOS_DO_CRM_MAX = 200;
+
 export const pipelineConfigPatchSchema = z.object({
   vocabulary: z
     .object({
@@ -236,7 +243,21 @@ export const pipelineConfigPatchSchema = z.object({
       lost: z.string().min(1).max(40).optional(),
     })
     .optional(),
-  fields: z.array(customFieldSchema).max(50).optional(),
+  // FORK ESCALE · Fase 1F-a: o teto é o do catálogo da organização.
+  fields: z.array(customFieldSchema).max(CAMPOS_DO_CRM_MAX).optional(),
+  /**
+   * FORK ESCALE · Fase 1F-a: as chaves que a pessoa tirou da lista. Gravar
+   * `fields` sem uma chave não apaga (o gatilho da 9006 devolve o campo); quem
+   * apaga do catálogo, e de toda origem, é esta lista.
+   */
+  campos_removidos: z.array(customFieldSchema.shape.key).max(CAMPOS_DO_CRM_MAX).optional(),
+  /**
+   * FORK ESCALE · Fase 1F-a: as definições que a tela carregou. Com elas o
+   * servidor só adota o que a pessoa mexeu nesta tela e não desfaz o que outro
+   * administrador mudou depois (ver `mesclaComOCatalogo`). Sem elas, vale `fields`
+   * como veio (quem grava sem ter carregado, como a captação).
+   */
+  campos_carregados: z.array(customFieldSchema).max(CAMPOS_DO_CRM_MAX).optional(),
   /**
    * Os motivos de perda do funil (issue #1537): texto puro continua valendo —
    * nenhum funil existente precisa migrar dado — e quem quiser agrupar no

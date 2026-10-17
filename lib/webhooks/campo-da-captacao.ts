@@ -10,7 +10,7 @@
  *
  * Puro, sem I/O.
  */
-import { customFieldSchema, type CustomFieldDef } from "@/lib/schemas/settings";
+import { CAMPOS_DO_CRM_MAX, customFieldSchema, type CustomFieldDef } from "@/lib/schemas/settings";
 
 /**
  * Os tipos oferecidos na captação. `select` e `multiselect` ficam de fora de
@@ -31,8 +31,8 @@ export const TIPOS_CADASTRAVEIS_DA_CAPTACAO = [
 
 export type TipoCadastravel = (typeof TIPOS_CADASTRAVEIS_DA_CAPTACAO)[number];
 
-/** O mesmo limite de `pipelineConfigPatchSchema.fields`. */
-export const MAX_CAMPOS_DO_FUNIL = 50;
+/** O mesmo limite de `pipelineConfigPatchSchema.fields` (FORK ESCALE · Fase 1F-a: o do catálogo do CRM). */
+export const MAX_CAMPOS_DO_FUNIL = CAMPOS_DO_CRM_MAX;
 
 /** A chave vira `key` da definição, e `customFieldSchema` só aceita isto. */
 export function chaveCadastravel(chave: string): boolean {

@@ -9509,6 +9509,22 @@ export const DICIONARIO: Traducoes = {
   "A preferência mudou em outra aba. Abra de novo e salve.": {
     es: "La preferencia cambió en otra pestaña. Ábrela de nuevo y guarda.",
   },
+  // ─── FORK ESCALE · Fase 1F-a: campos do CRM (Configurações › Funis) ───
+  "Campos do negócio (valem em todas as origens)": { es: "Campos del negocio (valen en todos los orígenes)" },
+  "Remover um campo aqui e salvar o remove de toda origem.": { es: "Quitar un campo aquí y guardar lo quita de todos los orígenes." },
+  "Se este campo estiver configurado como obrigatório em alguma origem, a regra será removida.": {
+    es: "Si este campo está configurado como obligatorio en algún origen, se eliminará la regla.",
+  },
+  "Outra pessoa estava alterando os campos ao mesmo tempo. Tente novamente.": {
+    es: "Otra persona estaba cambiando los campos al mismo tiempo. Inténtalo de nuevo.",
+  },
+  "Algum campo tem rótulo ou tipo inválido. Revise os campos e tente novamente.": {
+    es: "Algún campo tiene una etiqueta o un tipo no válido. Revisa los campos e inténtalo de nuevo.",
+  },
+  "Outra pessoa alterou os campos enquanto esta tela estava aberta. Recarregue a página para ver a versão atual.": {
+    es: "Otra persona cambió los campos mientras esta pantalla estaba abierta. Recarga la página para ver la versión actual.",
+  },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },

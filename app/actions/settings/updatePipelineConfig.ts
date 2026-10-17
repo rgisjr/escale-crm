@@ -12,10 +12,26 @@ import {
 } from "@/lib/schemas/settings";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { podeAdministrarEmpresa } from "@/lib/auth/pode-administrar-empresa";
+// FORK ESCALE · Fase 1F-a
+import { camposDoFunil } from "@/lib/leads/campos-do-funil";
+import { mesclaComOCatalogo } from "@/lib/escale/campos-do-crm/mescla-com-o-catalogo";
 
 export type UpdatePipelineConfigResult =
-  | { ok: true }
+  // FORK ESCALE · Fase 1F-a: `camposDesatualizados` só aparece quando a tela estava velha.
+  | { ok: true; camposDesatualizados?: true }
   | { ok: false; error: string; details?: unknown };
+
+/**
+ * FORK ESCALE · Fase 1F-a: erros do Postgres que a pessoa resolve sozinha viram
+ * um código estável (a tela o traduz). 40P01 (deadlock) e 40001 (serialização):
+ * dois administradores editando os campos da mesma organização ao mesmo tempo.
+ * 23514 do gatilho do catálogo: definição de campo inválida.
+ */
+function erroDoBanco(e: { message: string; code?: string }): string {
+  if (e.code === "40P01" || e.code === "40001") return "campos_em_conflito";
+  if (e.code === "23514" && e.message.includes("campo do CRM")) return "campo_invalido";
+  return e.message;
+}
 
 export async function updatePipelineConfig(
   pipelineId: string,
@@ -53,13 +69,27 @@ export async function updatePipelineConfig(
     return { ok: false, error: "forbidden_tenant" };
   }
 
+  // FORK ESCALE · Fase 1F-a: tela velha não desfaz o que outro administrador mudou.
+  // Sem `campos_carregados` (captação, API) vale `fields` como veio.
+  let camposParaGravar = parsed.data.fields;
+  let camposDesatualizados = false;
+  if (camposParaGravar !== undefined && parsed.data.campos_carregados !== undefined) {
+    const mescla = mesclaComOCatalogo({
+      enviados: camposParaGravar,
+      carregados: parsed.data.campos_carregados,
+      atuais: camposDoFunil(row.settings as Record<string, unknown> | null),
+    });
+    camposParaGravar = mescla.fields;
+    camposDesatualizados = mescla.desatualizado;
+  }
+
   const nextVocabulary = parsed.data.vocabulary
     ? { ...((row.vocabulary as Record<string, unknown> | null) ?? {}), ...parsed.data.vocabulary }
     : ((row.vocabulary as Record<string, unknown> | null) ?? {});
 
   const currentSettings = (row.settings as Record<string, unknown> | null) ?? {};
   const nextSettings: Record<string, unknown> = { ...currentSettings };
-  if (parsed.data.fields !== undefined) nextSettings.fields = parsed.data.fields;
+  if (camposParaGravar !== undefined) nextSettings.fields = camposParaGravar; // FORK ESCALE · Fase 1F-a
   if (parsed.data.lost_reasons !== undefined) nextSettings.lost_reasons = parsed.data.lost_reasons;
   if (parsed.data.won_reasons !== undefined) nextSettings.won_reasons = parsed.data.won_reasons;
   if (parsed.data.won_reason_required !== undefined) {
@@ -73,11 +103,25 @@ export async function updatePipelineConfig(
     nextSettings.reabertura_campos = parsed.data.reabertura_campos;
   }
 
+  // FORK ESCALE · Fase 1F-a: os campos são do CRM. Remover na tela apaga do
+  // catálogo, e o gatilho da 9006 tira o campo e a regra dele do
+  // `settings.fields` de todas as origens (como na Clint: "A exclusão desse
+  // campo remove em toda origem.").
+  const camposRemovidos = parsed.data.campos_removidos ?? [];
+  if (camposRemovidos.length > 0) {
+    const { error: erroAoApagar } = await supabase
+      .from("crm_campos_do_negocio")
+      .delete()
+      .eq("organization_id", activeOrg.orgId)
+      .in("chave", camposRemovidos);
+    if (erroAoApagar) return { ok: false, error: erroDoBanco(erroAoApagar) };
+  }
+
   const { error } = await supabase
     .from("crm_pipelines")
     .update({ vocabulary: nextVocabulary, settings: nextSettings })
     .eq("id", pipelineId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: erroDoBanco(error) };
 
   await audit({
     action: "pipeline.config_updated",
@@ -93,9 +137,12 @@ export async function updatePipelineConfig(
       won_reasons_count: parsed.data.won_reasons?.length ?? null,
       won_reason_required: parsed.data.won_reason_required ?? null,
       reabertura: parsed.data.reabertura ?? null,
+      // FORK ESCALE · Fase 1F-a
+      campos_removidos: camposRemovidos.length > 0 ? camposRemovidos : null,
+      campos_desatualizados: camposDesatualizados ? true : null,
     },
   });
 
   revalidatePath("/app/settings/tenant/pipelines");
-  return { ok: true };
+  return camposDesatualizados ? { ok: true, camposDesatualizados: true } : { ok: true };
 }
