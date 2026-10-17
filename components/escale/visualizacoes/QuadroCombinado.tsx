@@ -13,6 +13,7 @@ import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import type { RecusaDeCampos, RetomadaPendente } from "@/hooks/kanban/useMoveCard";
 import { useAtRiskLeads } from "@/hooks/leads/useAtRiskLeads";
 import { useReactivations } from "@/hooks/leads/useReactivations";
+import { camposDaCapa } from "@/lib/escale/capa/tipos";
 import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
 import {
   alternarNaSelecao,
@@ -129,6 +130,7 @@ export function QuadroCombinado({
         ]),
       ),
       pulses: new Map(Object.values(pulsosPorOrigem).flatMap((m) => [...m])),
+      camposDoCard: camposDaCapa(quadros.map((q) => q.pipeline.settings)),
     };
   }, [quadros, members, atRisk, propostasVivas, pulsosPorOrigem]);
 

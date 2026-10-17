@@ -73,7 +73,8 @@ vi.mock("@/components/kanban/KanbanBoard", () => ({
     leads: Array<{ id: string }>;
     ordemDosCards?: unknown;
     aparencia?: string;
-    aoAdicionarNegocio?: unknown;
+    aoAdicionarNegocio?: (stageId: string) => void;
+    podeSelecionarNaEtapa?: boolean;
   }) => (
     <div>
       <p>{`etapas: ${p.stages.map((s) => s.name).join(", ")}`}</p>
@@ -81,21 +82,38 @@ vi.mock("@/components/kanban/KanbanBoard", () => ({
       <p>{`ordem: ${typeof p.ordemDosCards}`}</p>
       <p>{`aparencia: ${p.aparencia ?? "original"}`}</p>
       <p>{`adicionar: ${typeof p.aoAdicionarNegocio}`}</p>
+      <p>{`selecionar: ${String(p.podeSelecionarNaEtapa)}`}</p>
+      <button type="button" onClick={() => p.aoAdicionarNegocio?.("e-2")}>
+        adicionar na e-2
+      </button>
     </div>
   ),
 }));
 vi.mock("@/components/escale/filtros/BarraDoQuadro", () => ({
-  BarraDoQuadro: (p: { contagem: number; onAtualizar: () => void }) => (
-    <button type="button" onClick={p.onAtualizar}>{`barra nova: ${p.contagem}`}</button>
+  BarraDoQuadro: (p: {
+    contagem: number;
+    onAtualizar: () => void;
+    exportacao?: { leads: unknown[] };
+  }) => (
+    <>
+      <button type="button" onClick={p.onAtualizar}>{`barra nova: ${p.contagem}`}</button>
+      <p>{`exportar: ${p.exportacao ? p.exportacao.leads.length : "não"}`}</p>
+    </>
   ),
 }));
 vi.mock("@/components/kanban/FilterBar", () => ({ FilterBar: () => <p>barra do original</p> }));
 vi.mock("@/components/kanban/BulkActionBar", () => ({ BulkActionBar: () => null }));
 vi.mock("@/components/kanban/NewLeadDialog", () => ({
-  NewLeadDialog: ({ open }: { open: boolean }) => (open ? <p>novo negócio aberto</p> : null),
+  NewLeadDialog: ({ open, etapaInicial }: { open: boolean; etapaInicial?: string | null }) =>
+    open ? <p>{`novo negócio aberto na etapa ${etapaInicial ?? "padrão"}`}</p> : null,
 }));
 vi.mock("@/components/kanban/CalendarioDoFunil", () => ({ CalendarioDoFunil: () => null }));
+vi.mock("@/components/escale/quadro/JanelaDeImportarNegocios", () => ({
+  JanelaDeImportarNegocios: ({ aberta, etapas }: { aberta: boolean; etapas: Array<{ name: string }> }) =>
+    aberta ? <p>{`importar aberto: ${etapas.map((e) => e.name).join(", ")}`}</p> : null,
+}));
 
+import type { Role } from "@/lib/auth/types";
 import { PipelinePageClient } from "@/app/app/pipelines/[id]/_client";
 
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -107,12 +125,16 @@ const DOIS_FUNIS = [
   { id: "p-1", name: "Vendas" },
   { id: "p-2", name: "Pós-venda" },
 ];
-const abrir = (cascaNova: boolean, funis = [{ id: "p-1", name: "Vendas" }]) =>
+const abrir = (
+  cascaNova: boolean,
+  funis = [{ id: "p-1", name: "Vendas" }],
+  role: Role = "agent",
+) =>
   render(
     <PipelinePageClient
       pipelineId="p-1"
       initialName="Vendas"
-      role="agent"
+      role={role}
       funis={funis}
       cascaNova={cascaNova}
     />,
@@ -178,9 +200,45 @@ describe("a página do funil com a casca nova (Fase 1D)", () => {
     expect(screen.getByText("adicionar: function")).toBeInTheDocument();
   });
 
-  it("com a casca, 'Negócio +' abre o Novo negócio de sempre", async () => {
+  it("com a casca, 'Negócio +' abre o menu da Clint e 'Novo negócio' abre a janela de sempre", async () => {
     abrir(true);
-    await userEvent.setup().click(screen.getByRole("button", { name: /^Negócio/ }));
-    expect(screen.getByText("novo negócio aberto")).toBeInTheDocument();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("button", { name: /^Negócio/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Novo negócio" }));
+    expect(screen.getByText("novo negócio aberto na etapa padrão")).toBeInTheDocument();
+  });
+
+  it("com a casca, 'Importar negócios' abre a janela de importar só com as etapas abertas", async () => {
+    abrir(true);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    expect(screen.queryByText(/importar aberto/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Negócio/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Importar negócios" }));
+    expect(screen.getByText("importar aberto: Entrada, Proposta")).toBeInTheDocument();
+  });
+
+  it("viewer: 'Negócio +' fica desligado", () => {
+    abrir(true, undefined, "viewer");
+    expect(screen.getByRole("button", { name: /^Negócio/ })).toBeDisabled();
+  });
+
+  it("'+ Adicionar negócio' da coluna abre o Novo negócio já na etapa dela", async () => {
+    abrir(true);
+    await userEvent.setup().click(screen.getByRole("button", { name: "adicionar na e-2" }));
+    expect(screen.getByText("novo negócio aberto na etapa e-2")).toBeInTheDocument();
+  });
+
+  it("viewer: sem '+ Adicionar negócio' e sem seleção por etapa", () => {
+    abrir(true, undefined, "viewer");
+    expect(screen.getByText("adicionar: undefined")).toBeInTheDocument();
+    expect(screen.getByText("selecionar: false")).toBeInTheDocument();
+  });
+
+  it("Fase 1E: gerente exporta o recorte da tela; agente não (a rota pede manager)", () => {
+    const { unmount } = abrir(true, undefined, "manager");
+    expect(screen.getByText("exportar: 1")).toBeInTheDocument();
+    unmount();
+    abrir(true, undefined, "agent");
+    expect(screen.getByText("exportar: não")).toBeInTheDocument();
   });
 });

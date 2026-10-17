@@ -1,13 +1,17 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
+import { PersonalizarCards } from "@/components/escale/capa/PersonalizarCards";
 import { useT } from "@/hooks/i18n/useT";
 import type { CampoFiltravel } from "@/lib/escale/filtros/campos";
 import type { AlvoDoFiltro } from "@/lib/escale/filtros/filtros-salvos";
-import type { FiltrosDoQuadro } from "@/lib/escale/filtros/tipos";
+import { limparCriterios, temCriterios, type FiltrosDoQuadro } from "@/lib/escale/filtros/tipos";
 import type { Lead } from "@/lib/types/leads";
-import { Search } from "@/lib/ui/icons-da-casca";
+import { Search, X } from "@/lib/ui/icons-da-casca";
 
+import { BotaoOrdenar } from "./BotaoOrdenar";
+import { CLASSE_DA_LINHA_DO_MENU } from "./controles";
+import { ExportarCards, type ExportacaoDoQuadro } from "./ExportarCards";
 import { FiltroDeData } from "./FiltroDeData";
 import {
   GatilhoDeCampos,
@@ -16,7 +20,7 @@ import {
   GatilhoMaisFiltros,
 } from "./GatilhosDoQuadro";
 import { LinhaDeContagem } from "./LinhaDeContagem";
-import { MenuDaEngrenagem } from "./MenuDaEngrenagem";
+import { MenuDeFiltrosSalvos } from "./MenuDeFiltrosSalvos";
 import { StatusDoQuadro } from "./StatusDoQuadro";
 
 export interface BarraDoQuadroProps {
@@ -33,6 +37,8 @@ export interface BarraDoQuadroProps {
   contagem: number;
   onAtualizar: () => void;
   atualizando?: boolean;
+  /** Fase 1E: o que o ícone Exportar leva; ausente = sem ícone (Visualização, abaixo de gerente). */
+  exportacao?: ExportacaoDoQuadro;
 }
 
 const ESPERA_DA_BUSCA_MS = 250;
@@ -54,6 +60,7 @@ export function BarraDoQuadro({
   contagem,
   onAtualizar,
   atualizando = false,
+  exportacao,
 }: BarraDoQuadroProps) {
   const t = useT();
   // Muda só quando os filtros vêm de fora da digitação (filtro salvo, limpar):
@@ -94,21 +101,48 @@ export function BarraDoQuadro({
           status={filtros.status}
           onMudar={(status) => mudar({ ...filtros, status })}
         />
-        <GatilhoMaisFiltros filtros={filtros} onMudar={mudar} leads={leads} settings={settings} />
+        <GatilhoMaisFiltros
+          filtros={filtros}
+          onMudar={mudar}
+          leads={leads}
+          settings={settings}
+          // FORK ESCALE · Fase 1E (E15): "Filtros salvos" e "Limpar filtros" saíram do menu da engrenagem.
+          rodape={
+            <div>
+              <MenuDeFiltrosSalvos
+                alvo={alvo}
+                filtros={filtros}
+                filtroSalvoId={filtroSalvoId}
+                onAplicar={trocarTudo}
+              />
+              <button
+                type="button"
+                disabled={!temCriterios(filtros)}
+                onClick={() => trocarTudo(limparCriterios(filtros), null)}
+                className={CLASSE_DA_LINHA_DO_MENU}
+              >
+                <X size={14} aria-hidden />
+                {t("Limpar filtros")}
+              </button>
+            </div>
+          }
+        />
       </div>
       <LinhaDeContagem
         contagem={contagem}
         ordemAtiva={Boolean(filtros.ordem?.length)}
         onAtualizar={onAtualizar}
         atualizando={atualizando}
-        engrenagem={
-          <MenuDaEngrenagem
-            alvo={alvo}
-            filtros={filtros}
-            filtroSalvoId={filtroSalvoId}
+        // FORK ESCALE · Fase 1E: o ícone "Personalizar cards", logo depois do atualizar.
+        personalizar={<PersonalizarCards campos={campos} />}
+        // FORK ESCALE · Fase 1E: o ícone Exportar (gerente ou acima, só no funil).
+        exportar={exportacao ? <ExportarCards {...exportacao} /> : undefined}
+        // FORK ESCALE · Fase 1E (E15): "Ordenar" é botão da linha de contagem; a engrenagem fica para a 1F.
+        ordenar={
+          <BotaoOrdenar
+            ordem={filtros.ordem}
             campos={campos}
-            onMudar={mudar}
-            onTrocarTudo={trocarTudo}
+            onAplicar={(ordem) => mudar({ ...filtros, ordem })}
           />
         }
       />

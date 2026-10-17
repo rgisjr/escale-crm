@@ -15,8 +15,15 @@ vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
 vi.mock("@/hooks/kanban/useAssignableAgents", () => ({
   useAssignableAgents: () => ({ data: [] }),
 }));
+vi.mock("@/hooks/escale/usePrefsDoCard", () => ({
+  usePrefsDoCard: () => ({ data: null }),
+  useSalvarPrefsDoCard: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock("@/components/escale/filtros/MenuDeFiltrosSalvos", () => ({
   MenuDeFiltrosSalvos: () => <p>filtros salvos</p>,
+}));
+vi.mock("@/components/escale/filtros/ExportarCards", () => ({
+  ExportarCards: () => <button type="button">Exportar</button>,
 }));
 
 import { BarraDoQuadro, type BarraDoQuadroProps } from "@/components/escale/filtros/BarraDoQuadro";
@@ -111,21 +118,6 @@ describe("<BarraDoQuadro> da casca (Casca V4)", () => {
     expect(onMudar).toHaveBeenCalledWith({ status: ["open", "won"] }, "s-1");
   });
 
-  it("Ordenar mora na engrenagem: monta os critérios e aplica", async () => {
-    const { onMudar, u } = barra();
-    await u.click(screen.getByRole("button", { name: "Configurações do quadro" }));
-    await u.click(screen.getByRole("button", { name: /^Ordenar/ }));
-    expect(screen.getByText("Nenhum critério de ordenação")).toBeInTheDocument();
-    await u.click(screen.getByRole("button", { name: "Adicionar critério" }));
-    await u.click(screen.getByRole("combobox", { name: "Campo 1" }));
-    expect(screen.getByRole("option", { name: "Renda" })).toBeInTheDocument();
-    await u.click(screen.getByRole("option", { name: "Valor do negócio" }));
-    await u.click(screen.getByRole("combobox", { name: "Direção 1" }));
-    await u.click(screen.getByRole("option", { name: "Decrescente" }));
-    await u.click(screen.getByRole("button", { name: "Aplicar" }));
-    expect(onMudar).toHaveBeenCalledWith({ status: ["open"], ordem: ORDEM }, "s-1");
-  });
-
   it("com ordenação ativa, avisa que arrastar dentro da coluna está desligado", () => {
     barra({ status: ["open"], ordem: ORDEM });
     expect(screen.getByText(/Ordenação ativa/)).toBeInTheDocument();
@@ -137,19 +129,39 @@ describe("<BarraDoQuadro> da casca (Casca V4)", () => {
     expect(onAtualizar).toHaveBeenCalled();
   });
 
-  it("Exportar e Ajuda aparecem como na Clint, desligados", () => {
+  it("sem a prop exportacao, não há ícone de Exportar (Visualização, abaixo de gerente)", () => {
     barra();
-    expect(screen.getByRole("button", { name: "Exportar" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Exportar" })).toBeNull();
+  });
+
+  it("com exportacao, o ícone de Exportar aparece na linha de contagem (Fase 1E)", () => {
+    barra(
+      { status: ["open"] },
+      {
+        exportacao: {
+          origem: { id: "p-1", nome: "Vendas" },
+          leads: [negocio("l1")],
+          stages: [],
+        },
+      },
+    );
+    expect(screen.getByRole("button", { name: "Exportar" })).toBeInTheDocument();
+  });
+
+  it("Ajuda aparece como na Clint, desligada", () => {
+    barra();
     expect(screen.getByRole("button", { name: "Ajuda" })).toBeDisabled();
   });
 
-  it("na engrenagem: os filtros salvos, Limpar filtros (solta o filtro salvo) e Personalizar desligado", async () => {
-    const { onMudar, u } = barra({ status: ["open", "won"], tags: ["vip"], ordem: ORDEM });
-    await u.click(screen.getByRole("button", { name: "Configurações do quadro" }));
-    expect(screen.getByText("filtros salvos")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Personalizar cards/ })).toBeDisabled();
-    await u.click(screen.getByRole("button", { name: /Limpar filtros/ }));
-    expect(onMudar).toHaveBeenCalledWith({ status: ["open", "won"], ordem: ORDEM }, null);
+  it("Personalizar cards fica ligado na linha de contagem, logo depois de Atualizar (Fase 1E)", () => {
+    barra();
+    const linha = screen.getByTestId("contagem-do-quadro").parentElement!.parentElement!;
+    const nomes = within(linha)
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label"));
+    const personalizar = screen.getAllByRole("button", { name: "Personalizar cards" })[0]!;
+    expect(personalizar).toBeEnabled();
+    expect(nomes.indexOf("Personalizar cards")).toBe(nomes.indexOf("Atualizar") + 1);
   });
 
   it("o painel único de filtros e os chips saíram: a Clint usa um gatilho por filtro (D4)", () => {

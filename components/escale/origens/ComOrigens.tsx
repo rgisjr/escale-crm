@@ -6,6 +6,7 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { lerOrigens } from "@/lib/escale/origens/ler-origens";
 import type { Origens } from "@/lib/escale/origens/regras";
 import { lerPreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
+import { chaveDosRecentes } from "@/lib/escale/recentes/regras";
 import { lerVisualizacoes } from "@/lib/escale/visualizacoes/ler-visualizacoes";
 import type { Visualizacao } from "@/lib/escale/visualizacoes/regras";
 import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
@@ -68,6 +69,8 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
         podeGerenciar={ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager}
         // Painel/lista recolhidos e grupos ocultos vêm de cookie: o primeiro render já sai certo.
         preferencias={lerPreferenciasDoPainel((nome) => store.get(nome)?.value)}
+        // Fase 1E: os Recentes moram no navegador, por organização e pessoa.
+        chaveDeRecentes={chaveDosRecentes(activeOrg.orgId, user.id)}
       />
       <div className={CONTEUDO_AO_LADO_DO_PAINEL}>{children}</div>
     </div>

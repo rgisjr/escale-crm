@@ -197,7 +197,8 @@ test.describe("webhooks & automações — fluxo completo", () => {
       const ruleCard = cardOf(ruleTitle);
       await expect(ruleCard.getByText("Pausada")).toBeVisible();
 
-      await page.getByRole("switch", { name: `Ligar ${RULE_NAME}` }).click();
+      // FORK ESCALE · Fase 1E: o interruptor passou a "Ativar"; aceita os dois para a sincronização com o original.
+      await page.getByRole("switch", { name: new RegExp(`(Ligar|Ativar) ${RULE_NAME}`) }).click();
       await expectToast(page, "Automação ligada.");
       await expect(ruleCard.getByText("Ativa")).toBeVisible();
 

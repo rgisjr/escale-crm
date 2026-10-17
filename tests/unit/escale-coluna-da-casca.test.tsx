@@ -11,6 +11,11 @@ vi.mock("@hello-pangea/dnd", () => ({
     ),
 }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (texto: string) => texto }));
+vi.mock("@/hooks/escale/usePrefsDoCard", () => ({ usePrefsDoCard: () => ({ data: null }) }));
+vi.mock("@/hooks/auth/AuthProvider", () => ({
+  useActiveOrg: () => ({ orgId: "org-1", role: "agent" }),
+  useUser: () => ({ id: "u-1" }),
+}));
 vi.mock("@/components/escale/quadro/CardDaCasca", () => ({
   CardDaCasca: ({
     lead,
@@ -101,28 +106,33 @@ describe("<ColunaDoFunilNaCasca> (Casca V4)", () => {
   it("'+ Adicionar negócio' nas etapas abertas avisa a etapa; na de ganho não aparece", async () => {
     const aoAdicionar = vi.fn();
     const { u } = coluna({ aoAdicionar });
-    await u.click(screen.getByRole("button", { name: "Adicionar negócio" }));
+    const botao = screen.getByRole("button", { name: "+ Adicionar negócio" });
+    expect(botao).toHaveClass("justify-start");
+    await u.click(botao);
     expect(aoAdicionar).toHaveBeenCalledWith("e1");
   });
 
   it("na etapa de ganho, sem '+ Adicionar negócio'", () => {
     coluna({ stage: etapa({ is_won: true }), aoAdicionar: vi.fn() });
-    expect(screen.queryByRole("button", { name: "Adicionar negócio" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+ Adicionar negócio" })).not.toBeInTheDocument();
   });
 
-  it("o ⋮ da etapa seleciona todos (o lote do original)", async () => {
-    const { onSelectMany, u } = coluna();
+  it("com menuDaEtapa, o ⋮ da Clint: 'Selecionar todos...' avisa os ids e o número de cards", async () => {
+    const aoSelecionarNaEtapa = vi.fn();
+    const { u } = coluna({ aoSelecionarNaEtapa });
     await u.click(screen.getByRole("button", { name: "Ações da etapa 1. Entrada Lead" }));
-    await u.click(await screen.findByRole("menuitem", { name: "Selecionar todos" }));
-    expect(onSelectMany).toHaveBeenCalledWith(["a", "b", "c"], true);
+    await u.click(await screen.findByRole("button", { name: "Selecionar todos..." }));
+    expect(aoSelecionarNaEtapa).toHaveBeenCalledWith(["a", "b", "c"], 3);
   });
 
-  it("com todos marcados, a contagem mostra a seleção e o ⋮ desmarca", async () => {
-    const { onSelectMany, u } = coluna({ selectedLeadIds: new Set(["a", "b", "c"]) });
+  it("sem menuDaEtapa, não há ⋮ (Visualização, viewer)", () => {
+    coluna();
+    expect(screen.queryByRole("button", { name: /Ações da etapa/ })).toBeNull();
+  });
+
+  it("com todos marcados, a contagem mostra a seleção", () => {
+    coluna({ selectedLeadIds: new Set(["a", "b", "c"]) });
     expect(screen.getByText("3/3")).toBeInTheDocument();
-    await u.click(screen.getByRole("button", { name: "Ações da etapa 1. Entrada Lead" }));
-    await u.click(await screen.findByRole("menuitem", { name: "Desmarcar todos" }));
-    expect(onSelectMany).toHaveBeenCalledWith(["a", "b", "c"], false);
   });
 
   it("shift estende a seleção desde a âncora, na ordem da coluna", async () => {

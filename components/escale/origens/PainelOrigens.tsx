@@ -47,6 +47,7 @@ import {
   type SelecaoNoPainel,
 } from "./LinhasDoPainel";
 import { ConteudoDoMenu, ItemDoMenu } from "./MenuDoPainel";
+import { SecaoRecentes } from "./SecaoRecentes";
 import { textoDoErro } from "./texto-do-erro";
 
 const JANELA_DO_GRUPO: Record<
@@ -86,7 +87,7 @@ interface Selecao {
  *   levam às janelas (`JanelasDeOrigens`);
  * - o "+" das visualizações e o "Selecionar" dos ⋮ entram no modo seleção.
  *
- * RECENTES entra com a Fase 1E (ver o comentário no lugar dela).
+ * RECENTES (Fase 1E) é a terceira seção: fixados e abertos por último, recolhida por padrão.
  *
  * Só md+: no celular o quadro segue como sempre.
  *
@@ -101,11 +102,14 @@ export function PainelOrigens({
   visualizacoes: visualizacoesDoServidor,
   podeGerenciar,
   preferencias,
+  chaveDeRecentes,
 }: {
   origens: Origens;
   visualizacoes: Visualizacao[];
   podeGerenciar: boolean;
   preferencias: PreferenciasDoPainel;
+  /** Fase 1E: onde moram os Recentes desta pessoa nesta organização. Ausente = sem a seção. */
+  chaveDeRecentes?: string;
 }) {
   const t = useT();
   const router = useRouter();
@@ -129,6 +133,7 @@ export function PainelOrigens({
   const [painelAberto, setPainelAberto] = useState(preferencias.painelAberto);
   const [listaAberta, setListaAberta] = useState(preferencias.listaAberta);
   const [visualizacoesAbertas, setVisualizacoesAbertas] = useState(preferencias.visualizacoesAbertas);
+  const [recentesAbertos, setRecentesAbertos] = useState(preferencias.recentesAbertos);
   const [ocultos, setOcultos] = useState<string[]>(preferencias.ocultos);
   const [verOcultos, setVerOcultos] = useState(false);
   const [abertos, setAbertos] = useState<ReadonlySet<string>>(() => {
@@ -181,6 +186,12 @@ export function PainelOrigens({
     const proximo = !visualizacoesAbertas;
     setVisualizacoesAbertas(proximo);
     void guardarPreferenciaDeOrigens({ nome: "visualizacoes", valor: proximo ? "aberta" : "fechada" });
+  }
+
+  function alternarRecentes() {
+    const proximo = !recentesAbertos;
+    setRecentesAbertos(proximo);
+    void guardarPreferenciaDeOrigens({ nome: "recentes", valor: proximo ? "aberta" : "fechada" });
   }
 
   function alternarGrupo(id: string) {
@@ -441,13 +452,10 @@ export function PainelOrigens({
             />
           )}
 
-          {/*
-            RECENTES (01-010, terceira seção) entra AQUI com a Fase 1E, quando ela for
-            reescrita sob a regra nova: `SecaoRecentes` com `CabecalhoDaSecao`, o ícone
-            `Clock`, o chevron com `BOTAO_DE_ICONE` + `text-casca-meta` e as linhas com
-            `LINHA`/`LINHA_COM_HOVER`. Hoje não há dado de recentes, e cabeçalho que não
-            abre nada seria controle decorativo.
-          */}
+          {/* Fase 1E: RECENTES (01-010, terceira seção), recolhida por padrão como na Clint. */}
+          {!selecao && chaveDeRecentes && (
+            <SecaoRecentes chave={chaveDeRecentes} aberta={recentesAbertos} onAlternar={alternarRecentes} />
+          )}
         </div>
 
         {selecao && (

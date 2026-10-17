@@ -157,7 +157,8 @@ test.describe("J6.8 — anti-SSRF do outbound call_webhook (real, ponta a ponta)
             r.status() === 200,
           { timeout: 20_000 },
         ),
-        page.getByRole("switch", { name: `Ligar ${RULE_NAME}` }).click(),
+        // FORK ESCALE · Fase 1E: o interruptor passou a "Ativar"; aceita os dois para a sincronização com o original.
+        page.getByRole("switch", { name: new RegExp(`(Ligar|Ativar) ${RULE_NAME}`) }).click(),
       ]);
       await expect(cardOf(page.getByText(RULE_NAME, { exact: true })).getByText("Ativa")).toBeVisible(
         { timeout: 15_000 },

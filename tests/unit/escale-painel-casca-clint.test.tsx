@@ -31,7 +31,7 @@ const ORIGENS: Origens = {
 const VISUALIZACOES: Visualizacao[] = [
   { id: "v-time", name: "Time comercial", acesso: "todos", origens: ["f-nayara", "f-leads"], pessoas: [] },
 ];
-const ABERTO: PreferenciasDoPainel = { painelAberto: true, listaAberta: true, visualizacoesAbertas: true, ocultos: [] };
+const ABERTO: PreferenciasDoPainel = { painelAberto: true, listaAberta: true, visualizacoesAbertas: true, recentesAbertos: false, ocultos: [] };
 
 function renderizar(preferencias: PreferenciasDoPainel = ABERTO, podeGerenciar = true) {
   render(

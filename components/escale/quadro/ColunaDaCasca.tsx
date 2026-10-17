@@ -3,17 +3,12 @@ import { Droppable } from "@hello-pangea/dnd";
 import { useRef, type ReactNode } from "react";
 
 import type { GestoDeSelecao } from "@/components/kanban/KanbanCard";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useT } from "@/hooks/i18n/useT";
 import { intervaloDaColuna } from "@/lib/kanban/selecao";
 import type { Lead } from "@/lib/types/leads";
-import { EllipsisVertical, Plus } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
+
+import { MenuDaColuna } from "./MenuDaColuna";
 
 export interface ColunaDaCascaProps {
   /** O `droppableId`: a etapa no funil, a chave da coluna combinada na Visualização. */
@@ -35,6 +30,8 @@ export interface ColunaDaCascaProps {
   ) => ReactNode;
   /** "+ Adicionar negócio" (só onde faz sentido). */
   aoAdicionar?: () => void;
+  /** Fase 1E: o ⋮ da Clint ("Selecionar todos..." e "Selecione N"). Ausente = sem ⋮ (Visualização, viewer). */
+  menuDaEtapa?: { aoSelecionar: (n: number) => void };
   /** Os mesmos ganchos do original, para os testes e o e2e acharem a coluna. */
   marcador: { "data-etapa-do-quadro": string } | { "data-coluna-da-visualizacao": string };
 }
@@ -43,8 +40,7 @@ export interface ColunaDaCascaProps {
  * A COLUNA DA CLINT (fork Escale, Casca V4; 01-010 e
  * `docs/escale/clint/crops/colhead.png`; design system §6.10 e §6.12). Raia
  * lavanda de 260px, sem borda; cabeçalho com nome, total e o círculo da
- * contagem; ⋮ com o "Selecionar todos" do original (PRINT 18: o resto do ⋮ é
- * da 1E); cards de 236px com 16px entre eles; rolagem própria (D7).
+ * contagem; ⋮ da Clint quando há `menuDaEtapa` (Fase 1E); cards de 236px com 16px entre eles; rolagem própria (D7).
  */
 export function ColunaDaCasca({
   idDaColuna,
@@ -57,12 +53,12 @@ export function ColunaDaCasca({
   onSelectMany,
   renderCard,
   aoAdicionar,
+  menuDaEtapa,
   marcador,
 }: ColunaDaCascaProps) {
   const t = useT();
   const ids = leads.map((l) => l.id);
   const aqui = ids.filter((id) => selecionados.has(id)).length;
-  const todos = ids.length > 0 && aqui === ids.length;
   // A âncora do shift+clique, como no `StageColumn`: `useRef` para não remontar o Droppable.
   const ancora = useRef<string | null>(null);
 
@@ -75,10 +71,6 @@ export function ColunaDaCasca({
     }
     ancora.current = leadId;
     onSelectMany?.([leadId], !selecionados.has(leadId));
-  };
-  const alternarTodos = () => {
-    ancora.current = null;
-    onSelectMany?.(ids, !todos);
   };
 
   return (
@@ -97,22 +89,16 @@ export function ColunaDaCasca({
         <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-casca-contador px-1 text-[10px] font-semibold text-casca-texto tabular-nums">
           {aqui > 0 ? `${aqui}/${leads.length}` : leads.length}
         </span>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={`${t("Ações da etapa")} ${nome}`}
-              className="grid h-7 w-5 shrink-0 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-surface"
-            >
-              <EllipsisVertical size={18} aria-hidden />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled={ids.length === 0} onSelect={alternarTodos}>
-              {todos ? t("Desmarcar todos") : t("Selecionar todos")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {menuDaEtapa ? (
+          <MenuDaColuna
+            nome={nome}
+            total={leads.length}
+            aoSelecionar={(n) => {
+              ancora.current = null;
+              menuDaEtapa.aoSelecionar(n);
+            }}
+          />
+        ) : null}
       </header>
 
       <Droppable droppableId={idDaColuna} type="LEAD">
@@ -131,10 +117,10 @@ export function ColunaDaCasca({
               <button
                 type="button"
                 onClick={aoAdicionar}
-                className="flex w-full shrink-0 items-center justify-center gap-1 rounded-casca-gatilho py-1 text-[13px] text-casca-texto-2 hover:bg-surface"
+                className="flex w-full shrink-0 items-center justify-start gap-1 rounded-casca-gatilho px-2 py-1 text-[13px] text-casca-texto-2 hover:bg-surface"
               >
-                <Plus size={14} aria-hidden />
-                {t("Adicionar negócio")}
+                {/* A Clint superior escreve o "+" no texto, alinhado à esquerda (01-010). */}
+                {`+ ${t("Adicionar negócio")}`}
               </button>
             ) : null}
           </div>

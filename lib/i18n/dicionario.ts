@@ -7451,7 +7451,7 @@ export const DICIONARIO: Traducoes = {
   Quem: { es: "Quién" },
   "ação": { es: "acción" },
   "ações": { es: "acciones" },
-  Ligar: { es: "Activar" },
+  Ligar: { es: "Llamar" },
   "Seu nome": { es: "Tu nombre" },
   "Selecione uma conversa para visualizar": {
     es: "Selecciona una conversación para verla",
@@ -9388,6 +9388,126 @@ export const DICIONARIO: Traducoes = {
   "Selecionar todos": { es: "Seleccionar todos" },
   "Desmarcar todos": { es: "Desmarcar todos" },
   "Adicionar negócio": { es: "Agregar negocio" },
+  // ─── FORK ESCALE · Fase 1E (Task 6): card da casca com a preferência (a Task 15 acrescenta o resto) ───
+  "Enviar Whatsapp": { es: "Enviar WhatsApp" },
+  "Copiar {label}": { es: "Copiar {label}" },
+  "Copiado: {label}": { es: "Copiado: {label}" },
+  // ─── FORK ESCALE · Fase 1E (Task 7): a janela "Personalizar cards" (a Task 15 acrescenta o resto) ───
+  "Limite de 10 campos atingido": { es: "Límite de 10 campos alcanzado" },
+  "Limite de 3 ícones no rodapé atingido": { es: "Límite de 3 íconos en el pie alcanzado" },
+  "Ícones de canal no rodapé": { es: "Íconos de canal en el pie" },
+  "Prévia da última mensagem": { es: "Vista previa del último mensaje" },
+  "Idade do negócio": { es: "Antigüedad del negocio" },
+  "Lembrete": { es: "Recordatorio" },
+  "Buscar por...": { es: "Buscar por..." },
+  "Nenhum campo encontrado.": { es: "Ningún campo encontrado." },
+  "Pré-visualização": { es: "Vista previa" },
+  "Este é um exemplo. Suas alterações aparecem no kanban depois de salvar.": {
+    es: "Este es un ejemplo. Tus cambios aparecen en el kanban después de guardar.",
+  },
+  "Preferências salvas": { es: "Preferencias guardadas" },
+  "Salvar preferência": { es: "Guardar preferencia" },
+  "Maria Silva": { es: "Maria Silva" },
+  "Exemplo": { es: "Ejemplo" },
+  "Oii Maria! Aqui é a Ana, posso te ajudar?": { es: "¡Hola María! Soy Ana, ¿puedo ayudarte?" },
+  "Ana Souza": { es: "Ana Souza" },
+  // ─── FORK ESCALE · Fase 1E (Task 9): o ⋮ da etapa (a Task 15 acrescenta o resto) ───
+  "Selecionar todos...": { es: "Seleccionar todos..." },
+  "Selecione": { es: "Selecciona" },
+  "Escolha quantos negócios você quer selecionar": {
+    es: "Elige cuántos negocios quieres seleccionar",
+  },
+  "Nenhum negócio nesta etapa": { es: "Ningún negocio en esta etapa" },
+  // ─── FORK ESCALE · Fase 1E (Task 11): o menu "Negócio +" (a Task 15 acrescenta o resto) ───
+  "Novo negócio": { es: "Nuevo negocio" },
+  "Importar negócios": { es: "Importar negocios" },
+  "Sem permissão": { es: "Sin permiso" },
+  // ─── FORK ESCALE · Fase 1E (Task 12): a janela "Importar negócios" (a Task 15 acrescenta o resto) ───
+  "Passos da importação": { es: "Pasos de la importación" },
+  "Mapeamento": { es: "Mapeo" },
+  "Prévia e confirmação": { es: "Vista previa y confirmación" },
+  "Importe contatos em Contatos": { es: "Importa contactos en Contactos" },
+  "Escolha o arquivo .CSV para criar negócios": { es: "Elige el archivo .CSV para crear negocios" },
+  "Seu arquivo precisa ter os campos importantes para mapear com a plataforma. No próximo passo você liga cada coluna a um campo da Escale OS.": {
+    es: "Tu archivo necesita tener los campos importantes para mapear con la plataforma. En el siguiente paso conectas cada columna a un campo de Escale OS.",
+  },
+  "Baixar arquivo de exemplo .CSV": { es: "Descargar archivo de ejemplo .CSV" },
+  "Arraste o arquivo aqui ou clique para selecionar": { es: "Arrastra el archivo aquí o haz clic para seleccionar" },
+  "Formato .CSV": { es: "Formato .CSV" },
+  "Pronto para mapear": { es: "Listo para mapear" },
+  "Arquivo .CSV": { es: "Archivo .CSV" },
+  "Apenas arquivos CSV são aceitos.": { es: "Solo se aceptan archivos CSV." },
+  "O arquivo CSV excede o limite máximo de 5 MB.": { es: "El archivo CSV supera el límite máximo de 5 MB." },
+  "A planilha passa de 500 linhas. Divida em arquivos menores.": {
+    es: "La hoja pasa de 500 filas. Divídela en archivos más pequeños.",
+  },
+  "Mapeie os campos do seu arquivo": { es: "Mapea los campos de tu archivo" },
+  "Ligue cada coluna do seu arquivo a um campo da Escale OS.": {
+    es: "Conecta cada columna de tu archivo a un campo de Escale OS.",
+  },
+  "Coluna do arquivo": { es: "Columna del archivo" },
+  "Mapear para": { es: "Mapear a" },
+  "Coluna": { es: "Columna" },
+  "Campo da coluna": { es: "Campo de la columna" },
+  "Não importar esse campo": { es: "No importar este campo" },
+  "Para continuar você precisa associar pelo menos o nome do negócio ou do contato.": {
+    es: "Para continuar debes asociar al menos el nombre del negocio o del contacto.",
+  },
+  "Configurações da importação": { es: "Configuración de la importación" },
+  "Origem, etapa e status padrão dos negócios e a etiqueta aplicada aos contatos.": {
+    es: "Origen, etapa y estado predeterminados de los negocios y la etiqueta aplicada a los contactos.",
+  },
+  "Opcional. Aplicada a todos os contatos criados ou atualizados nesta importação.": {
+    es: "Opcional. Se aplica a todos los contactos creados o actualizados en esta importación.",
+  },
+  "Este quadro ainda não tem tags.": { es: "Este tablero aún no tiene etiquetas." },
+  "Origem de destino": { es: "Origen de destino" },
+  "A importação entra nesta origem": { es: "La importación entra en este origen" },
+  "Etapa inicial padrão": { es: "Etapa inicial predeterminada" },
+  "Confira e confirme a importação": { es: "Revisa y confirma la importación" },
+  "Revise os detalhes antes de iniciar.": { es: "Revisa los detalles antes de iniciar." },
+  "Campos mapeados": { es: "Campos mapeados" },
+  "Confirmar e importar": { es: "Confirmar e importar" },
+  "A importação conclui agora.": { es: "La importación se completa ahora." },
+  "Os negócios entram na etapa escolhida. As linhas recusadas aparecem com o motivo logo depois.": {
+    es: "Los negocios entran en la etapa elegida. Las filas rechazadas aparecen con el motivo justo después.",
+  },
+  "Importação concluída": { es: "Importación completada" },
+  "{n} negócio criado": { es: "{n} negocio creado" },
+  "{n} negócios criados": { es: "{n} negocios creados" },
+  "{n} contato criado": { es: "{n} contacto creado" },
+  "{n} contatos criados": { es: "{n} contactos creados" },
+  "Linha {linha}: {motivo}": { es: "Fila {linha}: {motivo}" },
+  "Nenhum negócio foi importado.": { es: "No se importó ningún negocio." },
+  // ─── FORK ESCALE · Fase 1E (Task 13): Exportar pelo ícone da linha de contagem (a Task 15 acrescenta o resto) ───
+  "Exportar {n} Negócio": { es: "Exportar {n} Negocio" },
+  "Exportar {n} Negócios": { es: "Exportar {n} Negocios" },
+  "Nenhum negócio para exportar.": { es: "Ningún negocio para exportar." },
+  "Confirme sua ação": { es: "Confirma tu acción" },
+  "Tem certeza que deseja exportar os negócios dessa origem?": {
+    es: "¿Seguro que deseas exportar los negocios de este origen?",
+  },
+  "Os negócios foram exportados com sucesso.": { es: "Los negocios se exportaron con éxito." },
+  "Falha ao exportar os negócios, tente novamente ou chame o suporte.": {
+    es: "Error al exportar los negocios, inténtalo de nuevo o contacta con soporte.",
+  },
+  // ─── FORK ESCALE · Fase 1E (Task 14): RECENTES no painel Origens (a Task 15 acrescenta o resto) ───
+  "Recentes": { es: "Recientes" },
+  "Recolher os recentes": { es: "Contraer los recientes" },
+  "Abrir os recentes": { es: "Abrir los recientes" },
+  "Você não possui negócios recém trabalhados.": { es: "No tienes negocios trabajados recientemente." },
+  "Você atingiu o limite. Desafixe algo pra fixar mais.": { es: "Alcanzaste el límite. Desfija algo para fijar más." },
+  "Fixar": { es: "Fijar" },
+  "Desafixar": { es: "Desfijar" },
+  "Esconder detalhes": { es: "Ocultar detalles" },
+  "Ver mais": { es: "Ver más" },
+  "Ver menos": { es: "Ver menos" },
+  "Sem empresa": { es: "Sin empresa" },
+  // ─── FORK ESCALE · Fase 1E (Task 15): o espanhol que faltava dos textos da fase ───
+  "Origem não encontrada.": { es: "Origen no encontrado." },
+  "A preferência mudou em outra aba. Abra de novo e salve.": {
+    es: "La preferencia cambió en otra pestaña. Ábrela de nuevo y guarda.",
+  },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
@@ -11542,6 +11662,7 @@ export const DICIONARIO: Traducoes = {
   // linha ~3725: "Ligar" -> "Activar"). Mesma palavra em PT, contextos
   // diferentes; o dicionário é chaveado pelo texto, não por significado, então
   // a colisão vira TS1117 (chave duplicada) se as duas usarem a mesma string.
+  // FORK ESCALE · Fase 1E: desde a 1E, "Ligar" é ligação ("Llamar") e o interruptor usa "Ativar".
   "Chamar": { es: "Llamar" },
   "Em ligação": { es: "En llamada" },
   "Chamada de voz recebida": { es: "Llamada de voz recibida" },

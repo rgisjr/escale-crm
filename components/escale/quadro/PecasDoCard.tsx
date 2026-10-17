@@ -6,6 +6,7 @@ import { AbrirConversaDoLead, temAlvoParaAbrir } from "@/components/kanban/Abrir
 import { useCorDaEtiqueta } from "@/components/tags/CoresDasEtiquetas";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useT } from "@/hooks/i18n/useT";
+import { PREFS_PADRAO, type PrefsDoCard } from "@/lib/escale/capa/tipos";
 import { dadosDeFiltro } from "@/lib/escale/filtros/dados-do-quadro";
 import {
   atividadesDoCard,
@@ -228,11 +229,27 @@ function AvatarDoDono({ card, lead }: { card: CardInput; lead: Lead }) {
   );
 }
 
-/** O rodapé: dono, telefone, conversa, e-mail, valor e, à direita, atividades e tempo na etapa. */
-export function RodapeDoCard({ card, lead }: { card: CardInput; lead: Lead }) {
+/**
+ * O rodapé: dono, telefone, conversa, e-mail, valor e, à direita, atividades e tempo na etapa.
+ * FORK ESCALE · Fase 1E: cada peça obedece à preferência da pessoa (`prefs`); sem nada ligado, sem rodapé.
+ */
+export function RodapeDoCard({
+  card,
+  lead,
+  prefs = PREFS_PADRAO,
+}: {
+  card: CardInput;
+  lead: Lead;
+  prefs?: PrefsDoCard;
+}) {
   const t = useT();
   const { concluidas, total, atrasadas } = atividadesDoCard(lead);
   const idade = idadeNaEtapa(card.hoursInStage);
+  const { itens, canais } = prefs;
+  const temEsquerda = itens.dono || canais.telefone || canais.mensagem || canais.email || itens.valor;
+  const temDireita = itens.atividades || (itens.idade && Boolean(idade));
+  // A Clint não desenha o rodapé quando nada está ligado.
+  if (!temEsquerda && !temDireita) return null;
   const telefone = lead.contact_phone?.trim() || null;
   const email = lead.contact_email?.trim() || null;
   const icone = "grid size-4 shrink-0 place-items-center text-casca-meta hover:text-casca-marca";
@@ -243,68 +260,79 @@ export function RodapeDoCard({ card, lead }: { card: CardInput; lead: Lead }) {
       .replace("{n}", String(total)) +
     (atrasadas > 0 ? ` · ${atrasadas} ${atrasadas === 1 ? t("atrasada") : t("atrasadas")}` : "");
   return (
-    <div className="flex min-h-9 items-center gap-2 border-t border-casca-borda px-2.5 py-1.5 text-[11px] text-casca-meta">
-      <AvatarDoDono card={card} lead={lead} />
-      {telefone ? (
-        <a
-          href={`tel:${telefone}`}
-          onClick={parar}
-          onPointerDown={parar}
-          aria-label={t("Chamar")}
-          title={telefone}
-          className={icone}
-        >
-          <Phone size={12} aria-hidden />
-        </a>
-      ) : (
-        <span role="img" aria-label={t("Sem telefone")} className={desligado}>
-          <Phone size={12} aria-hidden />
-        </span>
+    <div
+      data-testid="rodape-do-card"
+      className="flex min-h-9 items-center gap-2 border-t border-casca-borda px-2.5 py-1.5 text-[11px] text-casca-meta"
+    >
+      {itens.dono && <AvatarDoDono card={card} lead={lead} />}
+      {canais.telefone &&
+        (telefone ? (
+          <a
+            href={`tel:${telefone}`}
+            onClick={parar}
+            onPointerDown={parar}
+            aria-label={t("Ligar")}
+            title={t("Ligar")}
+            className={icone}
+          >
+            <Phone size={12} aria-hidden />
+          </a>
+        ) : (
+          <span role="img" aria-label={t("Sem telefone")} className={desligado}>
+            <Phone size={12} aria-hidden />
+          </span>
+        ))}
+      {canais.mensagem &&
+        (lead.conversa ? (
+          <Link
+            href={`/app/inbox?id=${lead.conversa.id}`}
+            onClick={parar}
+            onPointerDown={parar}
+            aria-label={t("Enviar Whatsapp")}
+            title={t("Enviar Whatsapp")}
+            className={icone}
+          >
+            <MessageCircle size={12} aria-hidden />
+          </Link>
+        ) : (
+          <span role="img" aria-label={t("Sem conversa")} className={desligado}>
+            <MessageCircle size={12} aria-hidden />
+          </span>
+        ))}
+      {canais.email &&
+        (email ? (
+          <a
+            href={`mailto:${email}`}
+            onClick={parar}
+            onPointerDown={parar}
+            aria-label={t("Email")}
+            title={t("Email")}
+            className={icone}
+          >
+            <Mail size={12} aria-hidden />
+          </a>
+        ) : (
+          <span role="img" aria-label={t("Sem e-mail")} className={desligado}>
+            <Mail size={12} aria-hidden />
+          </span>
+        ))}
+      {itens.valor && (
+        <span className="font-medium tabular-nums">{valorCurto(card.valueCents, card.currency)}</span>
       )}
-      {lead.conversa ? (
-        <Link
-          href={`/app/inbox?id=${lead.conversa.id}`}
-          onClick={parar}
-          onPointerDown={parar}
-          aria-label={t("Abrir esta conversa no Inbox")}
-          className={icone}
-        >
-          <MessageCircle size={12} aria-hidden />
-        </Link>
-      ) : (
-        <span role="img" aria-label={t("Sem conversa")} className={desligado}>
-          <MessageCircle size={12} aria-hidden />
-        </span>
-      )}
-      {email ? (
-        <a
-          href={`mailto:${email}`}
-          onClick={parar}
-          onPointerDown={parar}
-          aria-label={t("Enviar e-mail")}
-          title={email}
-          className={icone}
-        >
-          <Mail size={12} aria-hidden />
-        </a>
-      ) : (
-        <span role="img" aria-label={t("Sem e-mail")} className={desligado}>
-          <Mail size={12} aria-hidden />
-        </span>
-      )}
-      <span className="font-medium tabular-nums">{valorCurto(card.valueCents, card.currency)}</span>
       <span className="ml-auto flex items-center gap-2 tabular-nums">
-        <span
-          title={dicaDasAtividades}
-          className={cn(
-            "flex items-center gap-1",
-            atrasadas > 0 && "font-semibold text-casca-alerta",
-          )}
-        >
-          <CheckCircle2 size={12} aria-hidden />
-          {`${concluidas}/${total}`}
-        </span>
-        {idade ? (
+        {itens.atividades && (
+          <span
+            title={dicaDasAtividades}
+            className={cn(
+              "flex items-center gap-1",
+              atrasadas > 0 && "font-semibold text-casca-alerta",
+            )}
+          >
+            <CheckCircle2 size={12} aria-hidden />
+            {`${concluidas}/${total}`}
+          </span>
+        )}
+        {itens.idade && idade ? (
           <span title={t("Tempo na etapa")} className="flex items-center gap-1">
             <Clock size={12} aria-hidden />
             {idade}

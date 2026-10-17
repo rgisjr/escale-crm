@@ -24,6 +24,10 @@ import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import { posicaoNoFimDaEtapa } from "@/lib/escale/filtros/ordenar";
 // FORK ESCALE · Casca V4: com a casca nova, a coluna e o card da Clint (fork).
 import { ColunaDoFunilNaCasca } from "@/components/escale/quadro/ColunaDoFunilNaCasca";
+// FORK ESCALE · Fase 1E: o "Selecione N" da etapa (casca nova).
+import { selecaoDaEtapa } from "@/lib/escale/quadro/selecao";
+// FORK ESCALE · Fase 1E: os campos que o "Personalizar cards" oferece.
+import { camposDaCapa } from "@/lib/escale/capa/tipos";
 
 interface KanbanBoardProps {
   pipelineId: string;
@@ -66,6 +70,17 @@ interface KanbanBoardProps {
   aparencia?: "casca";
   /** FORK ESCALE · Casca V4: o "+ Adicionar negócio" das colunas (só na casca). */
   aoAdicionarNegocio?: (stageId: string) => void;
+  /**
+   * FORK ESCALE · Fase 1E: o ⋮ da etapa na casca ("Selecionar todos..." e
+   * "Selecione N"). Agent ou acima, o mesmo corte das ações em lote.
+   */
+  podeSelecionarNaEtapa?: boolean;
+  /**
+   * FORK ESCALE · Fase 1E: o dossiê fechou (a página da casca tira o `?lead=` da
+   * URL, para o mesmo Recente reabrir). Com ela, um `?lead=` NOVO com o quadro
+   * aberto abre o dossiê dele. Sem ela, o contrato do original: o estado local manda.
+   */
+  aoFecharDossie?: () => void;
 }
 
 function groupLeadsByStage(
@@ -118,6 +133,8 @@ export function KanbanBoard({
   ordemDosCards,
   aparencia,
   aoAdicionarNegocio,
+  podeSelecionarNaEtapa = false,
+  aoFecharDossie,
 }: KanbanBoardProps) {
   const t = useT();
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
@@ -170,6 +187,11 @@ export function KanbanBoard({
     const raw = (pipelineProp ?? queryResult.data?.pipeline)?.settings?.canonical_tags;
     return Array.isArray(raw) ? raw.filter((t): t is string => typeof t === "string") : [];
   }, [pipelineProp, queryResult.data?.pipeline]);
+  // FORK ESCALE · Fase 1E: os campos que o "Personalizar cards" pode pôr no card da casca.
+  const camposDoCard = useMemo(() => {
+    const settings = (pipelineProp ?? queryResult.data?.pipeline)?.settings ?? null;
+    return camposDaCapa([settings]);
+  }, [pipelineProp, queryResult.data?.pipeline]);
 
   // O dossiê é do BOARD e não da página: ele precisa do lead inteiro e do nome
   // do estágio, que só existem aqui depois do agrupamento.
@@ -179,6 +201,14 @@ export function KanbanBoard({
   // o histórico de captação tinha o id e nenhum lugar para levá-lo. Uma vez
   // aberto, o estado local manda (fechar não reabre pela URL).
   const [dossieId, setDossieId] = useState<string | null>(leadInicial ?? null);
+  // FORK ESCALE · Fase 1E: um link novo para `?lead=` (um Recente do painel) com
+  // o quadro já aberto abre o dossiê dele. Ajuste no render, o padrão do React
+  // para estado que segue prop, e só na casca (quem passa `aoFecharDossie`).
+  const [leadInicialVisto, setLeadInicialVisto] = useState<string | null>(leadInicial ?? null);
+  if (aoFecharDossie && (leadInicial ?? null) !== leadInicialVisto) {
+    setLeadInicialVisto(leadInicial ?? null);
+    if (leadInicial) setDossieId(leadInicial);
+  }
   const [internalSelected, setInternalSelected] = useState<Set<string>>(new Set());
   const selectedLeadIds = useMemo(
     () => (selectedIds ? new Set(selectedIds) : internalSelected),
@@ -224,6 +254,15 @@ export function KanbanBoard({
       } else {
         setInternalSelected((prev) => apply(prev));
       }
+    },
+    [onSelectionChange, selectedLeadIds],
+  );
+
+  // FORK ESCALE · Fase 1E: "Selecione N" troca a seleção da etapa numa conta só.
+  const selecionarNaEtapa = useCallback(
+    (ids: string[], n: number) => {
+      if (onSelectionChange) onSelectionChange(Array.from(selecaoDaEtapa(ids, selectedLeadIds, n)));
+      else setInternalSelected((prev) => selecaoDaEtapa(ids, prev, n));
     },
     [onSelectionChange, selectedLeadIds],
   );
@@ -373,6 +412,10 @@ export function KanbanBoard({
               podeRenomear={podeRenomearEtapa}
               onRenomear={(nome) => renameStage.mutate({ stageId: stage.id, name: nome })}
               aoAdicionar={aoAdicionarNegocio}
+              // FORK ESCALE · Fase 1E: "Selecione N", campos do "Personalizar cards" e nome da origem.
+              aoSelecionarNaEtapa={podeSelecionarNaEtapa ? selecionarNaEtapa : undefined}
+              camposDoCard={camposDoCard}
+              nomeDaOrigem={data.pipeline.name}
             />
           ) : (
           <StageColumn
@@ -397,7 +440,12 @@ export function KanbanBoard({
       {leadDoDossie && (
         <LeadDossier
           open
-          onOpenChange={(v: boolean) => !v && setDossieId(null)}
+          onOpenChange={(v: boolean) => {
+            if (v) return;
+            setDossieId(null);
+            // FORK ESCALE · Fase 1E: a página da casca tira o `?lead=` da URL.
+            aoFecharDossie?.();
+          }}
           lead={leadDoDossie}
           pipelineId={pipelineId}
           fieldDefs={camposDoFunil(data.pipeline.settings ?? null)}

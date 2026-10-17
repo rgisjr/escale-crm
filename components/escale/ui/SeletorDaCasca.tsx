@@ -38,6 +38,12 @@ export type SeletorDaCascaProps<V extends string> = {
   "aria-label": string;
   vazio?: string;
   buscaAPartirDe?: number;
+  /** Fase 1E: o gatilho desligado (a origem da importação, que é a do quadro). */
+  desabilitado?: boolean;
+  /** Fase 1E: a dica do gatilho (o motivo de estar desligado). */
+  dica?: string;
+  /** Fase 1E: ajuste do gatilho (a janela de importar usa 32px no lugar dos 44px). */
+  className?: string;
 };
 
 /** O mesmo corte do `SearchableSelect` do original (`MINIMO_PARA_BUSCA`). */
@@ -95,6 +101,9 @@ export function SeletorDaCasca<V extends string>({
   "aria-label": rotuloAcessivel,
   vazio,
   buscaAPartirDe = BUSCA_A_PARTIR_DE,
+  desabilitado = false,
+  dica,
+  className,
 }: SeletorDaCascaProps<V>) {
   const t = useT();
   const id = useId();
@@ -153,6 +162,8 @@ export function SeletorDaCasca<V extends string>({
           type="button"
           role="combobox"
           aria-label={rotuloAcessivel}
+          disabled={desabilitado}
+          title={dica}
           aria-haspopup="listbox"
           aria-expanded={aberto}
           aria-controls={aberto ? listaId : undefined}
@@ -165,6 +176,8 @@ export function SeletorDaCasca<V extends string>({
           className={cn(
             "flex h-11 w-full items-center justify-between gap-2 rounded-[4px] bg-casca-raia px-3 text-left text-[13px] transition-colors duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-casca-marca",
             atual ? "text-casca-texto" : "text-casca-suave",
+            desabilitado && "cursor-not-allowed opacity-70",
+            className,
           )}
         >
           <span className="truncate">{textoDoGatilho}</span>

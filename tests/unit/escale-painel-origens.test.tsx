@@ -36,7 +36,7 @@ const ORIGENS: Origens = {
     { id: "f-morto", name: "Funil morto", group_id: "g-cred", is_archived: true, is_default: false },
   ],
 };
-const ABERTO: PreferenciasDoPainel = { painelAberto: true, listaAberta: true, visualizacoesAbertas: true, ocultos: [] };
+const ABERTO: PreferenciasDoPainel = { painelAberto: true, listaAberta: true, visualizacoesAbertas: true, recentesAbertos: false, ocultos: [] };
 const VISUALIZACOES: Visualizacao[] = [
   { id: "v-time", name: "Time comercial", acesso: "todos", origens: ["f-nayara", "f-morto", "f-leads"], pessoas: [] },
 ];
@@ -116,7 +116,7 @@ describe("<PainelOrigens> — recolher", () => {
   });
 
   it("respeita as preferências que vieram do servidor", () => {
-    renderizar(true, { painelAberto: false, listaAberta: true, visualizacoesAbertas: true, ocultos: [] });
+    renderizar(true, { painelAberto: false, listaAberta: true, visualizacoesAbertas: true, recentesAbertos: false, ocultos: [] });
     expect(screen.queryByRole("complementary", { name: "Origens" })).toBeNull();
     expect(screen.getByRole("button", { name: "Abrir o painel de origens" })).toBeInTheDocument();
   });
@@ -350,5 +350,32 @@ describe("<RodapeDaSelecao>", () => {
     render(<RodapeDaSelecao quantas={2} editando salvando={false} erro={null} onCancelar={onCancelar} onSalvar={vi.fn()} />);
     await userEvent.setup().click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancelar).toHaveBeenCalled();
+  });
+});
+
+describe("<PainelOrigens> — Recentes (Fase 1E)", () => {
+  it("com a chave, a seção aparece recolhida; abrir grava a preferência", async () => {
+    window.localStorage.clear();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PainelOrigens
+          origens={ORIGENS}
+          visualizacoes={VISUALIZACOES}
+          podeGerenciar
+          preferencias={ABERTO}
+          chaveDeRecentes="escale:negocios-recentes:v2:org-1:u-1"
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Recentes" })).toBeInTheDocument();
+    expect(screen.queryByText("Você não possui negócios recém trabalhados.")).toBeNull();
+    await userEvent.setup({ pointerEventsCheck: 0 }).click(screen.getByRole("button", { name: "Abrir os recentes" }));
+    expect(guardarPreferenciaDeOrigens).toHaveBeenCalledWith({ nome: "recentes", valor: "aberta" });
+    expect(screen.getByText("Você não possui negócios recém trabalhados.")).toBeInTheDocument();
+  });
+
+  it("sem a chave (como até aqui), não há seção Recentes", () => {
+    renderizar();
+    expect(screen.queryByRole("heading", { name: /Recentes/ })).toBeNull();
   });
 });

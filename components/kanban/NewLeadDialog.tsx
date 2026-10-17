@@ -69,6 +69,12 @@ interface Props {
    * mesmo funil + aberto, e depender de quem chama é como a regra se perde.
    */
   leads?: Lead[];
+  /**
+   * FORK ESCALE · Fase 1E: a etapa em que o negócio nasce, a cada abertura ("+
+   * Adicionar negócio" da coluna da casca). `null` = a etapa padrão. Ausente =
+   * o comportamento de sempre (a última etapa escolhida fica).
+   */
+  etapaInicial?: string | null;
 }
 
 function defaultStageId(stages: Stage[]): string {
@@ -84,6 +90,7 @@ export function NewLeadDialog({
   contactId,
   leads,
   onCreated,
+  etapaInicial,
 }: Props) {
   const t = useT();
   const org = useActiveOrg();
@@ -142,6 +149,12 @@ export function NewLeadDialog({
       form.setValue("stage_id", initialStage);
     }
   }, [initialStage, form]);
+
+  // FORK ESCALE · Fase 1E: quem abre pela coluna escolhe a etapa; `setValue` do
+  // formulário não é estado do React, então o efeito não renderiza em cascata.
+  useEffect(() => {
+    if (open && etapaInicial !== undefined) form.setValue("stage_id", etapaInicial ?? initialStage);
+  }, [open, etapaInicial, initialStage, form]);
 
   /**
    * O submit normal. ANTES de qualquer chamada de rede vem a pergunta de

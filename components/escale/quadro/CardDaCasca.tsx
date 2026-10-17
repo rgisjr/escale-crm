@@ -9,11 +9,13 @@ import { NextActionSlot } from "@/components/kanban/NextActionSlot";
 import { ReactivationSlot } from "@/components/kanban/ReactivationSlot";
 import { ScoreSlot } from "@/components/kanban/ScoreSlot";
 import { useT } from "@/hooks/i18n/useT";
+import { PREFS_PADRAO, type CampoDaCapa, type PrefsDoCard } from "@/lib/escale/capa/tipos";
 import { tituloDoCard } from "@/lib/escale/quadro/aparencia";
 import { resolveCardState, type CardInput } from "@/lib/kanban/card-state";
 import type { Lead } from "@/lib/types/leads";
 import { cn } from "@/lib/utils";
 
+import { ChipsDeCampos } from "./ChipsDeCampos";
 import { CaixaDaMensagem, ChipsDoCard, FotoDoContato, RodapeDoCard } from "./PecasDoCard";
 
 export interface CardDaCascaProps {
@@ -31,6 +33,10 @@ export interface CardDaCascaProps {
   nomes?: Map<string, string | null>;
   /** Na Visualização, o nome da origem do card, numa linha pequena abaixo do nome (D15). */
   origem?: string;
+  /** FORK ESCALE · Fase 1E: a preferência "Personalizar cards" da pessoa. Ausente = o padrão da Clint (o card da V4). */
+  prefs?: PrefsDoCard;
+  /** FORK ESCALE · Fase 1E: os campos que a preferência pode escolher (rótulo e opções), para os chips. */
+  camposDoCard?: readonly CampoDaCapa[];
 }
 
 const parar = (e: MouseEvent) => e.stopPropagation();
@@ -58,6 +64,8 @@ export function CardDaCasca({
   onOpen,
   nomes,
   origem,
+  prefs = PREFS_PADRAO,
+  camposDoCard = [],
 }: CardDaCascaProps) {
   const t = useT();
   const titulo = tituloDoCard(lead);
@@ -103,7 +111,7 @@ export function CardDaCasca({
           )}
 
           <div className="min-h-[51px] p-2 pb-1">
-            <ChipsDoCard lead={lead} />
+            {prefs.itens.tags && <ChipsDoCard lead={lead} />}
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <h3 className="mt-2 mb-1 truncate text-[13px] leading-[15px] font-medium text-casca-texto">
@@ -149,7 +157,7 @@ export function CardDaCasca({
             </div>
           </div>
 
-          <CaixaDaMensagem lead={lead} nomes={nomes} />
+          {prefs.itens.ultimaMensagem && <CaixaDaMensagem lead={lead} nomes={nomes} />}
 
           {state.slot.type !== "idle" ? (
             <div className="flex min-h-6 items-center gap-2 px-2 pb-2 text-xs">
@@ -183,7 +191,8 @@ export function CardDaCasca({
             </div>
           ) : null}
 
-          <RodapeDoCard card={card} lead={lead} />
+          <RodapeDoCard card={card} lead={lead} prefs={prefs} />
+          <ChipsDeCampos lead={lead} prefs={prefs} campos={camposDoCard} />
         </div>
       )}
     </Draggable>

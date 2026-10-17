@@ -147,7 +147,8 @@ export function RulesTab() {
                 checked={r.is_active}
                 disabled={update.isPending}
                 onCheckedChange={(checked) => toggleActive(r, checked)}
-                aria-label={`${r.is_active ? t("Pausar") : t("Ligar")} ${r.name}`}
+                // FORK ESCALE · Fase 1E: "Ligar" agora é ligação; o interruptor usa "Ativar".
+                aria-label={`${r.is_active ? t("Pausar") : t("Ativar")} ${r.name}`}
               />
               <div className="flex items-center gap-1">
                 <Button asChild variant="ghost" size="icon">
