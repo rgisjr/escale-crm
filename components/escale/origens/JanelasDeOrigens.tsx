@@ -50,7 +50,10 @@ export function JanelasDeOrigens({
   onAbrirOrigem,
   ...comuns
 }: PropsDaJanela & { janela: Janela | null; onAbrirOrigem: (id: string) => void }) {
-  if (janela?.tipo === "config-origem") return <JanelaDaOrigem {...comuns} id={janela.id} />;
+  // `key`: outra origem recomeça do zero, sem herdar o rascunho da anterior.
+  if (janela?.tipo === "config-origem") {
+    return <JanelaDaOrigem key={janela.id} {...comuns} id={janela.id} />;
+  }
   return (
     <JanelaDaCasca aberta={janela !== null} onFechar={comuns.onFechar}>
       {janela?.tipo === "adicionar-origem" && (

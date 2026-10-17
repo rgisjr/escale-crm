@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +14,7 @@ vi.mock("@/lib/api/client", () => ({
 
 import { apiClient } from "@/lib/api/client";
 import { JanelaDaOrigem } from "@/components/escale/configuracoes/JanelaDaOrigem";
+import { JanelasDeOrigens } from "@/components/escale/origens/JanelasDeOrigens";
 import type { ConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/montar";
 import type { Origens } from "@/lib/escale/origens/regras";
 
@@ -62,7 +63,7 @@ export const CONFIG: ConfiguracoesDaOrigem = {
   podeAdministrar: true,
 };
 
-function abrir(config: ConfiguracoesDaOrigem = CONFIG) {
+function abrir(config: ConfiguracoesDaOrigem = CONFIG, origens: Origens = ORIGENS) {
   vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
     url === "/api/v1/pipelines/f-1/configuracoes" ? { data: config } : { data: [] },
   );
@@ -75,7 +76,7 @@ function abrir(config: ConfiguracoesDaOrigem = CONFIG) {
         })
       }
     >
-      <JanelaDaOrigem id="f-1" origens={ORIGENS} onFechar={onFechar} onOrigens={vi.fn()} />
+      <JanelaDaOrigem id="f-1" origens={origens} onFechar={onFechar} onOrigens={vi.fn()} />
     </QueryClientProvider>,
   );
   return { onFechar, user: userEvent.setup({ pointerEventsCheck: 0 }) };
@@ -160,5 +161,125 @@ describe("<JanelaDaOrigem>", () => {
       "Não consegui abrir as configurações desta origem.",
     );
     expect(screen.getByRole("button", { name: "Tentar de novo" })).toBeInTheDocument();
+  });
+  it("Etapas: 'Salvar na origem' e a seta desligados têm a dica 'Em breve' e deixam a dica aparecer", async () => {
+    const { user } = abrir();
+    await screen.findByRole("navigation", { name: "Configurações da origem" });
+    await user.click(screen.getByRole("tab", { name: "Etapas e atividades" }));
+    for (const nome of ["Salvar na origem", "Mais opções de salvar"]) {
+      const botao = screen.getByRole("button", { name: nome });
+      expect(botao).toBeDisabled();
+      expect(botao).toHaveAttribute("title", "Em breve");
+      expect(botao).toHaveClass("disabled:pointer-events-auto", "disabled:cursor-not-allowed");
+    }
+  });
+
+  it("Etapas: a coluna mede 227px (P20)", async () => {
+    const { user } = abrir();
+    await screen.findByRole("navigation", { name: "Configurações da origem" });
+    await user.click(screen.getByRole("tab", { name: "Etapas e atividades" }));
+    expect(screen.getAllByRole("region", { name: /Entrada Lead/ })[0]).toHaveClass("w-[227px]");
+  });
+
+  it("o título prefere o nome vivo da lista de origens; sem ele, o da configuração", async () => {
+    const viva: Origens = {
+      ...ORIGENS,
+      funis: [{ ...ORIGENS.funis[0]!, name: "Clayton renomeado" }],
+    };
+    abrir(CONFIG, viva);
+    expect(await screen.findByRole("dialog", { name: "Clayton renomeado" })).toBeInTheDocument();
+  });
+
+  it("o título cai no nome da configuração quando a origem não está na lista", async () => {
+    abrir(CONFIG, { grupos: [], funis: [] });
+    expect(await screen.findByRole("dialog", { name: "Clayton" })).toBeInTheDocument();
+  });
+});
+
+describe("<JanelaDaOrigem> — fechar por fora e rascunho", () => {
+  /** O clique na cortina escura, como a pessoa faz. */
+  async function cliqueNaCortina(user: ReturnType<typeof userEvent.setup>) {
+    const cortina = document.querySelector(".ds-cortina");
+    expect(cortina).not.toBeNull();
+    await user.click(cortina as Element);
+  }
+
+  async function comRascunho() {
+    const ctx = abrir();
+    await screen.findByRole("navigation", { name: "Configurações da origem" });
+    await ctx.user.type(screen.getByRole("textbox", { name: "Nome da origem" }), " X");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled());
+    // O Radix só liga o ouvinte de "fora" um instante depois de abrir.
+    await new Promise((r) => setTimeout(r, 10));
+    return ctx;
+  }
+
+  it("com alteração, clicar fora (na cortina) não fecha: o rascunho não se perde", async () => {
+    const { onFechar, user } = await comRascunho();
+    await cliqueNaCortina(user);
+    expect(onFechar).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("com alteração, Esc e Cancelar continuam fechando", async () => {
+    const { onFechar, user } = await comRascunho();
+    await user.keyboard("{Escape}");
+    expect(onFechar).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onFechar).toHaveBeenCalledTimes(2);
+  });
+
+  it("sem alteração, clicar fora fecha como antes", async () => {
+    const { onFechar, user } = abrir();
+    await screen.findByRole("navigation", { name: "Configurações da origem" });
+    await new Promise((r) => setTimeout(r, 10));
+    await cliqueNaCortina(user);
+    expect(onFechar).toHaveBeenCalled();
+  });
+});
+
+describe("<JanelasDeOrigens> — outra origem não herda o rascunho", () => {
+  it("trocar de f-1 para f-2 recomeça do zero, com o nome de f-2", async () => {
+    const dois: Origens = {
+      ...ORIGENS,
+      funis: [
+        ...ORIGENS.funis,
+        { id: "f-2", name: "Outra", group_id: "g-1", is_archived: false, is_default: false },
+      ],
+    };
+    const outra: ConfiguracoesDaOrigem = {
+      ...CONFIG,
+      pipeline: { id: "f-2", name: "Outra", group_id: "g-1", is_default: false },
+    };
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
+      url === "/api/v1/pipelines/f-1/configuracoes"
+        ? { data: CONFIG }
+        : url === "/api/v1/pipelines/f-2/configuracoes"
+          ? { data: outra }
+          : { data: [] },
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const cena = (id: string) => (
+      <QueryClientProvider client={client}>
+        <JanelasDeOrigens
+          janela={{ tipo: "config-origem", id }}
+          origens={dois}
+          onFechar={vi.fn()}
+          onOrigens={vi.fn()}
+          onAbrirOrigem={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const { rerender } = render(cena("f-1"));
+    const campo = await screen.findByRole("textbox", { name: "Nome da origem" });
+    await user.type(campo, " rascunho");
+    expect(campo).toHaveValue("Clayton rascunho");
+    rerender(cena("f-2"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Nome da origem" })).toHaveValue("Outra"),
+    );
   });
 });

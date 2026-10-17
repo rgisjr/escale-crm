@@ -5290,7 +5290,7 @@ export const DICIONARIO: Traducoes = {
   "Chega na fase 1K, com a distribuição por percentual.": { es: "Llega en la fase 1K, con la distribución por porcentaje." },
   "Permissão de usuários": { es: "Permisos de usuarios" },
   "Chega na fase 1J, com o acesso por origem.": { es: "Llega en la fase 1J, con el acceso por origen." },
-  "Atribuição de ganho": { es: "Atribución de ganancia" },
+  "Atribuição de ganho": { es: "Atribución de ganado" },
   "Chega na fase 1K.": { es: "Llega en la fase 1K." },
   "Visualização de campos": { es: "Visualización de campos" },
   "Chega com o módulo Contatos (Fase 2).": { es: "Llega con el módulo Contactos (Fase 2)." },

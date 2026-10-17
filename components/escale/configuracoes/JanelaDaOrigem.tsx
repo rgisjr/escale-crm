@@ -92,7 +92,7 @@ export function JanelaDaOrigem({
   const inicial = useMemo(() => (config ? rascunhoInicial(config) : null), [config]);
   const rascunho = editado ?? inicial;
 
-  const nome = config?.pipeline.name ?? origens.funis.find((f) => f.id === id)?.name ?? "";
+  const nome = origens.funis.find((f) => f.id === id)?.name ?? config?.pipeline.name ?? "";
   const mudar = (f: (r: RascunhoDaOrigem) => RascunhoDaOrigem) =>
     setEditado((e) => {
       const base = e ?? inicial;
@@ -182,6 +182,9 @@ export function JanelaDaOrigem({
         <DialogOverlay className="bg-black/55" />
         <DialogPrimitive.Content
           data-escale-janela-da-origem=""
+          // Com alteração por salvar, clicar na cortina não fecha: o rascunho não se perde. Esc e Cancelar fecham.
+          onPointerDownOutside={(e) => podeSalvar && e.preventDefault()}
+          onInteractOutside={(e) => podeSalvar && e.preventDefault()}
           className="ds-modal fixed inset-x-2 top-1/2 z-50 flex max-h-[calc(100dvh-100px)] -translate-y-1/2 flex-col overflow-hidden rounded-[12px] bg-surface text-casca-texto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]"
         >
           <TooltipProvider delayDuration={150}>
@@ -258,14 +261,20 @@ export function JanelaDaOrigem({
               </BotaoDaJanela>
               {aba === "etapas" ? (
                 <span className="inline-flex">
-                  <BotaoDaJanela variante="salvar" disabled className="rounded-r-none">
+                  <BotaoDaJanela
+                    variante="salvar"
+                    disabled
+                    title={t("Em breve")}
+                    className="rounded-r-none disabled:pointer-events-auto disabled:cursor-not-allowed"
+                  >
                     {t("Salvar na origem")}
                   </BotaoDaJanela>
                   <BotaoDaJanela
                     variante="salvar"
                     disabled
                     aria-label={t("Mais opções de salvar")}
-                    className="rounded-l-none border-l border-white/40 px-2"
+                    title={t("Em breve")}
+                    className="rounded-l-none border-l border-white/40 px-2 disabled:pointer-events-auto disabled:cursor-not-allowed"
                   >
                     <ChevronDown size={14} aria-hidden />
                   </BotaoDaJanela>

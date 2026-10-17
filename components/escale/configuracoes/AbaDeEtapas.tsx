@@ -17,7 +17,7 @@ export function AbaDeEtapas({ config }: { config: ConfiguracoesDaOrigem }) {
         <section
           key={etapa.id}
           aria-label={etapa.name}
-          className="flex h-full min-h-[340px] w-[230px] shrink-0 flex-col rounded-[4px] bg-casca-busca"
+          className="flex h-full min-h-[340px] w-[227px] shrink-0 flex-col rounded-[4px] bg-casca-busca"
         >
           <header className="flex h-[38px] items-center gap-2 rounded-t-[4px] bg-casca-raia px-3">
             {i === 0 ? (

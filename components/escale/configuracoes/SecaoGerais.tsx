@@ -157,7 +157,7 @@ export function SecaoGerais({
         </div>
       </Campo>
 
-      <div className="-mt-[5px] grid gap-2">
+      <div className="-mt-[14px] grid gap-2">
         <span className="flex items-center gap-1.5 text-[13px] font-medium text-casca-texto">
           {t("Moeda da origem")}
           <AjudaDaCasca
