@@ -66,6 +66,46 @@ describe("campos do CRM: migration 9006 e bloco do baseline", () => {
     expect(sql).toContain("do $f$ begin perform public.fn_aplicar_travas_de_suporte(); end $f$;");
   });
 
+  it("escrita direta no catálogo é validada pelo gatilho definer (não por CHECK), e a definição cabe até 256 KB", () => {
+    const sql = compacto(ler(MIGRATION));
+    expect(sql).toContain("check (octet_length(definicao::text) <= 262144)");
+    expect(sql).toContain(
+      "if tg_op <> 'DELETE' and not public.fn_escale_campo_valido(new.definicao || jsonb_build_object('key', new.chave)) then raise exception 'definição inválida para o campo do CRM (%)', new.chave using errcode = '23514'; end if;",
+    );
+    // a validação vem antes do retorno antecipado de "nada mudou"
+    expect(sql.indexOf("definição inválida para o campo do CRM")).toBeLessThan(
+      sql.indexOf("if tg_op = 'UPDATE' and new.definicao = old.definicao"),
+    );
+    expect(sql).not.toContain("crm_campos_do_negocio_definicao_valida");
+  });
+
+  it("a junção não perde definição em silêncio: avisa, pula o grande demais e guarda o perdedor inteiro", () => {
+    const sql = compacto(ler(MIGRATION));
+    expect(sql).toContain("c_max constant integer := 262144;");
+    expect(sql).toContain("and it.definicao is distinct from v.definicao");
+    expect(sql).toContain("'definicao', nu.definicao");
+    expect(sql).toContain("raise notice 'campos do CRM: % campos juntados, % com divergências");
+    // a régua do banco não é mais estrita que a do zod: rótulo só com espaços passa no `min(1)`
+    expect(sql).toContain("and char_length(p->>'label') between 1 and 80");
+    expect(sql).not.toContain("btrim(p->>'label')");
+  });
+
+  it("reprojetar só reescreve a origem que mudou, em ordem estável de trava; adoção não perde definição mudada", () => {
+    const sql = compacto(ler(MIGRATION));
+    const reescritas = sql.match(/and p\.settings->'fields' is distinct from public\.fn_escale_campos_projetados\(p\.organization_id, p\.settings->'fields'\) order by p\.id for update/g);
+    expect(reescritas?.length).toBe(2); // o gatilho do catálogo e a primeira projeção
+    expect(sql).toContain(
+      "if tg_op = 'DELETE' and not exists (select 1 from public.organizations where id = v_org) then return null; end if;",
+    );
+    expect(sql).toContain(
+      "on conflict (organization_id, chave) do update set definicao = excluded.definicao where crm_campos_do_negocio.definicao is distinct from excluded.definicao;",
+    );
+    // `limit 1` sempre com ordem
+    const comLimite = sql.match(/limit 1/g)?.length ?? 0;
+    expect(comLimite).toBeGreaterThan(0);
+    expect(sql.match(/order by x\.i limit 1/g)?.length).toBe(comLimite);
+  });
+
   it("o tipo aceito pelo banco é o mesmo do customFieldSchema", () => {
     const sql = ler(MIGRATION);
     const lista = /\(p->>'type'\) in \(([^)]*)\)/.exec(sql)?.[1] ?? "";
