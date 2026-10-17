@@ -30,6 +30,8 @@ vi.mock("@/components/escale/negocio/ConteudoDaAba", () => ({
 vi.mock("@/components/escale/negocio/ProximoNegocio", () => ({
   ProximoNegocio: () => <span data-testid="proximo" />,
 }));
+vi.mock("@/components/escale/negocio/MenuDaFicha", () => ({ MenuDaFicha: () => <span data-testid="menu" /> }));
+vi.mock("@/components/escale/negocio/AcoesDaFicha", () => ({ AcoesDaFicha: () => <span data-testid="acoes" /> }));
 
 import { FichaDoNegocio } from "@/components/escale/negocio/FichaDoNegocio";
 import { useFichaDoNegocio } from "@/hooks/escale/useFichaDoNegocio";
@@ -154,6 +156,8 @@ describe("<FichaDoNegocio>", () => {
       "title",
       "Em breve",
     );
+    expect(screen.getByTestId("menu")).toBeInTheDocument();
+    expect(screen.getByTestId("acoes")).toBeInTheDocument();
   });
 
   it("as sete abas da Clint, Atividades por padrão, e trocar de aba vai na URL", async () => {

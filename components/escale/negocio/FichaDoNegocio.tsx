@@ -18,8 +18,11 @@ import { tituloDoCard } from "@/lib/escale/quadro/aparencia";
 import { recenteDoLead } from "@/lib/escale/recentes/regras";
 
 import { AbasDaFicha } from "./AbasDaFicha";
+import { AcoesDaFicha } from "./AcoesDaFicha";
 import { CabecalhoDaFicha } from "./CabecalhoDaFicha";
 import { ConteudoDaAba } from "./ConteudoDaAba";
+import { ContadorDeNegocios } from "./ContadorDeNegocios";
+import { MenuDaFicha } from "./MenuDaFicha";
 import { ProximoNegocio } from "./ProximoNegocio";
 import { TopoDaFicha } from "./TopoDaFicha";
 
@@ -41,7 +44,7 @@ export interface FichaDoNegocioProps {
   negociosDoContato: number;
 }
 
-export function FichaDoNegocio({ negocioId, origem, grupo }: FichaDoNegocioProps) {
+export function FichaDoNegocio({ negocioId, origem, grupo, negociosDoContato }: FichaDoNegocioProps) {
   const t = useT();
   const router = useRouter();
   const busca = useSearchParams();
@@ -105,7 +108,18 @@ export function FichaDoNegocio({ negocioId, origem, grupo }: FichaDoNegocioProps
           />
         }
       />
-      <CabecalhoDaFicha lead={ficha.lead} />
+      <CabecalhoDaFicha
+        lead={ficha.lead}
+        // C7 e C6 (a Task 9 põe o status e o dono entre os dois).
+        direita={
+          <>
+            <ContadorDeNegocios total={negociosDoContato} contatoId={ficha.lead.contact_id} />
+            <MenuDaFicha lead={ficha.lead} pipelineId={origem.id} stages={ficha.stages} leads={ficha.leadsDoRecorte} />
+          </>
+        }
+      />
+      {/* C3: as ações rápidas e as tags. */}
+      <AcoesDaFicha lead={ficha.lead} />
       <AbasDaFicha
         valor={aba}
         // FORK ESCALE · Fase 1G: trocar de aba só muda a URL (sem ir ao servidor).
