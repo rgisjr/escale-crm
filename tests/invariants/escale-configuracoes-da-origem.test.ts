@@ -154,3 +154,182 @@ describe("moeda da origem no negócio novo (9007)", () => {
     expect(moedaDe(L_FUNIL_SEM_MOEDA)).toBe("BRL");
   });
 });
+
+/**
+ * BORDAS (9007): o teto de 10 tags, só texto vira tag, "VIP" x "vip", `cliente`,
+ * configuração torta, contato anonimizado/mesclado, falha ao etiquetar e moeda
+ * fora da forma ISO. Cada caso tem a SUA origem e o SEU contato: os arquivos de
+ * invariante rodam em paralelo no mesmo banco.
+ */
+const id = (grupo: number, n: number) => `e5ca1e00-9007-4000-8000-${String(grupo * 100 + n).padStart(12, "0")}`;
+const funil = (n: number) => id(1, n);
+const etapa = (n: number) => id(2, n);
+const lead = (n: number) => id(3, n);
+const contato = (n: number) => id(4, n);
+
+const criarOrigem = (n: number, settings: Record<string, unknown>) => {
+  const json = JSON.stringify({ fields: [], lost_reasons: [], ...settings });
+  sql(`
+    insert into public.crm_pipelines (id, organization_id, name, slug, settings)
+      values ('${funil(n)}', '${GOV_ORG}', 'Funil borda 9007 ${n}', 'escale-9007-borda-${n}', '${json}'::jsonb)
+      on conflict do nothing;
+    insert into public.crm_stages (id, organization_id, pipeline_id, name, slug, position)
+      values ('${etapa(n)}', '${GOV_ORG}', '${funil(n)}', 'Entrada', 'entrada-9007-borda-${n}', 1)
+      on conflict do nothing;
+  `);
+};
+
+const criarContato = (n: number, colunas = "", valores = "") => {
+  sql(`
+    insert into public.contacts (id, organization_id, display_name${colunas})
+      values ('${contato(n)}', '${GOV_ORG}', 'Contato borda 9007 ${n}'${valores})
+      on conflict do nothing;
+  `);
+};
+
+const criarNegocio = (n: number, origem: number, paraContato: number | null, moeda?: string) => {
+  const colunaContato = paraContato === null ? "" : ", contact_id";
+  const valorContato = paraContato === null ? "" : `, '${contato(paraContato)}'`;
+  const colunaMoeda = moeda === undefined ? "" : ", currency";
+  const valorMoeda = moeda === undefined ? "" : `, '${moeda}'`;
+  sql(`
+    insert into public.crm_leads (id, organization_id, pipeline_id, stage_id, title${colunaContato}${colunaMoeda})
+      values ('${lead(n)}', '${GOV_ORG}', '${funil(origem)}', '${etapa(origem)}', 'Negócio borda ${n}'${valorContato}${valorMoeda})
+      on conflict do nothing;
+  `);
+};
+
+const negociosCriados = (n: number) =>
+  lastLine(sql(`select count(*)::int from public.crm_leads where id = '${lead(n)}';`));
+
+/** Cada `contact.tag_added` do contato, na ordem, como lista de `added_tags`. */
+const anuncios = (n: number): string[][] =>
+  JSON.parse(
+    lastLine(
+      sql(`
+        select coalesce(jsonb_agg(payload -> 'added_tags' order by created_at, id), '[]'::jsonb)::text
+          from public.event_log
+         where event_type = 'contact.tag_added' and entity_id = '${contato(n)}';
+      `),
+    ),
+  ) as string[][];
+
+const tagsDaquele = (n: number) => tagsDo(contato(n));
+
+describe("bordas das tags padrão (9007)", () => {
+  it("passa de 10 tags padrão distintas: o contato recebe só as 10 primeiras", () => {
+    const doze = Array.from({ length: 12 }, (_, i) => `tag${String(i + 1).padStart(2, "0")}`);
+    // `cliente` e o repetido saem ANTES do corte: o teto vale para o que sobra.
+    criarOrigem(1, { escale_tags_padrao: ["Cliente", "TAG01", ...doze] });
+    criarContato(1);
+    criarNegocio(1, 1, 1);
+    expect(tagsDaquele(1)).toBe(doze.slice(0, 10).join("|"));
+    expect(anuncios(1)).toEqual([doze.slice(0, 10)]);
+  });
+
+  it("só texto vira tag: número, objeto, booleano, nulo e lista são ignorados", () => {
+    criarOrigem(2, { escale_tags_padrao: ["primeira", 42, { a: "objeto" }, true, null, ["lista"], "Segunda"] });
+    criarContato(2);
+    criarNegocio(2, 2, 2);
+    expect(negociosCriados(2)).toBe("1");
+    expect(tagsDaquele(2)).toBe("primeira|segunda");
+    expect(anuncios(2)).toEqual([["primeira", "segunda"]]);
+  });
+
+  it("apara tab, quebra de linha, FF e VT como o trim() do JavaScript, e não come a letra v", () => {
+    criarOrigem(6, { escale_tags_padrao: ["\t Vivo \u000b", "\f vip \r\n", "\u000b\u000b"] });
+    criarContato(6);
+    criarNegocio(6, 6, 6);
+    expect(tagsDaquele(6)).toBe("vivo|vip");
+    expect(anuncios(6)).toEqual([["vivo", "vip"]]);
+  });
+
+  it("o contato que já tem VIP não ganha vip nem evento", () => {
+    criarOrigem(3, { escale_tags_padrao: ["vip"] });
+    criarContato(3, ", tags", `, '{"VIP"}'`);
+    criarNegocio(3, 3, 3);
+    expect(negociosCriados(3)).toBe("1");
+    expect(tagsDaquele(3)).toBe("VIP");
+    expect(anuncios(3)).toEqual([]);
+  });
+
+  it("o contato que já é `cliente` continua assim, sem repetir nem anunciar `cliente`", () => {
+    criarOrigem(4, { escale_tags_padrao: ["cliente", "extra"] });
+    criarContato(4, ", tags", `, '{"cliente"}'`);
+    criarNegocio(4, 4, 4);
+    expect(tagsDaquele(4)).toBe("cliente|extra");
+    expect(anuncios(4)).toEqual([["extra"]]);
+  });
+
+  it.each([
+    ["texto solto", "vip", 10],
+    ["objeto", { vip: true }, 11],
+    ["nulo", null, 12],
+    ["número", 7, 13],
+  ])("`escale_tags_padrao` que não é lista (%s): o negócio nasce e nada é adicionado", (_nome, valor, n) => {
+    criarOrigem(n, { escale_tags_padrao: valor });
+    criarContato(n);
+    criarNegocio(n, n, n);
+    expect(negociosCriados(n)).toBe("1");
+    expect(tagsDaquele(n)).toBe("");
+    expect(anuncios(n)).toEqual([]);
+  });
+
+  it("contato anonimizado não recebe tag nem evento, e o negócio nasce", () => {
+    criarOrigem(5, { escale_tags_padrao: ["vip"] });
+    criarContato(20, ", is_anonymized, anonymized_at", ", true, now()");
+    criarNegocio(20, 5, 20);
+    expect(negociosCriados(20)).toBe("1");
+    expect(tagsDaquele(20)).toBe("");
+    expect(anuncios(20)).toEqual([]);
+  });
+
+  it("contato mesclado em outro não recebe tag nem evento, e o negócio nasce", () => {
+    criarOrigem(5, { escale_tags_padrao: ["vip"] });
+    criarContato(21);
+    criarContato(22, ", is_merged_into, merged_at", `, '${contato(21)}', now()`);
+    criarNegocio(22, 5, 22);
+    expect(negociosCriados(22)).toBe("1");
+    expect(tagsDaquele(22)).toBe("");
+    expect(anuncios(22)).toEqual([]);
+  });
+
+  it("falhar ao gravar as tags no contato não derruba o negócio (e nada é anunciado)", () => {
+    criarOrigem(5, { escale_tags_padrao: ["vip"] });
+    criarContato(30);
+    // O gatilho que quebra o UPDATE nasce e morre dentro da transação: os
+    // outros arquivos de invariante nunca o veem.
+    const out = sql(`
+      begin;
+      create function public.fn_prova_9007_quebra_contato() returns trigger
+        language plpgsql as $f$ begin raise exception 'prova 9007: UPDATE de contato recusado'; end $f$;
+      create trigger trg_prova_9007_quebra_contato before update on public.contacts
+        for each row when (old.id = '${contato(30)}') execute function public.fn_prova_9007_quebra_contato();
+      insert into public.crm_leads (id, organization_id, pipeline_id, stage_id, title, contact_id)
+        values ('${lead(30)}', '${GOV_ORG}', '${funil(5)}', '${etapa(5)}', 'Negócio com falha', '${contato(30)}');
+      select (select count(*) from public.crm_leads where id = '${lead(30)}')::text
+             || '/' || (select coalesce(array_to_string(tags, '|'), '') from public.contacts where id = '${contato(30)}')
+             || '/' || (select count(*) from public.event_log
+                         where event_type = 'contact.tag_added' and entity_id = '${contato(30)}')::text;
+      rollback;
+    `);
+    // psql imprime o `ROLLBACK` por último: a linha da prova é a anterior.
+    expect(out.split("\n").filter((linha) => /^\d+\/.*\/\d+$/.test(linha))).toEqual(["1//0"]);
+    expect(negociosCriados(30)).toBe("0");
+  });
+});
+
+describe("moeda fora da forma ISO não é aplicada (9007)", () => {
+  const moedaDoNegocio = (n: number) =>
+    lastLine(sql(`select coalesce(currency, '-') from public.crm_leads where id = '${lead(n)}';`));
+
+  it.each([
+    ["minúscula", "usd", 40],
+    ["curta", "US", 41],
+  ])("`escale_moeda` %s: o negócio nasce e fica na moeda que veio", (_nome, moeda, n) => {
+    criarOrigem(n, { escale_moeda: moeda });
+    criarNegocio(n, n, null, "BRL");
+    expect(negociosCriados(n)).toBe("1");
+    expect(moedaDoNegocio(n)).toBe("BRL");
+  });
+});

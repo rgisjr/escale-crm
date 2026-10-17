@@ -38,12 +38,12 @@ describe("configurações da origem: migration 9007 e bloco do baseline", () => 
 
   it("o bloco mora depois do bloco 9006 e antes do bloco da 0323", () => {
     const baseline = ler("supabase/baseline.sql");
-    const de9005 = baseline.indexOf(ler(MIGRATION_9006));
+    const de9006 = baseline.indexOf(ler(MIGRATION_9006));
     const cabecalho = baseline.indexOf(CABECALHO);
     const conteudo = baseline.indexOf(ler(MIGRATION));
     const ancora = baseline.indexOf("-- ---- marcadores do contato no filtro de conversas (migration 0323) ----");
-    expect(de9005).toBeGreaterThan(-1);
-    expect(cabecalho).toBeGreaterThan(de9005);
+    expect(de9006).toBeGreaterThan(-1);
+    expect(cabecalho).toBeGreaterThan(de9006);
     expect(conteudo).toBeGreaterThan(cabecalho);
     expect(conteudo).toBeLessThan(ancora);
   });
@@ -78,8 +78,11 @@ describe("configurações da origem: migration 9007 e bloco do baseline", () => 
   it("as tags seguem a régua do contato, pulam `cliente`, anonimizado e mesclado, e se anunciam", () => {
     const corpo = funcao(ler(MIGRATION), "fn_escale_tags_padrao_no_contato");
     expect(corpo).toContain("settings -> 'escale_tags_padrao'");
-    expect(corpo).toContain("left(lower(btrim(e.valor)), 40)");
-    expect(corpo).toContain("t.tag <> 'cliente'");
+    expect(corpo).toContain("left(lower(btrim(e.valor #>> '{}', E' \\t\\r\\n\\f\\x0b')), 40)");
+    expect(corpo).toContain("left(lower(btrim(atual.tag, E' \\t\\r\\n\\f\\x0b')), 40) = p.tag");
+    expect(corpo).toContain("jsonb_typeof(e.valor) = 'string'");
+    expect(corpo).toContain("limit 10");
+    expect(corpo).toContain("x.tag <> 'cliente'");
     expect(corpo).toContain("c.is_anonymized = false");
     expect(corpo).toContain("c.is_merged_into is null");
     expect(corpo).toContain("for no key update");

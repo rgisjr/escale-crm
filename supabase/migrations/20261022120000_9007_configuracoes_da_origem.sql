@@ -8,6 +8,13 @@
 -- (MCP, clone de um negócio que já estava em outra moeda) e fica como veio.
 -- Moeda fora da forma ISO não é aplicada: a CHECK `crm_leads_currency_iso`
 -- derrubaria a criação inteira por causa de uma configuração.
+--
+-- `crm_leads.currency` tem DEFAULT 'BRL'; por isso, na hora do gatilho, "omitida"
+-- e "BRL explícita" são a mesma coisa. Numa organização em BRL, um BRL explícito
+-- é indistinguível de moeda omitida e ganha a moeda da origem. Numa organização
+-- que NÃO é BRL, a moeda omitida chega como 'BRL' (o default), que é diferente
+-- da da organização: foi lida como escolha e fica 'BRL'. O app deve mandar a
+-- moeda explicitamente.
 create or replace function public.fn_escale_lead_nasce_na_moeda_da_origem()
 returns trigger
 language plpgsql
@@ -49,7 +56,12 @@ create trigger trg_escale_lead_nasce_na_moeda_da_origem
 -- CONTATO, e entra por qualquer caminho que crie negócio. A régua é a de
 -- `lib/contacts/tag-normalizada.ts` (minúsculas, aparada, 40 caracteres), e a
 -- comparação com o que o contato já tem usa a mesma régua, para não duplicar
--- "VIP" e "vip".
+-- "VIP" e "vip". A aparação é a do `trim()` do JavaScript (espaço, tab, CR, LF,
+-- FF e VT, este como \x0b: o Postgres não conhece \v e o leria como a letra v),
+-- não só o espaço do `btrim` puro. Só elemento de texto vira tag
+-- (número, objeto, nulo e lista dentro da lista são ignorados), e entram no
+-- máximo 10 tags padrão por origem (decisão F4): depois de normalizar, tirar o
+-- repetido e tirar `cliente`, ficam as 10 primeiras na ordem original.
 --
 -- `cliente` fica de fora: é a etiqueta que a agenda põe e tira sozinha
 -- (`fn_recalcular_cliente_do_contato`), e pô-la por aqui faria o sistema ler
@@ -92,11 +104,17 @@ begin
 
   select coalesce(array_agg(t.tag order by t.primeira), '{}'::text[]) into v_padrao
     from (
-      select left(lower(btrim(e.valor)), 40) as tag, min(e.ordem) as primeira
-        from jsonb_array_elements_text(v_bruto) with ordinality as e(valor, ordem)
-       group by 1
-    ) t
-   where t.tag <> '' and t.tag <> 'cliente';
+      select x.tag, min(x.ordem) as primeira
+        from (
+          select left(lower(btrim(e.valor #>> '{}', E' \t\r\n\f\x0b')), 40) as tag, e.ordem
+            from jsonb_array_elements(v_bruto) with ordinality as e(valor, ordem)
+           where jsonb_typeof(e.valor) = 'string'
+        ) x
+       where x.tag <> '' and x.tag <> 'cliente'
+       group by x.tag
+       order by min(x.ordem)
+       limit 10
+    ) t;
   if cardinality(v_padrao) = 0 then
     return null;
   end if;
@@ -118,7 +136,7 @@ begin
      where not exists (
        select 1
          from unnest(v_tags) as atual(tag)
-        where left(lower(btrim(atual.tag)), 40) = p.tag
+        where left(lower(btrim(atual.tag, E' \t\r\n\f\x0b')), 40) = p.tag
      );
     if cardinality(v_novas) = 0 then
       return null;
