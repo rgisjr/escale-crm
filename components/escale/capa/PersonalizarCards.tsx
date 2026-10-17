@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { textoDoErro } from "@/components/escale/origens/texto-do-erro";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useCamposDasOrigens } from "@/hooks/escale/useCamposDasOrigens";
 import { usePrefsDoCard } from "@/hooks/escale/usePrefsDoCard";
 import { useT } from "@/hooks/i18n/useT";
 import {
@@ -67,6 +68,8 @@ export function PersonalizarCards({ campos }: { campos: readonly CampoFiltravel[
 /**
  * A janela só monta com a preferência carregada: senão o rascunho nasceria do padrão e gravaria por cima.
  * Se a leitura falhar, a pessoa vê o erro e a janela não abre (antes, o clique não fazia nada).
+ * O catálogo dos campos de todas as origens também é esperado: sem ele a janela não saberia o que
+ * soltar. Se ele falhar, a janela abre sem catálogo e não solta nada.
  */
 function AbrirJanela({
   campos,
@@ -77,6 +80,7 @@ function AbrirJanela({
 }) {
   const t = useT();
   const { data: prefs, isSuccess, isError, error } = usePrefsDoCard();
+  const catalogo = useCamposDasOrigens();
   useEffect(() => {
     if (!isError) return;
     toast.error(textoDoErro(error, t));
@@ -98,11 +102,12 @@ function AbrirJanela({
       ),
     [campos],
   );
-  if (!isSuccess) return null;
+  if (!isSuccess || catalogo.isPending) return null;
   return (
     <JanelaPersonalizarCards
       prefs={prefs ?? PREFS_PADRAO}
       campos={camposDoCard}
+      catalogo={catalogo.data}
       onFechar={onFechar}
     />
   );

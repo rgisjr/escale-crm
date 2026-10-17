@@ -177,6 +177,38 @@ export function camposDaCapa(
   return [...CAMPOS_DO_CONTATO, ...doNegocio.values()];
 }
 
+const chavesDoNegocio = (campos: readonly CampoDaCapa[]) =>
+  new Set(campos.filter((c) => c.entidade === "negocio").map((c) => c.chave));
+
+/**
+ * A preferência vale em todas as origens, mas o campo do negócio mora numa origem
+ * (`settings.fields`). O que nenhuma origem visível tem mais (apagado de todas)
+ * sairia do card e ainda gastaria um dos 10 lugares: aqui ele é solto. Contato
+ * não entra na conta. Nada a soltar devolve a MESMA preferência. Só chame com o
+ * catálogo carregado: com ele vazio por falha, soltaria tudo.
+ */
+export function limparCamposSemOrigem(
+  p: PrefsDoCard,
+  catalogo: readonly CampoDaCapa[],
+): PrefsDoCard {
+  const existentes = chavesDoNegocio(catalogo);
+  const campos = p.campos.filter((c) => c.entidade !== "negocio" || existentes.has(c.chave));
+  return campos.length === p.campos.length ? p : { ...p, campos };
+}
+
+/** Os campos do negócio escolhidos que existem em alguma origem, mas não na atual (a janela os mostra para desligar). */
+export function camposDeOutraOrigem(
+  p: PrefsDoCard,
+  atuais: readonly CampoDaCapa[],
+  catalogo: readonly CampoDaCapa[],
+): CampoDaCapa[] {
+  const daOrigem = chavesDoNegocio(atuais);
+  const escolhidos = new Set(p.campos.filter((c) => c.entidade === "negocio").map((c) => c.chave));
+  return catalogo.filter(
+    (c) => c.entidade === "negocio" && escolhidos.has(c.chave) && !daOrigem.has(c.chave),
+  );
+}
+
 export function valorDoCampo(lead: Lead, campo: CampoEscolhido): unknown {
   if (campo.entidade === "negocio") return lead.custom_fields?.[campo.chave];
   if (campo.chave === "email") return lead.contact_email ?? null;

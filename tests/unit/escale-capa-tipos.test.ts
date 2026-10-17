@@ -7,9 +7,11 @@ import {
   alternarCanal,
   alternarItem,
   camposDaCapa,
+  camposDeOutraOrigem,
   canaisLigados,
   diferemDoPadrao,
   lerPrefs,
+  limparCamposSemOrigem,
   ocupados,
   prefsIguais,
   textoDoValor,
@@ -92,5 +94,34 @@ describe("a preferência do card (forma da Clint)", () => {
     expect(textoDoValor(valorDoCampo(lead, plano), plano, "Sim", "Não")).toBe("Anual");
     expect(textoDoValor(true, campos[2]!, "Sim", "Não")).toBe("Sim");
     expect(textoDoValor("  ", campos[2]!, "Sim", "Não")).toBeNull();
+  });
+});
+
+describe("campos de outra origem (a preferência vale em todas as origens)", () => {
+  const CATALOGO = camposDaCapa([SETTINGS, { fields: [{ key: "cidade", label: "Cidade", type: "text" }] }]);
+  const DA_ORIGEM = camposDaCapa([{ fields: [{ key: "cidade", label: "Cidade", type: "text" }] }]);
+  const PLANO = { entidade: "negocio" as const, chave: "plano" };
+  const CIDADE = { entidade: "negocio" as const, chave: "cidade" };
+  const EMAIL = { entidade: "contato" as const, chave: "email" };
+  const FANTASMA = { entidade: "negocio" as const, chave: "apagado" };
+
+  it("solta o campo do negócio que nenhuma origem tem mais; contato e os que existem ficam", () => {
+    const p: PrefsDoCard = { ...PREFS_PADRAO, campos: [RENDA, FANTASMA, EMAIL, CIDADE] };
+    const limpa = limparCamposSemOrigem(p, CATALOGO);
+    expect(limpa.campos).toEqual([RENDA, EMAIL, CIDADE]);
+    expect(ocupados(limpa)).toBe(ocupados(p) - 1);
+    expect(p.campos).toHaveLength(4);
+  });
+
+  it("não tem o que soltar: devolve a MESMA preferência; catálogo vazio solta todos os do negócio", () => {
+    const p: PrefsDoCard = { ...PREFS_PADRAO, campos: [RENDA, EMAIL] };
+    expect(limparCamposSemOrigem(p, CATALOGO)).toBe(p);
+    expect(limparCamposSemOrigem(p, []).campos).toEqual([EMAIL]);
+  });
+
+  it("os de outra origem: escolhidos no negócio, no catálogo e fora da origem atual", () => {
+    const p: PrefsDoCard = { ...PREFS_PADRAO, campos: [RENDA, PLANO, CIDADE, FANTASMA, EMAIL] };
+    expect(camposDeOutraOrigem(p, DA_ORIGEM, CATALOGO).map((c) => c.chave)).toEqual(["renda", "plano"]);
+    expect(camposDeOutraOrigem(PREFS_PADRAO, DA_ORIGEM, CATALOGO)).toEqual([]);
   });
 });
