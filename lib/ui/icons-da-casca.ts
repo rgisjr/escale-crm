@@ -60,3 +60,6 @@ export { Shuffle, CircleSlash, ReceiptText, CirclePlus, TriangleAlert, ArrowRigh
 
 // Fase 2A (lista de contatos)
 export { AtSign, ChevronsUpDown, GripVertical } from "lucide-react";
+
+// Fase 1G (ficha do negócio): nota, mudar origem, campos de negócio, modo espião e o vazio de Conversas.
+export { StickyNote, ArrowRightLeft, Target, Glasses, MessagesSquare } from "lucide-react";

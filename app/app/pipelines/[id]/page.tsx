@@ -5,19 +5,32 @@ import { PipelinePageClient } from "./_client";
 // FORK ESCALE · Fase 1D: a barra nova do quadro vem com a casca nova.
 import { cookies } from "next/headers";
 import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
+// FORK ESCALE · Fase 1G (N3): com a casca, `?lead=` abre a ficha do negócio.
+import { lerUuid } from "@/lib/escale/origens/preferencias";
+import { buscaDosParametros, rotaDoNegocio, type ParametrosDaPagina } from "@/lib/escale/negocio/regras";
 
 export const dynamic = "force-dynamic";
 
 export default async function PipelinePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  // FORK ESCALE · Fase 1G: o `?lead=` (e os filtros) para a ficha do negócio.
+  searchParams?: Promise<ParametrosDaPagina>;
 }) {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");
 
   const { id } = await params;
+  // FORK ESCALE · Fase 1G (N14): com a casca nova, `?lead=` vira a ficha própria, levando os filtros.
+  // Antes de ler o banco: a ficha resolve a origem do negócio sozinha. Sem a casca, nada muda.
+  const busca = buscaDosParametros((await searchParams) ?? {});
+  const leadDaUrl = lerUuid(new URLSearchParams(busca).get("lead"));
+  if (leadDaUrl && lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo") {
+    redirect(rotaDoNegocio(leadDaUrl, busca));
+  }
   const supabase = await createClient();
   // Mesma razão da Agenda: a RLS é piso, não escopo. Sem este filtro o funil de
   // OUTRA organização do mesmo usuário abre, e o quadro monta com as etapas de

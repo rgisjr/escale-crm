@@ -17,9 +17,12 @@
  * diferença entre os dois.
  */
 import { notFound, redirect } from "next/navigation";
+// FORK ESCALE · Fase 1G (N3): com a casca nova, o link estável abre a ficha própria do negócio.
+import { cookies } from "next/headers";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -46,5 +49,9 @@ export default async function LeadPage({
     .maybeSingle();
 
   if (!lead?.pipeline_id) notFound();
+  // FORK ESCALE · Fase 1G (N3): com a casca nova, a ficha própria; sem ela, o quadro com o dossiê.
+  if (lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo") {
+    redirect(`/app/negocios/${lead.id}`);
+  }
   redirect(`/app/pipelines/${lead.pipeline_id}?lead=${lead.id}`);
 }

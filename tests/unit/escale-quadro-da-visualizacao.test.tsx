@@ -4,21 +4,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BoardData } from "@/lib/kanban/types";
 
-const busca = vi.hoisted(() => ({ atual: "" }));
+const busca = vi.hoisted(() => ({ atual: "", push: vi.fn() }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: busca.push }),
   usePathname: () => "/app/pipelines/visualizacoes/v-1",
   useSearchParams: () => new URLSearchParams(busca.atual),
 }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (texto: string) => texto }));
 vi.mock("@/hooks/escale/useQuadrosDaVisualizacao", () => ({ useQuadrosDaVisualizacao: vi.fn() }));
 vi.mock("@/components/escale/visualizacoes/QuadroCombinado", () => ({
-  QuadroCombinado: ({ leads }: { leads: Array<{ id: string }> }) => (
-    <ul aria-label="quadro">
-      {leads.map((l) => (
-        <li key={l.id}>{l.id}</li>
-      ))}
-    </ul>
+  QuadroCombinado: ({
+    leads,
+    aoAbrirNegocio,
+  }: {
+    leads: Array<{ id: string }>;
+    aoAbrirNegocio: (id: string) => void;
+  }) => (
+    <div>
+      <ul aria-label="quadro">
+        {leads.map((l) => (
+          <li key={l.id}>{l.id}</li>
+        ))}
+      </ul>
+      <button type="button" onClick={() => aoAbrirNegocio("n-1")}>
+        abrir n-1
+      </button>
+    </div>
   ),
 }));
 vi.mock("@/components/escale/filtros/BarraDoQuadro", () => ({
@@ -143,6 +154,13 @@ describe("<QuadroDaVisualizacao>", () => {
         (li) => li.textContent,
       ),
     ).toEqual(["a-aberto", "a-ganho", "b-aberto"]);
+  });
+
+  it("o card abre a ficha com os filtros da visualização, mas sem o fs dela", async () => {
+    busca.atual = "st=open&fs=filtro-da-visualizacao&q=ana";
+    render(<QuadroDaVisualizacao id="v-1" nome="Time" origens={ORIGENS} />);
+    await userEvent.click(screen.getByRole("button", { name: "abrir n-1" }));
+    expect(busca.push).toHaveBeenCalledWith("/app/negocios/n-1?st=open&q=ana");
   });
 
   it("a barra é da visualização (alvo dos filtros salvos), conta os cards e Atualizar relê as origens", async () => {

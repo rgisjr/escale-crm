@@ -55,6 +55,7 @@ export function QuadroCombinado({
   onSelecao,
   leadInicial,
   ordemDosCards,
+  aoAbrirNegocio,
 }: {
   quadros: BoardData[];
   leads: Lead[];
@@ -63,6 +64,8 @@ export function QuadroCombinado({
   leadInicial?: string | null;
   /** A ordenação da barra (Fase 1D). Com ela, arrastar só muda de etapa, e o card vai para o fim. */
   ordemDosCards?: (a: Lead, b: Lead) => number;
+  /** Fase 1G (N3): o card abre a ficha do negócio. Ausente = o dossiê. */
+  aoAbrirNegocio?: (leadId: string) => void;
 }) {
   const t = useT();
   const qc = useQueryClient();
@@ -236,7 +239,7 @@ export function QuadroCombinado({
               contexto={contexto}
               selecionados={selecionadosSet}
               onSelectMany={selecionarVarios}
-              onOpen={setDossieId}
+              onOpen={aoAbrirNegocio ?? setDossieId}
             />
           ))}
         </div>
