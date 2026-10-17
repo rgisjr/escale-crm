@@ -60,7 +60,8 @@ function barra(filtros: FiltrosDoQuadro = { status: ["open"] }) {
 }
 
 describe("linha de contagem da Fase 1E (Task 7B, E15)", () => {
-  it("a engrenagem fica para a 1F: desligada, com a dica 'Em breve'", () => {
+  // Fase 1F (F20): sem `aoConfigurar` (Visualização), a engrenagem continua desligada com "Em breve".
+  it("sem aoConfigurar, a engrenagem fica desligada, com a dica 'Em breve'", () => {
     barra();
     const engrenagem = screen.getByRole("button", { name: "Configurações da origem" });
     expect(engrenagem).toBeDisabled();

@@ -21,7 +21,7 @@ que o `next/font/google` baixava.
 | `source-serif-4-200-900-latin.woff2` | Source Serif 4 | variável 200–900 | latin | `sourceserif4/v14` |
 | `ibm-plex-sans-300-700-latin.woff2` | IBM Plex Sans | variável, usada em 300–700 | latin | `ibmplexsans/v23` |
 | `jetbrains-mono-100-800-latin.woff2` | JetBrains Mono | variável 100–800 | latin | `jetbrainsmono/v24` |
-| `poppins-{400,500,600}-latin.woff2` | Poppins | 400, 500, 600 (estáticas) | latin | `poppins/v24` (fork Escale: fonte da casca nova, a mesma da Clint) |
+| `poppins-{300,400,500,600}-latin.woff2` | Poppins | 300, 400, 500, 600 (estáticas) | latin | `poppins/v24` (fork Escale: fonte da casca nova, a mesma da Clint; o 300 é só da janela da origem, Fase 1F) |
 
 ## Como baixar de novo
 

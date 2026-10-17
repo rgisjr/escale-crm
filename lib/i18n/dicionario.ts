@@ -5280,6 +5280,28 @@ export const DICIONARIO: Traducoes = {
   "Data de início": { es: "Fecha de inicio" },
   "Data de fim": { es: "Fecha de fin" },
   "Limpar": { es: "Limpiar" },
+  "Limpar tudo": { es: "Limpiar todo" },
+  // Fase 1F: a janela de configurações da origem (Task 6).
+  "Nenhuma atividade nessa etapa": { es: "Ninguna actividad en esta etapa" },
+  "Nova atividade": { es: "Nueva actividad" },
+  "Configurações Gerais": { es: "Configuraciones generales" },
+  "Motivo de Perda": { es: "Motivo de pérdida" },
+  "Distribuição de dono": { es: "Distribución de dueño" },
+  "Chega na fase 1K, com a distribuição por percentual.": { es: "Llega en la fase 1K, con la distribución por porcentaje." },
+  "Permissão de usuários": { es: "Permisos de usuarios" },
+  "Chega na fase 1J, com o acesso por origem.": { es: "Llega en la fase 1J, con el acceso por origen." },
+  "Atribuição de ganho": { es: "Atribución de ganado" },
+  "Chega na fase 1K.": { es: "Llega en la fase 1K." },
+  "Visualização de campos": { es: "Visualización de campos" },
+  "Chega com o módulo Contatos (Fase 2).": { es: "Llega con el módulo Contactos (Fase 2)." },
+  "Alerta de tempo na etapa": { es: "Alerta de tiempo en la etapa" },
+  "Chega na fase 1K, com os avisos dentro do app.": { es: "Llega en la fase 1K, con los avisos dentro de la app." },
+  "Origem alterada com sucesso!": { es: "¡Origen modificado con éxito!" },
+  "Falha na edição da origem!": { es: "¡Falló la edición del origen!" },
+  "Etapas e atividades": { es: "Etapas y actividades" },
+  "Não consegui abrir as configurações desta origem.": { es: "No pude abrir las configuraciones de este origen." },
+  "Salvar na origem": { es: "Guardar en el origen" },
+  "Mais opções de salvar": { es: "Más opciones para guardar" },
   "Recurso": { es: "Recurso" },
   "Nenhum evento encontrado": { es: "No se encontraron eventos" },
   "Ajuste os filtros para ver entradas do audit log.": {
@@ -9523,6 +9545,220 @@ export const DICIONARIO: Traducoes = {
   "Outra pessoa alterou os campos enquanto esta tela estava aberta. Recarregue a página para ver a versão atual.": {
     es: "Otra persona cambió los campos mientras esta pantalla estaba abierta. Recarga la página para ver la versión actual.",
   },
+
+  // ─── FORK ESCALE · configurações da origem (Fase 1F, rota: erros do banco) ───
+  "Só gerente ou administrador muda as configurações da origem.": {
+    es: "Solo un gerente o administrador cambia la configuración del origen.",
+  },
+  "Outra pessoa está salvando ao mesmo tempo. Tente de novo.": {
+    es: "Otra persona está guardando al mismo tiempo. Inténtalo de nuevo.",
+  },
+  "Alguma configuração não é válida. Revise e tente de novo.": {
+    es: "Alguna configuración no es válida. Revísala e inténtalo de nuevo.",
+  },
+
+  // ─── FORK ESCALE · Fase 1F (Task 7): Configurações Gerais ───
+  "Configure aqui a sua origem de dados.": {
+    es: "Configura aquí tu origen de datos.",
+  },
+  "Origem de dados, são fontes de geração de contatos, elas podem ser manuais (cadastro individual e/ou importação) ou automáticas (formulários e/ou integrações com ferramentas como Eduzz/Hotmart).": {
+    es: "Los orígenes de datos son fuentes de generación de contactos. Pueden ser manuales (registro individual y/o importación) o automáticos (formularios y/o integraciones con herramientas como Eduzz/Hotmart).",
+  },
+  "Nome é um campo obrigatório!": { es: "¡Nombre es un campo obligatorio!" },
+  "Adicione um grupo": { es: "Agrega un grupo" },
+  "Novo grupo": { es: "Nuevo grupo" },
+  "Visualização de negócios": { es: "Visualización de negocios" },
+  "Usuários visualizam todos os negócios": {
+    es: "Los usuarios ven todos los negocios",
+  },
+  "Usuários visualizam apenas seus negócios": {
+    es: "Los usuarios ven solo sus negocios",
+  },
+  "Usuários visualizam seus negócios e sem dono": {
+    es: "Los usuarios ven sus negocios y los que no tienen dueño",
+  },
+  "Em breve: quem vê os negócios de cada origem chega na fase 1J. Até lá, vale a regra da organização.": {
+    es: "Próximamente: quién ve los negocios de cada origen llega en la fase 1J. Hasta entonces, vale la regla de la organización.",
+  },
+  "Moeda da origem": { es: "Moneda del origen" },
+  "Selecione o tipo de moeda que você quer apenas para essa origem.": {
+    es: "Selecciona el tipo de moneda que quieres solo para este origen.",
+  },
+  "Real (BRL)": { es: "Real (BRL)" },
+  "Dólar Americano (USD)": { es: "Dólar estadounidense (USD)" },
+  "Euro (EUR)": { es: "Euro (EUR)" },
+  "Peso Mexicano (MXN)": { es: "Peso mexicano (MXN)" },
+  "Kwanza (AOA)": { es: "Kwanza (AOA)" },
+  "Configure uma tag para ser aplicada a todos os contatos que entram nesta origem.": {
+    es: "Configura una etiqueta para aplicarla a todos los contactos que entran en este origen.",
+  },
+  "Nova tag": { es: "Nueva etiqueta" },
+  "Adicione uma tag": { es: "Agrega una etiqueta" },
+  "Tirar a tag": { es: "Quitar la etiqueta" },
+  "A tag «cliente» é do sistema. Escolha outra.": {
+    es: "La etiqueta «cliente» es del sistema. Elige otra.",
+  },
+  "Uma origem tem no máximo 10 tags padrão.": {
+    es: "Un origen tiene como máximo 10 etiquetas predeterminadas.",
+  },
+
+  // ─── FORK ESCALE · Fase 1F (Task 7): Motivo de Perda ───
+  "Configure aqui os motivos de perda desta origem.": {
+    es: "Configura aquí los motivos de pérdida de este origen.",
+  },
+  "Só administrador muda os motivos de perda. Você vê a lista como ela está.": {
+    es: "Solo el administrador cambia los motivos de pérdida. Ves la lista tal como está.",
+  },
+  "Motivos de perda selecionados": { es: "Motivos de pérdida seleccionados" },
+  "Motivos de perda da origem": { es: "Motivos de pérdida del origen" },
+  "Novo motivo de perda": { es: "Nuevo motivo de pérdida" },
+  "Adicione um motivo de perda": { es: "Agrega un motivo de pérdida" },
+  "Adicionar Motivo de Perda": { es: "Agregar motivo de pérdida" },
+  "Esse motivo de perda está vazio.": { es: "Ese motivo de pérdida está vacío." },
+  "Esse motivo de perda já existe.": { es: "Ese motivo de pérdida ya existe." },
+  "Para continuar selecione ao menos um motivo de perda.": {
+    es: "Para continuar, selecciona al menos un motivo de pérdida.",
+  },
+
+  // ─── FORK ESCALE · Fase 1F (Task 8): Campos obrigatórios ───
+  "Defina campos que devem ser preenchidos para sair de uma etapa, para entrar em uma etapa, ou ao alterar o status para Ganho ou Perdido.":
+    {
+      es: "Define los campos que deben completarse para salir de una etapa, para entrar en una etapa o al cambiar el estado a Ganado o Perdido.",
+    },
+  "Só administrador muda os campos obrigatórios. Você vê as regras como elas estão.": {
+    es: "Solo el administrador cambia los campos obligatorios. Ves las reglas tal como están.",
+  },
+  "Só administrador muda os campos obrigatórios.": {
+    es: "Solo el administrador cambia los campos obligatorios.",
+  },
+  "O status só vale em Ao sair.": { es: "El estado solo vale en Al salir." },
+  "Esta origem atingiu o limite de 50 regras de campo obrigatório. Remova algumas para poder salvar.":
+    {
+      es: "Este origen alcanzó el límite de 50 reglas de campo obligatorio. Quita algunas para poder guardar.",
+    },
+  "Ainda não há campos personalizados no CRM.": {
+    es: "Todavía no hay campos personalizados en el CRM.",
+  },
+  "Criar campos em Configurações › Funis": { es: "Crear campos en Configuración › Embudos" },
+  "Nenhum campo obrigatório configurado.": { es: "Ningún campo obligatorio configurado." },
+  "Ao sair": { es: "Al salir" },
+  "Ao entrar": { es: "Al entrar" },
+  "Ao sair: precisa estar preenchido para o negócio avançar desta etapa (próxima etapa, ganho, perda ou outro funil). Ao entrar: precisa estar preenchido para o negócio entrar na etapa.":
+    {
+      es: "Al salir: debe estar completo para que el negocio avance de esta etapa (siguiente etapa, ganado, perdido u otro embudo). Al entrar: debe estar completo para que el negocio entre en la etapa.",
+    },
+  Etapas: { es: "Etapas" },
+  "Etapas às quais a regra se aplica": { es: "Etapas a las que se aplica la regla" },
+  "Selecione para exigir este campo ao marcar como Ganho ou Perdido": {
+    es: "Selecciona para exigir este campo al marcar como Ganado o Perdido",
+  },
+  "Todas as etapas": { es: "Todas las etapas" },
+  "Nenhuma etapa": { es: "Ninguna etapa" },
+  "Nenhum status": { es: "Ningún estado" },
+  "Remover a regra de": { es: "Quitar la regla de" },
+  "Adicionar campo obrigatório": { es: "Agregar campo obligatorio" },
+  "Selecione ao menos uma etapa": { es: "Selecciona al menos una etapa" },
+  "Selecione ao menos uma etapa ou status": { es: "Selecciona al menos una etapa o estado" },
+  "Selecione ao menos uma etapa ou status para cada campo.": {
+    es: "Selecciona al menos una etapa o estado para cada campo.",
+  },
+  "Este campo já possui uma regra deste tipo.": {
+    es: "Este campo ya tiene una regla de este tipo.",
+  },
+  "Esse campo não existe mais no CRM. Feche e abra de novo.": {
+    es: "Ese campo ya no existe en el CRM. Cierra y abre de nuevo.",
+  },
+  "Escolha etapas desta origem.": { es: "Elige etapas de este origen." },
+
+  // ─── FORK ESCALE · Fase 1F (Task 8): Alerta de tempo na etapa ───
+  "dentro do prazo": { es: "dentro del plazo" },
+  "passou de atenção": { es: "superó el límite de atención" },
+  "passou de crítico": { es: "superó el límite crítico" },
+  "Defina quanto tempo um negócio pode ficar parado em cada etapa antes de receber destaque visual no Kanban.":
+    {
+      es: "Define cuánto tiempo puede estar detenido un negocio en cada etapa antes de recibir un resaltado visual en el Kanban.",
+    },
+  "A regra geral vale para todas as etapas do funil. Crie exceções só para etapas com ritmo diferente.":
+    {
+      es: "La regla general vale para todas las etapas del embudo. Crea excepciones solo para etapas con un ritmo diferente.",
+    },
+  "Como aparece no card": { es: "Cómo aparece en la tarjeta" },
+  "No rodapé do card": { es: "En el pie de la tarjeta" },
+  "dentro do prazo · cinza": { es: "dentro del plazo · gris" },
+  "passou de atenção · âmbar": { es: "superó el límite de atención · ámbar" },
+  "passou de crítico · vermelho": { es: "superó el límite crítico · rojo" },
+  "Regra geral do funil": { es: "Regla general del embudo" },
+  "vale para todas as etapas, exceto as que tiverem regra própria abaixo": {
+    es: "vale para todas las etapas, excepto las que tengan regla propia abajo",
+  },
+  "Remover regra geral": { es: "Quitar regla general" },
+  "Sem regra geral. Apenas as etapas listadas em Exceções abaixo terão alerta de tempo.": {
+    es: "Sin regla general. Solo las etapas listadas en Excepciones abajo tendrán alerta de tiempo.",
+  },
+  "Definir regra geral": { es: "Definir regla general" },
+  "Exceções por etapa": { es: "Excepciones por etapa" },
+  "etapas com regra própria; todas as outras seguem a geral acima": {
+    es: "etapas con regla propia; todas las demás siguen la general de arriba",
+  },
+  "Adicionar etapa": { es: "Agregar etapa" },
+  "Selecionar etapa": { es: "Seleccionar etapa" },
+  "Todas as etapas já têm regra própria.": { es: "Todas las etapas ya tienen regla propia." },
+  "Nenhuma exceção configurada. Todas as etapas seguem a regra geral.": {
+    es: "Ninguna excepción configurada. Todas las etapas siguen la regla general.",
+  },
+  "Voltar à regra geral": { es: "Volver a la regla general" },
+  "Limite de atenção": { es: "Límite de atención" },
+  "Limite crítico": { es: "Límite crítico" },
+  "Unidade do limite de atenção": { es: "Unidad del límite de atención" },
+  "Unidade do limite crítico": { es: "Unidad del límite crítico" },
+  Minutos: { es: "Minutos" },
+  Horas: { es: "Horas" },
+  "O limite crítico deve ser maior que o limite de atenção.": {
+    es: "El límite crítico debe ser mayor que el límite de atención.",
+  },
+  "Preencha pelo menos um limite na exceção ou remova-a antes de salvar.": {
+    es: "Completa al menos un límite en la excepción o quítala antes de guardar.",
+  },
+  "Preencha pelo menos um limite da regra geral ou remova-a antes de salvar.": {
+    es: "Completa al menos un límite de la regla general o quítala antes de guardar.",
+  },
+  "Informe um valor entre 1 e 8760.": { es: "Indica un valor entre 1 y 8760." },
+  "Informe um valor entre 1 e 525600.": { es: "Indica un valor entre 1 y 525600." },
+  "Informe um valor entre 1 e 365.": { es: "Indica un valor entre 1 y 365." },
+
+  // ─── FORK ESCALE · configurações da origem (Fase 1F, igual à Clint) ───
+  // Textos da Clint: o espanhol é o dela. Os nossos seguem "tú".
+  "Não é possível alterar o grupo de uma origem de integração.": {
+    es: "No se puede cambiar el grupo de un origen de integración.",
+  },
+  "O motivo de perda foi salvo com sucesso!": { es: "¡Motivo de pérdida guardado con éxito!" },
+  "Esta origem atingiu o limite de {max} regras de campo obrigatório. Remova algumas para poder salvar.":
+    {
+      es: "Esta origen ha alcanzado el límite de {max} reglas de campo obligatorio. Elimina algunas para poder guardar.",
+    },
+  "Informe um valor entre {min} e {max}.": { es: "Ingresa un valor entre {min} y {max}." },
+  "Selecionar campo": { es: "Seleccionar campo" },
+  "Campos obrigatórios pendentes": { es: "Campos obligatorios pendientes" },
+  "Para mover para {stage}, preencha os campos abaixo.": {
+    es: "Para pasar a {stage}, rellena los campos siguientes.",
+  },
+  "Preencha os campos abaixo para mover este negócio.": {
+    es: "Rellene los campos siguientes para tramitar este asunto.",
+  },
+  "Preencha os campos abaixo para alterar o status deste negócio.": {
+    es: "Rellene los campos siguientes para cambiar el estado de este asunto.",
+  },
+  "Salvar e mover": { es: "Guardar y mover" },
+  "Salvar e alterar status": { es: "Guardar y cambiar el estado" },
+  "Salvar e criar": { es: "Guardar y crear" },
+  // Textos nossos.
+  "Só administrador muda motivos de perda e campos obrigatórios.": {
+    es: "Solo el administrador cambia los motivos de pérdida y los campos obligatorios.",
+  },
+  "Uma origem tem no máximo 50 motivos de perda.": {
+    es: "Un origen tiene como máximo 50 motivos de pérdida.",
+  },
+  "Para avançar desta etapa, preencha:": { es: "Para avanzar desde esta etapa, completa:" },
 
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },

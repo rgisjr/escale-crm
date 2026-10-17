@@ -172,7 +172,8 @@ describe("<PainelOrigens> — + e ⋮ (gerente)", () => {
     const itens = (await screen.findAllByRole("menuitem")).map((i) => i.textContent);
     expect(itens).toEqual(["Configurações", "Selecionar origem", "Arquivar", "Excluir"]);
     await user.click(screen.getByRole("menuitem", { name: "Configurações" }));
-    expect(await screen.findByRole("dialog", { name: "Configurações da origem" })).toBeInTheDocument();
+    // Fase 1F: a janela da Clint tem o nome da origem no título (01-013).
+    expect(await screen.findByRole("dialog", { name: "Leads INSS WhatsApp" })).toBeInTheDocument();
   });
 
   it("Arquivados lista o grupo arquivado e a origem arquivada, com Desarquivar", async () => {

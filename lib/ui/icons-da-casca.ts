@@ -54,3 +54,6 @@ export { ArrowUpDown, Briefcase, Calendar, Copy, DollarSign, Pin, PinOff, Tag } 
 
 // Fase 1E (Task 12): a janela "Importar negócios" (nuvem, coluna, status e bandeira).
 export { CircleMinus, CircleX, CloudUpload, Columns2, Flag, Upload } from "lucide-react";
+
+// Fase 1F (configurações da origem): ícones do menu interno, do alerta e das regras.
+export { Shuffle, CircleSlash, ReceiptText, CirclePlus, TriangleAlert, ArrowRight, ClipboardList } from "lucide-react";
