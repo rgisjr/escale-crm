@@ -173,18 +173,22 @@ describe("<FichaDoNegocio>", () => {
     );
     expect(screen.getByText("conteúdo atividades")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Histórico" }));
-    expect(nav.replace).toHaveBeenCalledWith("/app/negocios/n1?foo=1&aba=historico", {
-      scroll: false,
-    });
+    // Só a URL muda, sem ir ao servidor.
+    expect(window.location.pathname + window.location.search).toBe(
+      "/app/negocios/n1?foo=1&aba=historico",
+    );
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(nav.push).not.toHaveBeenCalled();
   });
 
   it("trocar de aba mantém o pe da URL", async () => {
     nav.busca = "foo=1&pe=abc";
     render(<FichaDoNegocio {...PROPS} />);
     await userEvent.click(screen.getByRole("tab", { name: "Contato" }));
-    expect(nav.replace).toHaveBeenCalledWith("/app/negocios/n1?foo=1&aba=contato&pe=abc", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/app/negocios/n1?foo=1&aba=contato&pe=abc",
+    );
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   it("a aba da URL abre direto", () => {

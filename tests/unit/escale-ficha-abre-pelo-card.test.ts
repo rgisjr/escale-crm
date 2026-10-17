@@ -25,7 +25,7 @@ describe("o card abre a ficha (só na casca)", () => {
       "onOpen={aoAbrirNegocio ?? setDossieId}",
     );
     expect(ler("components/escale/visualizacoes/QuadroDaVisualizacao.tsx")).toContain(
-      "aoAbrirNegocio={(id) => router.push(rotaDoNegocio(id, searchParams.toString()))}",
+      "aoAbrirNegocio={(id) => router.push(rotaDoNegocio(id, semFiltroSalvo(searchParams)))}",
     );
   });
 });

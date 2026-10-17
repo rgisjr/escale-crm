@@ -108,15 +108,15 @@ export function FichaDoNegocio({ negocioId, origem, grupo }: FichaDoNegocioProps
       <CabecalhoDaFicha lead={ficha.lead} />
       <AbasDaFicha
         valor={aba}
+        // FORK ESCALE · Fase 1G: trocar de aba só muda a URL (sem ir ao servidor).
         aoMudar={(nova) =>
-          router.replace(
+          window.history.replaceState(
+            null,
+            "",
             rotaDoNegocio(ficha.lead.id, qs, {
               aba: nova,
               etapa: busca.get(PARAM_ETAPA_DO_PROXIMO),
             }),
-            {
-              scroll: false,
-            },
           )
         }
       />
@@ -126,7 +126,7 @@ export function FichaDoNegocio({ negocioId, origem, grupo }: FichaDoNegocioProps
         aria-labelledby={`aba-${aba}`}
         className="min-h-0 flex-1 overflow-y-auto"
       >
-        <ConteudoDaAba aba={aba} ficha={ficha} />
+        <ConteudoDaAba key={ficha.lead.id} aba={aba} ficha={ficha} />
       </div>
     </div>
   );

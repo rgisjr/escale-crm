@@ -34,11 +34,12 @@ export default async function NegocioPage({ params }: { params: Promise<{ id: st
   const supabase = await createClient();
   const { data: lead } = await supabase
     .from("crm_leads")
-    .select("id, pipeline_id, contact_id")
+    .select("id, pipeline_id, contact_id, status")
     .eq("organization_id", activeOrg.orgId)
     .eq("id", id)
     .maybeSingle();
-  if (!lead?.pipeline_id) notFound();
+  // O quadro não traz arquivado: a ficha também não existe para ele.
+  if (!lead?.pipeline_id || lead.status === "archived") notFound();
 
   const { data: origem } = await supabase
     .from("crm_pipelines")

@@ -6,6 +6,7 @@ const estado = vi.hoisted(() => ({
   linhas: {} as Record<string, Record<string, unknown> | null>,
   contagem: 0,
   contou: false,
+  filtros: [] as Array<{ tabela: string; coluna: string; valor: unknown }>,
 }));
 
 vi.mock("next/headers", () => ({
@@ -31,9 +32,24 @@ function consulta(tabela: string) {
   q.select = (_colunas: string, opcoes?: { head?: boolean }) => {
     if (!opcoes?.head) return q;
     estado.contou = true;
-    return { eq: () => ({ eq: async () => ({ count: estado.contagem, error: null }) }) };
+    const registra = (coluna: string, valor: unknown) =>
+      estado.filtros.push({ tabela, coluna, valor });
+    return {
+      eq: (c1: string, v1: unknown) => {
+        registra(c1, v1);
+        return {
+          eq: async (c2: string, v2: unknown) => {
+            registra(c2, v2);
+            return { count: estado.contagem, error: null };
+          },
+        };
+      },
+    };
   };
-  q.eq = () => q;
+  q.eq = (coluna: string, valor: unknown) => {
+    estado.filtros.push({ tabela, coluna, valor });
+    return q;
+  };
   q.order = async () => ({ data: [], error: null });
   q.maybeSingle = async () => ({ data: estado.linhas[tabela] ?? null, error: null });
   return q;
@@ -57,8 +73,9 @@ beforeEach(() => {
   estado.menu = "topo";
   estado.contagem = 3;
   estado.contou = false;
+  estado.filtros = [];
   estado.linhas = {
-    crm_leads: { id: LEAD, pipeline_id: ORIGEM, contact_id: "contato-1" },
+    crm_leads: { id: LEAD, pipeline_id: ORIGEM, contact_id: "contato-1", status: "open" },
     crm_pipelines: { id: ORIGEM, name: "Leads INSS Whatsapp", group_id: GRUPO, vocabulary: null },
     crm_pipeline_groups: { name: "INSS Vendas" },
   };
@@ -73,6 +90,28 @@ describe("/app/negocios/[id]", () => {
       grupo: "INSS Vendas",
       negociosDoContato: 3,
     });
+  });
+
+  it("toda consulta da ficha filtra pela organização ativa (negócio, origem, grupo e contagem)", async () => {
+    await NegocioPage(params(LEAD));
+    const porTabela = (t: string) => estado.filtros.filter((f) => f.tabela === t);
+    // negócio + contagem (2 consultas em crm_leads), origem e grupo
+    expect(estado.contou).toBe(true);
+    for (const t of ["crm_leads", "crm_pipelines", "crm_pipeline_groups"]) {
+      const consultas = porTabela(t).filter((f) => f.coluna === "organization_id");
+      expect(consultas.length).toBe(t === "crm_leads" ? 2 : 1);
+      expect(consultas.every((f) => f.valor === "org-1")).toBe(true);
+    }
+  });
+
+  it("negócio arquivado: 404 (o quadro não o traz)", async () => {
+    estado.linhas.crm_leads = {
+      id: LEAD,
+      pipeline_id: ORIGEM,
+      contact_id: null,
+      status: "archived",
+    };
+    await expect(NegocioPage(params(LEAD))).rejects.toThrow("NOT_FOUND");
   });
 
   it("sem a casca: o link estável do original (que leva ao quadro com ?lead=)", async () => {

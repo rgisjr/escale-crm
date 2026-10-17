@@ -7,10 +7,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
   useSearchParams: () => new URLSearchParams(nav.busca),
 }));
-vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
-vi.mock("@/components/escale/ui/AjudaDaCasca", () => ({
-  AjudaDaCasca: ({ texto }: { texto: string }) => <span data-testid="ajuda">{texto}</span>,
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: () => null,
 }));
+vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 
 import { ProximoNegocio } from "@/components/escale/negocio/ProximoNegocio";
 import type { Stage } from "@/lib/kanban/types";
@@ -81,19 +83,22 @@ describe("<ProximoNegocio>", () => {
         aba="historico"
       />,
     );
-    expect(screen.queryByTestId("ajuda")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Ajuda:/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Etapa do próximo negócio" }));
-    expect(screen.getByTestId("ajuda")).toHaveTextContent(
-      "O próximo negócio leva em consideração a ordem e os filtros atuais da listagem de negócios.",
+    expect(screen.getByRole("button", { name: /^Ajuda:/ })).toHaveAccessibleName(
+      "Ajuda: O próximo negócio leva em consideração a ordem e os filtros atuais da listagem de negócios.",
     );
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
     expect(screen.getByRole("option", { name: "1. Entrada Lead" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
     await userEvent.click(screen.getByRole("option", { name: "2. Em atendimento" }));
-    expect(nav.replace).toHaveBeenCalledWith("/app/negocios/b?st=open&aba=historico&pe=e2", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/app/negocios/b?st=open&aba=historico&pe=e2",
+    );
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(nav.push).not.toHaveBeenCalled();
   });
 
   it("com outra etapa escolhida (pe), a seta › leva ao primeiro dela e a ‹ fica desligada", async () => {

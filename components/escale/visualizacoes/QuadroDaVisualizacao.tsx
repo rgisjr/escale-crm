@@ -35,6 +35,13 @@ import { rotaDoNegocio } from "@/lib/escale/negocio/regras";
  * Os filtros rodam POR ORIGEM: a categoria de um motivo de perda e as colunas de
  * ganho e de perda são da origem do card. Os filtros salvos são da VISUALIZAÇÃO.
  */
+/** FORK ESCALE · Fase 1G: a busca da Visualização sem o `fs` dela. */
+function semFiltroSalvo(busca: { toString(): string }): string {
+  const p = new URLSearchParams(busca.toString());
+  p.delete("fs");
+  return p.toString();
+}
+
 export function QuadroDaVisualizacao({
   id,
   nome,
@@ -66,7 +73,10 @@ export function QuadroDaVisualizacao({
       quadros.map((q) => ({
         quadro: q,
         // Fase 1F: cada origem filtra o valor na própria moeda.
-        ...recortarQuadro(q, filtros, { moeda: moedaDaOrigem(q.pipeline.settings) ?? orgAtiva?.currency ?? null, campos }),
+        ...recortarQuadro(q, filtros, {
+          moeda: moedaDaOrigem(q.pipeline.settings) ?? orgAtiva?.currency ?? null,
+          campos,
+        }),
       })),
     [quadros, filtros, orgAtiva?.currency, campos],
   );
@@ -165,8 +175,9 @@ export function QuadroDaVisualizacao({
           selecionados={selecionados}
           onSelecao={setSelecionados}
           leadInicial={searchParams.get("lead")}
-          // Fase 1G (N3, Q13): o card da Visualização também abre a ficha do negócio.
-          aoAbrirNegocio={(id) => router.push(rotaDoNegocio(id, searchParams.toString()))}
+          // FORK ESCALE · Fase 1G (N3, Q13): o card da Visualização também abre a ficha do negócio.
+          // `fs` é o filtro salvo DA VISUALIZAÇÃO: não vale no quadro da origem, onde a migalha volta.
+          aoAbrirNegocio={(id) => router.push(rotaDoNegocio(id, semFiltroSalvo(searchParams)))}
           ordemDosCards={ordemDosCards}
         />
       )}

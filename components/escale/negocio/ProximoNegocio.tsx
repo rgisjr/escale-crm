@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { AjudaDaCasca } from "@/components/escale/ui/AjudaDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useT } from "@/hooks/i18n/useT";
 import {
   PARAM_ETAPA_DO_PROXIMO,
@@ -27,6 +27,35 @@ import { cn } from "@/lib/utils";
  */
 const SETA =
   "grid size-6 place-items-center rounded-md text-casca-suave hover:bg-casca-raia hover:text-casca-texto disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-40";
+
+/**
+ * O "?" do PRÓXIMO NEGÓCIO (print 11): círculo cheio na cor da marca com o "?"
+ * branco, diferente do "?" sem fundo do `AjudaDaCasca`. A dica é a mesma
+ * (cartão claro à direita). Precisa de um `TooltipProvider` acima.
+ */
+function AjudaDoProximo({ texto }: { texto: string }) {
+  const t = useT();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${t("Ajuda")}: ${texto}`}
+          className="grid size-3.5 place-items-center rounded-full bg-casca-marca text-[9px] leading-none font-bold text-white"
+        >
+          <span aria-hidden>?</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="right"
+        sideOffset={8}
+        className="max-w-[340px] rounded-[6px] bg-surface px-3 py-2.5 text-[10px] leading-[14px] font-normal text-casca-suave shadow-casca-painel"
+      >
+        {texto}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function ProximoNegocio({
   lead,
@@ -55,9 +84,12 @@ export function ProximoNegocio({
   const ir = (destino: Lead) => router.push(rotaDoNegocio(destino.id, qs, { aba, etapa: pedida }));
   const escolher = (id: string) => {
     setAberto(false);
-    router.replace(rotaDoNegocio(lead.id, qs, { aba, etapa: id === lead.stage_id ? null : id }), {
-      scroll: false,
-    });
+    // FORK ESCALE · Fase 1G: só a URL muda (sem ir ao servidor); a etapa é estado da tela.
+    window.history.replaceState(
+      null,
+      "",
+      rotaDoNegocio(lead.id, qs, { aba, etapa: id === lead.stage_id ? null : id }),
+    );
   };
 
   return (
@@ -65,7 +97,7 @@ export function ProximoNegocio({
       {aberto ? (
         <span className="flex items-center gap-1.5 text-[10px] text-casca-suave uppercase">
           {t("Próximo negócio")}
-          <AjudaDaCasca
+          <AjudaDoProximo
             texto={t(
               "O próximo negócio leva em consideração a ordem e os filtros atuais da listagem de negócios.",
             )}
@@ -98,7 +130,7 @@ export function ProximoNegocio({
               {opcoes.map((s) => {
                 const escolhida = s.id === etapaId;
                 return (
-                  <li key={s.id}>
+                  <li key={s.id} role="none">
                     <button
                       type="button"
                       role="option"
