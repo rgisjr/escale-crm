@@ -30,6 +30,7 @@ window.HTMLElement.prototype.releasePointerCapture = vi.fn();
 import { JanelaPersonalizarCards } from "@/components/escale/capa/JanelaPersonalizarCards";
 import { PersonalizarCards } from "@/components/escale/capa/PersonalizarCards";
 import { ApiError } from "@/lib/api/types";
+import type { CampoFiltravel } from "@/lib/escale/filtros/campos";
 import {
   CAMPOS_MAX,
   PREFS_PADRAO,
@@ -48,8 +49,7 @@ const CATALOGO = camposDaCapa([
     ],
   },
 ]);
-const PLANO = { entidade: "negocio" as const, chave: "plano" };
-const CIDADE = { entidade: "negocio" as const, chave: "cidade" };
+const RENDA = { entidade: "negocio" as const, chave: "renda" };
 const FANTASMA = { entidade: "negocio" as const, chave: "apagado" };
 const onFechar = vi.fn();
 
@@ -79,10 +79,10 @@ function responder(prefs: unknown, campos: CampoDaCapa[] | null = CATALOGO) {
   });
 }
 
-function icone() {
+function icone(campos: readonly CampoFiltravel[] = []) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <PersonalizarCards campos={[]} />
+      <PersonalizarCards campos={campos} />
     </QueryClientProvider>,
   );
   return userEvent.setup({ pointerEventsCheck: 0 });
@@ -246,7 +246,7 @@ describe("<PersonalizarCards> (ícone de ajustes)", () => {
   });
 });
 
-describe("campos de outra origem (a preferência vale em todas as origens)", () => {
+describe("campo apagado do CRM (a preferência vale em todas as origens)", () => {
   const comFantasma = { ...PREFS_PADRAO, campos: [FANTASMA] };
 
   it("ao abrir, solta o campo que nenhuma origem tem mais: libera o lugar e deixa Salvar ligado", async () => {
@@ -284,55 +284,17 @@ describe("campos de outra origem (a preferência vale em todas as origens)", () 
       prefs: { ...comFantasma, itens: { ...PREFS_PADRAO.itens, tags: false } },
     });
   });
-
-  it("o escolhido que existe em outra origem aparece ligado, com 'de outra origem', e dá para desligar", async () => {
-    const user = janela({ ...PREFS_PADRAO, campos: [PLANO] }, CATALOGO);
-    await user.click(screen.getByRole("button", { name: /Negócio/ }));
-    expect(screen.getByText("de outra origem")).toBeInTheDocument();
-    const plano = screen.getByRole("switch", { name: /Plano/ });
-    expect(plano).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("button", { name: /Negócio/ })).toHaveTextContent("6");
-    await user.click(plano);
-    expect(screen.getByRole("switch", { name: /Plano/ })).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByRole("button", { name: /Negócio/ })).toHaveTextContent("5");
-    await user.click(screen.getByRole("button", { name: "Salvar preferência" }));
-    await waitFor(() => expect(onFechar).toHaveBeenCalled());
-    expect(api.put).toHaveBeenCalledWith("/api/v1/capas-do-card", { prefs: PREFS_PADRAO });
-  });
-
-  it("os de outra origem entram na conta do limite, e desligar um libera o lugar", async () => {
-    // 6 itens ligados + Plano, Cidade (de outra origem) = 8; Renda liga (9) e Email liga (10).
-    const user = janela({ ...PREFS_PADRAO, campos: [PLANO, CIDADE] }, CATALOGO);
-    await user.click(screen.getByRole("button", { name: /Negócio/ }));
-    await user.click(screen.getByRole("switch", { name: "Renda" }));
-    await user.click(screen.getByRole("switch", { name: "Email" }));
-    expect(CAMPOS_MAX).toBe(10);
-    const telefone = screen.getByRole("switch", { name: "Telefone" });
-    expect(telefone).toBeDisabled();
-    expect(telefone).toHaveAttribute("title", "Limite de 10 campos atingido");
-    await user.click(screen.getByRole("switch", { name: /Plano/ }));
-    expect(screen.getByRole("switch", { name: "Telefone" })).toBeEnabled();
-  });
-
-  it("o que não está escolhido e é de outra origem não é oferecido", async () => {
-    const user = janela(PREFS_PADRAO, CATALOGO);
-    await user.click(screen.getByRole("button", { name: /Negócio/ }));
-    expect(screen.getByRole("switch", { name: "Renda" })).toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /Plano/ })).toBeNull();
-    expect(screen.queryByRole("switch", { name: /Cidade/ })).toBeNull();
-    expect(screen.queryByText("de outra origem")).toBeNull();
-  });
 });
 
 describe("<PersonalizarCards> com o catálogo das origens", () => {
   it("espera o catálogo, busca na rota de campos e abre sem o campo que não existe mais", async () => {
-    responder({ ...PREFS_PADRAO, campos: [FANTASMA, PLANO] });
-    const user = icone();
+    responder({ ...PREFS_PADRAO, campos: [FANTASMA, RENDA] });
+    const user = icone([{ alvo: "negocio", chave: "renda", rotulo: "Renda", tipo: "numero" }]);
     await user.click(screen.getByRole("button", { name: "Personalizar cards" }));
     expect(await screen.findByRole("dialog", { name: "Personalizar cards" })).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith(ROTA_DOS_CAMPOS);
     await user.click(screen.getByRole("button", { name: /Negócio/ }));
-    expect(screen.getByRole("switch", { name: /Plano/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch", { name: "Renda" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("button", { name: "Salvar preferência" })).toBeEnabled();
   });
 

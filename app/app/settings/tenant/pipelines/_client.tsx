@@ -20,7 +20,7 @@ import type { PipelineConfigPatch } from "@/lib/schemas/settings";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import { modoDeReabertura } from "@/lib/leads/reabertura";
 import { CATEGORIAS_DE_PERDA } from "@/lib/schemas/leads";
-import { customFieldSchema, type CustomFieldDef } from "@/lib/schemas/settings";
+import { CAMPOS_DO_CRM_MAX, customFieldSchema, type CustomFieldDef } from "@/lib/schemas/settings";
 import {
   mostrarQuandoSchema,
   OPERADORES_DE_MOSTRA,
@@ -329,7 +329,15 @@ function PipelineEditor({
   const [retomaComoNovo, setRetomaComoNovo] = useState(
     modoDeReabertura(pipeline.settings) === "novo_negocio",
   );
-  const [fields, setFields] = useState<CustomFieldDef[]>(camposDoFunil(pipeline.settings));
+  // FORK ESCALE · Fase 1F-a: `settings` à parte (a cerca do vocabulário lê o que fica entre `>` e `<`).
+  const settingsDoFunil = pipeline.settings;
+  const [fields, setFields] = useState<CustomFieldDef[]>(camposDoFunil(settingsDoFunil));
+  // FORK ESCALE · Fase 1F-a: os campos são do CRM. `carregados` são as definições
+  // que vieram do banco (ou do último salvar). As chaves que estão aqui e não
+  // estão mais na lista ao salvar são apagadas do catálogo (de toda origem);
+  // campo criado depois que a tela abriu não está aqui, então não é apagado. O
+  // servidor também as recebe, para não desfazer o que outro administrador mudou.
+  const [carregados, setCarregados] = useState<CustomFieldDef[]>(() => camposDoFunil(settingsDoFunil));
   const [isPending, startTransition] = useTransition();
 
   function handleSave() {
@@ -387,6 +395,8 @@ function PipelineEditor({
       .map((s2) => s2.trim())
       .filter((s2) => s2.length > 0);
 
+    // FORK ESCALE · Fase 1F-a: o que saiu da lista sai do catálogo.
+    const camposRemovidos = carregados.map((c) => c.key).filter((k) => !ok.some((f) => f.key === k));
     const patch: PipelineConfigPatch = {
       vocabulary: { lead, deal, won, lost },
       fields: ok,
@@ -395,11 +405,29 @@ function PipelineEditor({
       won_reason_required: wonRequired,
       comanda_no_ganho: comandaNoGanho,
       reabertura: retomaComoNovo ? "novo_negocio" : "mesmo_registro",
+      // FORK ESCALE · Fase 1F-a
+      campos_carregados: carregados,
+      ...(camposRemovidos.length > 0 ? { campos_removidos: camposRemovidos } : {}),
     };
     startTransition(async () => {
       const r = await updatePipelineConfig(pipeline.id, patch);
-      if (r.ok) toast.success(`${pipeline.name} ${t("atualizado.")}`);
-      else toast.error(`${t("Erro:")} ${r.error}`);
+      if (r.ok) {
+        toast.success(`${pipeline.name} ${t("atualizado.")}`);
+        // FORK ESCALE · Fase 1F-a: o que foi salvo passa a ser "do banco".
+        setCarregados(ok);
+        if (r.camposDesatualizados) {
+          toast.warning(
+            t("Outra pessoa alterou os campos enquanto esta tela estava aberta. Recarregue a página para ver a versão atual."),
+          );
+        }
+      } else if (r.error === "campos_em_conflito") {
+        // FORK ESCALE · Fase 1F-a: deadlock/serialização no banco
+        toast.error(t("Outra pessoa estava alterando os campos ao mesmo tempo. Tente novamente."));
+      } else if (r.error === "campo_invalido") {
+        toast.error(t("Algum campo tem rótulo ou tipo inválido. Revise os campos e tente novamente."));
+      } else {
+        toast.error(`${t("Erro:")} ${r.error}`);
+      }
     });
   }
 
@@ -540,9 +568,14 @@ function PipelineEditor({
       )}
 
       <div className="space-y-2">
-        <Label className="text-xs">{t("Campos do lead neste funil")}</Label>
+        {/* FORK ESCALE · Fase 1F-a: os campos são do CRM, não do funil. */}
+        <Label className="text-xs">{t("Campos do negócio (valem em todas as origens)")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("Aparecem no dossiê do negócio. No follow-up, você escolhe em qual campo gravar a resposta.")}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t("Remover um campo aqui e salvar o remove de toda origem.")}{" "}
+          {t("Se este campo estiver configurado como obrigatório em alguma origem, a regra será removida.")}
         </p>
         {fields.map((f, i) => (
           <div key={`${f.key}-${i}`} className="grid gap-2 rounded-md border border-border p-2 md:grid-cols-[1fr_1fr_8rem_auto]">
@@ -816,7 +849,8 @@ function PipelineEditor({
             </div>
           </div>
         ))}
-        {fields.length < 50 && (
+        {/* FORK ESCALE · Fase 1F-a: o teto é o do catálogo. */}
+        {fields.length < CAMPOS_DO_CRM_MAX && (
           <Button
             type="button"
             variant="outline"

@@ -7,7 +7,7 @@ import type { CampoDaCapa } from "@/lib/escale/capa/tipos";
 /**
  * O catálogo dos campos personalizados do negócio de TODAS as origens que a
  * pessoa enxerga (fork Escale, Fase 1E). A janela "Personalizar cards" usa para
- * soltar o campo apagado de todas e mostrar o que só existe em outra origem.
+ * soltar o campo apagado do CRM.
  * Sem repetição: se falhar, a janela abre sem o catálogo e não solta nada.
  */
 export const CHAVE_DOS_CAMPOS_DAS_ORIGENS = ["campos-das-origens"] as const;
