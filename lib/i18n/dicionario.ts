@@ -9662,6 +9662,59 @@ export const DICIONARIO: Traducoes = {
   },
   "Escolha etapas desta origem.": { es: "Elige etapas de este origen." },
 
+  // ─── FORK ESCALE · Fase 1F (Task 8): Alerta de tempo na etapa ───
+  "dentro do prazo": { es: "dentro del plazo" },
+  "passou de atenção": { es: "superó el límite de atención" },
+  "passou de crítico": { es: "superó el límite crítico" },
+  "Defina quanto tempo um negócio pode ficar parado em cada etapa antes de receber destaque visual no Kanban.":
+    {
+      es: "Define cuánto tiempo puede estar detenido un negocio en cada etapa antes de recibir un destaque visual en el Kanban.",
+    },
+  "A regra geral vale para todas as etapas do funil. Crie exceções só para etapas com ritmo diferente.":
+    {
+      es: "La regla general vale para todas las etapas del embudo. Crea excepciones solo para etapas con un ritmo diferente.",
+    },
+  "Como aparece no card": { es: "Cómo aparece en la tarjeta" },
+  "No rodapé do card": { es: "En el pie de la tarjeta" },
+  "dentro do prazo · cinza": { es: "dentro del plazo · gris" },
+  "passou de atenção · âmbar": { es: "superó el límite de atención · ámbar" },
+  "passou de crítico · vermelho": { es: "superó el límite crítico · rojo" },
+  "Regra geral do funil": { es: "Regla general del embudo" },
+  "vale para todas as etapas, exceto as que tiverem regra própria abaixo": {
+    es: "vale para todas las etapas, excepto las que tengan regla propia abajo",
+  },
+  "Remover regra geral": { es: "Quitar regla general" },
+  "Sem regra geral. Apenas as etapas listadas em Exceções abaixo terão alerta de tempo.": {
+    es: "Sin regla general. Solo las etapas listadas en Excepciones abajo tendrán alerta de tiempo.",
+  },
+  "Definir regra geral": { es: "Definir regla general" },
+  "Exceções por etapa": { es: "Excepciones por etapa" },
+  "etapas com regra própria; todas as outras seguem a geral acima": {
+    es: "etapas con regla propia; todas las demás siguen la general de arriba",
+  },
+  "Adicionar etapa": { es: "Agregar etapa" },
+  "Selecionar etapa": { es: "Seleccionar etapa" },
+  "Todas as etapas já têm regra própria.": { es: "Todas las etapas ya tienen regla propia." },
+  "Nenhuma exceção configurada. Todas as etapas seguem a regra geral.": {
+    es: "Ninguna excepción configurada. Todas las etapas siguen la regla general.",
+  },
+  "Voltar à regra geral": { es: "Volver a la regla general" },
+  "Limite de atenção": { es: "Límite de atención" },
+  "Limite crítico": { es: "Límite crítico" },
+  "Unidade do limite de atenção": { es: "Unidad del límite de atención" },
+  "Unidade do limite crítico": { es: "Unidad del límite crítico" },
+  Minutos: { es: "Minutos" },
+  Horas: { es: "Horas" },
+  "O limite crítico deve ser maior que o limite de atenção.": {
+    es: "El límite crítico debe ser mayor que el límite de atención.",
+  },
+  "Preencha pelo menos um limite na exceção ou remova-a antes de salvar.": {
+    es: "Completa al menos un límite en la excepción o quítala antes de guardar.",
+  },
+  "Informe um valor entre 1 e 8760.": { es: "Indica un valor entre 1 y 8760." },
+  "Informe um valor entre 1 e 525600.": { es: "Indica un valor entre 1 y 525600." },
+  "Informe um valor entre 1 e 365.": { es: "Indica un valor entre 1 y 365." },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
