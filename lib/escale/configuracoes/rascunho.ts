@@ -139,8 +139,16 @@ export function pedidoDoSalvar(
       tags_padrao: r.gerais.tags,
     };
   }
-  if (!igual(r.motivos, inicial.motivos))
+  if (!igual(r.motivos, inicial.motivos)) {
+    if (r.motivos.selecionados.length === 0) {
+      return {
+        ok: false,
+        erro: "Para continuar selecione ao menos um motivo de perda.",
+        secao: "motivos",
+      };
+    }
     patch.motivos = { selecionados: r.motivos.selecionados, novos: r.motivos.novos };
+  }
   if (!igual(r.regras, inicial.regras)) {
     if (Object.keys(errosDasRegras(r.regras)).length > 0) {
       return {

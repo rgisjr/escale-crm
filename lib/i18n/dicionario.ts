@@ -9602,6 +9602,24 @@ export const DICIONARIO: Traducoes = {
     es: "Un origen tiene como máximo 10 etiquetas predeterminadas.",
   },
 
+  // ─── FORK ESCALE · Fase 1F (Task 7): Motivo de Perda ───
+  "Configure aqui os motivos de perda desta origem.": {
+    es: "Configura aquí los motivos de pérdida de este origen.",
+  },
+  "Só administrador muda os motivos de perda. Você vê a lista como ela está.": {
+    es: "Solo el administrador cambia los motivos de pérdida. Ves la lista tal como está.",
+  },
+  "Motivos de perda selecionados": { es: "Motivos de pérdida seleccionados" },
+  "Motivos de perda da origem": { es: "Motivos de pérdida del origen" },
+  "Novo motivo de perda": { es: "Nuevo motivo de pérdida" },
+  "Adicione um motivo de perda": { es: "Agrega un motivo de pérdida" },
+  "Adicionar Motivo de Perda": { es: "Agregar motivo de pérdida" },
+  "Esse motivo de perda está vazio.": { es: "Ese motivo de pérdida está vacío." },
+  "Esse motivo de perda já existe.": { es: "Ese motivo de pérdida ya existe." },
+  "Para continuar selecione ao menos um motivo de perda.": {
+    es: "Para continuar, selecciona al menos un motivo de pérdida.",
+  },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
