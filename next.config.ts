@@ -78,6 +78,10 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react", "lucide-react", "date-fns"],
+    // FORK ESCALE · Fase 1H (C): o `proxy.ts` cobre `/api/*`, e o Next corta o corpo da requisição
+    // neste teto (10 MB por padrão). Os arquivos do contato vão até 25 MB (como na Clint) mais as
+    // bordas do multipart; a rota lê o corpo aos pedaços e recusa o que passar de 26 MB.
+    proxyClientMaxBodySize: "27mb",
   },
   images: {
     // O app não usa next/image de fato (só <img> raw); desligar o otimizador

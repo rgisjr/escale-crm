@@ -1,6 +1,6 @@
 /**
  * ARQUIVOS DO CONTATO (fork Escale, Fase 1H; C17, N8): regras puras. Sem
- * React e sem rede. A lista de extensões, o limite de 9 MB e o filtro por
+ * React e sem rede. A lista de extensões, o limite de 25 MB e o filtro por
  * extensão são os da Clint (`Cx`, `ImportModal`); o caminho no bucket segue o
  * padrão do anexo de nota interna do original (`{org}/{dono}/{id}.{ext}`).
  */
@@ -19,12 +19,11 @@ export interface Arquivo {
 
 export const BUCKET_DOS_ARQUIVOS = "arquivos-do-contato";
 /**
- * 9 MB, e não os 25 MB da Clint: o `proxy.ts` do original cobre `/api/*` e o Next
- * (experimental.proxyClientMaxBodySize) corta o corpo da requisição em 10 MB, o
- * que quebraria um envio maior com um erro confuso. Subir para 25 MB pede essa
- * opção em `next.config.ts` (arquivo do original): pendência registrada no PR.
+ * 25 MB, como na Clint (`maxFileSize`). O teto do corpo atrás do proxy do Next
+ * (`experimental.proxyClientMaxBodySize` em `next.config.ts`) é 27 MB, para caber
+ * o arquivo e as bordas do multipart (teste `escale-arquivos-limite-de-envio`).
  */
-export const MAX_ARQUIVO_MB = 9;
+export const MAX_ARQUIVO_MB = 25;
 export const MAX_ARQUIVO_BYTES = MAX_ARQUIVO_MB * 1024 * 1024;
 /** Nunca inclui `storage_path` nem `organization_id`: a lista não entrega o caminho do bucket. */
 export const COLUNAS_DO_ARQUIVO =
