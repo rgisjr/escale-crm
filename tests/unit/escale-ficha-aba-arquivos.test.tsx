@@ -38,9 +38,11 @@ const arquivos = vi.hoisted(() => ({
     },
   ],
   enviar: vi.fn(
-    async (): Promise<{
+    async (
+      _arquivos: File[],
+    ): Promise<{
       enviados: number;
-      falhas: { nome: string; mensagem: string | null }[];
+      falhas: { arquivo: File; nome: string; mensagem: string | null }[];
     }> => ({ enviados: 1, falhas: [] }),
   ),
   excluir: vi.fn(async () => undefined),
@@ -134,10 +136,10 @@ describe("a tabela", () => {
 describe("Novo arquivo", () => {
   it("se um envio falha: toast com o nome e o motivo traduzido, e o modal fica aberto só com o que falhou", async () => {
     const { toast } = await import("sonner");
-    arquivos.enviar.mockResolvedValueOnce({
+    arquivos.enviar.mockImplementationOnce(async (fs: File[]) => ({
       enviados: 1,
-      falhas: [{ nome: "contrato.pdf", mensagem: null }],
-    });
+      falhas: [{ arquivo: fs[0]!, nome: fs[0]!.name, mensagem: null }],
+    }));
     render(<AbaArquivos lead={LEAD} />);
     await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
     const janela = await screen.findByRole("dialog", { name: "Novo documento" });
@@ -151,6 +153,23 @@ describe("Novo arquivo", () => {
     expect(screen.getByRole("dialog", { name: "Novo documento" })).toBeInTheDocument();
     expect(within(janela).getByText("contrato.pdf")).toBeInTheDocument();
     expect(within(janela).queryByText("foto.png")).toBeNull();
+  });
+
+  it("dois arquivos com o MESMO nome: fica só o que falhou, e o segundo Salvar não reenvia o que subiu", async () => {
+    arquivos.enviar.mockImplementationOnce(async (fs: File[]) => ({
+      enviados: 1,
+      falhas: [{ arquivo: fs[1]!, nome: fs[1]!.name, mensagem: null }],
+    }));
+    render(<AbaArquivos lead={LEAD} />);
+    await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
+    const janela = await screen.findByRole("dialog", { name: "Novo documento" });
+    const primeiro = new File(["x"], "a.pdf", { type: "application/pdf" });
+    const segundo = new File(["yy"], "a.pdf", { type: "application/pdf" });
+    await userEvent.upload(within(janela).getByLabelText("Adicionar"), [primeiro, segundo]);
+    await userEvent.click(within(janela).getByRole("button", { name: "Salvar" }));
+    expect(within(janela).getAllByText("a.pdf")).toHaveLength(1);
+    await userEvent.click(within(janela).getByRole("button", { name: "Salvar" }));
+    expect(arquivos.enviar).toHaveBeenLastCalledWith([segundo]);
   });
 
   it("sem permissão (quem só lê): 'Novo arquivo' desligado com 'Sem permissão'", () => {

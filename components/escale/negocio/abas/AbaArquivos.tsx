@@ -131,14 +131,14 @@ export function AbaArquivos({ lead }: { lead: Lead }) {
     }
   }
 
-  /** Envia e devolve os nomes que falharam (o modal fica aberto só com eles). */
-  async function salvarNovos(arquivos: File[]): Promise<string[]> {
+  /** Envia e devolve os arquivos que falharam (o modal fica aberto só com eles). */
+  async function salvarNovos(arquivos: File[]): Promise<File[]> {
     const r = await enviar.mutateAsync(arquivos);
     if (r.enviados > 0) toast.success(t("Arquivo(s) enviado(s) com sucesso"));
     for (const f of r.falhas) {
       toast.error(`${f.nome}: ${f.mensagem ?? t("Erro ao enviar arquivo(s)")}`);
     }
-    return r.falhas.map((f) => f.nome);
+    return r.falhas.map((f) => f.arquivo);
   }
 
   async function confirmarExclusao() {

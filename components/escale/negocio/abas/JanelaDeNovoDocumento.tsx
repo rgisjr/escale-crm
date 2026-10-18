@@ -26,7 +26,7 @@ export function JanelaDeNovoDocumento({
 }: {
   aberta: boolean;
   onFechar: () => void;
-  aoSalvar: (arquivos: File[]) => Promise<string[]>;
+  aoSalvar: (arquivos: File[]) => Promise<File[]>;
 }) {
   const t = useT();
   const id = useId();
@@ -35,10 +35,16 @@ export function JanelaDeNovoDocumento({
   const [recusados, setRecusados] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
 
-  function fechar() {
+  function limparEFechar() {
     setLista([]);
     setRecusados([]);
     onFechar();
+  }
+
+  /** Esc, cortina e Cancelar. Enviando, não fecha: o arquivo que falhar precisa continuar na lista. */
+  function fechar() {
+    if (enviando) return;
+    limparEFechar();
   }
 
   function escolher(arquivos: FileList | null) {
@@ -63,8 +69,8 @@ export function JanelaDeNovoDocumento({
     try {
       const falharam = await aoSalvar(lista);
       // Fecha só quando tudo subiu; senão fica com os que falharam, para tentar de novo.
-      if (falharam.length === 0) fechar();
-      else setLista((atual) => atual.filter((a) => falharam.includes(a.name)));
+      if (falharam.length === 0) limparEFechar();
+      else setLista((atual) => atual.filter((a) => falharam.includes(a)));
     } finally {
       setEnviando(false);
     }
