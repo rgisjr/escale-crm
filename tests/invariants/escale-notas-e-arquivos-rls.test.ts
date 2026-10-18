@@ -122,17 +122,20 @@ describe("autoria e data carimbadas pelo banco (trigger de INSERT)", () => {
     }
   });
 
-  it("authenticated sem nome no perfil: o nome forjado é descartado (fica nulo), nunca mantido", () => {
+  it("authenticated sem nome no perfil: cai para a parte local do e-mail da sessão, nunca para o forjado (9011)", () => {
+    sql(
+      `update auth.users set email = 'agente.a@exemplo.test', raw_user_meta_data = '{}'::jsonb where id = '${GOV_AGENT_A}';`,
+    );
     expect(
       resultadoComoRole("authenticated", GOV_AGENT_A, medir(nota(GOV_ORG, GOV_LEAD, GOV_AGENT_A))),
-    ).toBe("<nulo>|true");
+    ).toBe("agente.a|true");
     expect(
       resultadoComoRole(
         "authenticated",
         GOV_AGENT_A,
         medir(arquivo(GOV_ORG, GOV_CONTACT_1, GOV_AGENT_A)),
       ),
-    ).toBe("<nulo>|true");
+    ).toBe("agente.a|true");
   });
 
   it("service role (rotas, sem auth.uid()): o nome informado é mantido, a data continua do banco", () => {
