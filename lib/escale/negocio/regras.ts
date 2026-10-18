@@ -199,46 +199,43 @@ export function haQuantoTempo(iso: string, agora: Date = new Date(), idioma = "p
   return rtf.format(Math.round(seg / (86_400 * 365)), "year");
 }
 
-/** O domingo da semana (a semana brasileira, como o "Essa semana" da Clint). */
-function domingoDe(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
-}
-
-const ddmmaaaa = (d: Date) =>
-  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-
 export interface SecaoDoHistorico<T> {
   chave: string;
-  /** "Esta semana", "Semana passada" ou a data do domingo (dd/mm/aaaa) — print que falta 9. */
+  /** "Hoje", "Ontem", "Esta semana" ou "DD MMM" (a Clint não tem "Semana passada"). */
   rotulo: string;
-  /** O dia do evento mais novo da seção ("14 Out", ao lado de "ESTA SEMANA" no print 07). */
+  /** O dia do evento mais novo da seção ("14 Out", ao lado do rótulo no print 07). */
   data: string;
   itens: T[];
 }
+
+const inicioDaSemana = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)); // segunda (ISO)
 
 export function secoesDoHistorico<T extends { performed_at: string }>(
   itens: readonly T[],
   agora: Date = new Date(),
   idioma = "pt-BR",
 ): SecaoDoHistorico<T>[] {
-  const esta = domingoDe(agora).getTime();
-  const passada = domingoDe(
-    new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 7),
-  ).getTime();
+  const hoje = chaveDoDia(agora);
+  const ontem = chaveDoDia(new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1));
+  const semana = inicioDaSemana(agora).getTime();
   const ordenados = [...itens].sort(
     (a, b) => Date.parse(b.performed_at) - Date.parse(a.performed_at),
   );
   const secoes = new Map<string, SecaoDoHistorico<T>>();
   for (const item of ordenados) {
     const quando = new Date(item.performed_at);
-    const domingo = domingoDe(quando);
-    const chave = ddmmaaaa(domingo);
+    const dia = chaveDoDia(quando);
+    const chave =
+      dia === hoje ? "hoje" : dia === ontem ? "ontem" : quando.getTime() >= semana ? "semana" : dia;
     const rotulo =
-      domingo.getTime() === esta
-        ? "Esta semana"
-        : domingo.getTime() === passada
-          ? "Semana passada"
-          : chave;
+      chave === "hoje"
+        ? "Hoje"
+        : chave === "ontem"
+          ? "Ontem"
+          : chave === "semana"
+            ? "Esta semana"
+            : diaEMes(quando, idioma);
     const secao = secoes.get(chave) ?? { chave, rotulo, data: diaEMes(quando, idioma), itens: [] };
     secoes.set(chave, { ...secao, itens: [...secao.itens, item] });
   }
