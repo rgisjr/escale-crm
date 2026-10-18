@@ -10080,6 +10080,7 @@ export const DICIONARIO: Traducoes = {
   "Não consegui enviar a mensagem. Tente de novo.": { es: "No pude enviar el mensaje. Inténtalo de nuevo." },
   "Chamar {nome}": { es: "Llamar a {nome}" },
   "Enviar email": { es: "Enviar email" },
+  "Mensagem enviada, mas não consegui concluir a atividade.": { es: "Mensaje enviado, pero no pude completar la actividad." },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },

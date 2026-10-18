@@ -110,7 +110,10 @@ export function DetalheDaAtividade({
         )}
       </div>
       <footer className="flex h-[52px] shrink-0 items-center gap-3 border-t border-casca-borda px-4">
-        {rodape}
+        {/* Editando, o texto ainda não gravou: não deixa enviar a versão antiga. */}
+        <fieldset disabled={editando} className="contents">
+          {rodape}
+        </fieldset>
         <BotaoDaCasca
           variante="icone"
           aria-label={editando ? t("Sair do modo edição") : t("Modo edição")}

@@ -5,10 +5,11 @@ import { useUser } from "@/hooks/auth/AuthProvider";
 import { apiClient } from "@/lib/api/client";
 import type { AtividadeDoNegocio } from "@/lib/escale/negocio/atividades";
 import { MAX_CONTEUDO_DA_ATIVIDADE } from "@/lib/escale/playbook/regras";
+import { estaEncerrada } from "@/lib/tarefas/tipos";
 import type { Lead } from "@/lib/types/leads";
 
 export type ResultadoDoEnvio =
-  | { tipo: "enviada"; assumiu: boolean }
+  | { tipo: "enviada"; assumiu: boolean; concluida: boolean }
   | { tipo: "outro-atendente"; atendenteId: string; conversaId: string };
 
 /**
@@ -26,17 +27,17 @@ export type ResultadoDoEnvio =
 export function useEnviarAtividade(
   lead: Lead,
   alternar: (a: AtividadeDoNegocio) => Promise<unknown>,
+  /** O canal que a tela mostra (`dispositivoDeEnvio`): a conversa e o envio saem por ele. */
+  sessaoId?: string,
 ) {
   const user = useUser();
   const [enviando, setEnviando] = useState(false);
 
   async function conversaDoContato(): Promise<string> {
-    if (lead.conversa?.id) return lead.conversa.id;
+    if (!sessaoId && lead.conversa?.id) return lead.conversa.id;
     const r = await apiClient.post<{ data: { conversation_id: string } }>(
       "/api/v1/conversations/open-with-contact",
-      {
-        contact_id: lead.contact_id,
-      },
+      { contact_id: lead.contact_id, ...(sessaoId ? { channel_session_id: sessaoId } : {}) },
     );
     return r.data.conversation_id;
   }
@@ -61,13 +62,22 @@ export function useEnviarAtividade(
         if (atendente && atendente !== user.id)
           return { tipo: "outro-atendente", atendenteId: atendente, conversaId };
       }
-      await apiClient.post("/api/v1/messages", {
+      const enviada = await apiClient.post<{ data: { status?: string } }>("/api/v1/messages", {
         conversation_id: conversaId,
         body: texto.slice(0, MAX_CONTEUDO_DA_ATIVIDADE),
         type: "text",
       });
-      if (a.status !== "done") await alternar(a);
-      return { tipo: "enviada", assumiu: !!assumir };
+      // O envio responde 201 mesmo quando a mensagem não sai (canal parado, sem telefone): não conclui.
+      if (enviada.data?.status === "failed") throw new Error("mensagem_nao_enviada");
+      let concluida = true;
+      if (!estaEncerrada(a)) {
+        try {
+          await alternar(a);
+        } catch {
+          concluida = false;
+        }
+      }
+      return { tipo: "enviada", assumiu: !!assumir, concluida };
     } finally {
       setEnviando(false);
     }

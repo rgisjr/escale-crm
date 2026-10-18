@@ -22,6 +22,7 @@ import {
   linkDoWhatsappWeb,
   type AtividadeDoNegocio,
 } from "@/lib/escale/negocio/atividades";
+import { estaEncerrada } from "@/lib/tarefas/tipos";
 import type { Lead } from "@/lib/types/leads";
 import { ChevronDown, Smartphone } from "@/lib/ui/icons-da-casca";
 
@@ -48,17 +49,24 @@ export function RodapeDoWhatsapp({
   const router = useRouter();
   const { data: sessoes } = useChannelSessions();
   const { data: membros } = useAssignableMembers(true);
-  const { enviar, enviando, conversaDoContato } = useEnviarAtividade(lead, alternar);
+  const dispositivo = dispositivoDeEnvio(sessoes ?? []);
+  const { enviar, enviando, conversaDoContato } = useEnviarAtividade(
+    lead,
+    alternar,
+    dispositivo.tipo === "conectado" ? dispositivo.sessaoId : undefined,
+  );
   const [outro, setOutro] = useState<{ conversaId: string; atendenteId: string } | null>(null);
   const botao = useRef<HTMLButtonElement>(null);
 
   // Resposta de 17/10 (Q7): Enter envia na hora, como o clique. O detalhe remonta a cada
   // atividade escolhida; o foco vai para "Enviar mensagem", e o Enter do botão envia.
+  // Só rouba o foco se ninguém está digitando em outro campo e a atividade ainda está pendente.
   useEffect(() => {
-    botao.current?.focus({ preventScroll: true });
+    const livre = !document.activeElement || document.activeElement === document.body;
+    if (livre && !estaEncerrada(atividade)) botao.current?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na montagem: o detalhe remonta a cada atividade
   }, []);
 
-  const dispositivo = dispositivoDeEnvio(sessoes ?? []);
   const sessao =
     dispositivo.tipo === "conectado"
       ? (sessoes ?? []).find((s) => s.id === dispositivo.sessaoId)
@@ -84,6 +92,10 @@ export function RodapeDoWhatsapp({
         return;
       }
       setOutro(null);
+      if (!r.concluida) {
+        toast.error(t("Mensagem enviada, mas não consegui concluir a atividade."));
+        return;
+      }
       toast.success(
         r.assumiu
           ? t("Atendimento assumido e mensagem enviada com sucesso!")

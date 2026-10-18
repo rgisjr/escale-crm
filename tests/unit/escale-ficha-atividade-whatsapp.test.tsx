@@ -77,7 +77,7 @@ describe("useEnviarAtividade", () => {
       type: "text",
     });
     expect(alternar).toHaveBeenCalledWith(ATV);
-    expect(r).toEqual({ tipo: "enviada", assumiu: false });
+    expect(r).toEqual({ tipo: "enviada", assumiu: false, concluida: true });
   });
 
   it("sem conversa: abre pelo contato antes de enviar", async () => {
@@ -114,7 +114,7 @@ describe("useEnviarAtividade", () => {
     expect(apiClient.post).toHaveBeenCalledWith("/api/v1/conversations/cv1/claim", {
       expected_assignee: "u-outro",
     });
-    expect(r).toEqual({ tipo: "enviada", assumiu: true });
+    expect(r).toEqual({ tipo: "enviada", assumiu: true, concluida: true });
   });
 
   it("atividade já concluída: envia sem reabrir", async () => {
@@ -123,6 +123,58 @@ describe("useEnviarAtividade", () => {
     const { result } = renderHook(() => useEnviarAtividade(LEAD, alternar));
     await act(async () => {
       await result.current.enviar({ ...ATV, status: "done" }, "Oi");
+    });
+    expect(alternar).not.toHaveBeenCalled();
+  });
+});
+
+describe("useEnviarAtividade: o que não pode acontecer", () => {
+  it("com o canal da tela, abre a conversa por ele em vez de usar a mais recente do contato", async () => {
+    respostas(null);
+    const { result } = renderHook(() => useEnviarAtividade(LEAD, vi.fn(), "s1"));
+    await act(async () => {
+      await result.current.enviar(ATV, "Oi");
+    });
+    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/conversations/open-with-contact", {
+      contact_id: "c1",
+      channel_session_id: "s1",
+    });
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/messages",
+      expect.objectContaining({ conversation_id: "cv2" }),
+    );
+  });
+
+  it("mensagem que o servidor marcou como 'failed' não conclui a atividade", async () => {
+    respostas(null);
+    vi.mocked(apiClient.post).mockImplementation(async (url: string) =>
+      url === "/api/v1/messages" ? { data: { status: "failed" } } : { data: {} },
+    );
+    const alternar = vi.fn();
+    const { result } = renderHook(() => useEnviarAtividade(LEAD, alternar));
+    await act(async () => {
+      await expect(result.current.enviar(ATV, "Oi")).rejects.toThrow();
+    });
+    expect(alternar).not.toHaveBeenCalled();
+  });
+
+  it("se só a conclusão falha, avisa que a mensagem saiu (não convida a reenviar)", async () => {
+    respostas(null);
+    const alternar = vi.fn(async () => Promise.reject(new Error("x")));
+    const { result } = renderHook(() => useEnviarAtividade(LEAD, alternar));
+    let r: unknown;
+    await act(async () => {
+      r = await result.current.enviar(ATV, "Oi");
+    });
+    expect(r).toEqual({ tipo: "enviada", assumiu: false, concluida: false });
+  });
+
+  it("atividade cancelada não é reaberta pelo envio", async () => {
+    respostas(null);
+    const alternar = vi.fn();
+    const { result } = renderHook(() => useEnviarAtividade(LEAD, alternar));
+    await act(async () => {
+      await result.current.enviar({ ...ATV, status: "cancelled" }, "Oi");
     });
     expect(alternar).not.toHaveBeenCalled();
   });
