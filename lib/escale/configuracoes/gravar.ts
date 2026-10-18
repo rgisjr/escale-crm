@@ -62,9 +62,19 @@ export const patchDasConfiguracoesSchema = z
       .optional(),
     atribuicao: atribuicaoSchema.optional(),
     notificacoes: notificacoesSchema.optional(),
+    /**
+     * Só para a conferência da Q9 (1J): quem ficará na distribuição quando a tela
+     * salvar a distribuição DEPOIS desta gravação (sai um e entra outro na mesma
+     * hora). Sem esta lista, a rota confere a lista de pessoas contra a
+     * distribuição que ainda está gravada. Não é seção: não grava nada.
+     */
+    distribuicao_pendente: z.array(z.string().uuid()).max(PESSOAS_MAX).optional(),
   })
   .strict()
-  .refine((p) => Object.values(p).some((v) => v !== undefined), { message: "nada para salvar" });
+  .refine(
+    (p) => Object.entries(p).some(([chave, v]) => chave !== "distribuicao_pendente" && v !== undefined),
+    { message: "nada para salvar" },
+  );
 export type PatchDasConfiguracoes = z.infer<typeof patchDasConfiguracoesSchema>;
 export type SecaoDasConfiguracoes =
   | "gerais"

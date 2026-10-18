@@ -42,6 +42,7 @@ import {
 } from "@/lib/escale/playbook/regras";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/montar";
+import { gravarNaOrdem, planoDeGravacao } from "@/lib/escale/configuracoes/ordem-de-gravacao";
 import {
   algoMudou,
   pedidoDoSalvar,
@@ -204,16 +205,28 @@ export function JanelaDaOrigem({
       if (Object.keys(pedido.mudancaDaOrigem).length > 0) {
         onOrigens(await atualizar.mutateAsync({ id, mudanca: pedido.mudancaDaOrigem }));
       }
-      if (pedido.patch) await salvar.mutateAsync(pedido.patch);
-      if (pedido.distribuicao) {
-        try {
-          await salvarDistribuicao.mutateAsync(pedido.distribuicao);
-        } catch (e) {
-          setErro(`${t("Erro ao salvar a distribuição de donos.")} ${textoDoErro(e, t)}`);
-          setSubaba("distribuicao");
-          return;
-        }
-      }
+      // A ordem das duas rotas depende da direção da mudança (Q9 da 1J): ver ordem-de-gravacao.ts.
+      const plano = planoDeGravacao({
+        patch: pedido.patch,
+        distribuicao: pedido.distribuicao,
+        distribuidosHoje: config.distribuicao.map((p) => p.userId),
+      });
+      const terminou = await gravarNaOrdem(plano.ordem, {
+        configuracoes: async () => {
+          if (plano.patch) await salvar.mutateAsync(plano.patch);
+        },
+        distribuicao: async () => {
+          if (!pedido.distribuicao) return;
+          try {
+            await salvarDistribuicao.mutateAsync(pedido.distribuicao);
+          } catch (e) {
+            setErro(`${t("Erro ao salvar a distribuição de donos.")} ${textoDoErro(e, t)}`);
+            setSubaba("distribuicao");
+            return false;
+          }
+        },
+      });
+      if (!terminou) return;
       const soDistribuicao =
         !!pedido.distribuicao && !pedido.patch && Object.keys(pedido.mudancaDaOrigem).length === 0;
       toast.success(

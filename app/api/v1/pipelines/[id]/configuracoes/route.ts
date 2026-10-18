@@ -47,7 +47,7 @@ import {
   respostaDoErroDeGravacao,
   responderComConfiguracoes,
 } from "@/lib/escale/configuracoes/respostas";
-import { lerDistribuicao } from "@/lib/escale/distribuicao/ler";
+import { lerDistribuicao, papeisAtivos } from "@/lib/escale/distribuicao/ler";
 import { distribuidosForaDaLista, linhasDaTela } from "@/lib/escale/distribuicao/regras";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -148,8 +148,25 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     if (!distribuicao.ok) {
       return falhaInesperada(distribuicao.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
     }
+    // `distribuicao_pendente`: a tela vai salvar a distribuição logo depois (sai um, entra
+    // outro); a lista confere contra quem FICARÁ, não contra quem está gravado.
+    let linhas = linhasDaTela(distribuicao.pessoas);
+    if (parsed.data.distribuicao_pendente) {
+      const pendentes = parsed.data.distribuicao_pendente.map((p) => p.toLowerCase());
+      const papeis = pendentes.length
+        ? await papeisAtivos(supabase, orgId, pendentes)
+        : ({ ok: true, papeis: new Map<string, string>() } as const);
+      if (!papeis.ok) {
+        return falhaInesperada(papeis.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
+      }
+      linhas = pendentes.map((userId) => ({
+        userId,
+        percentual: "",
+        papel: papeis.papeis.get(userId) ?? null,
+      }));
+    }
     const fora = distribuidosForaDaLista({
-      linhas: linhasDaTela(distribuicao.pessoas),
+      linhas,
       pessoas: parsed.data.permissoes.pessoas.map((p) => p.toLowerCase()),
       pessoasDoGrupo: pessoasDaOrigem(origem.grupo?.settings),
     });

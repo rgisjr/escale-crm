@@ -561,6 +561,41 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     );
   });
 
+  it("Q9 com distribuicao_pendente: confere contra quem ficará, não contra a distribuição gravada", async () => {
+    const A = "11111111-1111-4111-8111-111111111111";
+    const B = "66666666-6666-4666-8666-666666666666";
+    const db = banco();
+    const tabelas = db.tabelas as unknown as Record<string, unknown[]>;
+    // Gravada: só B. A tela tirou B da lista e da distribuição e pôs A nos dois.
+    tabelas.crm_distribuicao_de_dono = [
+      { organization_id: ORG_ID, pipeline_id: PIPE, user_id: B, percentual: 100, contador: 0, created_at: "2026-10-18" },
+    ];
+    tabelas.user_organizations = [
+      { organization_id: ORG_ID, user_id: B, role: "agent", accepted_at: "2026-01-01", revoked_at: null },
+      { organization_id: ORG_ID, user_id: A, role: "agent", accepted_at: "2026-01-01", revoked_at: null },
+    ];
+    const corpoDoPedido = { permissoes: { pessoas: [A] } };
+    // Sem a lista pendente, a gravada (B) fica de fora da lista nova: recusa.
+    expect((await PATCH(pedido("PATCH", corpoDoPedido), ctx(PIPE))).status).toBe(422);
+    // Com ela (A é quem ficará), passa.
+    const res = await PATCH(
+      pedido("PATCH", { ...corpoDoPedido, distribuicao_pendente: [A] }),
+      ctx(PIPE),
+    );
+    expect(res.status).toBe(200);
+    // Pendente que ainda deixa alguém de fora da lista: recusa.
+    expect(
+      (
+        await PATCH(
+          pedido("PATCH", { permissoes: { pessoas: [A] }, distribuicao_pendente: [A, B] }),
+          ctx(PIPE),
+        )
+      ).status,
+    ).toBe(422);
+    // Sozinha, a lista pendente não é "algo para salvar".
+    expect((await PATCH(pedido("PATCH", { distribuicao_pendente: [A] }), ctx(PIPE))).status).toBe(422);
+  });
+
   it("o GET traz a distribuição (vazia sem linhas) e quando mudou por último", async () => {
     banco();
     const { data } = await corpo(await GET(pedido("GET"), ctx(PIPE)));
