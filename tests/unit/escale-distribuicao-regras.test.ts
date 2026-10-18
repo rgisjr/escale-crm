@@ -3,13 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   ERRO_DA_SOMA,
   ERRO_DO_ZERO,
+  dataBr,
   dividirIgual,
+  horaBr,
   distribuidosForaDaLista,
   erroDaDistribuicao,
   linhasDaTela,
   pedidoDaDistribuicao,
   percentualDaTela,
   textoDoBloqueio,
+  tempoRelativo,
   textoDoPercentual,
   versoesDaDistribuicao,
   type AlteracaoDaDistribuicao,
@@ -149,5 +152,20 @@ describe("versoesDaDistribuicao (Clint: mesmo autor em até 2 s é uma versão)"
     ]);
     expect(versoes.map((v) => v.itens.map((i) => i.id))).toEqual([["4"], ["3"], ["2", "1"]]);
     expect(versoes[0]?.autorId).toBe(A);
+  });
+});
+
+describe("datas e tempo (formato brasileiro, 24 h)", () => {
+  it("dataBr e horaBr", () => {
+    const iso = new Date(2026, 9, 18, 9, 5).toISOString();
+    expect(dataBr(iso)).toBe("18/10/2026");
+    expect(horaBr(iso)).toBe("09:05");
+  });
+
+  it("tempoRelativo usa a unidade certa", () => {
+    const agora = Date.parse("2026-10-18T12:00:00Z");
+    expect(tempoRelativo("2026-10-18T11:55:00Z", agora, "pt-BR")).toBe("há 5 minutos");
+    expect(tempoRelativo("2026-10-18T09:00:00Z", agora, "pt-BR")).toBe("há 3 horas");
+    expect(tempoRelativo("2026-10-16T12:00:00Z", agora, "pt-BR")).toBe("anteontem");
   });
 });

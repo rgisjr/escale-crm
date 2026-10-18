@@ -1,10 +1,11 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { CampoDeTexto } from "@/components/escale/origens/JanelaDaCasca";
 import { AjudaDaCasca } from "@/components/escale/ui/AjudaDaCasca";
 import { ConfirmacaoDaCasca } from "@/components/escale/ui/ConfirmacaoDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { useTeamMembers } from "@/hooks/team/useTeamMembers";
 import type { Role } from "@/lib/auth/types";
@@ -12,11 +13,14 @@ import { temAcessoAOrigem } from "@/lib/escale/acesso/regras";
 import {
   DISTRIBUICAO_MAX,
   dividirIgual,
+  tempoRelativo,
   type LinhaDaDistribuicao,
 } from "@/lib/escale/distribuicao/regras";
 import { Clock, Shuffle, Trash2 } from "@/lib/ui/icons-da-casca";
 
 import { CabecaDaSecao } from "./CabecaDaSecao";
+import { HistoricoDeAlteracoes } from "./HistoricoDeAlteracoes";
+import { HistoricoDeDistribuicoes } from "./HistoricoDeDistribuicoes";
 import type { PropsDaSecao } from "./JanelaDaOrigem";
 import { membrosAtivosDaEquipe } from "./ListaDePessoas";
 
@@ -40,6 +44,12 @@ export function iniciaisDoNome(nome: string): string {
  */
 export function SecaoDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
   const t = useT();
+  const tag = useTagDeIdioma();
+  const [agora] = useState(() => Date.now());
+  const [relogio, setRelogio] = useState(false);
+  const [contadorDe, setContadorDe] = useState<string | null>(null);
+  const quando = config.distribuicaoAtualizada;
+  const nomeDaOrigem = config.pipeline.name;
   const equipe = useTeamMembers();
   const membros = useMemo(
     () => membrosAtivosDaEquipe(equipe.data?.data, t("Sem nome")),
@@ -49,7 +59,7 @@ export function SecaoDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
     () => new Map((equipe.data?.data ?? []).map((m) => [m.user_id.toLowerCase(), m.role])),
     [equipe.data],
   );
-  const contadorDe = useMemo(
+  const contadores = useMemo(
     () => new Map(config.distribuicao.map((p) => [p.userId, p.contador])),
     [config.distribuicao],
   );
@@ -81,6 +91,18 @@ export function SecaoDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
         descricao={t(
           "Defina os usuários e percentuais. Negócios criados por Integrações, Apps e Checkouts são distribuídos automaticamente entre eles.",
         )}
+        acao={
+          <button
+            type="button"
+            onClick={() => setRelogio(true)}
+            aria-label={t("Histórico de alterações")}
+            title={quando ? undefined : t("Histórico de alterações")}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[6px] border border-casca-borda px-2.5 text-[12px] text-casca-suave hover:bg-casca-raia"
+          >
+            <Clock size={13} aria-hidden />
+            {quando ? `${t("Atualizado")} ${tempoRelativo(quando.em, agora, tag)}` : null}
+          </button>
+        }
       />
 
       <div role="table" aria-label={t("Distribuição de dono")}>
@@ -152,10 +174,17 @@ export function SecaoDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
                 />
               </div>
               <div role="cell" className="flex justify-center">
-                <span className="inline-flex items-center gap-1 rounded-full bg-casca-marca-suave px-3.5 py-1 text-[13px] font-semibold text-casca-marca">
+                <button
+                  type="button"
+                  aria-label={t("Ver distribuições de {nome}")
+                    .split("{nome}")
+                    .join(nome.split(" ")[0] ?? nome)}
+                  onClick={() => setContadorDe(l.userId)}
+                  className="inline-flex items-center gap-1 rounded-full bg-casca-marca-suave px-3.5 py-1 text-[13px] font-semibold text-casca-marca hover:brightness-95"
+                >
                   <Clock size={13} aria-hidden />
-                  {contadorDe.get(l.userId) ?? 0}
-                </span>
+                  {contadores.get(l.userId) ?? 0}
+                </button>
               </div>
               <div role="cell" className="flex justify-center">
                 <ConfirmacaoDaCasca
@@ -201,6 +230,24 @@ export function SecaoDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
             aria-label={t("Adicionar usuário")}
           />
         </div>
+      ) : null}
+
+      <HistoricoDeAlteracoes
+        aberta={relogio}
+        aoFechar={() => setRelogio(false)}
+        pipelineId={config.pipeline.id}
+        origem={nomeDaOrigem}
+      />
+      {/* Montada só aberta: cada abertura começa com os filtros limpos e a pessoa do contador clicado. */}
+      {contadorDe !== null ? (
+        <HistoricoDeDistribuicoes
+          aberta
+          aoFechar={() => setContadorDe(null)}
+          pipelineId={config.pipeline.id}
+          origem={nomeDaOrigem}
+          usuarioInicial={contadorDe}
+          naDistribuicao={config.distribuicao.map((p) => p.userId)}
+        />
       ) : null}
     </div>
   );

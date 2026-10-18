@@ -172,3 +172,29 @@ export function versoesDaDistribuicao(
     return [...versoes.slice(0, -1), { ...ultima, itens: [...ultima.itens, a] }];
   }, []);
 }
+
+const doisDigitos = (n: number) => String(n).padStart(2, "0");
+
+/** "18/10/2026" (dia/mês/ano, hora local). */
+export function dataBr(iso: string): string {
+  const d = new Date(iso);
+  return `${doisDigitos(d.getDate())}/${doisDigitos(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/** "09:05" (24 h, hora local). */
+export function horaBr(iso: string): string {
+  const d = new Date(iso);
+  return `${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}`;
+}
+
+/** "há 5 minutos" / "hace 5 minutos": o "Atualizado há …" da Clint, no idioma da tela. */
+export function tempoRelativo(iso: string, agoraMs: number, tagDeIdioma: string): string {
+  const rtf = new Intl.RelativeTimeFormat(tagDeIdioma, { numeric: "auto" });
+  const segundos = Math.round((Date.parse(iso) - agoraMs) / 1000);
+  const abs = Math.abs(segundos);
+  if (abs < 60) return rtf.format(segundos, "second");
+  if (abs < 3600) return rtf.format(Math.round(segundos / 60), "minute");
+  if (abs < 86_400) return rtf.format(Math.round(segundos / 3600), "hour");
+  if (abs < 30 * 86_400) return rtf.format(Math.round(segundos / 86_400), "day");
+  return rtf.format(Math.round(segundos / (30 * 86_400)), "month");
+}
