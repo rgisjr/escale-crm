@@ -197,10 +197,18 @@ export function avisoDoNegocio({
   // O `old` do tempo real traz só o `id` (identidade de réplica padrão), então a
   // comparação com o status antigo acima nunca barra nada: qualquer UPDATE de um
   // negócio que já estava ganho/perdido (título, dono, valor...) chega com o
-  // status final. O fechamento recente separa a virada de um UPDATE qualquer.
+  // status final. O fechamento recente separa a virada de um UPDATE qualquer. A régua é o
+  // `updated_at` da própria linha (as duas datas são do servidor e saem juntas na virada;
+  // uma edição posterior só adianta o `updated_at`): o relógio do navegador, que pode estar
+  // adiantado ou atrasado, só entra quando a linha não traz o `updated_at`.
   if (typeof novo.closed_at === "string") {
     const fechadoEm = Date.parse(novo.closed_at);
-    if (Number.isFinite(fechadoEm) && agora - fechadoEm > JANELA_DO_FECHAMENTO_MS) return null;
+    const atualizadoEm =
+      typeof novo.updated_at === "string" ? Date.parse(novo.updated_at) : Number.NaN;
+    const referencia = Number.isFinite(atualizadoEm) ? atualizadoEm : agora;
+    if (Number.isFinite(fechadoEm) && referencia - fechadoEm > JANELA_DO_FECHAMENTO_MS) {
+      return null;
+    }
   }
   if (
     typeof novo.owner_user_id === "string" &&
@@ -227,7 +235,7 @@ export function avisoDoNegocio({
 }
 
 /**
- * `avisoDoNegocio` + a memória da sessão: cada negócio+status avisa uma vez só
+ * `avisoDoNegocio` + a memória da sessão: cada negócio+status+fechamento avisa uma vez só
  * (`jaAvisados` vive num ref do hook). Marca só quando há aviso para entregar.
  */
 export function avisoDoNegocioUmaVez(
@@ -236,7 +244,11 @@ export function avisoDoNegocioUmaVez(
 ): EntregarAvisoInput | null {
   const aviso = avisoDoNegocio(entrada);
   if (!aviso) return null;
-  const chave = `${String(entrada.novo.id)}:${entrada.tipo === "INSERT" ? "novo" : String(entrada.novo.status)}`;
+  // O `closed_at` entra na chave: reabrir e ganhar de novo é outro fechamento e avisa outra vez.
+  const chave =
+    entrada.tipo === "INSERT"
+      ? `${String(entrada.novo.id)}:novo`
+      : `${String(entrada.novo.id)}:${String(entrada.novo.status)}:${String(entrada.novo.closed_at ?? "")}`;
   if (jaAvisados.has(chave)) return null;
   jaAvisados.add(chave);
   return aviso;

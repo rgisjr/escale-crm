@@ -206,6 +206,28 @@ describe("ganho/perda no tempo real: o `old` traz só o id", () => {
     });
   });
 
+  it("a janela usa o updated_at da linha (do servidor), não o relógio do navegador", () => {
+    // Navegador uma hora adiantado: pelo relógio dele o fechamento recente pareceria antigo.
+    const adiantado = { agora: AGORA + 3_600_000 };
+    const recente = { updated_at: "2026-10-18T11:59:50Z" };
+    expect(avisoDoNegocio({ ...ganho(recente), ...adiantado })).toMatchObject({
+      category: "lead_won",
+    });
+    // Edição posterior (título, dono...) adianta o updated_at: já não é a virada.
+    expect(avisoDoNegocio(ganho({ updated_at: "2026-10-18T12:30:00Z" }))).toBeNull();
+    // Sem updated_at na linha, vale o relógio do navegador.
+    expect(avisoDoNegocio({ ...ganho(), ...adiantado })).toBeNull();
+  });
+
+  it("reabrir e ganhar de novo (outro closed_at) avisa outra vez; o mesmo fechamento não", () => {
+    const jaAvisados = new Set<string>();
+    const primeiro = { closed_at: "2026-10-18T11:59:50Z", updated_at: "2026-10-18T11:59:50Z" };
+    const segundo = { closed_at: "2026-10-18T11:59:55Z", updated_at: "2026-10-18T11:59:55Z" };
+    expect(avisoDoNegocioUmaVez(ganho(primeiro), jaAvisados)).not.toBeNull();
+    expect(avisoDoNegocioUmaVez(ganho(primeiro), jaAvisados)).toBeNull();
+    expect(avisoDoNegocioUmaVez(ganho(segundo), jaAvisados)).not.toBeNull();
+  });
+
   it("com antigo = { id } e o mesmo ganho chegando duas vezes, avisa uma só vez", () => {
     const jaAvisados = new Set<string>();
     expect(avisoDoNegocioUmaVez(ganho(), jaAvisados)).toMatchObject({ category: "lead_won" });
