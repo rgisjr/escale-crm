@@ -35,7 +35,8 @@ export function useAtividadesDoNegocio(lead: Lead) {
   const chave = chaveDasAtividades(lead.id);
 
   const consulta = useQuery({
-    queryKey: chave,
+    // A etapa entra na chave: o gatilho do banco cria as tarefas ao mudar de etapa, por qualquer caminho.
+    queryKey: [...chave, lead.stage_id],
     queryFn: async () =>
       (await apiClient.get<{ data: AtividadesDoNegocio }>(`/api/v1/leads/${lead.id}/atividades`))
         .data,
@@ -71,7 +72,10 @@ export function useAtividadesDoNegocio(lead: Lead) {
     await editar.mutateAsync({ id: a.id, entrada: { status: proximo } });
     if (proximo !== "done") return "reaberta";
     if (!lead.owner_user_id && !lead.owner_agent_id && podeAssumir) {
-      await editarLead.mutateAsync({ leadId: lead.id, patch: { owner_user_id: user.id } });
+      // A tarefa já está concluída: se o dono falhar, o `useEditLead` já avisou e a conclusão vale.
+      await editarLead
+        .mutateAsync({ leadId: lead.id, patch: { owner_user_id: user.id } })
+        .catch(() => undefined);
     }
     return "concluida";
   }

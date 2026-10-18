@@ -25,6 +25,7 @@ import { juntarAtividades, type ExtraDaAtividade } from "@/lib/escale/negocio/at
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { TIPOS_DE_ATIVIDADE, type ModeloDaEtapa } from "@/lib/escale/playbook/regras";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { logger } from "@/lib/logger";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createClient } from "@/lib/supabase/server";
 import { registraAtividadeDaTarefa } from "@/lib/tarefas/atividade";
@@ -208,7 +209,13 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     visibilidade: "padrao",
   });
   if (gravado.error) {
-    await supabase.from("crm_tasks").delete().eq("organization_id", orgId).eq("id", tarefa.id);
+    const desfeito = await supabase
+      .from("crm_tasks")
+      .delete()
+      .eq("organization_id", orgId)
+      .eq("id", tarefa.id);
+    if (desfeito.error)
+      logger.error("atividades.desfazer", { requestId, error: desfeito.error.message });
     return falhaInesperada(
       gravado.error,
       { rota: `POST ${ROTA}`, operacao: "gravar" },
