@@ -20,6 +20,24 @@ import {
   useSalvarConfiguracoes,
 } from "@/hooks/escale/useConfiguracoesDaOrigem";
 import { useAtualizarOrigem } from "@/hooks/escale/useOrigens";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { usePlaybookDaOrigem, useSalvarPlaybook } from "@/hooks/escale/usePlaybookDaOrigem";
+import type { AbaDaOrigem } from "@/lib/escale/configuracoes/abrir";
+import {
+  doServidor,
+  paraOServidor,
+  playbookMudou,
+  type AtividadeDoPlaybook,
+} from "@/lib/escale/playbook/regras";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/montar";
 import {
@@ -70,7 +88,7 @@ export interface PropsDaSecao {
 
 /**
  * A JANELA DE CONFIGURAÇÕES DA ORIGEM (Fase 1F, D1; Clint 01-013 superior).
- * Guarda o rascunho das subabas e tem UM "Salvar": nome, grupo e padrão vão
+ * Guarda o rascunho das subabas (um "Salvar") e o do playbook (o "Salvar na origem", Fase 1I): nome, grupo e padrão vão
  * pelas rotas da 1B; o resto, numa gravação só na rota de configurações. Salvou,
  * fecha. Sem X: fecha com Esc ou Cancelar.
  */
@@ -79,12 +97,13 @@ export function JanelaDaOrigem({
   origens,
   onFechar,
   onOrigens,
-}: PropsDaJanela & { id: string }) {
+  abaInicial = "geral",
+}: PropsDaJanela & { id: string; abaInicial?: AbaDaOrigem }) {
   const t = useT();
   const consulta = useConfiguracoesDaOrigem(id);
   const salvar = useSalvarConfiguracoes(id);
   const atualizar = useAtualizarOrigem();
-  const [aba, setAba] = useState<"geral" | "etapas">("geral");
+  const [aba, setAba] = useState<AbaDaOrigem>(abaInicial);
   const [subaba, setSubaba] = useState<SubabaDaOrigem>("gerais");
   // O rascunho é o que a pessoa mexeu; enquanto não mexe, vale a origem como veio do servidor.
   const [editado, setEditado] = useState<RascunhoDaOrigem | null>(null);
@@ -93,6 +112,21 @@ export function JanelaDaOrigem({
 
   const inicial = useMemo(() => (config ? rascunhoInicial(config) : null), [config]);
   const rascunho = editado ?? inicial;
+  // O playbook (Fase 1I) tem rascunho próprio: "Salvar na origem" é separado do "Salvar" da aba Geral.
+  const playbook = usePlaybookDaOrigem(id);
+  const salvarPlaybook = useSalvarPlaybook(id);
+  const playbookSalvo = useMemo(() => playbook.data?.map(doServidor) ?? null, [playbook.data]);
+  const [playbookEditado, setPlaybookEditado] = useState<readonly AtividadeDoPlaybook[] | null>(
+    null,
+  );
+  const [erroDoPlaybook, setErroDoPlaybook] = useState<string | null>(null);
+  const [confirmarDesfazer, setConfirmarDesfazer] = useState(false);
+  const rascunhoDoPlaybook = playbookEditado ?? playbookSalvo;
+  const playbookMexido =
+    !!playbookSalvo && !!playbookEditado && playbookMudou(playbookEditado, playbookSalvo);
+  const mudarPlaybook = (
+    f: (l: readonly AtividadeDoPlaybook[]) => readonly AtividadeDoPlaybook[],
+  ) => setPlaybookEditado((e) => f(e ?? playbookSalvo ?? []));
 
   const nome = origens.funis.find((f) => f.id === id)?.name ?? config?.pipeline.name ?? "";
   const mudar = (f: (r: RascunhoDaOrigem) => RascunhoDaOrigem) =>
@@ -163,6 +197,19 @@ export function JanelaDaOrigem({
     }
   }
 
+  async function aoSalvarPlaybook() {
+    if (!rascunhoDoPlaybook) return;
+    setErroDoPlaybook(null);
+    try {
+      await salvarPlaybook.mutateAsync(rascunhoDoPlaybook.map(paraOServidor));
+      setPlaybookEditado(null);
+      toast.success(t("Origem alterada com sucesso!"));
+      onFechar();
+    } catch (e) {
+      setErroDoPlaybook(`${t("Falha na edição da origem!")} ${textoDoErro(e, t)}`);
+    }
+  }
+
   function conteudo(props: PropsDaSecao) {
     if (atual.emBreve) return <EmBreve titulo={atual.rotulo} texto={atual.emBreve} />;
     switch (atual.id) {
@@ -186,8 +233,8 @@ export function JanelaDaOrigem({
         <DialogPrimitive.Content
           data-escale-janela-da-origem=""
           // Com alteração por salvar, clicar na cortina não fecha: o rascunho não se perde. Esc e Cancelar fecham.
-          onPointerDownOutside={(e) => podeSalvar && e.preventDefault()}
-          onInteractOutside={(e) => podeSalvar && e.preventDefault()}
+          onPointerDownOutside={(e) => (podeSalvar || playbookMexido) && e.preventDefault()}
+          onInteractOutside={(e) => (podeSalvar || playbookMexido) && e.preventDefault()}
           // A animação do `ds-modal` termina deslocada -50% na horizontal (feita para quem centraliza com
           // `left: 50%`). Esta janela ocupa a largura toda, então zera o deslocamento: senão meia janela some à esquerda.
           className="ds-modal fixed inset-x-2 top-1/2 z-50 flex max-h-[calc(100dvh-100px)] -translate-y-1/2 flex-col overflow-hidden rounded-[12px] bg-surface text-casca-texto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] [--ds-modal-x:0px]"
@@ -224,7 +271,29 @@ export function JanelaDaOrigem({
                   </BotaoDaJanela>
                 </div>
               ) : aba === "etapas" ? (
-                <AbaDeEtapas config={config} />
+                playbook.isPending ? (
+                  <p className="text-[13px] text-casca-suave">{t("Carregando…")}</p>
+                ) : playbook.isError || !rascunhoDoPlaybook ? (
+                  <div
+                    role="alert"
+                    className="flex items-center gap-3 text-[13px] text-casca-alerta"
+                  >
+                    {t("Não consegui abrir as atividades desta origem.")}
+                    <BotaoDaJanela variante="cancelar" onClick={() => void playbook.refetch()}>
+                      {t("Tentar de novo")}
+                    </BotaoDaJanela>
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col">
+                    <Alerta texto={erroDoPlaybook} />
+                    <AbaDeEtapas
+                      config={config}
+                      atividades={rascunhoDoPlaybook}
+                      temSalvas={(playbookSalvo?.length ?? 0) > 0}
+                      mudar={mudarPlaybook}
+                    />
+                  </div>
+                )
               ) : (
                 <div className="flex gap-12">
                   <nav
@@ -261,15 +330,22 @@ export function JanelaDaOrigem({
             </div>
 
             <div className="flex justify-end gap-2 px-8 pt-3 pb-[22px]">
-              <BotaoDaJanela variante="cancelar" onClick={onFechar}>
-                {t("Cancelar")}
-              </BotaoDaJanela>
+              {aba === "etapas" && playbookMexido ? (
+                <BotaoDaJanela variante="cancelar" onClick={() => setConfirmarDesfazer(true)}>
+                  {t("Desfazer")}
+                </BotaoDaJanela>
+              ) : (
+                <BotaoDaJanela variante="cancelar" onClick={onFechar}>
+                  {t("Cancelar")}
+                </BotaoDaJanela>
+              )}
               {aba === "etapas" ? (
                 <span className="inline-flex">
                   <BotaoDaJanela
                     variante="salvar"
-                    disabled
-                    title={t("Em breve")}
+                    disabled={!playbookMexido || salvarPlaybook.isPending}
+                    title={playbookMexido ? undefined : t("Nenhuma alteração para salvar")}
+                    onClick={() => void aoSalvarPlaybook()}
                     className="rounded-r-none disabled:pointer-events-auto disabled:cursor-not-allowed"
                   >
                     {t("Salvar na origem")}
@@ -294,6 +370,29 @@ export function JanelaDaOrigem({
                 </BotaoDaJanela>
               )}
             </div>
+            <AlertDialog open={confirmarDesfazer} onOpenChange={setConfirmarDesfazer}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("Desfazer")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t(
+                      "Ao confirmar esta ação, todas as alterações realizadas serão desfeitas. Tem certeza de que deseja continuar?",
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("Cancelar")}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setPlaybookEditado(null);
+                      setErroDoPlaybook(null);
+                    }}
+                  >
+                    {t("Confirmar")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TooltipProvider>
         </DialogPrimitive.Content>
       </DialogPortal>
