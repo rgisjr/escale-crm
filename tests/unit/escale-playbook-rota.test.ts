@@ -33,10 +33,11 @@ function banco(opts: {
   rpcErro?: { code: string; message: string };
 }) {
   const rpc = vi.fn(async () => ({ data: null, error: opts.rpcErro ?? null }));
+  const filtros: unknown[][] = [];
   const from = vi.fn(() => {
     const api = {
       select: () => api,
-      eq: () => api,
+      eq: (...argumentos: unknown[]) => (filtros.push(argumentos), api),
       order: () => api,
       maybeSingle: async () => ({ data: opts.origem === false ? null : { id: PIPE }, error: null }),
       then: (ok: (v: { data: unknown[]; error: null }) => unknown) =>
@@ -44,7 +45,7 @@ function banco(opts: {
     };
     return api;
   });
-  return { from, rpc };
+  return { from, rpc, filtros };
 }
 
 const ctx = (id = PIPE) => ({ params: Promise.resolve({ id }) });
@@ -68,6 +69,21 @@ describe("GET /api/v1/pipelines/[id]/playbook", () => {
     const res = await GET(new NextRequest("http://x"), ctx());
     expect(res.status).toBe(200);
     expect((await res.json()).data.atividades).toEqual([ATV]);
+  });
+  it("lista só as etapas abertas e não devolve o aninhado da etapa (atividade de etapa arquivada fica no banco, fora da tela)", async () => {
+    const db = banco({
+      atividades: [{ ...ATV, crm_stages: { is_archived: false, is_won: false, is_lost: false } }],
+    });
+    vi.mocked(createClient).mockResolvedValue(db as never);
+    const res = await GET(new NextRequest("http://x"), ctx());
+    expect((await res.json()).data.atividades).toEqual([ATV]);
+    expect(db.filtros).toEqual(
+      expect.arrayContaining([
+        ["crm_stages.is_archived", false],
+        ["crm_stages.is_won", false],
+        ["crm_stages.is_lost", false],
+      ]),
+    );
   });
   it("origem fora da organização: 404; id inválido: 404", async () => {
     vi.mocked(createClient).mockResolvedValue(banco({ origem: false }) as never);

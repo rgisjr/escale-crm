@@ -191,7 +191,9 @@ export function JanelaDaOrigem({
       }
       if (pedido.patch) await salvar.mutateAsync(pedido.patch);
       toast.success(t("Origem alterada com sucesso!"));
-      onFechar();
+      // O rascunho do playbook é independente: se há mudança dele por salvar, a janela fica aberta.
+      setEditado(null);
+      if (!playbookMexido) onFechar();
     } catch (e) {
       setErro(`${t("Falha na edição da origem!")} ${textoDoErro(e, t)}`);
     }
@@ -204,7 +206,8 @@ export function JanelaDaOrigem({
       await salvarPlaybook.mutateAsync(rascunhoDoPlaybook.map(paraOServidor));
       setPlaybookEditado(null);
       toast.success(t("Origem alterada com sucesso!"));
-      onFechar();
+      // E o das subabas: se há mudança dele por salvar, a janela fica aberta.
+      if (!podeSalvar) onFechar();
     } catch (e) {
       setErroDoPlaybook(`${t("Falha na edição da origem!")} ${textoDoErro(e, t)}`);
     }

@@ -46,13 +46,21 @@ async function lerPlaybook(supabase: Banco, orgId: string, pipelineId: string): 
   if (!origem.data) return { ok: false, causa: null };
   const lista = await supabase
     .from("crm_atividades_da_etapa")
-    .select(COLUNAS)
+    .select(`${COLUNAS}, crm_stages!inner(is_archived, is_won, is_lost)`)
     .eq("organization_id", orgId)
     .eq("pipeline_id", pipelineId)
+    // Só as etapas abertas: a atividade de etapa arquivada fica guardada no banco, mas a tela não a mostra
+    // e a função de salvar recusa etapa fechada — devolvê-la travaria todo "Salvar na origem".
+    .eq("crm_stages.is_archived", false)
+    .eq("crm_stages.is_won", false)
+    .eq("crm_stages.is_lost", false)
     .order("prazo_minutos")
     .order("ordem");
   if (lista.error) return { ok: false, causa: lista.error };
-  return { ok: true, atividades: (lista.data ?? []) as ModeloDaEtapa[] };
+  const atividades = (lista.data ?? []).map(
+    ({ crm_stages: _etapa, ...modelo }) => modelo as ModeloDaEtapa,
+  );
+  return { ok: true, atividades };
 }
 
 export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {

@@ -16,6 +16,7 @@ import {
   type TipoDeAtividade,
   type VisibilidadeDaAtividade,
 } from "@/lib/escale/playbook/regras";
+import { randomId } from "@/lib/random-id";
 import { CheckCircle2, Clipboard, Clock, EyeOff, LayoutPanelLeft } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,7 @@ export function JanelaNovaAtividade({
       return;
     }
     aoContinuar({
-      id: crypto.randomUUID(),
+      id: randomId(),
       etapaId: etapa.id,
       titulo: titulo.trim(),
       tipo,
