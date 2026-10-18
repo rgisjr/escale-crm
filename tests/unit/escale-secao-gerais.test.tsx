@@ -82,17 +82,32 @@ describe("Configurações Gerais", () => {
     expect(screen.getByText("Configure aqui a sua origem de dados.")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Grupo" })).toHaveTextContent("INSS");
     expect(screen.getByRole("button", { name: "Novo grupo" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Visualização de negócios" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-    expect(screen.getByRole("combobox", { name: "Visualização de negócios" })).toHaveTextContent(
-      "Usuários visualizam seus negócios e sem dono",
-    );
+    const seletor = screen.getByRole("combobox", { name: "Visualização de negócios" });
+    expect(seletor).not.toHaveAttribute("aria-disabled", "true");
+    expect(seletor).toHaveTextContent("Usuários visualizam seus negócios e sem dono");
     expect(screen.getByRole("combobox", { name: "Moeda da origem" })).toHaveTextContent(
       "Real (BRL)",
     );
     expect(screen.getByRole("button", { name: "Adicionar tag" })).toBeInTheDocument();
+  });
+
+  it("visualização de negócios: as três opções da Clint, na ordem do print 03; escolher liga o Salvar", async () => {
+    const { user } = abrir();
+    await user.click(await screen.findByRole("combobox", { name: "Visualização de negócios" }));
+    expect(screen.getByRole("option", { name: "Usuários visualizam todos os negócios" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Usuários visualizam apenas seus negócios" })).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Usuários visualizam todos os negócios" }));
+    expect(screen.getByRole("combobox", { name: "Visualização de negócios" })).toHaveTextContent(
+      "Usuários visualizam todos os negócios",
+    );
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    await vi.waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        "/api/v1/pipelines/f-1/configuracoes",
+        expect.objectContaining({ gerais: expect.objectContaining({ visualizacao: "all" }) }),
+      ),
+    );
   });
 
   it("renomear e trocar o grupo vão pelas rotas da 1B; nada na rota de configurações; sem a caixinha de origem padrão", async () => {
@@ -135,7 +150,7 @@ describe("Configurações Gerais", () => {
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     await vi.waitFor(() =>
       expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipelines/f-1/configuracoes", {
-        gerais: { moeda: "USD", tags_padrao: ["lead instagram"] },
+        gerais: { moeda: "USD", tags_padrao: ["lead instagram"], visualizacao: "own_and_unassigned" },
       }),
     );
   });
