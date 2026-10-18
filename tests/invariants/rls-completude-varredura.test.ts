@@ -128,6 +128,20 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "nome único sem caixa, CHECK da lista e FK da pessoa.",
   },
   {
+    tabela: "crm_acoes_em_massa",
+    razao:
+      "tests/invariants/escale-acoes-em-massa.test.ts — fork Escale (migration 9103): só gerente+ cria, cada um vê as suas " +
+      "(zero para os outros; o admin vê só as exportações que esperam ou tiveram decisão), quem pediu só fecha o preparo e " +
+      "não põe exportação na fila sem ser o único admin, o admin decide a exportação de outra pessoa em até 7 dias e a trava " +
+      "não deixa a decisão mudar mais nada; CHECKs e FK da pessoa.",
+  },
+  {
+    tabela: "crm_acoes_em_massa_itens",
+    razao:
+      "tests/invariants/escale-acoes-em-massa.test.ts — fork Escale (migration 9103): itens só da ação de quem pediu, " +
+      "só enquanto ela está em preparo; zero para os outros.",
+  },
+  {
     tabela: "crm_campos_do_negocio",
     razao:
       "tests/invariants/escale-campos-do-crm.test.ts — fork Escale (migration 9006): todo membro lê, só administrador escreve " +

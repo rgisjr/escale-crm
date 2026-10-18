@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -53,13 +53,26 @@ const props = {
 };
 
 describe("TabelaDeContatos (03-001)", () => {
-  it("cabeçalho NOME, CONTATO, TAGS, NEGÓCIOS e a caixinha desligada 'Em breve'", () => {
+  it("cabeçalho NOME, CONTATO, TAGS, NEGÓCIOS e a caixinha desligada sem permissão", () => {
     envolver(<TabelaDeContatos {...props} linhas={[linha({})]} />);
     for (const r of ["Nome", "Contato", "Tags", "Negócios"]) {
       expect(screen.getByRole("columnheader", { name: r })).toBeInTheDocument();
     }
     expect(screen.getAllByRole("checkbox")[0]).toBeDisabled();
-    expect(screen.getAllByTitle("Em breve").length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle("Disponível para gerente ou acima.").length).toBeGreaterThan(0);
+  });
+
+  it("com a seleção ligada, a caixinha da linha marca pelo índice da página", () => {
+    const aoAlternar = vi.fn();
+    envolver(
+      <TabelaDeContatos
+        {...props}
+        linhas={[linha({})]}
+        selecao={{ podeSelecionar: true, marcada: () => false, aoAlternar }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar contato" }));
+    expect(aoAlternar).toHaveBeenCalledWith("c1", 0, true);
   });
 
   it("linha: nome leva ao contato, telefone no formato BR, e-mail, tag e 'Ver 1 negócio' leva ao negócio", () => {

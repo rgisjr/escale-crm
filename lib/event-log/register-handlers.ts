@@ -13,6 +13,8 @@ import { aiHandoffFromSentimentHandler } from "@/workers/ai-handoff-from-sentime
 import { ragIndexerHandler } from "@/workers/rag-indexer.handler";
 import { lgpdExportHandler } from "@/workers/lgpd-export-worker.handler";
 import { lgpdRedactHandler } from "@/workers/lgpd-redact-worker.handler";
+// FORK ESCALE · Fase 2B: as ações em massa da lista de contatos.
+import { acaoEmMassaHandler } from "@/lib/escale/massa/handler";
 import { automationRulesHandler } from "@/lib/automation/engine.handler";
 import { followupReactivityHandler } from "@/lib/followup/reactivity.handler";
 import { campanhaRespostaHandler } from "@/lib/campanhas/resposta.handler";
@@ -56,6 +58,8 @@ export function ensureHandlersRegistered(): void {
   registerHandler(ragIndexerHandler);
   registerHandler(lgpdExportHandler);
   registerHandler(lgpdRedactHandler);
+  // FORK ESCALE · Fase 2B: escrita interna pedida pela própria organização (lotes com orçamento).
+  registerHandler(acaoEmMassaHandler);
   registerHandler(automationRulesHandler);
   registerHandler(followupGatilhoEtapaHandler);
   // Escrita curta no banco (um item na Central), vizinha do gatilho de etapa
