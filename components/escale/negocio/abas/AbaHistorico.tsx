@@ -1,39 +1,68 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
+import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
+import { useHistoricoDoNegocio } from "@/hooks/escale/useHistoricoDoNegocio";
+import { useNotasDoNegocio } from "@/hooks/escale/useNotasDoNegocio";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
-import { useLeadTimeline } from "@/hooks/leads/useLeadTimeline";
 import { useT } from "@/hooks/i18n/useT";
-import { haQuantoTempo, secoesDoHistorico } from "@/lib/escale/negocio/regras";
-import { activityLabel, actorName } from "@/lib/leads/activity-vocabulary";
-import type { TimelineItemView } from "@/lib/types/contacts";
+import { ROLE_RANK } from "@/lib/auth/types";
+import {
+  GRUPOS_DO_HISTORICO,
+  casaComABusca,
+  type ChaveDoGrupo,
+} from "@/lib/escale/negocio/historico";
+import { secoesDoHistorico } from "@/lib/escale/negocio/regras";
+import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
-import { ChevronDown, Clock, ListChecks, Search } from "@/lib/ui/icons-da-casca";
+import { Search } from "@/lib/ui/icons-da-casca";
+
+import { CartaoDoHistorico } from "./CartaoDoHistorico";
 
 /**
- * A ABA HISTÓRICO DA FICHA (fork Escale, Fase 1G, C2; prints 07 e 12).
- *
- * A linha do tempo do original (cerca de 60 tipos, autor e tempo real), em
- * cartões da Clint, por semana. Busca e filtro de tipo são da 1H (C18).
+ * A ABA HISTÓRICO DA FICHA (fork Escale, Fases 1G e 1H; C18, N12; prints 07 e 12).
+ * Busca na tela, filtro por grupo (os 16 da Clint; o `type` vai na rota),
+ * 25 por página com "Carregar mais", seções Hoje/Ontem/Esta semana/data, e as
+ * notas com "Ver nota", "Editar nota" e a lixeira.
  */
-export function AbaHistorico({ lead }: { lead: Lead }) {
+export function AbaHistorico({ lead, stages }: { lead: Lead; stages: readonly Stage[] }) {
   const t = useT();
   const idioma = useTagDeIdioma();
-  const linha = useLeadTimeline(lead.id, lead.contact_id);
-  const secoes = useMemo(
-    () => secoesDoHistorico(linha.itens, new Date(), idioma),
-    [linha.itens, idioma],
+  const user = useUser();
+  const org = useActiveOrg();
+  const gerente = !!org && ROLE_RANK[org.role] >= ROLE_RANK.manager;
+  const [busca, setBusca] = useState("");
+  const [grupo, setGrupo] = useState<ChaveDoGrupo>("todos");
+  const historico = useHistoricoDoNegocio(lead.id, grupo);
+  const notasDoNegocio = useNotasDoNegocio(lead.id).data;
+  const nomesDasEtapas = useMemo(
+    () => Object.fromEntries(stages.map((s) => [s.id, s.name])),
+    [stages],
   );
+  const notaPorId = useMemo(
+    () => new Map((notasDoNegocio ?? []).map((n) => [n.id, n])),
+    [notasDoNegocio],
+  );
+
+  const visiveis = useMemo(
+    () => historico.itens.filter((i) => casaComABusca(i, busca, t, nomesDasEtapas)),
+    [historico.itens, busca, t, nomesDasEtapas],
+  );
+  const secoes = useMemo(() => secoesDoHistorico(visiveis, new Date(), idioma), [visiveis, idioma]);
 
   return (
     <div className="px-4 py-6">
       <div className="flex items-center gap-3">
         <span className="relative">
           <input
-            disabled
-            title={t("Em breve")}
-            placeholder={t("Buscar no histórico")}
-            className="h-8 w-[148px] rounded-md bg-casca-busca pr-7 pl-2.5 text-[13px] text-casca-texto placeholder:text-casca-meta disabled:cursor-not-allowed"
+            type="search"
+            aria-label={t("Buscar no histórico...")}
+            placeholder={t("Buscar no histórico...")}
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="h-8 w-[148px] rounded-md bg-casca-busca pr-7 pl-2.5 text-[13px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
           />
           <Search
             size={14}
@@ -41,22 +70,23 @@ export function AbaHistorico({ lead }: { lead: Lead }) {
             className="absolute top-1/2 right-2.5 -translate-y-1/2 text-casca-suave"
           />
         </span>
-        <button
-          type="button"
-          disabled
-          title={t("Em breve")}
-          className="flex h-8 w-[218px] items-center justify-between rounded-md border border-casca-borda px-2.5 text-[13px] text-casca-texto disabled:pointer-events-auto disabled:cursor-not-allowed"
-        >
-          {t("Todos")}
-          <ChevronDown size={14} aria-hidden />
-        </button>
+        <div className="w-[218px]">
+          <SeletorDaCasca
+            valor={grupo}
+            opcoes={GRUPOS_DO_HISTORICO.map((g) => ({ valor: g.chave, rotulo: t(g.rotulo) }))}
+            aria-label={t("Selecione um grupo")}
+            buscaAPartirDe={99}
+            className="h-8"
+            aoMudar={(v) => setGrupo((v || "todos") as ChaveDoGrupo)}
+          />
+        </div>
       </div>
-      {linha.isLoading ? (
+      {historico.isLoading ? (
         <p className="mt-6 text-xs text-casca-suave">{t("Carregando…")}</p>
-      ) : linha.isError ? (
+      ) : historico.isError ? (
         <p className="mt-6 text-xs text-casca-suave">{t("Não consegui carregar o histórico.")}</p>
       ) : secoes.length === 0 ? (
-        <p className="mt-6 text-xs text-casca-suave">{t("Nenhum evento ainda.")}</p>
+        <p className="mt-6 text-xs text-casca-suave">{t("Os resultados não foram encontrados.")}</p>
       ) : (
         secoes.map((s) => (
           <section key={s.chave} className="mt-6">
@@ -66,42 +96,39 @@ export function AbaHistorico({ lead }: { lead: Lead }) {
               <span aria-hidden className="h-px flex-1 bg-casca-borda" />
             </h3>
             <ol className="mt-3 flex flex-col gap-2">
-              {s.itens.map((item) => (
-                <CartaoDoHistorico key={item.id} item={item} idioma={idioma} />
-              ))}
+              {s.itens.map((item) => {
+                const nota =
+                  item.type === "note"
+                    ? notaPorId.get(String(item.payload?.nota_id ?? ""))
+                    : undefined;
+                return (
+                  <CartaoDoHistorico
+                    key={item.id}
+                    item={item}
+                    nota={nota}
+                    notaRemovida={item.type === "note" && notasDoNegocio !== undefined && !nota}
+                    nomesDasEtapas={nomesDasEtapas}
+                    leadId={lead.id}
+                    podeEditarNota={!!nota && (gerente || nota.user_id === user.id)}
+                  />
+                );
+              })}
             </ol>
           </section>
         ))
       )}
+      {historico.temMais ? (
+        <div className="mt-6 flex justify-center">
+          <BotaoDaCasca
+            variante="texto"
+            tamanho="md"
+            onClick={historico.carregarMais}
+            disabled={historico.carregandoMais}
+          >
+            {t("Carregar mais")}
+          </BotaoDaCasca>
+        </div>
+      ) : null}
     </div>
-  );
-}
-
-function CartaoDoHistorico({ item, idioma }: { item: TimelineItemView; idioma: string }) {
-  const t = useT();
-  const quem = actorName(
-    item.actor_kind ?? null,
-    { agente: item.actor_agent_name ?? null, usuario: item.actor_user_name ?? null },
-    t,
-  );
-  return (
-    <li className="flex gap-3 rounded-lg bg-casca-raia p-3">
-      <span
-        aria-hidden
-        className="grid size-8 shrink-0 place-items-center rounded-md text-casca-suave"
-      >
-        <ListChecks size={16} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-casca-texto">{t(activityLabel(item.type))}</p>
-        {item.reason ? (
-          <p className="mt-0.5 text-[13px] text-casca-texto-2">{t(item.reason)}</p>
-        ) : null}
-        <p className="mt-1 flex items-center gap-1 text-[11px] text-casca-suave">
-          <Clock size={12} aria-hidden />
-          {haQuantoTempo(item.performed_at, new Date(), idioma)} {t("por")} {quem}
-        </p>
-      </div>
-    </li>
   );
 }

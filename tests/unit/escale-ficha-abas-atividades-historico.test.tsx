@@ -14,8 +14,6 @@ vi.mock("@/hooks/leads/useLeadTimeline", () => ({
 }));
 
 import { AbaAtividades } from "@/components/escale/negocio/abas/AbaAtividades";
-import { AbaHistorico } from "@/components/escale/negocio/abas/AbaHistorico";
-import { activityLabel } from "@/lib/leads/activity-vocabulary";
 import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 
@@ -105,36 +103,5 @@ describe("aba Atividades (C2, print 01)", () => {
     render(<AbaAtividades lead={LEAD} stages={ETAPAS} />);
     expect(screen.getByText("Nenhuma atividade neste negócio.")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Etapas da origem" })).toBeInTheDocument();
-  });
-});
-
-describe("aba Histórico (C2, print 07)", () => {
-  it("a linha do tempo do original em cartões, por semana, com 'há N dias por Nome'", () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date(2026, 9, 17, 12));
-    linha.itens = [
-      {
-        id: "h1",
-        type: "stage_changed",
-        reason: "Mudou para 2. Em atendimento",
-        performed_at: new Date(2026, 9, 14, 10).toISOString(),
-        actor_kind: "user",
-        actor_user_name: "Camilly Victória",
-      },
-    ];
-    render(<AbaHistorico lead={LEAD} />);
-    expect(screen.getByText("Esta semana")).toBeInTheDocument();
-    expect(screen.getByText("14 Out")).toBeInTheDocument();
-    expect(screen.getByText(activityLabel("stage_changed"))).toBeInTheDocument();
-    expect(screen.getByText("Mudou para 2. Em atendimento")).toBeInTheDocument();
-    expect(screen.getByText("há 3 dias por Camilly Victória")).toBeInTheDocument();
-  });
-
-  it("busca e filtro de tipo são da 1H: desligados, com 'Em breve'", () => {
-    render(<AbaHistorico lead={LEAD} />);
-    expect(screen.getByPlaceholderText("Buscar no histórico")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Todos" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Todos" })).toHaveAttribute("title", "Em breve");
-    expect(screen.getByText("Nenhum evento ainda.")).toBeInTheDocument();
   });
 });

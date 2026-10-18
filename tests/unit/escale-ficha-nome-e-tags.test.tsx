@@ -6,6 +6,11 @@ import type * as ModuloDoGravar from "@/hooks/escale/useGravarContato";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// FORK ESCALE · Fase 1H (C15): as ações da ficha montam o modal da nota (hooks das notas).
+vi.mock("@/hooks/escale/useNotasDoNegocio", () => ({
+  useCriarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useEditarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock("@/hooks/auth/AuthProvider", () => ({ useActiveOrg: () => ({ orgId: "org1" }) }));
 const contato = vi.hoisted(() => ({
   data: { data: { id: "c1", name: "Ana", tags: ["vip"], custom_fields: {} } },

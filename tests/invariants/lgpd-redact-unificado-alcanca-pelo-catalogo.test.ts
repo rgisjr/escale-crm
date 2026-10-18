@@ -293,6 +293,16 @@ const DECISOES: Record<string, Decisao> = {
     razao: "0494 (#1964): a LINHA e o estágio ficam (é o estado do negócio), mas next_action (texto) e qualification (jsonb) — texto livre que cita a pessoa — são zerados na virada de is_anonymized pelo gatilho fn_redigir_conversas_ao_anonimizar (a porta da 0391 que a app já usava em lib/lgpd/cascata.ts passo 7).",
   },
   // ── manter: a linha e o conteúdo ficam, por decisão ───────────────────────
+  // FORK ESCALE · Fase 1H (migration 9008). PENDÊNCIA CONHECIDA, decisão do plano (Q14, aprovada em 17/10/2026): as
+  // duas tabelas novas ficam FORA da cascata até a Fase 2 (Contatos), que traz a seção de LGPD delas.
+  crm_notas_do_negocio: {
+    decidida: "manter",
+    razao: "A nota do negócio (texto livre escrito pelo time sobre o contato). NÃO é redigida pela anonimização nesta fase: PENDÊNCIA da Fase 2 (Contatos), que a declara em `modulo_secoes_lgpd` (`texto` → '[redigido]'). Enquanto isso, a exclusão do contato apaga as notas (FK com on delete cascade) e a nota some quando o próprio autor ou um gerente a remove.",
+  },
+  crm_arquivos_do_contato: {
+    decidida: "manter",
+    razao: "Os arquivos que o time anexou ao contato (nome, tamanho e ponteiro para o objeto no bucket privado `arquivos-do-contato`). NÃO são alcançados pela anonimização nesta fase: PENDÊNCIA da Fase 2 (Contatos), que apaga a linha E o objeto do bucket (SQL não alcança o Storage). Enquanto isso, a exclusão do contato apaga as linhas (on delete cascade) e a exclusão pela tela remove linha e objeto.",
+  },
   before_send_traces: {
     decidida: "manter",
     razao: "Traço de decisão do gate de envio (vetoed_gate/vetoed_code) para auditoria de POR QUE a mensagem não saiu; é código de vocabulário, não o conteúdo enviado — o corpo mora em messages.",

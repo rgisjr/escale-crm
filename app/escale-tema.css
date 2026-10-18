@@ -272,6 +272,8 @@ body:has([data-escale-casca]) {
      red.fg do tema da Clint (green.700/red.700 do tema da Clint, index-CY2O8ZFZ.js). */
   --escale-status-ganho: #15803d;
   --escale-status-perdido: #b91c1c;
+  /* Fase 1H (C16): fundo do chip "Em aberto" da lista de sessões; provisório (print 05, ~#E6F7EC), medir com conta-gotas. */
+  --escale-status-ganho-suave: #e6f7ec;
 }
 
 [data-theme="dark"] body:has([data-escale-casca]) {
@@ -293,6 +295,7 @@ body:has([data-escale-casca]) {
   --escale-alternancia-ativa: #7d98ff;
   --escale-status-ganho: #86efac;
   --escale-status-perdido: #fca5a5;
+  --escale-status-ganho-suave: #14351f;
 }
 
 /* F17: dentro da janela da origem, os textos dos campos, seletores, listas e

@@ -202,4 +202,10 @@ describe("<CalendarioDePeriodo>", () => {
     expect(screen.getByRole("tab", { name: "Fecha de creación" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mes siguiente" })).toBeInTheDocument();
   });
+
+  it("semAbas: Arquivos e Conversas usam só os calendários e os atalhos", () => {
+    render(<CalendarioDePeriodo valor={{ tipo: "criacao" }} aoMudar={() => undefined} semAbas />);
+    expect(screen.queryByRole("tablist", { name: "Tipo de data" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Hoje" })).toBeInTheDocument();
+  });
 });

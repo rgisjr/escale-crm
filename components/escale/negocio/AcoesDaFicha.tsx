@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useT } from "@/hooks/i18n/useT";
@@ -13,13 +14,14 @@ import {
   StickyNote,
 } from "@/lib/ui/icons-da-casca";
 
+import { JanelaDeNota } from "./JanelaDeNota";
 import { TagsDaFicha } from "./TagsDaFicha";
 
 /**
  * AS AÇÕES RÁPIDAS DA FICHA (fork Escale, Fase 1G, C3; print 01).
  *
  * Ligar, conversa e e-mail funcionam como na capa do card (1E); sem o dado, o
- * ícone fica apagado. Agendar e lembretes são atividades (1I); nota é 1H (C15);
+ * ícone fica apagado. Agendar e lembretes são atividades (1I); a nota abre o modal (1H, C15);
  * tags são do contato (1H, C10). Dicas: Q11.
  */
 const ICONE =
@@ -30,6 +32,7 @@ const EM_BREVE = "text-casca-marca disabled:pointer-events-auto disabled:cursor-
 
 export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: string }) {
   const t = useT();
+  const [nota, setNota] = useState(false);
   const telefone = lead.contact_phone?.trim() || null;
   const email = lead.contact_email?.trim() || null;
   return (
@@ -92,10 +95,10 @@ export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: str
       </BotaoDaCasca>
       <BotaoDaCasca
         variante="icone"
-        disabled
-        title={t("Em breve")}
+        title={t("Nova nota")}
         aria-label={t("Nova nota")}
-        className={EM_BREVE}
+        onClick={() => setNota(true)}
+        className="text-casca-marca"
       >
         <StickyNote aria-hidden />
       </BotaoDaCasca>
@@ -110,6 +113,7 @@ export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: str
       </BotaoDaCasca>
       {/* A `key` zera a busca e o pedido de remover ao trocar de negócio. */}
       <TagsDaFicha key={`tags-${lead.id}`} lead={lead} pipelineId={pipelineId} />
+      <JanelaDeNota leadId={lead.id} aberta={nota} onFechar={() => setNota(false)} />
     </div>
   );
 }
