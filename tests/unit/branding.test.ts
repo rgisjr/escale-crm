@@ -847,6 +847,11 @@ const HOSTS_DECLARADOS: Record<string, EntradaDeHost> = {
     motivo:
       "link do perfil que `lib/escale/contatos/regras.ts` monta a partir do @usuario digitado na janela Novo contato e desmonta para mostrar o @ na coluna da lista. O código não chama o host; quem abre o perfil é o navegador de quem clica. Trocar pelo domínio do revendedor não abriria perfil nenhum.",
   },
+  "web.whatsapp.com": {
+    categoria: "PLATAFORMA",
+    motivo:
+      "link do item \"Abrir no WhatsApp Web\" da aba Atividades da ficha (`lib/escale/negocio/atividades.ts`): abre a conversa com o texto da atividade já preenchido. O código não chama o host; quem abre é o navegador de quem clica. O endereço é do WhatsApp, não nosso.",
+  },
   // ── localização compartilhada: o link que abre o pino do cliente ──
   "maps.google.com": {
     categoria: "PLATAFORMA",
@@ -1259,6 +1264,10 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // aqui, e não em FORNECEDOR, porque o produto NÃO fala com esse host: quem
       // abre o link é o visitante do site. Crescimento escrito, como a regra pede.
       "wa.me",
+      // Decisão escrita, Fase 1I: o link "Abrir no WhatsApp Web" da atividade do negócio
+      // (`lib/escale/negocio/atividades.ts`). O produto não fala com o host, quem abre
+      // é o navegador de quem clica. Crescimento escrito, como a regra pede.
+      "web.whatsapp.com",
       // Decisão escrita (#2354): a CNPD, autoridade de controlo citada na
       // alínea f) do relatório de acesso de Portugal. Categoria própria,
       // AUTORIDADE, porque não é painel, amostra nem plataforma: é o endereço
