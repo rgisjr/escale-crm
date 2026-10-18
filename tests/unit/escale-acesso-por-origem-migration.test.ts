@@ -121,6 +121,25 @@ describe("acesso por origem: migration 9010 e bloco do baseline", () => {
     expect(sql).toContain("public.fn_escale_tem_acesso_ao_grupo(organization_id, id)");
   });
 
+  it("as três policies de escrita de manager+ (FOR ALL) também exigem acesso à origem/grupo; a do grupo só pela lista dele", () => {
+    const sql = compacto();
+    for (const [policy, termo] of [
+      ["crm_pipelines_manager_write", "public.fn_escale_tem_acesso_a_origem(organization_id, id))"],
+      [
+        "crm_stages_manager_write",
+        "public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id))",
+      ],
+      [
+        "crm_pipeline_groups_manager_write",
+        "public.fn_escale_lista_permite(settings->'escale_pessoas')))",
+      ],
+    ]) {
+      const i = sql.indexOf(`create policy "${policy}"`);
+      expect(i).toBeGreaterThan(-1);
+      expect(sql.slice(i, i + 700)).toContain(termo);
+    }
+  });
+
   it("o gatilho do dono padrão é before insert, definer, fechado e nunca derruba a inserção", () => {
     const sql = compacto();
     expect(sql).toContain(
@@ -133,9 +152,10 @@ describe("acesso por origem: migration 9010 e bloco do baseline", () => {
     expect(sql).toContain("exception when others then");
   });
 
-  it("a nota da 1H (9008) ganha a função nova só se a tabela existir", () => {
+  it("a nota da 1H (9008) ganha a função nova (policy simples: o awk do update.sh não lê dollar-quote aninhado)", () => {
     const sql = compacto();
-    expect(sql).toContain("if to_regclass('public.crm_notas_do_negocio') is not null then");
+    expect(sql).not.toContain("to_regclass");
+    expect(sql).not.toContain("$p$");
     expect(sql).toContain(
       "create policy crm_notas_do_negocio_select on public.crm_notas_do_negocio",
     );
