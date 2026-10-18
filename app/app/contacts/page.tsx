@@ -14,8 +14,9 @@ export const metadata: Metadata = { title: "Contatos" };
 export default async function ContactsPage() {
   // ── FORK ESCALE · Fase 2A ──
   if (lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo") {
-    const { origens, papel } = await origensDaPagina();
-    return <ListaDeContatos origens={origens} papel={papel} />;
+    // FORK ESCALE · Fase 2B: tudo o que a página lê (origens, papel e as opções do filtro).
+    const dados = await origensDaPagina();
+    return <ListaDeContatos {...dados} />;
   }
   // ── fim FORK ESCALE ──
   return <ContactsListClient />;
