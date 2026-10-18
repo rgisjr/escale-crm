@@ -30,10 +30,13 @@ export function JanelaDaCasca({
   aberta,
   onFechar,
   children,
+  className,
 }: {
   aberta: boolean;
   onFechar: () => void;
   children: ReactNode;
+  /** Largura (ou outro ajuste) da caixa; vem depois das classes padrão para vencer. */
+  className?: string;
 }) {
   const t = useT();
   return (
@@ -45,7 +48,12 @@ export function JanelaDaCasca({
     >
       <DialogPortal>
         <DialogOverlay className="bg-black/55" />
-        <DialogPrimitive.Content className="ds-modal fixed top-[50%] left-[50%] z-50 grid max-h-[85dvh] w-[min(28rem,calc(100vw-2rem))] translate-x-[-50%] translate-y-[-50%] gap-5 overflow-y-auto rounded-[8px] bg-surface p-6 text-casca-texto shadow-casca-painel">
+        <DialogPrimitive.Content
+          className={cn(
+            "ds-modal fixed top-[50%] left-[50%] z-50 grid max-h-[85dvh] w-[min(28rem,calc(100vw-2rem))] translate-x-[-50%] translate-y-[-50%] gap-5 overflow-y-auto rounded-[8px] bg-surface p-6 text-casca-texto shadow-casca-painel",
+            className,
+          )}
+        >
           {children}
           <DialogPrimitive.Close
             aria-label={t("Fechar")}

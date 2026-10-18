@@ -23,6 +23,12 @@ vi.mock("@/hooks/escale/useGravarContato", () => ({
 vi.mock("@/hooks/contacts/useContactTagVocabulary", () => ({
   useContactTagVocabulary: () => ({ data: [] }),
 }));
+// FORK ESCALE · Fase 1H (C15): a nota abre o modal, que grava pelos hooks das notas.
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/hooks/escale/useNotasDoNegocio", () => ({
+  useCriarNota: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
+  useEditarNota: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
+}));
 const lote = vi.hoisted(() => ({ mutate: vi.fn() }));
 vi.mock("@/hooks/kanban/useBulkAction", () => ({
   useBulkAction: () => ({ mutate: lote.mutate, isPending: false }),
@@ -88,13 +94,21 @@ describe("ações rápidas (C3)", () => {
     expect(screen.getByRole("img", { name: "Sem e-mail" })).toBeInTheDocument();
   });
 
-  it("agendar, nota e lembretes: no lugar, desligados com 'Em breve'", () => {
+  it("agendar e lembretes: no lugar, desligados com 'Em breve'", () => {
     render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
-    for (const nome of ["Agendar", "Nova nota", "Lembretes"]) {
+    for (const nome of ["Agendar", "Lembretes"]) {
       const b = screen.getByRole("button", { name: nome });
       expect(b).toBeDisabled();
       expect(b).toHaveAttribute("title", "Em breve");
     }
+  });
+
+  it("o ícone de nota está ligado e abre o modal 'Nova nota' (1H, C15)", async () => {
+    render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
+    const botao = screen.getByRole("button", { name: "Nova nota" });
+    expect(botao).toBeEnabled();
+    await userEvent.click(botao);
+    expect(screen.getByRole("dialog", { name: "Nova nota" })).toBeInTheDocument();
   });
 
   it("'+ Adicionar tags' está ligado (1H, C10)", () => {
@@ -122,10 +136,13 @@ describe("o ⋮ do cabeçalho (C6, print 09)", () => {
       "href",
       "/app/contacts/c1",
     );
-    expect(screen.getByRole("menuitem", { name: "Nova nota" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    expect(screen.getByRole("menuitem", { name: "Nova nota" })).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("Nova nota abre o modal da nota (1H, C15)", async () => {
+    await abrir();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Nova nota" }));
+    expect(screen.getByRole("dialog", { name: "Nova nota" })).toBeInTheDocument();
   });
 
   it("Novo negócio abre o do original já com o contato; Mudar origem, a janela de levar", async () => {
@@ -147,10 +164,13 @@ describe("o ⋮ do cabeçalho (C6, print 09)", () => {
   });
 
   it("itens desligados ficam apagados e sem hover de ativo", async () => {
-    await abrir();
-    const nota = screen.getByRole("menuitem", { name: "Nova nota" });
-    expect(nota.className).toContain("data-[disabled]:text-casca-meta");
-    expect(nota.className).toContain("data-[disabled]:hover:bg-transparent");
+    const semContato = { ...LEAD, contact_id: null } as unknown as Lead;
+    render(<MenuDaFicha lead={semContato} pipelineId="o1" stages={[]} leads={[]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Ações do negócio" }));
+    const contato = screen.getByRole("menuitem", { name: "Visualizar contato" });
+    expect(contato).toHaveAttribute("aria-disabled", "true");
+    expect(contato.className).toContain("data-[disabled]:text-casca-meta");
+    expect(contato.className).toContain("data-[disabled]:hover:bg-transparent");
   });
 
   it("Excluir pede confirmação com o texto da Clint e volta ao quadro com os filtros", async () => {
