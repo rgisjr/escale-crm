@@ -133,6 +133,12 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "pelas funções de salvar e reiniciar, com o autor; agente lê zero.",
   },
   {
+    tabela: "crm_ganho_do_negocio",
+    razao:
+      "tests/invariants/escale-atribuicao-de-ganho.test.ts — fork Escale (migration 9014): lê quem vê o negócio (a RLS de crm_leads " +
+      "dentro do EXISTS), ninguém com sessão escreve; só o gatilho do ganho e a correção pelo service role gravam.",
+  },
+  {
     tabela: "crm_colunas_das_listas",
     razao:
       "tests/invariants/escale-lista-de-contatos.test.ts — fork Escale (migration 9101): as colunas da lista só para a própria pessoa " +
