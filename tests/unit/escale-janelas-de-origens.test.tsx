@@ -68,7 +68,7 @@ describe("janelas do grupo", () => {
     await user.clear(campo);
     await user.type(campo, "INSS Obras 2026");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
-    expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipeline-groups/g-obras", { name: "INSS Obras 2026" });
+    expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipeline-groups/g-obras", { name: "INSS Obras 2026", pessoas: [] });
   });
 
   it("Customizar grava a cor da paleta e o ícone escolhidos", async () => {

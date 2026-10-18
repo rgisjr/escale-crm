@@ -41,6 +41,8 @@ export interface GrupoDeFunis {
   color: string | null;
   icon: IconeDeGrupo;
   is_archived: boolean;
+  /** 1J (Q6): quem tem acesso ao grupo; vazia = sem restrição. Opcional porque as rotas da 1A/1B e seus fixtures não a conhecem. */
+  pessoas?: string[];
 }
 
 export interface FunilDaOrigem {

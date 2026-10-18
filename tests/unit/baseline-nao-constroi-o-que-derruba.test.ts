@@ -491,7 +491,36 @@ function textoDaPolicy(sql: string, pos: number): string {
  * Definições LITERAIS de policy que rodam a cada update (sem guarda) e diferem da
  * definição final da mesma chave: a versão intermediária vale até a final chegar.
  */
-function redefinicoesIntermediarias(sql: string): string[] {
+/**
+ * Policies que um bloco POSTERIOR do fork recria DE PROPÓSITO com texto diferente.
+ * A intermediária é o estado que o clone já tinha antes da migration (a regra da
+ * organização, nunca mais larga que ele) e a final chega no MESMO apply, com o
+ * app parado pelo `update.sh`: não abre exposição nova. As intermediárias moram
+ * em blocos que são cópia byte a byte de migration já aplicada (9001, 9008) ou no
+ * dump, então não se tiram dali. Cada chave tem de continuar sendo achada pela
+ * régua (caso de vivacidade abaixo), senão a dispensa envelheceu.
+ * Acesso por origem (migration 9010, Fase 1J).
+ */
+const POLICIES_RECRIADAS_DE_PROPOSITO: ReadonlySet<string> = new Set([
+  "crm_pipelines_select on crm_pipelines",
+  "crm_pipelines_manager_write on crm_pipelines",
+  "crm_stages_select on crm_stages",
+  "crm_stages_manager_write on crm_stages",
+  "crm_leads_select on crm_leads",
+  "crm_leads_insert on crm_leads",
+  "crm_leads_update on crm_leads",
+  "crm_leads_delete on crm_leads",
+  "crm_lead_activities_select on crm_lead_activities",
+  "crm_lead_links_select on crm_lead_links",
+  "crm_pipeline_groups_select on crm_pipeline_groups",
+  "crm_pipeline_groups_manager_write on crm_pipeline_groups",
+  "crm_notas_do_negocio_select on crm_notas_do_negocio",
+]);
+
+function redefinicoesIntermediarias(
+  sql: string,
+  dispensadas: ReadonlySet<string> = POLICIES_RECRIADAS_DE_PROPOSITO,
+): string[] {
   const porChave = new Map<string, Ocorrencia[]>();
   for (const c of ocorrencias(sql, new RegExp(String.raw`create policy\s+` + ALVO_DE_POLICY, "gi"), nomeNaTabela)) {
     porChave.set(c.chave, [...(porChave.get(c.chave) ?? []), c]);
@@ -499,6 +528,7 @@ function redefinicoesIntermediarias(sql: string): string[] {
   const achadas: string[] = [];
   for (const [chave, lista] of porChave) {
     if (lista.length < 2) continue;
+    if (dispensadas.has(chave)) continue;
     const final = lista[lista.length - 1]!;
     for (const c of lista.slice(0, -1)) {
       if (guardaEm(sql, c.pos, c.nomeProprio) !== "nenhuma") continue;
@@ -835,6 +865,14 @@ describe("baseline.sql não reconstrói o que ele mesmo derruba ou substitui", (
       "Definição intermediária roda a cada update e vale até a final chegar. Tire a intermediária " +
         "(o drop da final já cuida do clone antigo).\n",
     ).toEqual([]);
+  });
+
+  it("cada policy dispensada de propósito ainda é redefinida (a dispensa não envelheceu)", () => {
+    const semDispensa = redefinicoesIntermediarias(SQL, new Set());
+    const vivas = [...POLICIES_RECRIADAS_DE_PROPOSITO].filter(
+      (chave) => !semDispensa.some((a) => a.startsWith(`${chave}:`)),
+    );
+    expect(vivas, "dispensa sem redefinição: tire a chave da lista").toEqual([]);
   });
 
   it("a criação condicional de ai_models_provider_model_unique depende da AUSÊNCIA da constraint", () => {

@@ -42,6 +42,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
     motivosInativos: [],
     aoSair: {},
     alerta: { geral: null, etapas: {} },
+    visualizacao: null,
+    pessoas: [],
   },
   motivos: [],
   campos: [
@@ -51,6 +53,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
   regras: [{ campo: "closer", quando: "ao_entrar", etapas: [E2], status: [] }],
   moedaDaOrganizacao: "BRL",
   visualizacao: "own_and_unassigned",
+  visualizacaoDaOrganizacao: "own_and_unassigned",
+  pessoasDoGrupo: [],
   podeAdministrar: true,
 };
 

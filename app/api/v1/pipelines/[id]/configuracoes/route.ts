@@ -14,6 +14,11 @@
  * entra no filtro da leitura e da escrita. A gravação é condicional ao
  * `updated_at` lido (409 se outra gravação passou na frente) e, sem exatamente
  * uma linha gravada, a rota não audita.
+ *
+ * Fase 1J: "Visualização de negócios" e "Permissão de usuários" vão em
+ * gerais.visualizacao e permissoes.pessoas (gerente ou acima); a regra da
+ * organização é lida por modoDaOrganizacao; a lista do grupo vem junto para a
+ * tela dizer se a origem a segue.
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -23,7 +28,9 @@ import { fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { podeAdministrarEmpresa } from "@/lib/auth/pode-administrar-empresa";
 import { requireRole } from "@/lib/auth/require-role";
-import { DEFAULT_VISIBILITY_MODE } from "@/lib/auth/types";
+import { membrosAtivos } from "@/lib/escale/acesso/membros";
+import { modoDaOrganizacao } from "@/lib/escale/acesso/modo-da-organizacao";
+import { pessoasDaOrigem, visualizacaoDaOrigem } from "@/lib/escale/acesso/regras";
 import {
   SECOES_DO_ADMINISTRADOR,
   aplicarConfiguracoes,
@@ -66,7 +73,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
       orgId: authz.org.orgId,
       pipelineId: id,
       moedaDaOrganizacao: moedaServidaOu(authz.org.currency),
-      visualizacao: authz.org.visibility_mode ?? DEFAULT_VISIBILITY_MODE,
+      visualizacaoDaOrganizacao: await modoDaOrganizacao(authz.org.orgId, requestId),
       podeAdministrar: podeAdministrarEmpresa(authz.user, authz.org),
     },
     t,
@@ -114,6 +121,14 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   }
 
   const supabase = await createClient();
+  let membros: string[] | undefined;
+  if (parsed.data.permissoes) {
+    const lidos = await membrosAtivos(supabase, orgId);
+    if (!lidos.ok) {
+      return falhaInesperada(lidos.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
+    }
+    membros = lidos.ids;
+  }
   const origem = await lerOrigemDaConfiguracao(supabase, orgId, id);
   if (!origem.ok) {
     return origem.erro === "nao_encontrada"
@@ -124,6 +139,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   const veredito = aplicarConfiguracoes(origem.pipeline.settings, parsed.data, {
     abertas: origem.etapas.filter((e) => !e.is_won && !e.is_lost).map((e) => e.id),
     vivas: origem.etapas.map((e) => e.id),
+    membros,
   });
   if (!veredito.ok) return fail("unprocessable_entity", t(veredito.erro), 422, { requestId });
 
@@ -153,7 +169,23 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     resourceType: "pipeline",
     resourceId: origem.pipeline.id,
     requestId,
-    metadata: { secoes, via: "escale" },
+    // 1J: quem vê a origem é controle de acesso; fica o antes e o depois.
+    metadata: {
+      secoes,
+      via: "escale",
+      ...(parsed.data.permissoes || parsed.data.gerais
+        ? {
+            antes: {
+              pessoas: pessoasDaOrigem(origem.pipeline.settings),
+              visualizacao: visualizacaoDaOrigem(origem.pipeline.settings),
+            },
+            depois: {
+              pessoas: pessoasDaOrigem(veredito.settings),
+              visualizacao: visualizacaoDaOrigem(veredito.settings),
+            },
+          }
+        : {}),
+    },
   });
 
   return responderComConfiguracoes(
@@ -162,7 +194,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
       orgId,
       pipelineId: id,
       moedaDaOrganizacao: moedaServidaOu(authz.org.currency),
-      visualizacao: authz.org.visibility_mode ?? DEFAULT_VISIBILITY_MODE,
+      visualizacaoDaOrganizacao: await modoDaOrganizacao(orgId, requestId),
       podeAdministrar,
     },
     t,

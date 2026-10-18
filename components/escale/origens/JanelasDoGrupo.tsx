@@ -1,9 +1,12 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 
+import { ContadorDePessoas, membrosAtivosDaEquipe } from "@/components/escale/configuracoes/ListaDePessoas";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
+import { SeletorMultiploDaCasca } from "@/components/escale/ui/SeletorMultiploDaCasca";
 import { useAtualizarGrupo, useCriarGrupo, useExcluirGrupo } from "@/hooks/escale/useOrigens";
 import { useT } from "@/hooks/i18n/useT";
+import { useTeamMembers } from "@/hooks/team/useTeamMembers";
 import { corDoIconeNaCasca } from "@/lib/escale/origens/cores-da-casca";
 import {
   ICONES_DE_GRUPO,
@@ -95,6 +98,13 @@ export function FormConfigGrupo({ origens, onFechar, onOrigens, id }: PropsDaJan
   const atualizar = useAtualizarGrupo();
   const grupo = origens.grupos.find((g) => g.id === id);
   const [nome, setNome] = useState(grupo?.name ?? "");
+  // 1J (Q6): quem vê o grupo. A origem sem lista própria segue esta.
+  const [pessoas, setPessoas] = useState<string[]>(grupo?.pessoas ?? []);
+  const equipe = useTeamMembers();
+  const membros = useMemo(
+    () => membrosAtivosDaEquipe(equipe.data?.data, t("Sem nome")),
+    [equipe.data, t],
+  );
   const [erro, setErro] = useState<string | null>(null);
   if (!grupo) return <GrupoSumiu onFechar={onFechar} />;
 
@@ -102,7 +112,7 @@ export function FormConfigGrupo({ origens, onFechar, onOrigens, id }: PropsDaJan
     e.preventDefault();
     if (!nome.trim()) return;
     atualizar.mutate(
-      { id, mudanca: { name: nome } },
+      { id, mudanca: { name: nome, pessoas } },
       {
         onSuccess: (r) => {
           onOrigens(r);
@@ -126,6 +136,22 @@ export function FormConfigGrupo({ origens, onFechar, onOrigens, id }: PropsDaJan
           maxLength={NOME_DE_GRUPO_MAX}
         />
       </Campo>
+      <section className="grid gap-2">
+        <h3 className="text-[13px] font-medium text-casca-texto">{t("Permissão de usuários")}</h3>
+        <p className="text-[11px] text-casca-suave">
+          {t(
+            "Somente os usuários selecionados poderão ver o grupo. Caso nenhum usuário seja selecionado, a visualização não terá restrição.",
+          )}
+        </p>
+        <SeletorMultiploDaCasca
+          valores={pessoas}
+          opcoes={membros.map((m) => ({ valor: m.id, rotulo: m.nome }))}
+          aoMudar={setPessoas}
+          vazio={t("Selecione os usuários que poderão visualizar o grupo")}
+          aria-label={t("Selecione os usuários que poderão visualizar o grupo")}
+        />
+        <ContadorDePessoas total={pessoas.length} />
+      </section>
       <RodapeDaJanela>
         <BotaoDaJanela variante="cancelar" onClick={onFechar}>
           {t("Cancelar")}

@@ -12,9 +12,10 @@ import { useCriarGrupo } from "@/hooks/escale/useOrigens";
 import { useT } from "@/hooks/i18n/useT";
 import type { VisibilityMode } from "@/lib/auth/types";
 import { normalizarTag, TAMANHO_MAXIMO_DA_TAG } from "@/lib/contacts/tag-normalizada";
+import { VISUALIZACOES } from "@/lib/escale/acesso/regras";
 import { TAG_DO_SISTEMA, TAGS_PADRAO_MAX } from "@/lib/escale/configuracoes/tipos";
 import type { Origens } from "@/lib/escale/origens/regras";
-import { ChevronDown, CirclePlus, Plus, Settings, X } from "@/lib/ui/icons-da-casca";
+import { CirclePlus, Plus, Settings, X } from "@/lib/ui/icons-da-casca";
 
 import { CabecaDaSecao } from "./CabecaDaSecao";
 import type { PropsDaSecao } from "./JanelaDaOrigem";
@@ -140,21 +141,15 @@ export function SecaoGerais({
       </Campo>
 
       <Campo rotulo={t("Visualização de negócios")}>
-        {/* F11: a regra que vale hoje (a da organização), sem abrir. O seletor da V1 não
-            tem gatilho desligado, então é a mesma caixa, parada, com a dica da fase. */}
-        <div
-          role="combobox"
+        {/* 1J (D11): a regra DESTA origem. Mostra a que vale hoje (a da origem ou, sem ela, a da organização) e grava a escolhida (N12). */}
+        <SeletorDaCasca
+          aparencia="janela"
+          valor={g.visualizacao}
+          opcoes={VISUALIZACOES.map((v) => ({ valor: v, rotulo: visualizacoes[v] }))}
+          aoMudar={(v) => v && mudarGerais({ visualizacao: v })}
           aria-label={t("Visualização de negócios")}
-          aria-disabled="true"
-          aria-expanded={false}
-          title={t(
-            "Em breve: quem vê os negócios de cada origem chega na fase 1J. Até lá, vale a regra da organização.",
-          )}
-          className="flex h-11 w-full cursor-not-allowed items-center rounded-[4px] bg-casca-raia px-3 text-[11.9px] font-light text-casca-texto opacity-70"
-        >
-          <span className="flex-1 truncate">{visualizacoes[config.visualizacao]}</span>
-          <ChevronDown size={14} aria-hidden className="text-casca-chevron" />
-        </div>
+          className="text-[11.9px] font-light"
+        />
       </Campo>
 
       <div className="-mt-[14px] grid gap-2">

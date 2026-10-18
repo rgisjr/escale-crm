@@ -42,12 +42,16 @@ const CONFIG: ConfiguracoesDaOrigem = {
     motivosInativos: [],
     aoSair: {},
     alerta: { geral: null, etapas: {} },
+    visualizacao: null,
+    pessoas: [],
   },
   motivos: [],
   campos: [],
   regras: [],
   moedaDaOrganizacao: "BRL",
   visualizacao: "own_and_unassigned",
+  visualizacaoDaOrganizacao: "own_and_unassigned",
+  pessoasDoGrupo: [],
   podeAdministrar: false,
 };
 

@@ -67,6 +67,7 @@ import { SecaoAlerta } from "./SecaoAlerta";
 import { SecaoCampos } from "./SecaoCampos";
 import { SecaoGerais } from "./SecaoGerais";
 import { SecaoMotivos } from "./SecaoMotivos";
+import { SecaoPermissoes } from "./SecaoPermissoes";
 
 export type SubabaDaOrigem =
   | "gerais"
@@ -150,7 +151,6 @@ export function JanelaDaOrigem({
       id: "permissoes",
       rotulo: t("Permissão de usuários"),
       icone: Users,
-      emBreve: t("Chega na fase 1J, com o acesso por origem."),
     },
     {
       id: "atribuicao",
@@ -224,6 +224,8 @@ export function JanelaDaOrigem({
         return <SecaoCampos {...props} />;
       case "alerta":
         return <SecaoAlerta {...props} />;
+      case "permissoes":
+        return <SecaoPermissoes {...props} />;
       default:
         return null;
     }

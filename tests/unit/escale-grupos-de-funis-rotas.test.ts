@@ -22,6 +22,11 @@ vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/impersonate/support", () => ({ requireSupportWrite: vi.fn(async () => null) }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
+const MEMBRO = "66666666-6666-4666-8666-666666666666";
+vi.mock("@/lib/escale/acesso/membros", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/escale/acesso/membros")>()),
+  membrosAtivos: vi.fn(async () => ({ ok: true, ids: [MEMBRO] })),
+}));
 
 const G_OBRAS = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 const G_CRED = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2";
@@ -140,6 +145,33 @@ describe("PATCH /api/v1/pipeline-groups/:id", () => {
     expect(escrita.patch).toEqual({ name: "INSS Obras 2026" });
     expect(escrita.filtros).toEqual(expect.arrayContaining([["id", G_OBRAS], ["organization_id", ORG_ID]]));
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "pipeline_group.updated" }));
+  });
+
+  it("pessoas: grava settings.escale_pessoas no grupo e audita", async () => {
+    const db = banco();
+    const res = await mudar(G_OBRAS, { pessoas: [MEMBRO] });
+    expect(res.status).toBe(200);
+    const escrita = escritasEm(db, "crm_pipeline_groups")[0]!;
+    expect(escrita.patch).toEqual({ settings: { escale_pessoas: [MEMBRO] } });
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "pipeline_group.updated" }));
+  });
+
+  it("quem já estava na lista do grupo e saiu da equipe não trava o salvar: sai da lista", async () => {
+    const SAIU = "33333333-3333-4333-8333-333333333333";
+    const db = banco();
+    (db.tabelas as unknown as Partial<Record<string, Array<Record<string, unknown>>>>).crm_pipeline_groups![0]!.settings = {
+      escale_pessoas: [MEMBRO, SAIU],
+    };
+    const res = await mudar(G_OBRAS, { pessoas: [MEMBRO, SAIU] });
+    expect(res.status).toBe(200);
+    expect(escritasEm(db, "crm_pipeline_groups")[0]!.patch).toEqual({ settings: { escale_pessoas: [MEMBRO] } });
+  });
+
+  it("pessoas com quem não é membro ativo: 422 e nada gravado", async () => {
+    const db = banco();
+    const res = await mudar(G_OBRAS, { pessoas: ["77777777-7777-4777-8777-777777777777"] });
+    expect(res.status).toBe(422);
+    expect(escritasEm(db, "crm_pipeline_groups")).toHaveLength(0);
   });
 
   it("customiza cor da paleta e ícone; cor fora da paleta é 422", async () => {

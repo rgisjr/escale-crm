@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 
 const store = { valores: {} as Record<string, string>, set: vi.fn() };
 
@@ -23,6 +24,7 @@ import { guardarPreferenciaDeOrigens } from "@/app/actions/escale/origens";
 import { GET } from "@/app/app/escale/negocios/route";
 import { ITENS_DO_TOPO } from "@/lib/escale/menu-do-topo";
 
+const pedido = (busca = "") => new NextRequest(`http://localhost/app/escale/negocios${busca}`);
 const F_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 const F_B = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2";
 
@@ -42,27 +44,41 @@ beforeEach(() => {
 describe("GET /app/escale/negocios", () => {
   it("abre o último funil aberto, pelo endereço público", async () => {
     store.valores.escale_ultimo_funil = F_A;
-    const res = await GET();
+    const res = await GET(pedido());
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe(`https://app.exemplo.com/app/pipelines/${F_A}`);
     expect(lerOrigens).toHaveBeenCalledWith(expect.anything(), "org-1");
   });
 
   it("sem lembrança, abre o funil padrão", async () => {
-    expect((await GET()).headers.get("location")).toBe(`https://app.exemplo.com/app/pipelines/${F_B}`);
+    expect((await GET(pedido())).headers.get("location")).toBe(`https://app.exemplo.com/app/pipelines/${F_B}`);
   });
 
   it("sem funil visível, ou com o banco fora do ar, cai na lista de funis", async () => {
     vi.mocked(lerOrigens).mockResolvedValueOnce({ grupos: [], funis: [] });
-    expect((await GET()).headers.get("location")).toBe("https://app.exemplo.com/app/kanban");
+    expect((await GET(pedido())).headers.get("location")).toBe("https://app.exemplo.com/app/kanban");
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(lerOrigens).mockRejectedValueOnce(new Error("fora do ar"));
-    expect((await GET()).headers.get("location")).toBe("https://app.exemplo.com/app/kanban");
+    expect((await GET(pedido())).headers.get("location")).toBe("https://app.exemplo.com/app/kanban");
+  });
+
+  it("1J (Q5): o aviso de origem sem acesso segue para o quadro, e só ele", async () => {
+    store.valores.escale_ultimo_funil = F_A;
+    expect((await GET(pedido("?aviso=origem-sem-acesso"))).headers.get("location")).toBe(
+      `https://app.exemplo.com/app/pipelines/${F_A}?aviso=origem-sem-acesso`,
+    );
+    expect((await GET(pedido("?aviso=outra-coisa"))).headers.get("location")).toBe(
+      `https://app.exemplo.com/app/pipelines/${F_A}`,
+    );
+    vi.mocked(lerOrigens).mockResolvedValueOnce({ grupos: [], funis: [] });
+    expect((await GET(pedido("?aviso=origem-sem-acesso"))).headers.get("location")).toBe(
+      "https://app.exemplo.com/app/kanban?aviso=origem-sem-acesso",
+    );
   });
 
   it("sem organização ativa, volta para /app", async () => {
     vi.mocked(resolveActiveOrg).mockResolvedValueOnce(null);
-    expect((await GET()).headers.get("location")).toBe("https://app.exemplo.com/app");
+    expect((await GET(pedido())).headers.get("location")).toBe("https://app.exemplo.com/app");
   });
 });
 

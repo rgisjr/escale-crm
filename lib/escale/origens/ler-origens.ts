@@ -12,6 +12,8 @@
  */
 import type { createClient } from "@/lib/supabase/server";
 
+import { pessoasDaOrigem } from "@/lib/escale/acesso/regras";
+
 import { corValida, iconeValido, type FunilDaOrigem, type GrupoDeFunis, type Origens } from "./regras";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -22,6 +24,7 @@ interface LinhaDeGrupo {
   color?: unknown;
   icon?: unknown;
   is_archived?: boolean | null;
+  settings?: unknown;
 }
 
 interface LinhaDeFunil {
@@ -38,6 +41,7 @@ const paraGrupo = (g: LinhaDeGrupo): GrupoDeFunis => ({
   color: corValida(g.color),
   icon: iconeValido(g.icon),
   is_archived: g.is_archived === true,
+  pessoas: pessoasDaOrigem(g.settings),
 });
 
 const paraFunil = (f: LinhaDeFunil): FunilDaOrigem => ({
@@ -52,7 +56,7 @@ export async function lerOrigens(supabase: Supabase, orgId: string): Promise<Ori
   const [grupos, funis] = await Promise.all([
     supabase
       .from("crm_pipeline_groups")
-      .select("id, name, color, icon, is_archived")
+      .select("id, name, color, icon, is_archived, settings")
       .eq("organization_id", orgId)
       .order("name"),
     supabase

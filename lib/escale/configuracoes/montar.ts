@@ -3,6 +3,7 @@
  * `podeAdministrar` e `visualizacao` é a rota (sessão de quem pede).
  */
 import type { VisibilityMode } from "@/lib/auth/types";
+import { pessoasDaOrigem, regraEmVigor } from "@/lib/escale/acesso/regras";
 import type { MoedaServida } from "@/lib/money";
 
 import { camposDaOrigem, regrasDaOrigem, type CampoDaOrigem, type RegraDeCampo } from "./campos";
@@ -26,8 +27,12 @@ export interface ConfiguracoesDaOrigem {
   campos: CampoDaOrigem[];
   regras: RegraDeCampo[];
   moedaDaOrganizacao: MoedaServida;
-  /** A regra de quem vê os negócios que vale hoje (da organização; por origem chega na 1J). */
+  /** A regra EM VIGOR nesta origem (1J): a da origem; sem ela, a da organização. */
   visualizacao: VisibilityMode;
+  /** A regra da organização (`organizations.settings.visibility_mode`). */
+  visualizacaoDaOrganizacao: VisibilityMode;
+  /** A lista do grupo da origem (1J, Q6): se a origem não tem lista, é esta que vale. */
+  pessoasDoGrupo: string[];
   podeAdministrar: boolean;
 }
 
@@ -43,7 +48,9 @@ export function montarConfiguracoes(entrada: {
   /** O `settings` de todas as origens da organização (o catálogo de motivos). */
   catalogo: readonly unknown[];
   moedaDaOrganizacao: MoedaServida;
-  visualizacao: VisibilityMode;
+  visualizacaoDaOrganizacao: VisibilityMode;
+  /** O grupo da origem (a RLS decide se a sessão o vê). */
+  grupo: { settings: unknown } | null;
   podeAdministrar: boolean;
 }): ConfiguracoesDaOrigem {
   const { pipeline } = entrada;
@@ -62,7 +69,9 @@ export function montarConfiguracoes(entrada: {
     campos: camposDaOrigem(pipeline.settings),
     regras: regrasDaOrigem(pipeline.settings, abertas),
     moedaDaOrganizacao: entrada.moedaDaOrganizacao,
-    visualizacao: entrada.visualizacao,
+    visualizacao: regraEmVigor(pipeline.settings, entrada.visualizacaoDaOrganizacao),
+    visualizacaoDaOrganizacao: entrada.visualizacaoDaOrganizacao,
+    pessoasDoGrupo: pessoasDaOrigem(entrada.grupo?.settings),
     podeAdministrar: entrada.podeAdministrar,
   };
 }

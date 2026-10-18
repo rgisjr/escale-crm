@@ -46,6 +46,8 @@ export interface MudancaDeGrupo {
   color?: string | null;
   icon?: IconeDeGrupo;
   is_archived?: boolean;
+  /** 1J (Q6): quem tem acesso ao grupo (ids); vazia = sem restrição. */
+  pessoas?: string[];
 }
 
 export function useAtualizarGrupo() {
