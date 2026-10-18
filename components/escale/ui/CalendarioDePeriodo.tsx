@@ -50,6 +50,8 @@ export type CalendarioDePeriodoProps = {
   valor: Periodo;
   aoMudar: (p: Periodo) => void;
   tiposDisponiveis?: TipoDeData[];
+  /** FORK ESCALE · Fase 1H: Arquivos e Conversas usam só os calendários e os atalhos (sem as abas de tipo de data). */
+  semAbas?: boolean;
 };
 
 const TIPOS_DE_DATA: readonly TipoDeData[] = ["criacao", "ganho", "perda", "agendado"];
@@ -181,7 +183,7 @@ function GradeDoMes({
   );
 }
 
-export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIPOS_DE_DATA] }: CalendarioDePeriodoProps) {
+export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIPOS_DE_DATA], semAbas = false }: CalendarioDePeriodoProps) {
   const t = useT();
   const locale = useLocaleDeData();
   const idBase = useId();
@@ -267,42 +269,44 @@ export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIP
   return (
     <div data-calendario-de-periodo="" className="flex w-[742px] max-w-full text-casca-texto">
       <div className="flex w-[184px] shrink-0 flex-col border-r border-casca-borda">
-        <div
-          role="tablist"
-          aria-label={t("Tipo de data")}
-          onKeyDown={teclaNasAbas}
-          className="flex gap-2 border-b border-casca-divisoria p-3"
-        >
-          {TIPOS_DE_DATA.map((tipo, i) => {
-            const Icone = ICONE_DO_TIPO[tipo];
-            const ativo = tipo === valor.tipo;
-            // As 4 abas ficam sempre no lugar (print); a que não vale ainda fica desligada.
-            const disponivel = tiposDisponiveis.includes(tipo);
-            return (
-              <button
-                key={tipo}
-                id={`${idBase}-aba-${tipo}`}
-                type="button"
-                role="tab"
-                aria-selected={ativo}
-                tabIndex={ativo ? 0 : -1}
-                disabled={!disponivel}
-                aria-label={t(ROTULO_DO_TIPO[tipo])}
-                title={disponivel ? t(ROTULO_DO_TIPO[tipo]) : t("Em breve")}
-                onClick={() => escolherTipo(tipo)}
-                className={cn(
-                  "grid h-[23px] w-[34px] place-items-center transition-colors duration-fast ease-out disabled:cursor-not-allowed disabled:opacity-40",
-                  FOCO,
-                  i === 0 && "rounded-l-[5px]",
-                  i === TIPOS_DE_DATA.length - 1 && "rounded-r-[5px]",
-                  ativo ? "bg-casca-texto-2 text-surface" : "bg-casca-raia text-casca-texto-2",
-                )}
-              >
-                <Icone aria-hidden className="size-3.5" />
-              </button>
-            );
-          })}
-        </div>
+        {semAbas ? null : (
+          <div
+            role="tablist"
+            aria-label={t("Tipo de data")}
+            onKeyDown={teclaNasAbas}
+            className="flex gap-2 border-b border-casca-divisoria p-3"
+          >
+            {TIPOS_DE_DATA.map((tipo, i) => {
+              const Icone = ICONE_DO_TIPO[tipo];
+              const ativo = tipo === valor.tipo;
+              // As 4 abas ficam sempre no lugar (print); a que não vale ainda fica desligada.
+              const disponivel = tiposDisponiveis.includes(tipo);
+              return (
+                <button
+                  key={tipo}
+                  id={`${idBase}-aba-${tipo}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={ativo}
+                  tabIndex={ativo ? 0 : -1}
+                  disabled={!disponivel}
+                  aria-label={t(ROTULO_DO_TIPO[tipo])}
+                  title={disponivel ? t(ROTULO_DO_TIPO[tipo]) : t("Em breve")}
+                  onClick={() => escolherTipo(tipo)}
+                  className={cn(
+                    "grid h-[23px] w-[34px] place-items-center transition-colors duration-fast ease-out disabled:cursor-not-allowed disabled:opacity-40",
+                    FOCO,
+                    i === 0 && "rounded-l-[5px]",
+                    i === TIPOS_DE_DATA.length - 1 && "rounded-r-[5px]",
+                    ativo ? "bg-casca-texto-2 text-surface" : "bg-casca-raia text-casca-texto-2",
+                  )}
+                >
+                  <Icone aria-hidden className="size-3.5" />
+                </button>
+              );
+            })}
+          </div>
+        )}
         <ul aria-label={t("Atalhos de período")} className="flex flex-col">
           {ATALHOS_DE_PERIODO.map((atalho) => (
             <li key={atalho} className="border-b border-casca-divisoria last:border-b-0">

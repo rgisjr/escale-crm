@@ -22,7 +22,7 @@ export function ConteudoDaAba({ aba, ficha }: { aba: AbaDoNegocio; ficha: FichaC
     case "conversas":
       return <AbaConversas lead={ficha.lead} />;
     case "arquivos":
-      return <AbaArquivos />;
+      return <AbaArquivos lead={ficha.lead} />;
     case "historico":
       return <AbaHistorico lead={ficha.lead} />;
   }
