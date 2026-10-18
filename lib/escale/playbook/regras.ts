@@ -57,6 +57,17 @@ export const AVISO_DO_TIPO: Record<TipoDeAtividade, string> = {
   reuniao: "Você poderá configurar a reunião após a criação da atividade.",
 };
 
+/** O que a caixa do conteúdo mostra vazia (Clint: editores por tipo, `TextTab`). */
+export const VAZIO_DO_CONTEUDO: Record<TipoDeAtividade, string> = {
+  whatsapp: "Clique aqui para adicionar o conteúdo da mensagem.",
+  instagram: "Clique aqui para adicionar o conteúdo da mensagem.",
+  ligacao: "Adicione o seu script",
+  email: "Adicione o seu texto",
+  agendamento: "Adicione o seu texto",
+  tarefa: "Adicione o seu texto",
+  reuniao: "Adicione o seu texto",
+};
+
 export type UnidadeDoPrazo = "minuto" | "hora" | "dia" | "semana" | "mes" | "ano";
 
 export const UNIDADES_DO_PRAZO: readonly {
