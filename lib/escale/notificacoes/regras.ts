@@ -151,6 +151,19 @@ export function origensQueAvisam(
   });
 }
 
+/** Quanto tempo depois do fechamento um ganho/perda ainda é "notícia" para o tempo real. */
+export const JANELA_DO_FECHAMENTO_MS = 60_000;
+
+export interface EntradaDoAviso {
+  tipo: "INSERT" | "UPDATE";
+  novo: Record<string, unknown>;
+  antigo: Record<string, unknown> | null;
+  origem: OrigemQueAvisa | undefined;
+  eu: string;
+  /** Relógio injetável (testes); o padrão é `Date.now()`. */
+  agora?: number;
+}
+
 /** O aviso na tela para um negócio que chegou pelo tempo real (a RLS já entrega só o que a pessoa vê). */
 export function avisoDoNegocio({
   tipo,
@@ -158,13 +171,8 @@ export function avisoDoNegocio({
   antigo,
   origem,
   eu,
-}: {
-  tipo: "INSERT" | "UPDATE";
-  novo: Record<string, unknown>;
-  antigo: Record<string, unknown> | null;
-  origem: OrigemQueAvisa | undefined;
-  eu: string;
-}): EntregarAvisoInput | null {
+  agora = Date.now(),
+}: EntradaDoAviso): EntregarAvisoInput | null {
   if (!origem) return null;
   const id = typeof novo.id === "string" ? novo.id : null;
   if (!id) return null;
@@ -186,6 +194,14 @@ export function avisoDoNegocio({
   const status = novo.status;
   if ((status !== "won" && status !== "lost") || status === antigo?.status) return null;
   if (!origem.status.includes(status)) return null;
+  // O `old` do tempo real traz só o `id` (identidade de réplica padrão), então a
+  // comparação com o status antigo acima nunca barra nada: qualquer UPDATE de um
+  // negócio que já estava ganho/perdido (título, dono, valor...) chega com o
+  // status final. O fechamento recente separa a virada de um UPDATE qualquer.
+  if (typeof novo.closed_at === "string") {
+    const fechadoEm = Date.parse(novo.closed_at);
+    if (Number.isFinite(fechadoEm) && agora - fechadoEm > JANELA_DO_FECHAMENTO_MS) return null;
+  }
   if (
     typeof novo.owner_user_id === "string" &&
     novo.owner_user_id.toLowerCase() === eu.toLowerCase()
@@ -208,4 +224,20 @@ export function avisoDoNegocio({
         tag: `escale-perdido:${id}`,
         href,
       };
+}
+
+/**
+ * `avisoDoNegocio` + a memória da sessão: cada negócio+status avisa uma vez só
+ * (`jaAvisados` vive num ref do hook). Marca só quando há aviso para entregar.
+ */
+export function avisoDoNegocioUmaVez(
+  entrada: EntradaDoAviso,
+  jaAvisados: Set<string>,
+): EntregarAvisoInput | null {
+  const aviso = avisoDoNegocio(entrada);
+  if (!aviso) return null;
+  const chave = `${String(entrada.novo.id)}:${entrada.tipo === "INSERT" ? "novo" : String(entrada.novo.status)}`;
+  if (jaAvisados.has(chave)) return null;
+  jaAvisados.add(chave);
+  return aviso;
 }

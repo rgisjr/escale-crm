@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ERRO_SEM_USUARIO,
   avisoDoNegocio,
+  avisoDoNegocioUmaVez,
   destinatariosDoEvento,
   erroDasNotificacoes,
   gravarNotificacoes,
@@ -170,5 +171,60 @@ describe("quem é avisado (N22)", () => {
         eu: A,
       }),
     ).toBeNull();
+  });
+});
+
+describe("ganho/perda no tempo real: o `old` traz só o id", () => {
+  const origem = {
+    id: "o1",
+    nome: "Clayton",
+    novo: false,
+    status: ["won" as const, "lost" as const],
+  };
+  const AGORA = Date.parse("2026-10-18T12:00:00Z");
+  const ganho = (extra: Record<string, unknown> = {}) => ({
+    tipo: "UPDATE" as const,
+    novo: {
+      id: "l1",
+      title: "Maria",
+      status: "won",
+      owner_user_id: B,
+      closed_at: "2026-10-18T11:59:50Z",
+      ...extra,
+    },
+    antigo: { id: "l1" },
+    origem,
+    eu: A,
+    agora: AGORA,
+  });
+
+  it("fechamento recente avisa; UPDATE antigo de negócio já ganho não", () => {
+    expect(avisoDoNegocio(ganho())).toMatchObject({ category: "lead_won" });
+    expect(avisoDoNegocio(ganho({ closed_at: "2026-10-18T11:50:00Z" }))).toBeNull();
+    expect(avisoDoNegocio(ganho({ closed_at: undefined }))).toMatchObject({
+      category: "lead_won",
+    });
+  });
+
+  it("com antigo = { id } e o mesmo ganho chegando duas vezes, avisa uma só vez", () => {
+    const jaAvisados = new Set<string>();
+    expect(avisoDoNegocioUmaVez(ganho(), jaAvisados)).toMatchObject({ category: "lead_won" });
+    expect(avisoDoNegocioUmaVez(ganho({ title: "Maria 2" }), jaAvisados)).toBeNull();
+  });
+
+  it("perda depois do ganho do mesmo negócio avisa (outro status); outro negócio também", () => {
+    const jaAvisados = new Set<string>();
+    expect(avisoDoNegocioUmaVez(ganho(), jaAvisados)).not.toBeNull();
+    expect(avisoDoNegocioUmaVez(ganho({ status: "lost" }), jaAvisados)).toMatchObject({
+      category: "lead_lost",
+    });
+    expect(avisoDoNegocioUmaVez(ganho({ id: "l2" }), jaAvisados)).not.toBeNull();
+  });
+
+  it("o que não vira aviso não entra na memória", () => {
+    const jaAvisados = new Set<string>();
+    expect(avisoDoNegocioUmaVez({ ...ganho(), eu: B }, jaAvisados)).toBeNull();
+    expect(jaAvisados.size).toBe(0);
+    expect(avisoDoNegocioUmaVez(ganho(), jaAvisados)).not.toBeNull();
   });
 });

@@ -1,12 +1,12 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
 import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import { apiClient } from "@/lib/api/client";
-import { avisoDoNegocio, type OrigemQueAvisa } from "@/lib/escale/notificacoes/regras";
+import { avisoDoNegocioUmaVez, type OrigemQueAvisa } from "@/lib/escale/notificacoes/regras";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { idiomaAtual } from "@/lib/i18n/IdiomaProvider";
 import { emitNotification } from "@/lib/notifications/emit";
@@ -80,12 +80,18 @@ export function useAvisosDaOrigem(): void {
   const algumNovo = (consulta.data ?? []).some((o) => o.novo);
   const algumStatus = (consulta.data ?? []).some((o) => o.status.length > 0);
 
+  // negócio+status já avisados nesta sessão (o `old` do tempo real não traz o status)
+  const jaAvisados = useRef(new Set<string>());
+
   const aoChegar = useCallback(
     (tipo: "INSERT" | "UPDATE") => (payload: unknown) => {
       const { novo, antigo } = lados(payload);
       if (!novo) return;
       const origem = porId.get(String(novo.pipeline_id ?? ""));
-      const aviso = avisoDoNegocio({ tipo, novo, antigo, origem, eu: user.id });
+      const aviso = avisoDoNegocioUmaVez(
+        { tipo, novo, antigo, origem, eu: user.id },
+        jaAvisados.current,
+      );
       if (aviso) entregar(aviso);
     },
     [porId, user.id],
