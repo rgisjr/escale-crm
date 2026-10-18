@@ -109,6 +109,43 @@ describe("só o administrador marca ganho (N15)", () => {
   });
 });
 
+describe("só o administrador muda as regras do ganho, mesmo gravando settings direto", () => {
+  const virar = (valor: string) =>
+    `update public.crm_pipelines set settings = jsonb_set(settings, '{escale_so_admin_ganha}', '${valor}'::jsonb) where id = '${P_TRAVADA}';`;
+  const lido = () =>
+    texto(
+      `select settings ->> 'escale_so_admin_ganha' from public.crm_pipelines where id = '${P_TRAVADA}';`,
+    );
+
+  it("o gerente (política de escrita do gerente) não desliga a trava nem troca a regra de crédito", () => {
+    expect(() => comoUsuario(GOV_MANAGER, virar("false"))).toThrow(
+      /so_administrador_muda_regras_do_ganho/,
+    );
+    expect(() =>
+      comoUsuario(
+        GOV_MANAGER,
+        `update public.crm_pipelines set settings = settings - 'escale_atribuicao_de_ganho' where id = '${P_TRAVADA}';`,
+      ),
+    ).toThrow(/so_administrador_muda_regras_do_ganho/);
+    expect(lido()).toBe("true");
+  });
+
+  it("o gerente segue gravando o resto das configurações da origem", () => {
+    comoUsuario(
+      GOV_MANAGER,
+      `update public.crm_pipelines set settings = jsonb_set(settings, '{escale_prova_9014}', '1'::jsonb) where id = '${P_TRAVADA}';`,
+    );
+    expect(lido()).toBe("true");
+  });
+
+  it("o administrador muda; o sistema (sem sessão) também", () => {
+    comoUsuario(GOV_ADMIN, virar("false"));
+    expect(lido()).toBe("false");
+    sql(virar("true"));
+    expect(lido()).toBe("true");
+  });
+});
+
 describe("o crédito do ganho (N17)", () => {
   it("quem cumpriu a regra leva o crédito; a regra aplicada fica gravada", () => {
     const l = negocio(P_TRAVADA, GOV_AGENT_A);

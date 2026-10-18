@@ -12,6 +12,7 @@ const BASELINE = readFileSync(join(process.cwd(), "supabase/baseline.sql"), "utf
 
 const FUNCOES = [
   "fn_escale_so_admin_marca_ganho()",
+  "fn_escale_so_admin_muda_regras_de_ganho()",
   "fn_escale_credito_do_ganho(uuid)",
   "fn_escale_registra_o_ganho()",
   "fn_escale_corrigir_ganho(uuid, uuid, uuid, uuid, timestamptz)",
@@ -51,6 +52,19 @@ describe("migration 9014 — atribuição de ganho", () => {
     );
     expect(MIGRATION).toContain("when (new.status = 'won' and old.status is distinct from 'won')");
     expect(MIGRATION).toContain("errcode = 'PT403'");
+  });
+
+  it("o gerente não desliga a trava gravando settings direto: gatilho na origem, fechado a anon/authenticated", () => {
+    expect(MIGRATION).toContain(
+      "create trigger trg_escale_so_admin_muda_regras_de_ganho\n  before insert or update of settings on public.crm_pipelines",
+    );
+    expect(MIGRATION).toContain("'escale_so_admin_ganha', 'escale_atribuicao_de_ganho'");
+    expect(MIGRATION).toContain("fn_role_at_least(new.organization_id, 'admin')");
+    expect(MIGRATION).toContain("if auth.uid() is null then");
+    expect(MIGRATION).toContain("errcode = 'PT403'");
+    expect(MIGRATION).toContain(
+      "revoke all on function public.fn_escale_so_admin_muda_regras_de_ganho() from public, anon, authenticated;",
+    );
   });
 
   it("o baseline traz o bloco idêntico, antes da âncora", () => {

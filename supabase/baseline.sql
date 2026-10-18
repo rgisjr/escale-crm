@@ -35854,6 +35854,52 @@ create trigger trg_escale_so_admin_marca_ganho_ao_criar
   when (new.status = 'won')
   execute function public.fn_escale_so_admin_marca_ganho();
 
+-- ── SÓ O ADMINISTRADOR MUDA AS REGRAS DO GANHO ─────────────────────────────
+-- A política `crm_pipelines_manager_write` deixa o gerente gravar
+-- `crm_pipelines.settings` direto pelo PostgREST; a conferência de admin da
+-- rota não o alcança. Este gatilho fecha a porta no banco: com sessão, quem não
+-- é administrador (nem suporte com escrita) não muda `escale_so_admin_ganha`
+-- nem `escale_atribuicao_de_ganho`. Sem sessão (serviço, sistema) passa. Na
+-- criação, a chave presente conta como mudança (ausente -> valor).
+create or replace function public.fn_escale_so_admin_muda_regras_de_ganho()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_chave text;
+  v_antes jsonb;
+  v_depois jsonb;
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if public.fn_is_platform_admin_full()
+     or public.fn_role_at_least(new.organization_id, 'admin') then
+    return new;
+  end if;
+  foreach v_chave in array array['escale_so_admin_ganha', 'escale_atribuicao_de_ganho'] loop
+    v_antes := case when tg_op = 'UPDATE' and jsonb_typeof(old.settings) = 'object'
+                    then old.settings -> v_chave end;
+    v_depois := case when jsonb_typeof(new.settings) = 'object'
+                     then new.settings -> v_chave end;
+    if v_antes is distinct from v_depois then
+      raise exception 'so_administrador_muda_regras_do_ganho' using errcode = 'PT403';
+    end if;
+  end loop;
+  return new;
+end
+$fn$;
+
+revoke all on function public.fn_escale_so_admin_muda_regras_de_ganho() from public, anon, authenticated;
+
+drop trigger if exists trg_escale_so_admin_muda_regras_de_ganho on public.crm_pipelines;
+create trigger trg_escale_so_admin_muda_regras_de_ganho
+  before insert or update of settings on public.crm_pipelines
+  for each row
+  execute function public.fn_escale_so_admin_muda_regras_de_ganho();
+
 -- ── O CRÉDITO DO GANHO ─────────────────────────────────────────────────────
 create table if not exists public.crm_ganho_do_negocio (
   lead_id uuid primary key references public.crm_leads(id) on delete cascade,
