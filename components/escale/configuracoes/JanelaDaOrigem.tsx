@@ -69,6 +69,7 @@ import { membrosAtivosDaEquipe } from "./ListaDePessoas";
 import { RodapeDaDistribuicao } from "./RodapeDaDistribuicao";
 import { SecaoAlerta } from "./SecaoAlerta";
 import { SecaoAtribuicao } from "./SecaoAtribuicao";
+import { SecaoNotificacoes } from "./SecaoNotificacoes";
 import { SecaoCampos } from "./SecaoCampos";
 import { SecaoDistribuicao } from "./SecaoDistribuicao";
 import { SecaoGerais } from "./SecaoGerais";
@@ -101,6 +102,7 @@ export interface PropsDaSecao {
  *
  * Fase 1K: a subaba "Distribuição de dono" (só admin), com a rota própria no mesmo "Salvar" e o
  * "Resetar distribuição" no canto do rodapé. Fase 1K: a subaba "Atribuição de ganho".
+ * Fase 1K: a subaba "Notificações" (aviso dentro do app).
  */
 export function JanelaDaOrigem({
   id,
@@ -175,7 +177,6 @@ export function JanelaDaOrigem({
       id: "notificacoes",
       rotulo: t("Notificações"),
       icone: Bell,
-      emBreve: t("Chega na fase 1K, com os avisos dentro do app."),
     },
   ];
   // Só o administrador vê a subaba "Distribuição de dono" (Clint).
@@ -259,6 +260,8 @@ export function JanelaDaOrigem({
         return <SecaoDistribuicao {...props} />;
       case "atribuicao":
         return <SecaoAtribuicao {...props} />;
+      case "notificacoes":
+        return <SecaoNotificacoes {...props} />;
       default:
         return null;
     }
