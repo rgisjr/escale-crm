@@ -189,7 +189,7 @@ export function podeMarcarGanho({
 export function frasesDasRegras(
   regras: AtribuicaoDeGanho,
 ): Array<{ modelo: string; valores: Record<string, string> }> {
-  return regras.condicoes.map((c) =>
+  return regras.condicoes.map((c): { modelo: string; valores: Record<string, string> } =>
     c.tipo === "atividade"
       ? {
           modelo: "Ter realizado {n} vezes a atividade do tipo {tipo}",
