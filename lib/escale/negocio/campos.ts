@@ -11,6 +11,7 @@
  *   objeto); nome, telefone e e-mail vão nas colunas.
  */
 import type { CustomFieldType } from "@/components/contacts/CustomFieldsEditor";
+import { formatarTelefone } from "@/lib/escale/contatos/regras";
 import type { ContactPatch } from "@/lib/schemas/contacts";
 import {
   TIPOS_DE_LINK,
@@ -122,6 +123,16 @@ export function dataIsoDeBr(texto: string): string | null {
   return bate ? `${a}-${m}-${d}` : null;
 }
 
+/**
+ * O telefone como a tela mostra: o canônico BR vira "(43) 99803-1566" (o mesmo
+ * formatador da lista de contatos); outro país vira "+351 912345678"; o que não
+ * é número fica como está. O gravado continua o canônico (`telefoneParaGravar`).
+ */
+export function textoDeTelefone(bruto: unknown): string {
+  if (campoVazio(bruto)) return "";
+  return formatarTelefone(String(bruto).trim());
+}
+
 /** O que a caixa mostra (null = "Clique aqui para adicionar"). */
 export function valorParaLeitura(
   tipo: TipoDeCampoDaFicha,
@@ -144,6 +155,8 @@ export function valorParaLeitura(
       return typeof bruto === "number" ? textoDeReais(bruto) : String(bruto);
     case "number":
       return typeof bruto === "number" ? textoDeNumero(bruto) : String(bruto);
+    case "phone":
+      return textoDeTelefone(bruto);
     default:
       return String(bruto);
   }

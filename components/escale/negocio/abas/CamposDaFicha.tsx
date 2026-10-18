@@ -159,7 +159,7 @@ export function CamposDaFicha({
                 placeholder={t("Pesquisar campos...")}
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                className="h-8 w-[166px] rounded-md bg-casca-busca pr-7 pl-2.5 text-[13px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
+                className="h-8 w-[166px] rounded-md bg-casca-busca pr-6 pl-2.5 text-[13px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca [&::-webkit-search-cancel-button]:appearance-none"
               />
               <Search
                 size={14}

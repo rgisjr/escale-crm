@@ -159,6 +159,15 @@ describe("aba Negócio (print 04, C14)", () => {
     expect(screen.getByText("Nenhum campo encontrado")).toBeInTheDocument();
   });
 
+  it("a caixa Pesquisar campos cabe o texto (sem o padding que o corta) e esconde o x nativo do navegador", () => {
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    const busca = screen.getByRole("searchbox", { name: "Pesquisar campos..." });
+    expect(busca).toHaveAttribute("placeholder", "Pesquisar campos...");
+    expect(busca.className).toContain("pr-6");
+    expect(busca.className).not.toContain("pr-7");
+    expect(busca.className).toContain("[&::-webkit-search-cancel-button]:appearance-none");
+  });
+
   it("Gerenciar campos leva à tela de campos para quem administra; para os outros fica desligado", () => {
     const { unmount } = render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
     expect(screen.getByRole("link", { name: "Gerenciar campos" })).toHaveAttribute(
@@ -200,7 +209,7 @@ describe("aba Contato (print 02, C10)", () => {
     render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
     expect(screen.getByRole("heading", { name: "Campos de contato" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nome" })).toHaveValue("Ana");
-    expect(screen.getByRole("textbox", { name: "Telefone" })).toHaveValue("+5543998031566");
+    expect(screen.getByRole("textbox", { name: "Telefone" })).toHaveValue("(43) 99803-1566");
     expect(screen.getByRole("textbox", { name: "Email" })).toHaveValue("ana@b.co");
     expect(screen.getByRole("textbox", { name: "Instagram" })).toHaveValue(
       "https://instagram.com/ana",
@@ -223,6 +232,22 @@ describe("aba Contato (print 02, C10)", () => {
     await userEvent.clear(tel);
     await userEvent.type(tel, "(43) 3222-3344{Enter}");
     expect(gravar.enviado).toHaveBeenLastCalledWith({ phone_number: "+554332223344" });
+  });
+
+  it("telefone: abrir e dar Enter sem mudar não envia nada; o mesmo número em outro formato grava e não deixa Cancelar/Salvar preso", async () => {
+    render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
+    const tel = screen.getByRole("textbox", { name: "Telefone" });
+    await userEvent.click(tel);
+    await userEvent.keyboard("{Enter}");
+    expect(gravar.enviado).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
+    await userEvent.clear(tel);
+    await userEvent.type(tel, "+55 43 99803-1566{Enter}");
+    expect(gravar.enviado).toHaveBeenLastCalledWith({ phone_number: "+5543998031566" });
+    await screen.findByLabelText("Salvo");
+    expect(tel).toHaveValue("(43) 99803-1566");
+    expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).toBeNull();
   });
 
   it("apagar o e-mail não grava e explica (Q4)", async () => {

@@ -11,6 +11,7 @@ import {
   telefoneParaGravar,
   textoDeNumero,
   textoDeReais,
+  textoDeTelefone,
   valorParaGravar,
   valorParaLeitura,
   type CampoEditavel,
@@ -68,6 +69,25 @@ describe("busca e vazios (N3)", () => {
     storage.set("escale_campos_vazios_contato", "1");
     expect(lerOcultarVazios({ getItem: (k) => storage.get(k) ?? null }, "contato")).toBe(true);
     expect(lerOcultarVazios(null, "contato")).toBe(false);
+  });
+});
+
+describe("telefone na tela", () => {
+  it("o canônico BR aparece formatado: (43) 99803-1566 (o mesmo formato da lista de contatos)", () => {
+    expect(textoDeTelefone("+5543998031566")).toBe("(43) 99803-1566");
+    expect(textoDeTelefone("+554332223344")).toBe("(43) 3222-3344");
+    expect(valorParaLeitura("phone", undefined, "+5543998031566", t)).toBe("(43) 99803-1566");
+  });
+  it("outro país não quebra; o que não é número fica como está", () => {
+    expect(textoDeTelefone("+351912345678")).toBe("+351 912345678");
+    expect(textoDeTelefone("+14155551234")).toBe("+1 4155551234");
+    expect(textoDeTelefone("abc")).toBe("abc");
+    expect(textoDeTelefone("43998031566")).toBe("43998031566");
+    expect(textoDeTelefone(null)).toBe("");
+  });
+  it("o formato de tela volta para o mesmo canônico na hora de gravar", () => {
+    const tela = textoDeTelefone("+5543998031566");
+    expect(telefoneParaGravar(tela)).toEqual({ ok: true, valor: "+5543998031566" });
   });
 });
 

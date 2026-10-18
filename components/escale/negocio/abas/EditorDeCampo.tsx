@@ -10,6 +10,7 @@ import {
   simboloDaMoeda,
   textoDeNumero,
   textoDeReais,
+  textoDeTelefone,
   valorParaGravar,
   type CampoEditavel,
 } from "@/lib/escale/negocio/campos";
@@ -256,5 +257,6 @@ function textoDoValor(campo: CampoEditavel): string {
   if (campo.tipo === "currency" && typeof v === "number") return textoDeReais(v);
   if (campo.tipo === "number" && typeof v === "number") return textoDeNumero(v);
   if (campo.tipo === "date" && typeof v === "string") return dataBrDeIso(v);
+  if (campo.tipo === "phone") return textoDeTelefone(v);
   return String(v);
 }
