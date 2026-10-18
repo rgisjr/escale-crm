@@ -22,7 +22,7 @@ import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { listaParaGravar, membrosAtivos } from "@/lib/escale/acesso/membros";
-import { CHAVE_DAS_PESSOAS, PESSOAS_MAX } from "@/lib/escale/acesso/regras";
+import { CHAVE_DAS_PESSOAS, PESSOAS_MAX, pessoasDaOrigem } from "@/lib/escale/acesso/regras";
 import { ICONES_DE_GRUPO, corValida, validarNomeDeGrupo } from "@/lib/escale/origens/regras";
 import { lerJson, nomeRepetido, origensOuFalha, responderComOrigens } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -106,8 +106,6 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   if (pedido.pessoas !== undefined) {
     const lidos = await membrosAtivos(supabase, orgId);
     if (!lidos.ok) return fail("internal_error", lidos.causa.message, 500, { requestId });
-    const lista = listaParaGravar(pedido.pessoas, lidos.ids);
-    if (!lista.ok) return fail("unprocessable_entity", t(lista.erro), 422, { requestId });
     const atual = await supabase
       .from("crm_pipeline_groups")
       .select("settings")
@@ -116,6 +114,8 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
       .maybeSingle();
     if (atual.error) return fail("internal_error", atual.error.message, 500, { requestId });
     const settings = { ...((atual.data as { settings?: Record<string, unknown> } | null)?.settings ?? {}) };
+    const lista = listaParaGravar(pedido.pessoas, lidos.ids, pessoasDaOrigem(settings));
+    if (!lista.ok) return fail("unprocessable_entity", t(lista.erro), 422, { requestId });
     if (lista.lista) settings[CHAVE_DAS_PESSOAS] = lista.lista;
     else delete settings[CHAVE_DAS_PESSOAS];
     patch.settings = settings;
@@ -123,12 +123,17 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   // Nada a mudar (ex.: arquivar o que já está arquivado): sem escrita e sem auditoria.
   if (Object.keys(patch).length === 0) return ok(antes.origens, { requestId });
 
-  const { error } = await supabase
+  const { data: gravadas, error } = await supabase
     .from("crm_pipeline_groups")
     .update(patch)
     .eq("id", id)
-    .eq("organization_id", orgId);
+    .eq("organization_id", orgId)
+    .select("id");
   if (error) return nomeRepetido(error, t, requestId) ?? fail("internal_error", error.message, 500, { requestId });
+  // A RLS pode filtrar a escrita sem erro (1J: o gerente que vê o grupo só por uma origem não o altera).
+  if (!Array.isArray(gravadas) || gravadas.length !== 1) {
+    return fail("not_found", t("Grupo não encontrado."), 404, { requestId });
+  }
 
   void audit({
     action:
@@ -196,12 +201,16 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<Response>
     if (moverErr) return fail("internal_error", moverErr.message, 500, { requestId });
   }
 
-  const { error } = await supabase
+  const { data: excluidos, error } = await supabase
     .from("crm_pipeline_groups")
     .delete()
     .eq("id", id)
-    .eq("organization_id", orgId);
+    .eq("organization_id", orgId)
+    .select("id");
   if (error) return fail("internal_error", error.message, 500, { requestId });
+  if (!Array.isArray(excluidos) || excluidos.length !== 1) {
+    return fail("not_found", t("Grupo não encontrado."), 404, { requestId });
+  }
 
   void audit({
     action: "pipeline_group.deleted",

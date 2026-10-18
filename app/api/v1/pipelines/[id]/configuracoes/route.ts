@@ -30,6 +30,7 @@ import { podeAdministrarEmpresa } from "@/lib/auth/pode-administrar-empresa";
 import { requireRole } from "@/lib/auth/require-role";
 import { membrosAtivos } from "@/lib/escale/acesso/membros";
 import { modoDaOrganizacao } from "@/lib/escale/acesso/modo-da-organizacao";
+import { pessoasDaOrigem, visualizacaoDaOrigem } from "@/lib/escale/acesso/regras";
 import {
   SECOES_DO_ADMINISTRADOR,
   aplicarConfiguracoes,
@@ -168,7 +169,23 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     resourceType: "pipeline",
     resourceId: origem.pipeline.id,
     requestId,
-    metadata: { secoes, via: "escale" },
+    // 1J: quem vê a origem é controle de acesso; fica o antes e o depois.
+    metadata: {
+      secoes,
+      via: "escale",
+      ...(parsed.data.permissoes || parsed.data.gerais
+        ? {
+            antes: {
+              pessoas: pessoasDaOrigem(origem.pipeline.settings),
+              visualizacao: visualizacaoDaOrigem(origem.pipeline.settings),
+            },
+            depois: {
+              pessoas: pessoasDaOrigem(veredito.settings),
+              visualizacao: visualizacaoDaOrigem(veredito.settings),
+            },
+          }
+        : {}),
+    },
   });
 
   return responderComConfiguracoes(

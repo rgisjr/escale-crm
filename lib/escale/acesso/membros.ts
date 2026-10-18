@@ -22,13 +22,19 @@ export async function membrosAtivos(
   };
 }
 
-/** A lista que vai para o `settings` (origem ou grupo): minúscula, sem repetição; `null` apaga a chave. */
+/**
+ * A lista que vai para o `settings` (origem ou grupo): minúscula, sem repetição; `null` apaga a chave.
+ * Quem já estava na lista gravada e deixou de ser membro (acesso revogado) sai em silêncio: a tela
+ * não o mostra, então recusar travaria todo salvar. Um id NOVO fora da equipe continua sendo 422.
+ */
 export function listaParaGravar(
   pessoas: readonly string[],
   membros: readonly string[],
+  gravadas: readonly string[] = [],
 ): { ok: true; lista: string[] | null } | { ok: false; erro: string } {
-  const lista = [...new Set(pessoas.map((p) => p.toLowerCase()))];
-  if (lista.some((p) => !membros.includes(p)))
+  const pedidas = [...new Set(pessoas.map((p) => p.toLowerCase()))];
+  if (pedidas.some((p) => !membros.includes(p) && !gravadas.includes(p)))
     return { ok: false, erro: "Este usuário não faz parte da equipe." };
+  const lista = pedidas.filter((p) => membros.includes(p));
   return { ok: true, lista: lista.length > 0 ? lista : null };
 }

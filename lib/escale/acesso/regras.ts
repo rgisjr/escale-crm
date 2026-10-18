@@ -102,7 +102,8 @@ export function podeVerNegocio(args: {
 }): boolean {
   if (!args.papel) return false;
   if (!temAcessoAOrigem(args)) return false;
-  if (args.papel !== "agent") return true;
+  // Como a SQL: só viewer, gerente e admin veem tudo; qualquer outro papel segue a regra do agente.
+  if (args.papel === "viewer" || args.papel === "manager" || args.papel === "admin") return true;
   if (args.donoUserId === args.userId) return true;
   if (args.regra === "all") return true;
   if (args.regra === "own_and_unassigned") return args.donoUserId === null;

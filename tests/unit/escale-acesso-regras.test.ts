@@ -160,6 +160,14 @@ describe("quem vê o negócio (N5, o espelho do SQL)", () => {
   });
 });
 
+describe("papéis fora da lista do SQL (ai_operator) seguem a regra do agente", () => {
+  it("espelha a SQL: só viewer, gerente e admin veem tudo", () => {
+    const base = { userId: EU, pessoas: [] as string[], pessoasDoGrupo: [] as string[] };
+    expect(podeVerNegocio({ ...base, papel: "ai_operator", donoUserId: OUTRO, regra: "own" })).toBe(false);
+    expect(podeVerNegocio({ ...base, papel: "ai_operator", donoUserId: EU, regra: "own" })).toBe(true);
+  });
+});
+
 describe("quem troca o dono (N14)", () => {
   it("gerente+ sempre; abaixo disso só com a regra 'todos'", () => {
     expect(podeTrocarDono({ papel: "manager", regra: "own" })).toBe(true);

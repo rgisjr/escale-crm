@@ -13,6 +13,7 @@ import {
   CHAVE_DAS_PESSOAS,
   PESSOAS_MAX,
   VISUALIZACOES,
+  pessoasDaOrigem,
 } from "@/lib/escale/acesso/regras";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
 
@@ -125,11 +126,9 @@ export function aplicarConfiguracoes(
     s = comChave(s, CHAVE_DO_ALERTA, gravarAlerta(patch.alerta, etapas.vivas));
   }
   if (patch.permissoes) {
-    // Sem `membros` (testes puros antigos) qualquer lista passa; a rota sempre manda.
-    const lista = listaParaGravar(
-      patch.permissoes.pessoas,
-      etapas.membros ?? patch.permissoes.pessoas.map((p) => p.toLowerCase()),
-    );
+    // Sem a lista de membros ativos não há como conferir quem entra: recusa (a rota sempre manda).
+    if (!etapas.membros) return { ok: false, erro: "Este usuário não faz parte da equipe." };
+    const lista = listaParaGravar(patch.permissoes.pessoas, etapas.membros, pessoasDaOrigem(settingsAtual));
     if (!lista.ok) return lista;
     s = comChave(s, CHAVE_DAS_PESSOAS, lista.lista);
   }

@@ -209,7 +209,21 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     expect(res.status).toBe(200);
     const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
     expect(escrita?.patch).toEqual({ settings: { ...SETTINGS, escale_pessoas: [MEMBRO_2] } });
-    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ metadata: { secoes: ["permissoes"], via: "escale" } }));
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ metadata: expect.objectContaining({ secoes: ["permissoes"], via: "escale" }) }));
+  });
+
+  it("a auditoria de permissoes guarda quem via a origem antes e depois", async () => {
+    banco({ settings: { ...SETTINGS, escale_pessoas: [MEMBRO_2] } });
+    const res = await PATCH(pedido("PATCH", { permissoes: { pessoas: [] } }), ctx(PIPE));
+    expect(res.status).toBe(200);
+    expect(audit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          antes: { pessoas: [MEMBRO_2], visualizacao: null },
+          depois: { pessoas: [], visualizacao: null },
+        }),
+      }),
+    );
   });
 
   it("lista vazia apaga a chave (sem restrição)", async () => {
@@ -257,7 +271,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
         resourceId: PIPE,
         actorUserId: expect.any(String),
         organizationId: ORG_ID,
-        metadata: { secoes: ["gerais"], via: "escale" },
+        metadata: expect.objectContaining({ secoes: ["gerais"], via: "escale" }),
       }),
     );
   });
@@ -354,7 +368,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     expect(res.status).toBe(200);
     expect(db.escritas.filter((e) => e.table === "crm_pipelines")).toHaveLength(1);
     expect(audit).toHaveBeenCalledWith(
-      expect.objectContaining({ metadata: { secoes: ["gerais", "motivos"], via: "escale" } }),
+      expect.objectContaining({ metadata: expect.objectContaining({ secoes: ["gerais", "motivos"], via: "escale" }) }),
     );
   });
 

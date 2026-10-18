@@ -156,6 +156,17 @@ describe("PATCH /api/v1/pipeline-groups/:id", () => {
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "pipeline_group.updated" }));
   });
 
+  it("quem já estava na lista do grupo e saiu da equipe não trava o salvar: sai da lista", async () => {
+    const SAIU = "33333333-3333-4333-8333-333333333333";
+    const db = banco();
+    (db.tabelas as unknown as Partial<Record<string, Array<Record<string, unknown>>>>).crm_pipeline_groups![0]!.settings = {
+      escale_pessoas: [MEMBRO, SAIU],
+    };
+    const res = await mudar(G_OBRAS, { pessoas: [MEMBRO, SAIU] });
+    expect(res.status).toBe(200);
+    expect(escritasEm(db, "crm_pipeline_groups")[0]!.patch).toEqual({ settings: { escale_pessoas: [MEMBRO] } });
+  });
+
   it("pessoas com quem não é membro ativo: 422 e nada gravado", async () => {
     const db = banco();
     const res = await mudar(G_OBRAS, { pessoas: ["77777777-7777-4777-8777-777777777777"] });

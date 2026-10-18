@@ -162,6 +162,17 @@ describe("permissoes", () => {
     );
     expect(estranho).toEqual({ ok: false, erro: "Este usuário não faz parte da equipe." });
   });
+
+  it("quem já estava na lista e saiu da equipe sai em silêncio; sem a lista de membros, recusa", () => {
+    const SAIU = "33333333-3333-4333-8333-333333333333";
+    const r = aplicarConfiguracoes(
+      { escale_pessoas: [PESSOA, SAIU] },
+      { permissoes: { pessoas: [PESSOA, SAIU] } },
+      { ...ETAPAS, membros: [PESSOA] },
+    );
+    expect(r).toEqual({ ok: true, settings: { escale_pessoas: [PESSOA] } });
+    expect(aplicarConfiguracoes({}, { permissoes: { pessoas: [PESSOA] } }, ETAPAS)).toMatchObject({ ok: false });
+  });
 });
 
 describe("rascunho da janela", () => {
