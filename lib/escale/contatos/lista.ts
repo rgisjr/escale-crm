@@ -6,7 +6,10 @@ import { padraoRegexDeBusca } from "@/lib/contacts/busca-regex";
 import { hashCpf } from "@/lib/contacts/cpf";
 import { buscaValeConsulta } from "@/lib/inbox/termo-de-busca";
 import { lerLinks } from "@/lib/leads/links-de-contato";
+import { fusoUtilizavel } from "@/lib/tempo/fusos";
 
+import type { FiltroCompilado } from "./compilar-filtros";
+import { filtrosDeContatosSchema, type FiltrosDeContatos } from "./filtros";
 import { POR_PAGINA, POR_PAGINA_PADRAO, VISOES_DE_CONTATOS, instagramDoLink } from "./regras";
 
 /**
@@ -28,8 +31,31 @@ export const consultaDaListaSchema = z.object({
     .int()
     .refine((n) => (POR_PAGINA as readonly number[]).includes(n))
     .default(POR_PAGINA_PADRAO),
+  // FORK ESCALE · Fase 2B: o filtro da tela (JSON de `FiltrosDeContatos`).
+  f: z.string().max(16384).optional(),
 });
 export type ConsultaDaLista = z.output<typeof consultaDaListaSchema>;
+
+/** O `f` da consulta → filtro; `null` quando veio e não vale (a rota responde 422). */
+export function filtrosDaConsulta(consulta: { f?: string }): FiltrosDeContatos | null {
+  if (!consulta.f) return {};
+  try {
+    const lido = filtrosDeContatosSchema.safeParse(JSON.parse(consulta.f));
+    return lido.success ? lido.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** O fuso da organização (Configurações › Empresa), sempre utilizável. */
+export async function fusoDaOrganizacao(supabase: SupabaseClient, orgId: string): Promise<string> {
+  const { data } = await supabase
+    .from("organizations")
+    .select("timezone")
+    .eq("id", orgId)
+    .maybeSingle();
+  return fusoUtilizavel((data as { timezone?: string | null } | null)?.timezone);
+}
 
 export function parametrosDaBusca(busca: string | undefined) {
   if (!busca?.trim()) return { padrao: null, digitos: [] as string[], cpfHash: null, vazia: false };
@@ -124,6 +150,7 @@ export async function listarContatos(
   supabase: SupabaseClient,
   orgId: string,
   consulta: ConsultaDaLista,
+  filtro?: FiltroCompilado,
 ): Promise<PaginaDeContatos> {
   const vazio: PaginaDeContatos = {
     linhas: [],
@@ -142,6 +169,7 @@ export async function listarContatos(
     p_cpf_hash: busca.cpfHash,
     p_limite: consulta.n,
     p_deslocamento: (consulta.p - 1) * consulta.n,
+    p_filtros: filtro ?? {},
   });
   if (error) throw error;
   const ordem = (pagina ?? []) as LinhaDaFuncao[];

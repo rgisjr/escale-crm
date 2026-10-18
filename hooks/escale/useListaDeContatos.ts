@@ -5,7 +5,7 @@ import { apiClient } from "@/lib/api/client";
 import type { PaginaDeContatos } from "@/lib/escale/contatos/lista";
 import type { VisaoDeContatos } from "@/lib/escale/contatos/regras";
 
-export type ConsultaDaTela = { q?: string; v: VisaoDeContatos; p: number; n: number };
+export type ConsultaDaTela = { q?: string; v: VisaoDeContatos; p: number; n: number; f?: string | null };
 
 /**
  * A página da lista de contatos da casca (fork Escale, Fase 2A). A chave começa
@@ -22,6 +22,7 @@ export function useListaDeContatos(consulta: ConsultaDaTela) {
         n: String(consulta.n),
       });
       if (consulta.q?.trim()) qs.set("q", consulta.q.trim());
+      if (consulta.f) qs.set("f", consulta.f);
       const res = await apiClient.get<{ data: PaginaDeContatos }>(
         `/api/v1/lista-de-contatos?${qs}`,
       );

@@ -136,6 +136,7 @@ describe("GET /api/v1/lista-de-contatos", () => {
       p_cpf_hash: null,
       p_limite: 10,
       p_deslocamento: 10,
+      p_filtros: {},
     });
     const corpo = (await res.json()) as {
       data: { total: number; linhas: Array<Record<string, unknown>> };
