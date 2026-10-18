@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
+import { useActiveOrg, usePermission, useUser } from "@/hooks/auth/AuthProvider";
 import {
   useArquivosDoContato,
   useEnviarArquivos,
@@ -102,6 +102,7 @@ export function AbaArquivos({ lead }: { lead: Lead }) {
   const user = useUser();
   const org = useActiveOrg();
   const gerente = !!org && ROLE_RANK[org.role] >= ROLE_RANK.manager;
+  const podeEnviar = usePermission("contact.update");
 
   const [busca, setBusca] = useState("");
   const [periodo, setPeriodo] = useState<{ de?: string; ate?: string }>({});
@@ -153,8 +154,14 @@ export function AbaArquivos({ lead }: { lead: Lead }) {
     <BotaoDaCasca
       variante="texto"
       tamanho="sm"
-      disabled={semContato}
-      title={semContato ? t("Este negócio não tem contato.") : undefined}
+      disabled={semContato || !podeEnviar}
+      title={
+        semContato
+          ? t("Este negócio não tem contato.")
+          : !podeEnviar
+            ? t("Sem permissão")
+            : undefined
+      }
       className={cn("border border-casca-borda", EM_BREVE, className)}
       onClick={() => setJanela(true)}
     >

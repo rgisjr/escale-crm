@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const permissao = vi.hoisted(() => ({ pode: true }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({
   useUser: () => ({ id: "u1" }),
   useActiveOrg: () => ({ orgId: "org1", role: "agent" }),
+  usePermission: () => permissao.pode,
 }));
 const arquivos = vi.hoisted(() => ({
   lista: [
@@ -49,7 +51,10 @@ import type { Lead } from "@/lib/types/leads";
 
 /** FORK ESCALE · Fase 1H (C17): a aba Arquivos da Clint (print 06). */
 const LEAD = { id: "n1", contact_id: "c1" } as unknown as Lead;
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  permissao.pode = true;
+});
 
 describe("a tabela", () => {
   it("lista nome, tamanho, data e usuário; data desc por padrão; clicar no cabeçalho reordena", async () => {
@@ -122,6 +127,15 @@ describe("a tabela", () => {
 });
 
 describe("Novo arquivo", () => {
+  it("sem permissão (quem só lê): 'Novo arquivo' desligado com 'Sem permissão'", () => {
+    permissao.pode = false;
+    render(<AbaArquivos lead={LEAD} />);
+    for (const b of screen.getAllByRole("button", { name: "Novo arquivo" })) {
+      expect(b).toBeDisabled();
+      expect(b).toHaveAttribute("title", "Sem permissão");
+    }
+  });
+
   it("abre 'Novo documento'; adicionar lista o arquivo; Salvar envia e mostra o toast da Clint", async () => {
     const { toast } = await import("sonner");
     render(<AbaArquivos lead={LEAD} />);

@@ -3,16 +3,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { usePermission } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import type { Lead } from "@/lib/types/leads";
-import {
-  Bell,
-  Calendar,
-  Mail,
-  MessageCircle,
-  Phone,
-  StickyNote,
-} from "@/lib/ui/icons-da-casca";
+import { Bell, Calendar, Mail, MessageCircle, Phone, StickyNote } from "@/lib/ui/icons-da-casca";
 
 import { JanelaDeNota } from "./JanelaDeNota";
 import { TagsDaFicha } from "./TagsDaFicha";
@@ -33,6 +27,7 @@ const EM_BREVE = "text-casca-marca disabled:pointer-events-auto disabled:cursor-
 export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: string }) {
   const t = useT();
   const [nota, setNota] = useState(false);
+  const podeAnotar = usePermission("pipeline.move_card");
   const telefone = lead.contact_phone?.trim() || null;
   const email = lead.contact_email?.trim() || null;
   return (
@@ -95,10 +90,11 @@ export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: str
       </BotaoDaCasca>
       <BotaoDaCasca
         variante="icone"
-        title={t("Nova nota")}
+        disabled={!podeAnotar}
+        title={podeAnotar ? t("Nova nota") : t("Sem permissão")}
         aria-label={t("Nova nota")}
         onClick={() => setNota(true)}
-        className="text-casca-marca"
+        className={podeAnotar ? "text-casca-marca" : EM_BREVE}
       >
         <StickyNote aria-hidden />
       </BotaoDaCasca>
