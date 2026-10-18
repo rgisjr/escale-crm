@@ -961,6 +961,11 @@ export const AUDIT_ACTIONS = [
   "list_filter.created",
   "list_filter.updated",
   "list_filter.deleted",
+  // FORK ESCALE · Fase 2B: ações em massa da lista de contatos e a aprovação da exportação (migration 9103).
+  "contacts.bulk_requested",
+  "contacts.export_approved",
+  "contacts.export_rejected",
+  "contacts.export_downloaded",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
