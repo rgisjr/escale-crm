@@ -1,36 +1,47 @@
 "use client";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-import { CONTEUDO_DO_MENU, ITEM_DO_MENU } from "@/components/escale/menu/estilos";
+import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
+import { Popover } from "@/components/ui/popover";
 import { useColunasDaLista, useSalvarColunasDaLista } from "@/hooks/escale/useColunasDaLista";
+import { useEstadoDaListaDeContatos } from "@/hooks/escale/useEstadoDaListaDeContatos";
+import {
+  useCriarFiltroDaLista,
+  useExcluirFiltroDaLista,
+  useFiltrosDaLista,
+  useMudarFiltroDaLista,
+} from "@/hooks/escale/useFiltrosDaLista";
 import { useListaDeContatos } from "@/hooks/escale/useListaDeContatos";
 import { useT } from "@/hooks/i18n/useT";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
-import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import {
-  CHAVE_DO_POR_PAGINA,
-  POR_PAGINA,
-  POR_PAGINA_PADRAO,
-  ROTULO_DA_VISAO,
-  VISOES_DE_CONTATOS,
-  type VisaoDeContatos,
-} from "@/lib/escale/contatos/regras";
-import { ChevronDown, ChevronsUpDown, Funnel, RefreshCw, Search, Users } from "@/lib/ui/icons-da-casca";
+  chipsDosFiltros,
+  filtrosParaUrl,
+  mesmosFiltros,
+  temFiltros,
+  type SecaoDoFiltro,
+} from "@/lib/escale/contatos/filtros";
+import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
+import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
+import { CHAVE_DO_POR_PAGINA, POR_PAGINA, POR_PAGINA_PADRAO } from "@/lib/escale/contatos/regras";
+import { Bookmark, RefreshCw, Search } from "@/lib/ui/icons-da-casca";
 
 import type { OrigemParaCriar } from "./CamposDaOportunidade";
+import { BalaoDoFiltro } from "./filtros/BalaoDoFiltro";
+import { ControleDosFiltros } from "./filtros/ControleDosFiltros";
+import { FaixaDeFiltros } from "./filtros/FaixaDeFiltros";
+import { PainelDeFiltros } from "./filtros/PainelDeFiltros";
+import { SeletorDeFiltros } from "./filtros/SeletorDeFiltros";
 import { JanelaNovoNegocio } from "./JanelaNovoNegocio";
 import { MenuNovoContato } from "./MenuNovoContato";
 import { PainelDeColunas } from "./PainelDeColunas";
 import { SeloDeMescla } from "./SeloDeMescla";
 import { TabelaDeContatos } from "./TabelaDeContatos";
+
+const CHAVE_DA_FAIXA = "escale:contatos:faixa-de-filtros";
 
 function lerPorPagina(): number {
   try {
@@ -41,37 +52,58 @@ function lerPorPagina(): number {
   }
 }
 
+/** A faixa nasce recolhida, como na Clint (`contacts-list:filter-bar-collapsed`). */
+function lerFaixaAberta(): boolean {
+  try {
+    return window.localStorage.getItem(CHAVE_DA_FAIXA) === "aberta";
+  } catch {
+    return false;
+  }
+}
+
+const mensagemDoErro = (e: unknown, padrao: string) =>
+  e instanceof Error && e.message ? e.message : padrao;
+
 /**
- * A LISTA DE CONTATOS DA CASCA (fork Escale, Fase 2A; capturas 03-001 e
- * 03-002): cabeçalho, barra, tabela e rodapé. Busca, visão e página na URL
- * (`q`, `v`, `p`); o "N por página" no navegador.
+ * A LISTA DE CONTATOS DA CASCA (fork Escale, Fases 2A e 2B; capturas 03-001,
+ * 03-002 e os prints 2b-01 a 2b-26): cabeçalho, barra (busca, filtros prontos e
+ * salvos, "Filtros" + ⇕), a faixa de chips, a tabela e o rodapé. Com a faixa
+ * aberta, o "Filtros" + ⇕ sai da barra, como na Clint. Busca, visão, página,
+ * filtro e filtro salvo na URL; o "N por página" e a faixa no navegador.
  */
-export function ListaDeContatos({ origens, papel }: { origens: OrigemParaCriar[]; papel: Role }) {
+export function ListaDeContatos({
+  origens,
+  papel,
+  opcoesDoFiltro = OPCOES_VAZIAS,
+}: {
+  origens: OrigemParaCriar[];
+  papel: Role;
+  opcoesDoFiltro?: OpcoesDoFiltro;
+}) {
   const t = useT();
-  const router = useRouter();
-  const caminho = usePathname();
-  const params = useSearchParams();
-  const visao = (VISOES_DE_CONTATOS as readonly string[]).includes(params.get("v") ?? "")
-    ? (params.get("v") as VisaoDeContatos)
-    : "todos";
-  const pagina = Math.max(1, Number(params.get("p")) || 1);
-  const buscaDaUrl = params.get("q") ?? "";
+  const {
+    visao,
+    pagina,
+    busca: buscaDaUrl,
+    filtros,
+    f,
+    filtroSalvoId,
+    irPara,
+    mudarFiltros,
+  } = useEstadoDaListaDeContatos();
   const [busca, setBusca] = useState(buscaDaUrl);
   const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
+  const [faixaAberta, setFaixaAberta] = useState(false);
+  const [painelAberto, setPainelAberto] = useState(false);
+  const [foco, setFoco] = useState<SecaoDoFiltro | null>(null);
   const [novoNegocio, setNovoNegocio] = useState<LinhaDeContato | null>(null);
   const [girando, setGirando] = useState(false);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- o navegador só é lido depois de montar (SSR)
-  useEffect(() => setPorPagina(lerPorPagina()), []);
-
-  const irPara = (mudar: Record<string, string | null>) => {
-    const novo = new URLSearchParams(params.toString());
-    for (const [k, v] of Object.entries(mudar)) {
-      if (v === null || v === "") novo.delete(k);
-      else novo.set(k, v);
-    }
-    router.replace(`${caminho}?${novo.toString()}`, { scroll: false });
-  };
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- o navegador só é lido depois de montar (SSR)
+    setPorPagina(lerPorPagina());
+    setFaixaAberta(lerFaixaAberta());
+  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -81,9 +113,13 @@ export function ListaDeContatos({ origens, papel }: { origens: OrigemParaCriar[]
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só a busca digitada dispara
   }, [busca]);
 
-  const consulta = useListaDeContatos({ q: buscaDaUrl, v: visao, p: pagina, n: porPagina });
+  const consulta = useListaDeContatos({ q: buscaDaUrl, v: visao, p: pagina, n: porPagina, f });
   const colunas = useColunasDaLista("contatos");
   const salvarColunas = useSalvarColunasDaLista("contatos");
+  const salvos = useFiltrosDaLista("contatos");
+  const criarFiltro = useCriarFiltroDaLista("contatos");
+  const mudarFiltro = useMudarFiltroDaLista("contatos");
+  const excluirFiltro = useExcluirFiltroDaLista("contatos");
   const dados = consulta.data;
 
   useEffect(() => {
@@ -95,6 +131,11 @@ export function ListaDeContatos({ origens, papel }: { origens: OrigemParaCriar[]
   const podeExcluir = ROLE_RANK[papel] >= ROLE_RANK.manager;
   const podeMesclar = ROLE_RANK[papel] >= ROLE_RANK.manager;
   const total = dados?.total ?? 0;
+  const comFiltro = temFiltros(filtros);
+  const salvoAtivo = (salvos.data ?? []).find((s) => s.id === filtroSalvoId) ?? null;
+  const batendoComSalvo = salvoAtivo !== null && mesmosFiltros(salvoAtivo.criterios, filtros);
+  const quantos = chipsDosFiltros(filtros).length;
+  const falhou = t("Não consegui completar essa ação. Tente de novo.");
 
   const mudarPorPagina = (n: number) => {
     setPorPagina(n);
@@ -106,8 +147,52 @@ export function ListaDeContatos({ origens, papel }: { origens: OrigemParaCriar[]
     irPara({ p: null });
   };
 
-  const desligado =
-    "flex h-8 items-center gap-2 rounded-casca-gatilho border border-casca-borda px-3 text-[13px] font-medium text-casca-meta";
+  const alternarFaixa = () => {
+    const nova = !faixaAberta;
+    setFaixaAberta(nova);
+    try {
+      window.localStorage.setItem(CHAVE_DA_FAIXA, nova ? "aberta" : "recolhida");
+    } catch {
+      // o navegador pode recusar; a faixa vale só nesta visita
+    }
+  };
+
+  const abrirPainel = (s: SecaoDoFiltro | null) => {
+    setFoco(s);
+    setPainelAberto(true);
+  };
+  const resetar = () => irPara({ f: null, fs: null, v: null, p: null });
+
+  async function salvarFiltro(nome: string, compartilhado: boolean): Promise<string | null> {
+    try {
+      const r = await criarFiltro.mutateAsync({ nome, compartilhado, criterios: filtros });
+      irPara({ fs: r.id });
+      return null;
+    } catch (e) {
+      return mensagemDoErro(e, falhou);
+    }
+  }
+
+  const rodapeDoPainel = (
+    <div className="flex h-[44px] shrink-0 items-center justify-end gap-2 border-t border-casca-borda px-4">
+      {comFiltro && !batendoComSalvo ? (
+        <BalaoDoFiltro
+          aoSalvar={salvarFiltro}
+          gatilho={
+            <BotaoDaCasca type="button" variante="texto" tamanho="sm">
+              <Bookmark size={14} aria-hidden />
+              {t("Salvar filtro")}
+            </BotaoDaCasca>
+          }
+        />
+      ) : null}
+      {comFiltro ? (
+        <BotaoDaCasca type="button" variante="texto" tamanho="sm" onClick={resetar}>
+          {t("Resetar")}
+        </BotaoDaCasca>
+      ) : null}
+    </div>
+  );
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] min-h-[28rem] flex-col bg-surface md:[body:has([data-escale-casca])_&]:h-[calc(100dvh-2.75rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))]">
@@ -130,39 +215,65 @@ export function ListaDeContatos({ origens, papel }: { origens: OrigemParaCriar[]
           />
           <Search size={15} aria-hidden className="shrink-0 text-casca-suave" />
         </label>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-8 items-center gap-2 rounded-casca-gatilho border border-casca-borda px-3 text-[13px] font-medium text-casca-texto hover:bg-casca-raia">
-            <Users size={15} aria-hidden className="text-casca-marca" />
-            {t(ROTULO_DA_VISAO[visao])}
-            <ChevronDown size={14} aria-hidden />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className={CONTEUDO_DO_MENU}>
-            {VISOES_DE_CONTATOS.map((v) => (
-              <DropdownMenuItem
-                key={v}
-                className={ITEM_DO_MENU}
-                onSelect={() => irPara({ v: v === "todos" ? null : v, p: null })}
-              >
-                {t(ROTULO_DA_VISAO[v])}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <span className="flex">
-          <button type="button" disabled title={t("Em breve")} className={`${desligado} rounded-r-none`}>
-            <Funnel size={15} aria-hidden />
-            {t("Filtros")}
-          </button>
-          <button
-            type="button"
-            disabled
-            title={t("Em breve")}
-            aria-label={t("Ordenar filtros")}
-            className={`${desligado} rounded-l-none border-l-0 px-2`}
-          >
-            <ChevronsUpDown size={14} aria-hidden />
-          </button>
-        </span>
+        <SeletorDeFiltros
+          visao={visao}
+          filtros={filtros}
+          filtroSalvoId={filtroSalvoId}
+          salvos={salvos.data ?? []}
+          aoEscolherVisao={(v) =>
+            irPara({ v: v === "todos" ? null : v, f: null, fs: null, p: null })
+          }
+          aoAplicarSalvo={(s) =>
+            irPara({ f: filtrosParaUrl(s.criterios), fs: s.id, v: null, p: null })
+          }
+          aoCriarFiltro={() => abrirPainel(null)}
+          aoRenomear={async (id, nome) => {
+            try {
+              await mudarFiltro.mutateAsync({ id, nome });
+              return null;
+            } catch (e) {
+              return mensagemDoErro(e, falhou);
+            }
+          }}
+          aoCompartilhar={(id, compartilhado) =>
+            mudarFiltro.mutate(
+              { id, compartilhado },
+              { onError: (e) => toast.error(mensagemDoErro(e, falhou)) },
+            )
+          }
+          aoExcluir={(id) =>
+            excluirFiltro.mutate(id, {
+              onSuccess: () => {
+                if (id === filtroSalvoId) irPara({ fs: null });
+              },
+              onError: (e) => toast.error(mensagemDoErro(e, falhou)),
+            })
+          }
+        />
+        <Popover
+          open={painelAberto}
+          onOpenChange={(aberto) => {
+            setPainelAberto(aberto);
+            if (!aberto) setFoco(null);
+          }}
+        >
+          {/* Faixa recolhida: "Filtros" (gatilho) + ⇕. Aberta: só a âncora do painel (prints 2b-24 a 2b-26). */}
+          <ControleDosFiltros
+            faixaAberta={faixaAberta}
+            quantos={quantos}
+            aoAlternarFaixa={alternarFaixa}
+          />
+          <PainelSuspenso align="start" sideOffset={8} className="w-auto p-0">
+            <PainelDeFiltros
+              filtros={filtros}
+              aoMudar={(novos) => mudarFiltros(novos, filtroSalvoId)}
+              opcoes={opcoesDoFiltro}
+              foco={foco}
+              aoMudarFoco={setFoco}
+              rodape={rodapeDoPainel}
+            />
+          </PainelSuspenso>
+        </Popover>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[14px] text-casca-suave">
             <span className="mr-1 font-semibold text-casca-texto">{total}</span>
@@ -183,6 +294,18 @@ export function ListaDeContatos({ origens, papel }: { origens: OrigemParaCriar[]
           <PainelDeColunas itens={colunas.itens} aoMudar={(itens) => salvarColunas.mutate(itens)} />
         </div>
       </div>
+
+      {faixaAberta ? (
+        <FaixaDeFiltros
+          filtros={filtros}
+          opcoes={opcoesDoFiltro}
+          aoMudar={(novos) => mudarFiltros(novos, filtroSalvoId)}
+          aoAbrir={abrirPainel}
+          podeResetar={comFiltro || visao !== "todos"}
+          aoResetar={resetar}
+          aoRecolher={alternarFaixa}
+        />
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto px-6">
         <TabelaDeContatos
@@ -208,7 +331,11 @@ export function ListaDeContatos({ origens, papel }: { origens: OrigemParaCriar[]
         />
       </footer>
 
-      <JanelaNovoNegocio contato={novoNegocio} aoFechar={() => setNovoNegocio(null)} origens={origens} />
+      <JanelaNovoNegocio
+        contato={novoNegocio}
+        aoFechar={() => setNovoNegocio(null)}
+        origens={origens}
+      />
     </div>
   );
 }

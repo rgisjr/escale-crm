@@ -138,7 +138,7 @@ describe("fn_escale_lista_de_contatos", () => {
     ).toBe("f");
     expect(
       sql(
-        `select has_function_privilege('anon', 'public.fn_escale_lista_de_contatos(uuid,text,text,text[],text,integer,integer)', 'execute');`,
+        `select has_function_privilege('anon', 'public.fn_escale_lista_de_contatos(uuid,text,text,text[],text,integer,integer,jsonb)', 'execute');`,
       ),
     ).toBe("f");
   });

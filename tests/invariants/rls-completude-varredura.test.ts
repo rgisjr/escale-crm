@@ -121,6 +121,13 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "(zero para o gerente e para o vizinho), qualquer papel grava a sua, ninguém escreve a de outra, uma por pessoa, CHECKs e FK.",
   },
   {
+    tabela: "crm_filtros_das_listas",
+    razao:
+      "tests/invariants/escale-filtros-de-contatos.test.ts — fork Escale (migration 9102): o filtro pessoal só para quem criou " +
+      "(zero para o gerente), o compartilhado para toda a organização, só quem criou escreve, 20 por pessoa e lista, " +
+      "nome único sem caixa, CHECK da lista e FK da pessoa.",
+  },
+  {
     tabela: "crm_campos_do_negocio",
     razao:
       "tests/invariants/escale-campos-do-crm.test.ts — fork Escale (migration 9006): todo membro lê, só administrador escreve " +

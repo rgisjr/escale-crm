@@ -5,6 +5,8 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import type { Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 
+import { opcoesDoFiltroDasOrigens, type OpcoesDoFiltro } from "./opcoes-do-filtro";
+
 type EtapaLida = {
   id: string;
   name: string;
@@ -13,7 +15,12 @@ type EtapaLida = {
   is_won: boolean;
   is_lost: boolean;
 };
-type OrigemLida = { id: string; name: string; crm_stages: EtapaLida[] | null };
+type OrigemLida = {
+  id: string;
+  name: string;
+  settings: Record<string, unknown> | null;
+  crm_stages: EtapaLida[] | null;
+};
 
 /**
  * As origens e etapas que as janelas de criar oferecem (fork Escale, Fase 2A,
@@ -21,18 +28,25 @@ type OrigemLida = { id: string; name: string; crm_stages: EtapaLida[] | null };
  * as etapas de ganho e perda, na ordem do quadro. `GET /api/v1/pipelines` exige
  * gerente; a lista de contatos é aberta a todo papel.
  */
-export async function origensDaPagina(): Promise<{ origens: OrigemParaCriar[]; papel: Role }> {
+export async function origensDaPagina(): Promise<{
+  origens: OrigemParaCriar[];
+  papel: Role;
+  opcoesDoFiltro: OpcoesDoFiltro;
+}> {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");
   const supabase = await createClient();
   const { data } = await supabase
     .from("crm_pipelines")
-    .select("id, name, position, crm_stages(id, name, position, is_archived, is_won, is_lost)")
+    .select(
+      "id, name, position, settings, crm_stages(id, name, position, is_archived, is_won, is_lost)",
+    )
     .eq("organization_id", activeOrg.orgId)
     .eq("is_archived", false)
     .order("position", { ascending: true });
-  const origens = ((data ?? []) as unknown as OrigemLida[]).map((p) => ({
+  const lidas = (data ?? []) as unknown as OrigemLida[];
+  const origens = lidas.map((p) => ({
     id: p.id,
     nome: p.name,
     etapas: [...(p.crm_stages ?? [])]
@@ -40,5 +54,10 @@ export async function origensDaPagina(): Promise<{ origens: OrigemParaCriar[]; p
       .sort((a, b) => Number(a.position) - Number(b.position))
       .map((s) => ({ id: s.id, nome: s.name })),
   }));
-  return { origens, papel: activeOrg.role as Role };
+  // FORK ESCALE · Fase 2B: o painel de filtros oferece todas as etapas (ganho e perda também).
+  return {
+    origens,
+    papel: activeOrg.role as Role,
+    opcoesDoFiltro: opcoesDoFiltroDasOrigens(lidas),
+  };
 }
