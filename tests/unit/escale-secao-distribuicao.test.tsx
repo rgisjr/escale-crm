@@ -229,6 +229,26 @@ describe("Distribuição de dono", () => {
   });
 });
 
+describe("o 'Resetar distribuição' fica à vista, junto da tabela (pedido do usuário, 18/10)", () => {
+  it("mora na seção, logo abaixo da tabela, e não no rodapé da janela", async () => {
+    const { user } = abrir();
+    await irPara(user);
+    const tabela = await screen.findByRole("table", { name: "Distribuição de dono" });
+    const resetar = screen.getByRole("button", { name: "Resetar distribuição" });
+    expect(tabela.parentElement).toContainElement(resetar);
+    expect(screen.getByRole("button", { name: "Cancelar" }).parentElement).not.toContainElement(
+      resetar,
+    );
+  });
+
+  it("sem ninguém na distribuição gravada não há contagem a zerar: o botão não aparece", async () => {
+    const { user } = abrir(config({ distribuicao: [] }));
+    await irPara(user);
+    await screen.findByRole("table", { name: "Distribuição de dono" });
+    expect(screen.queryByRole("button", { name: "Resetar distribuição" })).toBeNull();
+  });
+});
+
 describe("M6: a caixa 'Reiniciar…' e o Salvar", () => {
   it("marcar, editar e voltar às linhas gravadas deixa o Salvar desligado (nada a gravar)", async () => {
     const { user } = abrir();

@@ -67,7 +67,6 @@ import { cn } from "@/lib/utils";
 import { AbaDeEtapas } from "./AbaDeEtapas";
 import { EmBreve } from "./EmBreve";
 import { membrosAtivosDaEquipe } from "./ListaDePessoas";
-import { RodapeDaDistribuicao } from "./RodapeDaDistribuicao";
 import { SecaoAlerta } from "./SecaoAlerta";
 import { SecaoAtribuicao } from "./SecaoAtribuicao";
 import { SecaoNotificacoes } from "./SecaoNotificacoes";
@@ -102,7 +101,7 @@ export interface PropsDaSecao {
  * fecha. Sem X: fecha com Esc ou Cancelar.
  *
  * Fase 1K: a subaba "Distribuição de dono" (só admin), com a rota própria no mesmo "Salvar" e o
- * "Resetar distribuição" no canto do rodapé. Fase 1K: a subaba "Atribuição de ganho".
+ * "Resetar distribuição" logo abaixo da tabela (SecaoDistribuicao). Fase 1K: a subaba "Atribuição de ganho".
  * Fase 1K: a subaba "Notificações" (aviso dentro do app).
  */
 export function JanelaDaOrigem({
@@ -384,15 +383,7 @@ export function JanelaDaOrigem({
             </div>
 
             <div className="flex items-center justify-between gap-2 px-8 pt-3 pb-[22px]">
-              {aba === "geral" &&
-              subaba === "distribuicao" &&
-              config &&
-              rascunho &&
-              config.podeAdministrar ? (
-                <RodapeDaDistribuicao config={config} rascunho={rascunho} mudar={mudar} />
-              ) : (
-                <span />
-              )}
+              <span />
               <div className="flex gap-2">
                 {aba === "etapas" && playbookMexido ? (
                   <BotaoDaJanela variante="cancelar" onClick={() => setConfirmarDesfazer(true)}>
