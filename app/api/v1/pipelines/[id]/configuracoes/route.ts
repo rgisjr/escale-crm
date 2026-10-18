@@ -149,9 +149,11 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
       return falhaInesperada(distribuicao.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
     }
     // `distribuicao_pendente`: a tela vai salvar a distribuição logo depois (sai um, entra
-    // outro); a lista confere contra quem FICARÁ, não contra quem está gravado.
+    // outro); a lista confere contra quem FICARÁ, não contra quem está gravado. Só vale
+    // para o administrador (é quem salva a distribuição): de quem não é, o campo é
+    // ignorado, senão um gerente mandaria uma lista vazia para desligar a conferência.
     let linhas = linhasDaTela(distribuicao.pessoas);
-    if (parsed.data.distribuicao_pendente) {
+    if (parsed.data.distribuicao_pendente && podeAdministrar) {
       const pendentes = parsed.data.distribuicao_pendente.map((p) => p.toLowerCase());
       const papeis = pendentes.length
         ? await papeisAtivos(supabase, orgId, pendentes)

@@ -562,6 +562,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
   });
 
   it("Q9 com distribuicao_pendente: confere contra quem ficará, não contra a distribuição gravada", async () => {
+    authOk("admin");
     const A = "11111111-1111-4111-8111-111111111111";
     const B = "66666666-6666-4666-8666-666666666666";
     const db = banco();
@@ -594,6 +595,28 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     ).toBe(422);
     // Sozinha, a lista pendente não é "algo para salvar".
     expect((await PATCH(pedido("PATCH", { distribuicao_pendente: [A] }), ctx(PIPE))).status).toBe(422);
+  });
+
+  it("Q9: o gerente não desliga a conferência mandando distribuicao_pendente (o campo é ignorado)", async () => {
+    const A = "11111111-1111-4111-8111-111111111111";
+    const B = "66666666-6666-4666-8666-666666666666";
+    const db = banco();
+    const tabelas = db.tabelas as unknown as Record<string, unknown[]>;
+    tabelas.crm_distribuicao_de_dono = [
+      { organization_id: ORG_ID, pipeline_id: PIPE, user_id: B, percentual: 100, contador: 0, created_at: "2026-10-18" },
+    ];
+    tabelas.user_organizations = [
+      { organization_id: ORG_ID, user_id: B, role: "agent", accepted_at: "2026-01-01", revoked_at: null },
+      { organization_id: ORG_ID, user_id: A, role: "agent", accepted_at: "2026-01-01", revoked_at: null },
+    ];
+    // authOk() é gerente. B está na distribuição gravada e fica fora da lista nova.
+    for (const pendente of [[], [A]]) {
+      const res = await PATCH(
+        pedido("PATCH", { permissoes: { pessoas: [A] }, distribuicao_pendente: pendente }),
+        ctx(PIPE),
+      );
+      expect(res.status).toBe(422);
+    }
   });
 
   it("o GET traz a distribuição (vazia sem linhas) e quando mudou por último", async () => {
