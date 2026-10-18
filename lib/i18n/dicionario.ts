@@ -10098,8 +10098,6 @@ export const DICIONARIO: Traducoes = {
   "Adicione um usuário...": { es: "Agrega un usuario..." },
   "Primeira página": { es: "Primera página" },
   "Última página": { es: "Última página" },
-  "Usuários": { es: "Usuarios" },
-  "Remover": { es: "Quitar" },
   "Este usuário não faz parte da equipe.": { es: "Este usuario no forma parte del equipo." },
   "Você não tem permissão para acessar essa origem.": { es: "No tienes permiso para acceder a este origen." },
   "Atenção! Esse negócio pertence a outro dono.": { es: "¡Atención! Este negocio pertenece a otro dueño." },
