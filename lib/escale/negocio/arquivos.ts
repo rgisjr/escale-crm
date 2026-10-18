@@ -125,20 +125,20 @@ export function formatarTamanho(bytes: number): string {
 
 /** "17/10/2026 13:05:09" (a tabela da Clint mostra dd/mm/aaaa hh:mm:ss). */
 export function dataHoraBr(iso: string, timeZone?: string): string {
-  const d = new Date(iso);
-  const data = d.toLocaleDateString("pt-BR", {
+  // Montado das partes, sempre dd/mm/aaaa hh:mm:ss (formato BR do projeto, em qualquer idioma da tela).
+  const partes = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  });
-  const hora = d.toLocaleTimeString("pt-BR", {
-    timeZone,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-  });
-  return `${data} ${hora}`;
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const p = (tipo: Intl.DateTimeFormatPartTypes) =>
+    partes.find((x) => x.type === tipo)?.value ?? "";
+  return `${p("day")}/${p("month")}/${p("year")} ${p("hour")}:${p("minute")}:${p("second")}`;
 }
 
 const MAX_NOME_DO_ARQUIVO = 255;

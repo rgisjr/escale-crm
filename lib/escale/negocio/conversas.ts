@@ -12,11 +12,14 @@ export const ROTULO_DO_STATUS: Readonly<Record<StatusDeConversa, string>> = {
 };
 
 /** Verde claro para o que está aberto; cinza para o resto (sem print dos outros estados). */
+const STATUS_EM_ANDAMENTO: ReadonlySet<string> = new Set([
+  "open",
+  "claimed",
+  "ai_handling",
+  "pending",
+]);
 export function classeDoStatus(status: string): string {
-  return status === "open" ||
-    status === "claimed" ||
-    status === "ai_handling" ||
-    status === "pending"
+  return STATUS_EM_ANDAMENTO.has(status)
     ? "bg-[var(--escale-status-ganho-suave)] text-[var(--escale-status-ganho)]"
     : "bg-casca-raia text-casca-texto-2";
 }
