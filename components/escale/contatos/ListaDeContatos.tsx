@@ -7,6 +7,7 @@ import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover } from "@/components/ui/popover";
 import { useColunasDaLista, useSalvarColunasDaLista } from "@/hooks/escale/useColunasDaLista";
+import { useAcompanharAcoes } from "@/hooks/escale/useAcompanharAcoes";
 import { useEstadoDaListaDeContatos } from "@/hooks/escale/useEstadoDaListaDeContatos";
 import {
   useCriarFiltroDaLista,
@@ -28,6 +29,7 @@ import {
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
 import { CHAVE_DO_POR_PAGINA, POR_PAGINA, POR_PAGINA_PADRAO } from "@/lib/escale/contatos/regras";
+import { alvoDaSelecao } from "@/lib/escale/contatos/selecao";
 import { Bookmark, RefreshCw, Search } from "@/lib/ui/icons-da-casca";
 
 import type { OrigemParaCriar } from "./CamposDaOportunidade";
@@ -39,6 +41,7 @@ import { SeletorDeFiltros } from "./filtros/SeletorDeFiltros";
 import { JanelaNovoNegocio } from "./JanelaNovoNegocio";
 import { MenuNovoContato } from "./MenuNovoContato";
 import { PainelDeColunas } from "./PainelDeColunas";
+import { AcoesEmMassa } from "./massa/AcoesEmMassa";
 import { FaixaDaSelecao } from "./massa/FaixaDaSelecao";
 import { MenuDaSelecao } from "./massa/MenuDaSelecao";
 import { SeloDeMescla } from "./SeloDeMescla";
@@ -148,6 +151,7 @@ export function ListaDeContatos({
     primeiro: (pagina - 1) * porPagina,
     chaveDaConsulta: JSON.stringify([buscaDaUrl, visao, f]),
   });
+  const acompanhamento = useAcompanharAcoes();
 
   const mudarPorPagina = (n: number) => {
     setPorPagina(n);
@@ -363,6 +367,15 @@ export function ListaDeContatos({
         />
       </footer>
 
+      {podeSelecionar && sel.quantidade > 0 ? (
+        <AcoesEmMassa
+          quantidade={sel.quantidade}
+          alvo={alvoDaSelecao(sel.selecao, { q: buscaDaUrl, v: visao, f })}
+          origens={origens}
+          aoLimpar={sel.limpar}
+          aoPedir={acompanhamento.acompanhar}
+        />
+      ) : null}
       <JanelaNovoNegocio
         contato={novoNegocio}
         aoFechar={() => setNovoNegocio(null)}
