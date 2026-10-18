@@ -55,9 +55,15 @@ describe("acesso por origem: migration 9010 e bloco do baseline", () => {
       (sql.match(/language sql stable security definer set search_path = public, pg_temp/g) ?? [])
         .length,
     ).toBe(5);
+    // A regra em vigor recebe a organização sem conferir quem chama: só as definers a usam (0149).
+    expect(sql).toContain(
+      "revoke execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) from anon, authenticated;",
+    );
+    expect(sql).toContain(
+      "grant execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) to service_role;",
+    );
     for (const assinatura of [
       "fn_escale_lista_permite(jsonb)",
-      "fn_escale_visualizacao_da_origem(uuid, uuid)",
       "fn_escale_tem_acesso_a_origem(uuid, uuid)",
       "fn_escale_tem_acesso_ao_grupo(uuid, uuid)",
       "fn_escale_pode_ver_negocio(uuid, uuid, uuid)",
