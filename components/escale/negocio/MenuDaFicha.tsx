@@ -7,6 +7,7 @@ import * as MenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CAIXA_DO_MENU, ITEM_DO_MENU } from "@/components/escale/quadro/estilos-do-menu";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { MoveToOtherPipelineDialog } from "@/components/kanban/MoveToOtherPipelineDialog";
+import { JanelaDeNota } from "@/components/escale/negocio/JanelaDeNota";
 import { NewLeadDialog } from "@/components/kanban/NewLeadDialog";
 import {
   AlertDialog,
@@ -74,6 +75,7 @@ export function MenuDaFicha({
   const [novo, setNovo] = useState(false);
   const [mudar, setMudar] = useState(false);
   const [excluir, setExcluir] = useState(false);
+  const [nota, setNota] = useState(false);
 
   return (
     <>
@@ -110,7 +112,7 @@ export function MenuDaFicha({
                 {t("Mudar origem")}
               </MenuPrimitive.Item>
             ) : null}
-            <MenuPrimitive.Item disabled title={t("Em breve")} className={ITEM_DESLIGADO}>
+            <MenuPrimitive.Item className={ITEM_DO_MENU} onSelect={() => setNota(true)}>
               <StickyNote size={14} aria-hidden />
               {t("Nova nota")}
             </MenuPrimitive.Item>
@@ -146,6 +148,7 @@ export function MenuDaFicha({
         leadId={lead.id}
         pipelineId={pipelineId}
       />
+      <JanelaDeNota leadId={lead.id} aberta={nota} onFechar={() => setNota(false)} />
       <AlertDialog open={excluir} onOpenChange={setExcluir}>
         <AlertDialogContent>
           <AlertDialogHeader>

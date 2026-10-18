@@ -226,6 +226,22 @@ body:has([data-escale-casca]) {
   --shadow-casca-painel: 0 8px 16px rgb(0 0 0 / 0.45), 0 0 1px rgb(0 0 0 / 0.6);
 }
 
+/* ─── FORK ESCALE · Fase 1I (playbook e atividades) ───
+   O olho cortado da atividade não listada (#FF9C46 no código da Clint,
+   SaveOriginTemplate) e o aviso verde da janela "Nova atividade" (print 024;
+   conferir com conta-gotas). */
+body:has([data-escale-casca]) {
+  --escale-nao-listada: #ff9c46;
+  --escale-aviso-ok-borda: #86efac;
+  --escale-aviso-ok-texto: #15803d;
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --escale-nao-listada: #ffb47a;
+  --escale-aviso-ok-borda: #166534;
+  --escale-aviso-ok-texto: #86efac;
+}
+
 /* ─── FORK ESCALE · casca V3 (painel esquerdo de Negócios) ───
    Cores da Clint que NÃO são a marca e que só o painel e as janelas dele usam:
    o cinza do hover da linha (01-032/033/034) e o "Salvar" verde-menta do modal
@@ -272,6 +288,8 @@ body:has([data-escale-casca]) {
      red.fg do tema da Clint (green.700/red.700 do tema da Clint, index-CY2O8ZFZ.js). */
   --escale-status-ganho: #15803d;
   --escale-status-perdido: #b91c1c;
+  /* Fase 1H (C16): fundo do chip "Em aberto" da lista de sessões; provisório (print 05, ~#E6F7EC), medir com conta-gotas. */
+  --escale-status-ganho-suave: #e6f7ec;
 }
 
 [data-theme="dark"] body:has([data-escale-casca]) {
@@ -293,6 +311,7 @@ body:has([data-escale-casca]) {
   --escale-alternancia-ativa: #7d98ff;
   --escale-status-ganho: #86efac;
   --escale-status-perdido: #fca5a5;
+  --escale-status-ganho-suave: #14351f;
 }
 
 /* F17: dentro da janela da origem, os textos dos campos, seletores, listas e

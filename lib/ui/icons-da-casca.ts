@@ -88,3 +88,6 @@ export {
   Link2,
   ExternalLink,
 } from "lucide-react";
+
+// Fase 1I (playbook e aba Atividades): tarefa, reunião, celular, setas da ordem, compartilhar e a lista dos dias.
+export { Clipboard, Watch, Smartphone, ArrowUp, ArrowDown, Share2, List } from "lucide-react";

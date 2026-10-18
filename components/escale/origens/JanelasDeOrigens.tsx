@@ -1,14 +1,11 @@
 "use client";
 // Fase 1F: a janela grande da Clint (01-013).
 import { JanelaDaOrigem } from "@/components/escale/configuracoes/JanelaDaOrigem";
+import type { AbaDaOrigem } from "@/lib/escale/configuracoes/abrir";
 import type { Origens } from "@/lib/escale/origens/regras";
 
 import { JanelaDaCasca } from "./JanelaDaCasca";
-import {
-  FormAdicionarOrigem,
-  FormArquivarOrigem,
-  FormExcluirOrigem,
-} from "./JanelasDaOrigem";
+import { FormAdicionarOrigem, FormArquivarOrigem, FormExcluirOrigem } from "./JanelasDaOrigem";
 import {
   FormAdicionarGrupo,
   FormArquivarGrupo,
@@ -30,6 +27,7 @@ export type Janela =
         | "arquivar-origem"
         | "excluir-origem";
       id: string;
+      aba?: AbaDaOrigem;
     };
 
 export interface PropsDaJanela {
@@ -52,7 +50,7 @@ export function JanelasDeOrigens({
 }: PropsDaJanela & { janela: Janela | null; onAbrirOrigem: (id: string) => void }) {
   // `key`: outra origem recomeça do zero, sem herdar o rascunho da anterior.
   if (janela?.tipo === "config-origem") {
-    return <JanelaDaOrigem key={janela.id} {...comuns} id={janela.id} />;
+    return <JanelaDaOrigem key={janela.id} {...comuns} id={janela.id} abaInicial={janela.aba} />;
   }
   return (
     <JanelaDaCasca aberta={janela !== null} onFechar={comuns.onFechar}>

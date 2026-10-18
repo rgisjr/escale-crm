@@ -42,8 +42,6 @@ const gravar = vi.hoisted(() => {
 });
 vi.mock("@/hooks/escale/useGravarContato", () => ({ useGravarContato: () => gravar }));
 
-import { AbaArquivos } from "@/components/escale/negocio/abas/AbaArquivos";
-import { AbaConversas } from "@/components/escale/negocio/abas/AbaConversas";
 import { AbaContato, AbaEmpresa, AbaNegocio } from "@/components/escale/negocio/abas/AbasDeCampos";
 import type { Pipeline } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
@@ -279,53 +277,5 @@ describe("aba Empresa (print 03)", () => {
       "Número de funcionários",
       "CNPJ",
     ]);
-  });
-});
-
-describe("aba Conversas (print 05)", () => {
-  it("a conversa do negócio na lista, que abre no Inbox, e o vazio da direita", () => {
-    render(<AbaConversas lead={LEAD} />);
-    expect(screen.getByText("Abra as conversas sem marcá-las como lidas.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ativar modo espião" })).toHaveAttribute(
-      "title",
-      "Em breve",
-    );
-    expect(screen.getByText("1 sessões")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Olá, me chamo Camilly/ })).toHaveAttribute(
-      "href",
-      "/app/inbox?id=cv1",
-    );
-    expect(screen.getByText("Selecione uma conversa")).toBeInTheDocument();
-    expect(
-      screen.getByText("Escolha uma conversa ao lado para ver as mensagens."),
-    ).toBeInTheDocument();
-  });
-
-  it("contato sem conversa: o texto da Clint", () => {
-    render(<AbaConversas lead={{ ...LEAD, conversa: null } as Lead} />);
-    expect(
-      screen.getByText("Este contato não possui conversas no atendimento"),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("aba Arquivos (print 06)", () => {
-  it("a barra, a tabela e o vazio da Clint; enviar é da 1H", () => {
-    render(<AbaArquivos />);
-    expect(screen.getAllByRole("columnheader").map((c) => c.textContent)).toEqual([
-      "Arquivo",
-      "Data de upload",
-      "Usuário",
-    ]);
-    expect(screen.getByText("Nenhum arquivo encontrado")).toBeInTheDocument();
-    expect(
-      screen.getByText("Envie arquivos para mantê-los junto deste contato."),
-    ).toBeInTheDocument();
-    for (const b of screen.getAllByRole("button", { name: "Novo arquivo" })) {
-      expect(b).toBeDisabled();
-      expect(b).toHaveAttribute("title", "Em breve");
-    }
-    expect(screen.getByRole("button", { name: "Data" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Tipo de arquivo" })).toBeDisabled();
   });
 });

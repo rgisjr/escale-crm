@@ -175,10 +175,12 @@ describe("contador e datas", () => {
     expect(dias[2]!.rotulo).toBeNull();
   });
 
-  it("histórico em seções: esta semana, semana passada e depois a data do domingo", () => {
+  it("histórico em seções: Hoje, Ontem, Esta semana e depois o dia e o mês (a Clint não tem Semana passada)", () => {
     const agora = new Date(2026, 9, 17, 12); // sábado
     const secoes = secoesDoHistorico(
       [
+        { id: "h", performed_at: new Date(2026, 9, 17, 9).toISOString() },
+        { id: "o", performed_at: new Date(2026, 9, 16, 10).toISOString() },
         { id: "a", performed_at: new Date(2026, 9, 14, 10).toISOString() },
         { id: "b", performed_at: new Date(2026, 9, 8, 10).toISOString() },
         { id: "c", performed_at: new Date(2026, 8, 20, 10).toISOString() },
@@ -186,10 +188,12 @@ describe("contador e datas", () => {
       agora,
     );
     expect(secoes.map((s) => [s.rotulo, s.itens.map((i) => i.id)])).toEqual([
+      ["Hoje", ["h"]],
+      ["Ontem", ["o"]],
       ["Esta semana", ["a"]],
-      ["Semana passada", ["b"]],
-      ["20/09/2026", ["c"]],
+      ["8 Out", ["b"]],
+      ["20 Set", ["c"]],
     ]);
-    expect(secoes[0]!.data).toBe("14 Out");
+    expect(secoes[2]!.data).toBe("14 Out");
   });
 });
