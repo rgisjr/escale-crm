@@ -53,6 +53,22 @@ function comoUsuario(userId: string, script: string): string {
   }
 }
 
+/** O comando foi recusado por falta de privilégio (coluna ou tabela sem GRANT para `authenticated`)? */
+function negado(userId: string, dml: string): boolean {
+  try {
+    sql(`
+      set role authenticated;
+      select set_config('request.jwt.claims', '{"sub":"${userId}"}', false);
+      ${dml};
+    `);
+    return false;
+  } catch (err) {
+    return ((err as { stderr?: string }).stderr ?? "").includes("permission denied");
+  } finally {
+    sql(`reset role;`);
+  }
+}
+
 const tarefasDo = (lead: string) =>
   Number(lastLine(sql(`select count(*)::int from public.crm_tasks where lead_id = '${lead}';`)));
 
@@ -235,20 +251,13 @@ describe("RLS do playbook e das atividades do negócio (9009)", () => {
     sql(`delete from public.crm_atividades_da_etapa where id = '${P(104)}';`);
   });
 
-  it("viewer não escreve atividade do negócio; agente escreve", () => {
+  it("ninguém atualiza a atividade do negócio direto (9012: só o gatilho grava tipo, etapa e quem concluiu)", () => {
     const [id] = tarefaDa(L2, A_LIGACAO);
-    expect(
-      writeCountAs(
-        GOV_VIEWER,
-        `update public.crm_atividades_do_negocio set tipo = 'tarefa' where tarefa_id = '${id}'`,
-      ),
-    ).toBe(0);
-    expect(
-      writeCountAs(
-        GOV_AGENT_A,
-        `update public.crm_atividades_do_negocio set tipo = 'ligacao' where tarefa_id = '${id}'`,
-      ),
-    ).toBe(1);
+    for (const quem of [GOV_VIEWER, GOV_AGENT_A, GOV_MANAGER]) {
+      expect(
+        negado(quem, `update public.crm_atividades_do_negocio set tipo = 'tarefa' where tarefa_id = '${id}'`),
+      ).toBe(true);
+    }
   });
 });
 
@@ -306,5 +315,52 @@ describe("salvar o playbook (fn_escale_salvar_playbook)", () => {
     expect(
       lastLine(sql(`select count(*) from public.crm_atividades_da_etapa where id = '${P(203)}';`)),
     ).toBe("0");
+  });
+});
+
+describe("endurecimento das atividades (9012)", () => {
+  /** Uma tarefa nova do negócio, criada como o superusuário (a rota a cria pela sessão). */
+  const novaTarefa = (n: number, lead: string, org = GOV_ORG) => {
+    sql(`insert into public.crm_tasks (id, organization_id, title, status, lead_id)
+           values ('${P(200 + n)}', '${org}', 'Tarefa ${n}', 'pending', ${lead ? `'${lead}'` : "null"})
+           on conflict do nothing;`);
+    return P(200 + n);
+  };
+  const linha = (tarefa: string, lead: string, extra = "", org = GOV_ORG) =>
+    `insert into public.crm_atividades_do_negocio (tarefa_id, organization_id, lead_id, stage_id, tipo, visibilidade${extra ? ", " + extra.split("=")[0] : ""})
+       values ('${tarefa}', '${org}', '${lead}', '${E1}', 'tarefa', 'padrao'${extra ? ", " + extra.split("=")[1] : ""})`;
+
+  it("como o app grava (tarefa do próprio negócio, etapa da organização): passa", () => {
+    const t = novaTarefa(1, L1);
+    expect(writeCountAs(GOV_MANAGER, linha(t, L1))).toBe(1);
+  });
+
+  it("não se forja quem concluiu, a data da conclusão nem a atividade do playbook no INSERT", () => {
+    const t = novaTarefa(2, L1);
+    expect(negado(GOV_MANAGER, linha(t, L1, `concluida_por='${GOV_AGENT_A}'`))).toBe(true);
+    expect(negado(GOV_MANAGER, linha(t, L1, "concluida_em=now()"))).toBe(true);
+    expect(negado(GOV_MANAGER, linha(t, L1, `atividade_id='${A_WHATS}'`))).toBe(true);
+  });
+
+  it("a tarefa precisa ser do MESMO negócio e da mesma organização", () => {
+    const deOutroNegocio = novaTarefa(3, L1);
+    expect(writeCountAs(GOV_MANAGER, linha(deOutroNegocio, L2))).toBe(0);
+    const daOutraOrg = novaTarefa(4, "", ORG_B);
+    expect(writeCountAs(GOV_MANAGER, linha(daOutraOrg, L1))).toBe(0);
+    expect(writeCountAs(USER_B, linha(novaTarefa(5, L1), L1, "", ORG_B))).toBe(0);
+  });
+
+  it("viewer não grava atividade do negócio", () => {
+    expect(writeCountAs(GOV_VIEWER, linha(novaTarefa(6, L1), L1))).toBe(0);
+  });
+
+  it("o gerente não põe atividade do playbook numa etapa de OUTRA origem", () => {
+    expect(
+      writeCountAs(
+        GOV_MANAGER,
+        `insert into public.crm_atividades_da_etapa (id, organization_id, pipeline_id, stage_id, titulo, tipo)
+           values ('${P(150)}', '${GOV_ORG}', '${FUNIL}', '${OUTRA_ETAPA}', 'X', 'tarefa')`,
+      ),
+    ).toBe(0);
   });
 });
