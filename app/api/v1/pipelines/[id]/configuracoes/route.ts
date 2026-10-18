@@ -19,6 +19,9 @@
  * gerais.visualizacao e permissoes.pessoas (gerente ou acima); a regra da
  * organização é lida por modoDaOrganizacao; a lista do grupo vem junto para a
  * tela dizer se a origem a segue.
+ *
+ * Fase 1K: a resposta traz a distribuição de dono (lida com a sessão); o PATCH de
+ * permissões recusa a lista que deixa de fora quem recebe por distribuição (Q9 da 1J).
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -44,6 +47,8 @@ import {
   respostaDoErroDeGravacao,
   responderComConfiguracoes,
 } from "@/lib/escale/configuracoes/respostas";
+import { lerDistribuicao } from "@/lib/escale/distribuicao/ler";
+import { distribuidosForaDaLista, linhasDaTela } from "@/lib/escale/distribuicao/regras";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -134,6 +139,28 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     return origem.erro === "nao_encontrada"
       ? fail("not_found", t("Origem não encontrada."), 404, { requestId })
       : falhaInesperada(origem.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
+  }
+
+  // FORK ESCALE · Fase 1K (Q9 da 1J): a lista de pessoas da origem não pode deixar
+  // de fora quem recebe negócios por distribuição (a tela já barra com o texto da Clint).
+  if (parsed.data.permissoes) {
+    const distribuicao = await lerDistribuicao(supabase, orgId, id);
+    if (!distribuicao.ok) {
+      return falhaInesperada(distribuicao.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
+    }
+    const fora = distribuidosForaDaLista({
+      linhas: linhasDaTela(distribuicao.pessoas),
+      pessoas: parsed.data.permissoes.pessoas.map((p) => p.toLowerCase()),
+      pessoasDoGrupo: pessoasDaOrigem(origem.grupo?.settings),
+    });
+    if (fora.length > 0) {
+      return fail(
+        "unprocessable_entity",
+        t("Não é possível salvar. Há usuários na distribuição desta origem fora da lista de permissões."),
+        422,
+        { requestId },
+      );
+    }
   }
 
   const veredito = aplicarConfiguracoes(origem.pipeline.settings, parsed.data, {

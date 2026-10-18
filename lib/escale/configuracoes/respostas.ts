@@ -9,6 +9,7 @@
  */
 import { fail, ok } from "@/lib/api/wrappers";
 import type { VisibilityMode } from "@/lib/auth/types";
+import { lerDistribuicao } from "@/lib/escale/distribuicao/ler";
 import { logger } from "@/lib/logger";
 import type { MoedaServida } from "@/lib/money";
 import type { createClient } from "@/lib/supabase/server";
@@ -211,6 +212,8 @@ export async function responderComConfiguracoes(
       ? fail("not_found", t("Origem não encontrada."), 404, { requestId })
       : falhaInesperada(lido.causa, onde, t, requestId);
   }
+  const distribuicao = await lerDistribuicao(supabase, ctx.orgId, ctx.pipelineId);
+  if (!distribuicao.ok) return falhaInesperada(distribuicao.causa, onde, t, requestId);
   return ok(
     montarConfiguracoes({
       pipeline: lido.pipeline,
@@ -220,6 +223,8 @@ export async function responderComConfiguracoes(
       visualizacaoDaOrganizacao: ctx.visualizacaoDaOrganizacao,
       grupo: lido.grupo,
       podeAdministrar: ctx.podeAdministrar,
+      distribuicao: distribuicao.pessoas,
+      distribuicaoAtualizada: distribuicao.atualizada,
     }),
     { requestId },
   );

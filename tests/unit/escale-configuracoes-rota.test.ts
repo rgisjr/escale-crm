@@ -485,4 +485,28 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     expect(JSON.stringify(await corpo(invalido))).not.toContain("check constraint");
     expect(audit).not.toHaveBeenCalled();
   });
+
+  it("Q9 da 1J: a lista de pessoas não pode deixar de fora quem recebe por distribuição (422)", async () => {
+    const db = banco();
+    const tabelas = db.tabelas as unknown as Record<string, unknown[]>;
+    tabelas.crm_distribuicao_de_dono = [
+      { organization_id: ORG_ID, pipeline_id: PIPE, user_id: "66666666-6666-4666-8666-666666666666", percentual: 100, contador: 0, created_at: "2026-10-18" },
+    ];
+    tabelas.user_organizations = [
+      { organization_id: ORG_ID, user_id: "66666666-6666-4666-8666-666666666666", role: "agent", accepted_at: "2026-01-01", revoked_at: null },
+      { organization_id: ORG_ID, user_id: "11111111-1111-4111-8111-111111111111", role: "agent", accepted_at: "2026-01-01", revoked_at: null },
+    ];
+    const res = await PATCH(pedido("PATCH", { permissoes: { pessoas: ["11111111-1111-4111-8111-111111111111"] } }), ctx(PIPE));
+    expect(res.status).toBe(422);
+    expect((await corpo(res)).error?.message).toBe(
+      "Não é possível salvar. Há usuários na distribuição desta origem fora da lista de permissões.",
+    );
+  });
+
+  it("o GET traz a distribuição (vazia sem linhas) e quando mudou por último", async () => {
+    banco();
+    const { data } = await corpo(await GET(pedido("GET"), ctx(PIPE)));
+    expect(data?.distribuicao).toEqual([]);
+    expect(data?.distribuicaoAtualizada).toBeNull();
+  });
 });

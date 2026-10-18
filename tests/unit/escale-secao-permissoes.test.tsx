@@ -62,6 +62,8 @@ const config = (pessoas: string[], pessoasDoGrupo: string[] = []): Configuracoes
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo,
   podeAdministrar: false,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 });
 
 function abrir(pessoas: string[] = [], pessoasDoGrupo: string[] = []) {

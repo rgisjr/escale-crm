@@ -4,6 +4,7 @@
  */
 import type { VisibilityMode } from "@/lib/auth/types";
 import { pessoasDaOrigem, regraEmVigor } from "@/lib/escale/acesso/regras";
+import type { PessoaNaDistribuicao } from "@/lib/escale/distribuicao/regras";
 import type { MoedaServida } from "@/lib/money";
 
 import { camposDaOrigem, regrasDaOrigem, type CampoDaOrigem, type RegraDeCampo } from "./campos";
@@ -34,6 +35,10 @@ export interface ConfiguracoesDaOrigem {
   /** A lista do grupo da origem (1J, Q6): se a origem não tem lista, é esta que vale. */
   pessoasDoGrupo: string[];
   podeAdministrar: boolean;
+  /** Fase 1K (D13): quem recebe os negócios sem dono, na ordem em que entrou. Vazia para quem não é gerente. */
+  distribuicao: PessoaNaDistribuicao[];
+  /** A última alteração da distribuição (o botão do relógio). */
+  distribuicaoAtualizada: { em: string; autorId: string | null } | null;
 }
 
 export function montarConfiguracoes(entrada: {
@@ -52,6 +57,8 @@ export function montarConfiguracoes(entrada: {
   /** O grupo da origem (a RLS decide se a sessão o vê). */
   grupo: { settings: unknown } | null;
   podeAdministrar: boolean;
+  distribuicao: readonly PessoaNaDistribuicao[];
+  distribuicaoAtualizada: { em: string; autorId: string | null } | null;
 }): ConfiguracoesDaOrigem {
   const { pipeline } = entrada;
   const etapas = [...entrada.etapas].sort((a, b) => a.position - b.position);
@@ -73,5 +80,7 @@ export function montarConfiguracoes(entrada: {
     visualizacaoDaOrganizacao: entrada.visualizacaoDaOrganizacao,
     pessoasDoGrupo: pessoasDaOrigem(entrada.grupo?.settings),
     podeAdministrar: entrada.podeAdministrar,
+    distribuicao: [...entrada.distribuicao],
+    distribuicaoAtualizada: entrada.distribuicaoAtualizada,
   };
 }

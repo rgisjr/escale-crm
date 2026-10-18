@@ -56,6 +56,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo: [],
   podeAdministrar: true,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 };
 
 async function abrirCampos(config: ConfiguracoesDaOrigem = CONFIG) {

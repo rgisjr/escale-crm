@@ -124,6 +124,8 @@ const CONFIG: ConfiguracoesDaOrigem = montarConfiguracoes({
   visualizacaoDaOrganizacao: "own_and_unassigned",
   grupo: null,
   podeAdministrar: true,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 });
 
 describe("montar", () => {
