@@ -10032,7 +10032,6 @@ export const DICIONARIO: Traducoes = {
   "Você poderá configurar a tarefa após a criação da atividade.": { es: "Podrás configurar la tarea después de crear la actividad." },
   "Você poderá configurar a reunião após a criação da atividade.": { es: "Podrás configurar la reunión después de crear la actividad." },
   // ─── FORK ESCALE · Fase 1I (PR B): aba Atividades da ficha ───
-  "Hoje": { es: "Hoy" },
   "{n}º minuto": { es: "Minuto {n}" },
   "{n}ª hora": { es: "Hora {n}" },
   "{n}º dia": { es: "Día {n}" },
@@ -10047,8 +10046,6 @@ export const DICIONARIO: Traducoes = {
   "A data e a hora da atividade foram alteradas com sucesso": { es: "La fecha y la hora de la actividad se cambiaron con éxito" },
   "Erro ao atualizar atividade. Tente novamente.": { es: "Error al actualizar la actividad. Inténtalo de nuevo." },
   "{nome} está aqui": { es: "{nome} está aquí" },
-  "Dias": { es: "Días" },
-  "Todas": { es: "Todas" },
   "Configurar etapa": { es: "Configurar etapa" },
   "O negócio ainda não está na etapa {stage}. Estas são as atividades previstas, agrupadas por quando devem ser feitas após a entrada; as datas só são definidas quando o negócio chega aqui.": { es: "El negocio aún no está en la etapa {stage}. Estas son las actividades previstas, agrupadas por cuándo deben hacerse después de la entrada; las fechas solo se definen cuando el negocio llega aquí." },
   "Erro ao buscar atividades. Tente novamente.": { es: "Error al buscar actividades. Inténtalo de nuevo." },
