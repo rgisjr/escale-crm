@@ -16,6 +16,7 @@ import {
   pessoasDaOrigem,
 } from "@/lib/escale/acesso/regras";
 import { atribuicaoSchema, gravarAtribuicao } from "@/lib/escale/ganho/regras";
+import { gravarNotificacoes, notificacoesSchema } from "@/lib/escale/notificacoes/regras";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
 
 import { alertaDeTempoSchema, gravarAlerta } from "./alerta";
@@ -60,6 +61,7 @@ export const patchDasConfiguracoesSchema = z
       .strict()
       .optional(),
     atribuicao: atribuicaoSchema.optional(),
+    notificacoes: notificacoesSchema.optional(),
   })
   .strict()
   .refine((p) => Object.values(p).some((v) => v !== undefined), { message: "nada para salvar" });
@@ -71,12 +73,13 @@ export type SecaoDasConfiguracoes =
   | "alerta"
   | "permissoes"
   | "distribuicao"
-  | "atribuicao";
+  | "atribuicao"
+  | "notificacoes";
 
 export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos", "atribuicao"];
 
 export function secoesDoPatch(patch: PatchDasConfiguracoes): SecaoDasConfiguracoes[] {
-  return (["gerais", "motivos", "campos", "alerta", "permissoes", "atribuicao"] as const).filter((s) => patch[s] !== undefined);
+  return (["gerais", "motivos", "campos", "alerta", "permissoes", "atribuicao", "notificacoes"] as const).filter((s) => patch[s] !== undefined);
 }
 
 export type VereditoDaGravacao =
@@ -142,5 +145,14 @@ export function aplicarConfiguracoes(
     s = comChave(s, CHAVE_DAS_PESSOAS, lista.lista);
   }
   if (patch.atribuicao) s = gravarAtribuicao(s, patch.atribuicao);
+  if (patch.notificacoes) {
+    const todas = [
+      ...patch.notificacoes.novo_negocio.pessoas,
+      ...patch.notificacoes.mudanca_de_status.pessoas,
+    ].map((p) => p.toLowerCase());
+    const v = gravarNotificacoes(s, patch.notificacoes, etapas.membros ?? todas);
+    if (!v.ok) return v;
+    s = v.settings;
+  }
   return { ok: true, settings: s };
 }

@@ -40,6 +40,7 @@ function config(podeAdministrar = true): ConfiguracoesDaOrigem {
       pessoas: [],
       soAdminGanha: false,
       atribuicao: { operador: "e", condicoes: [] },
+      notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
     },
     moedaDaOrganizacao: "BRL",
     visualizacao: "own_and_unassigned",

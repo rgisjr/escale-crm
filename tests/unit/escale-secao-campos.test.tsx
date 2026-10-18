@@ -46,6 +46,7 @@ const CONFIG: ConfiguracoesDaOrigem = {
     pessoas: [],
     soAdminGanha: false,
     atribuicao: { operador: "e", condicoes: [] },
+    notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
   },
   motivos: [],
   campos: [

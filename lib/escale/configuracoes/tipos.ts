@@ -9,6 +9,7 @@ import type { VisibilityMode } from "@/lib/auth/types";
 import { normalizarTag } from "@/lib/contacts/tag-normalizada";
 import { pessoasDaOrigem, visualizacaoDaOrigem } from "@/lib/escale/acesso/regras";
 import { lerAtribuicao, soAdminGanha, type AtribuicaoDeGanho } from "@/lib/escale/ganho/regras";
+import { lerNotificacoes, type NotificacoesDaOrigem } from "@/lib/escale/notificacoes/regras";
 import { MOEDAS_SERVIDAS, type MoedaServida } from "@/lib/money";
 
 import { lerAlerta, type AlertaDeTempo } from "./alerta";
@@ -43,6 +44,8 @@ export interface ConfiguracoesDoFork {
   soAdminGanha: boolean;
   /** Fase 1K (D14): as regras do crédito do ganho. */
   atribuicao: AtribuicaoDeGanho;
+  /** Fase 1K (D15). */
+  notificacoes: NotificacoesDaOrigem;
 }
 
 export function comoRecord(valor: unknown): Record<string, unknown> {
@@ -96,5 +99,6 @@ export function lerConfiguracoesDoFork(settings: unknown): ConfiguracoesDoFork {
     pessoas: pessoasDaOrigem(s),
     soAdminGanha: soAdminGanha(s),
     atribuicao: lerAtribuicao(s),
+    notificacoes: lerNotificacoes(s),
   };
 }

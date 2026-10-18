@@ -127,7 +127,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
 
   const supabase = await createClient();
   let membros: string[] | undefined;
-  if (parsed.data.permissoes) {
+  if (parsed.data.permissoes || parsed.data.notificacoes) {
     const lidos = await membrosAtivos(supabase, orgId);
     if (!lidos.ok) {
       return falhaInesperada(lidos.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);

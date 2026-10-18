@@ -67,6 +67,7 @@ function config(over: Partial<ConfiguracoesDaOrigem> = {}): ConfiguracoesDaOrige
       pessoas: [],
       soAdminGanha: false,
       atribuicao: { operador: "e", condicoes: [] },
+      notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
     },
     motivos: [],
     campos: [],

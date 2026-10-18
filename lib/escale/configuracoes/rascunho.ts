@@ -16,6 +16,11 @@ import {
   type PedidoDaDistribuicao,
 } from "@/lib/escale/distribuicao/regras";
 import { atribuicaoDaTela, patchDaAtribuicao, type AtribuicaoNaTela } from "@/lib/escale/ganho/regras";
+import {
+  erroDasNotificacoes,
+  patchDasNotificacoes,
+  type NotificacoesDaOrigem,
+} from "@/lib/escale/notificacoes/regras";
 import type { MoedaServida } from "@/lib/money";
 
 import {
@@ -58,6 +63,8 @@ export interface RascunhoDaOrigem {
   distribuicao: { linhas: LinhaDaDistribuicao[]; reiniciar: boolean };
   /** Fase 1K (D14): a caixa "só o admin dá ganho" e as regras do crédito do ganho. */
   atribuicao: AtribuicaoNaTela;
+  /** Fase 1K (D15): quem é avisado do novo negócio e da mudança de status. */
+  notificacoes: NotificacoesDaOrigem;
 }
 
 /** O exemplo da Clint (01-029): atenção em 4 horas, crítico em 8 horas. */
@@ -99,6 +106,13 @@ export function rascunhoInicial(config: ConfiguracoesDaOrigem): RascunhoDaOrigem
     permissoes: { pessoas: [...config.fork.pessoas] },
     distribuicao: { linhas: linhasDaTela(config.distribuicao), reiniciar: false },
     atribuicao: atribuicaoDaTela(config.fork),
+    notificacoes: {
+      novoNegocio: [...config.fork.notificacoes.novoNegocio],
+      mudancaDeStatus: {
+        status: [...config.fork.notificacoes.mudancaDeStatus.status],
+        pessoas: [...config.fork.notificacoes.mudancaDeStatus.pessoas],
+      },
+    },
   };
 }
 
@@ -225,6 +239,11 @@ export function pedidoDoSalvar(
     const lido = patchDaAtribuicao(r.atribuicao);
     if (!lido.ok) return { ok: false, erro: lido.erro, secao: "atribuicao" };
     patch.atribuicao = lido.patch;
+  }
+  if (!igual(r.notificacoes, inicial.notificacoes)) {
+    const erro = erroDasNotificacoes(r.notificacoes);
+    if (erro) return { ok: false, erro, secao: "notificacoes" };
+    patch.notificacoes = patchDasNotificacoes(r.notificacoes);
   }
   let distribuicao: PedidoDaDistribuicao | null = null;
   if (!igual(r.distribuicao.linhas, inicial.distribuicao.linhas)) {

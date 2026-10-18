@@ -267,6 +267,39 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     expect(db.escritas.filter((e) => e.table === "crm_pipelines")).toHaveLength(0);
   });
 
+  it("notificacoes grava a chave com membros ativos e audita a seção", async () => {
+    const db = banco();
+    const res = await PATCH(
+      pedido("PATCH", {
+        notificacoes: {
+          novo_negocio: { pessoas: [MEMBRO_2] },
+          mudanca_de_status: { status: ["won"], pessoas: [MEMBRO_2] },
+        },
+      }),
+      ctx(PIPE),
+    );
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    expect(escrita?.patch).toEqual({
+      settings: {
+        ...SETTINGS,
+        escale_notificacoes: {
+          novo_negocio: { pessoas: [MEMBRO_2] },
+          mudanca_de_status: { status: ["won"], pessoas: [MEMBRO_2] },
+        },
+      },
+    });
+  });
+
+  it("notificacoes com quem não é da equipe é 422", async () => {
+    banco();
+    const res = await PATCH(
+      pedido("PATCH", { notificacoes: { novo_negocio: { pessoas: [NAO_MEMBRO] }, mudanca_de_status: { status: [], pessoas: [] } } }),
+      ctx(PIPE),
+    );
+    expect(res.status).toBe(422);
+  });
+
   it("gerais sem visualizacao é 422 (o campo é obrigatório no patch de gerais)", async () => {
     banco();
     expect((await PATCH(pedido("PATCH", { gerais: { moeda: null, tags_padrao: [] } }), ctx(PIPE))).status).toBe(422);
