@@ -10234,6 +10234,22 @@ export const DICIONARIO: Traducoes = {
   "Negócio ganho não encontrado.": { es: "No se encontró el negocio ganado." },
   "As alterações foram salvas com sucesso!": { es: "¡Los cambios se guardaron con éxito!" },
   "Ou": { es: "O" },
+  // ─── FORK ESCALE · Fase 1K (PR C): notificações da origem ───
+  "Configure aqui as notificações relacionadas a sua origem de dados.": { es: "Configura aquí las notificaciones relacionadas con tu origen de datos." },
+  "Notificação de novo negócio": { es: "Notificación de nuevo negocio" },
+  "Os usuários selecionados receberão um aviso no app com as informações de novos negócios vindos de integrações.": { es: "Los usuarios seleccionados recibirán un aviso en la app con la información de los nuevos negocios que vienen de integraciones." },
+  "Selecione os usuários que receberão as notificações": { es: "Selecciona los usuarios que recibirán las notificaciones" },
+  "Notificação de mudança de status": { es: "Notificación de cambio de estado" },
+  "Quando seu negócio mudar para os status de ganho ou perdido, os usuários configurados receberão um aviso no app contendo as principais informações do negócio.": { es: "Cuando tu negocio cambie a ganado o perdido, los usuarios configurados recibirán un aviso en la app con la información principal del negocio." },
+  "Selecione os usuários que receberão as notificações e os status a serem notificados.": { es: "Selecciona los usuarios que recibirán las notificaciones y los estados a notificar." },
+  "1 status selecionado": { es: "1 estado seleccionado" },
+  "status selecionados": { es: "estados seleccionados" },
+  "Usuários do novo negócio": { es: "Usuarios del nuevo negocio" },
+  "Usuários da mudança de status": { es: "Usuarios del cambio de estado" },
+  "Selecione um usuário para continuar": { es: "Selecciona un usuario para continuar" },
+  "Negócio ganho": { es: "Negocio ganado" },
+  "Negócio perdido": { es: "Negocio perdido" },
+
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
