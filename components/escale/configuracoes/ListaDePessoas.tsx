@@ -21,7 +21,7 @@ export function membrosAtivosDaEquipe(
   equipe: readonly TeamMember[] | undefined,
   semNome: string,
 ): MembroDaEquipe[] {
-  return (equipe ?? [])
+  return (Array.isArray(equipe) ? equipe : [])
     .filter((m) => m.accepted_at && !m.revoked_at)
     .map((m) => ({
       id: m.user_id.toLowerCase(),

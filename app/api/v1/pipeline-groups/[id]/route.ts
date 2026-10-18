@@ -10,6 +10,9 @@
  * com funil. Grupo com origens exige `?destino=<grupo ativo>`: a rota move
  * TODAS (inclusive as arquivadas) e só depois exclui. Grupo de outra
  * organização morre no 404 antes de qualquer escrita.
+ *
+ * Fase 1J (Q6): `pessoas` grava a lista de quem vê o grupo em `settings` dele
+ * (o mesmo desenho da origem); só membros ativos da organização entram.
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -18,6 +21,8 @@ import { z } from "zod";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
+import { listaParaGravar, membrosAtivos } from "@/lib/escale/acesso/membros";
+import { CHAVE_DAS_PESSOAS, PESSOAS_MAX } from "@/lib/escale/acesso/regras";
 import { ICONES_DE_GRUPO, corValida, validarNomeDeGrupo } from "@/lib/escale/origens/regras";
 import { lerJson, nomeRepetido, origensOuFalha, responderComOrigens } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -36,6 +41,7 @@ const corpoSchema = z
     color: z.string().max(7).nullable().optional(),
     icon: z.enum(ICONES_DE_GRUPO).optional(),
     is_archived: z.boolean().optional(),
+    pessoas: z.array(z.string().uuid()).max(PESSOAS_MAX).optional(),
   })
   .strict()
   .refine((b) => Object.keys(b).length > 0);
@@ -96,6 +102,24 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     }
     patch.is_archived = pedido.is_archived;
   }
+  // 1J (Q6): a lista de quem vê o grupo, no settings dele (o mesmo desenho da origem).
+  if (pedido.pessoas !== undefined) {
+    const lidos = await membrosAtivos(supabase, orgId);
+    if (!lidos.ok) return fail("internal_error", lidos.causa.message, 500, { requestId });
+    const lista = listaParaGravar(pedido.pessoas, lidos.ids);
+    if (!lista.ok) return fail("unprocessable_entity", t(lista.erro), 422, { requestId });
+    const atual = await supabase
+      .from("crm_pipeline_groups")
+      .select("settings")
+      .eq("id", id)
+      .eq("organization_id", orgId)
+      .maybeSingle();
+    if (atual.error) return fail("internal_error", atual.error.message, 500, { requestId });
+    const settings = { ...((atual.data as { settings?: Record<string, unknown> } | null)?.settings ?? {}) };
+    if (lista.lista) settings[CHAVE_DAS_PESSOAS] = lista.lista;
+    else delete settings[CHAVE_DAS_PESSOAS];
+    patch.settings = settings;
+  }
   // Nada a mudar (ex.: arquivar o que já está arquivado): sem escrita e sem auditoria.
   if (Object.keys(patch).length === 0) return ok(antes.origens, { requestId });
 
@@ -119,7 +143,13 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     resourceId: id,
     requestId,
     metadata: {
-      antes: { name: grupo.name, color: grupo.color, icon: grupo.icon, is_archived: grupo.is_archived },
+      antes: {
+        name: grupo.name,
+        color: grupo.color,
+        icon: grupo.icon,
+        is_archived: grupo.is_archived,
+        pessoas: grupo.pessoas ?? [],
+      },
       mudou: patch,
     },
   });
