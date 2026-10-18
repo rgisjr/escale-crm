@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AvisoDePropostaEmDestaque } from "@/components/shell/AvisoDePropostaEmDestaque";
 import { useAuth } from "@/hooks/auth/AuthProvider";
+import { useAvisosDaOrigem } from "@/hooks/escale/useAvisosDaOrigem";
 import { useT } from "@/hooks/i18n/useT";
 import {
   acoesDeCriar,
@@ -48,6 +49,7 @@ const ITEM_PARADO = "hover:bg-black/[.03] hover:text-casca-marca";
  *   - 18px entre as peças do lado direito.
  */
 export function MenuDoTopo() {
+  useAvisosDaOrigem(); // FORK ESCALE · Fase 1K (D15): os avisos da origem dentro do app.
   const t = useT();
   const pathname = usePathname() ?? "/app";
   const { user, activeOrg } = useAuth();

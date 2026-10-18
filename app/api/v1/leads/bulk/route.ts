@@ -19,6 +19,7 @@ import { resolveOwnerPatch } from "@/lib/leads/owner-patch";
 import { emitLeadActivity, stageChangeReason } from "@/lib/leads/activity-emitter";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import { bulkLeadActionSchema, validateRequest } from "@/lib/schemas";
+import { recusaDoGanhoPeloBanco } from "@/lib/escale/ganho/recusa";
 import {
   decideMotivoDaPerda,
   etapaDePerda,
@@ -314,6 +315,11 @@ export async function POST(req: NextRequest): Promise<Response> {
         const recusaDoBanco = recusaDeMotivoDaPerdaPeloBanco(error, user.idioma);
         if (recusaDoBanco) {
           return fail(recusaDoBanco.codigo, recusaDoBanco.mensagem, 422, { requestId });
+        }
+        // FORK ESCALE · Fase 1K (N16): "só o administrador marca ganho" (gatilho da 9014).
+        const recusaDoGanho = recusaDoGanhoPeloBanco(error, user.idioma);
+        if (recusaDoGanho) {
+          return fail(recusaDoGanho.codigo, recusaDoGanho.mensagem, 403, { requestId });
         }
         return fail("internal_error", error.message, 500, { requestId });
       }

@@ -131,6 +131,15 @@ describe("o ⋮ do cabeçalho (C6, print 09)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Ações do negócio" }));
   };
 
+  it("negócio ganho ganha 'Ver atribuição de ganho' depois de 'Visualizar contato' (1K, D14)", async () => {
+    render(<MenuDaFicha lead={{ ...LEAD, status: "won" }} pipelineId="o1" stages={[]} leads={[]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Ações do negócio" }));
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent).slice(0, 2)).toEqual([
+      "Visualizar contato",
+      "Ver atribuição de ganho",
+    ]);
+  });
+
   it("os cinco itens da Clint, na ordem", async () => {
     await abrir();
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([

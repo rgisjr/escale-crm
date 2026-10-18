@@ -402,6 +402,11 @@ export function makeDb(opts: DbOpts = {}): Registro {
         filtros.push([c, v]);
         return b;
       },
+      /** `.not(col, "is", null)` — "preenchido" (convite aceito); o único uso real no repo. */
+      not: (c: string, _op: string, _v: unknown) => {
+        negacoes.push([c, null]);
+        return b;
+      },
       /** `.in(col, [...])` vira um filtro de pertinência, não de igualdade. */
       in: (c: string, vs: unknown[]) => {
         pertinencias.push([c, vs]);

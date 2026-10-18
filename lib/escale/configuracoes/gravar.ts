@@ -15,6 +15,8 @@ import {
   VISUALIZACOES,
   pessoasDaOrigem,
 } from "@/lib/escale/acesso/regras";
+import { atribuicaoSchema, gravarAtribuicao } from "@/lib/escale/ganho/regras";
+import { gravarNotificacoes, notificacoesSchema } from "@/lib/escale/notificacoes/regras";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
 
 import { alertaDeTempoSchema, gravarAlerta } from "./alerta";
@@ -58,16 +60,36 @@ export const patchDasConfiguracoesSchema = z
       .object({ pessoas: z.array(z.string().uuid()).max(PESSOAS_MAX) })
       .strict()
       .optional(),
+    atribuicao: atribuicaoSchema.optional(),
+    notificacoes: notificacoesSchema.optional(),
+    /**
+     * Só para a conferência da Q9 (1J): quem ficará na distribuição quando a tela
+     * salvar a distribuição DEPOIS desta gravação (sai um e entra outro na mesma
+     * hora). Sem esta lista, a rota confere a lista de pessoas contra a
+     * distribuição que ainda está gravada. Não é seção: não grava nada.
+     */
+    distribuicao_pendente: z.array(z.string().uuid()).max(PESSOAS_MAX).optional(),
   })
   .strict()
-  .refine((p) => Object.values(p).some((v) => v !== undefined), { message: "nada para salvar" });
+  .refine(
+    (p) => Object.entries(p).some(([chave, v]) => chave !== "distribuicao_pendente" && v !== undefined),
+    { message: "nada para salvar" },
+  );
 export type PatchDasConfiguracoes = z.infer<typeof patchDasConfiguracoesSchema>;
-export type SecaoDasConfiguracoes = "gerais" | "motivos" | "campos" | "alerta" | "permissoes";
+export type SecaoDasConfiguracoes =
+  | "gerais"
+  | "motivos"
+  | "campos"
+  | "alerta"
+  | "permissoes"
+  | "distribuicao"
+  | "atribuicao"
+  | "notificacoes";
 
-export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos"];
+export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos", "atribuicao"];
 
 export function secoesDoPatch(patch: PatchDasConfiguracoes): SecaoDasConfiguracoes[] {
-  return (["gerais", "motivos", "campos", "alerta", "permissoes"] as const).filter((s) => patch[s] !== undefined);
+  return (["gerais", "motivos", "campos", "alerta", "permissoes", "atribuicao", "notificacoes"] as const).filter((s) => patch[s] !== undefined);
 }
 
 export type VereditoDaGravacao =
@@ -131,6 +153,16 @@ export function aplicarConfiguracoes(
     const lista = listaParaGravar(patch.permissoes.pessoas, etapas.membros, pessoasDaOrigem(settingsAtual));
     if (!lista.ok) return lista;
     s = comChave(s, CHAVE_DAS_PESSOAS, lista.lista);
+  }
+  if (patch.atribuicao) s = gravarAtribuicao(s, patch.atribuicao);
+  if (patch.notificacoes) {
+    const todas = [
+      ...patch.notificacoes.novo_negocio.pessoas,
+      ...patch.notificacoes.mudanca_de_status.pessoas,
+    ].map((p) => p.toLowerCase());
+    const v = gravarNotificacoes(s, patch.notificacoes, etapas.membros ?? todas);
+    if (!v.ok) return v;
+    s = v.settings;
   }
   return { ok: true, settings: s };
 }

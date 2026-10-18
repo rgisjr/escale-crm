@@ -44,6 +44,9 @@ const CONFIG: ConfiguracoesDaOrigem = {
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas: [],
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
+    notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
   },
   motivos: [],
   campos: [
@@ -56,6 +59,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo: [],
   podeAdministrar: true,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 };
 
 async function abrirCampos(config: ConfiguracoesDaOrigem = CONFIG) {

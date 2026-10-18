@@ -34750,36 +34750,15 @@ create policy crm_atividades_da_etapa_select on public.crm_atividades_da_etapa
     public.fn_is_platform_admin() or (organization_id in (select public.fn_user_org_ids()))
   );
 
--- Escrever o playbook é configurar a origem: gerente ou acima (PRD §5).
-create policy crm_atividades_da_etapa_manager_write on public.crm_atividades_da_etapa
-  using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'manager'))
-  )
-  with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'manager'))
-  );
+-- A política de escrita do playbook (gerente ou acima, na etapa da própria origem) nasce na 9012: o baseline
+-- não pode criar aqui uma versão intermediária que a 9012 depois troca (cerca baseline-nao-constroi-o-que-derruba).
 
 create policy crm_atividades_do_negocio_select on public.crm_atividades_do_negocio
   for select using (
     public.fn_is_platform_admin() or (organization_id in (select public.fn_user_org_ids()))
   );
 
--- Escrever acompanha a tarefa: agente ou acima (a régua de `crm_tasks_write`).
-create policy crm_atividades_do_negocio_agent_write on public.crm_atividades_do_negocio
-  using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent'))
-  )
-  with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent'))
-  );
+-- A escrita da atividade do negócio (só INSERT, nas colunas da rota) também nasce na 9012, pelo mesmo motivo.
 
 revoke all on public.crm_atividades_da_etapa from anon;
 revoke all on public.crm_atividades_do_negocio from anon;
@@ -35065,8 +35044,9 @@ as $$
 $$;
 
 revoke all on function public.fn_escale_visualizacao_da_origem(uuid, uuid) from public;
-revoke execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) from anon;
-grant execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) to authenticated, service_role;
+-- Recebe a organização e não confere quem chama: só as definers deste arquivo a usam (varredura 0149).
+revoke execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) from anon, authenticated;
+grant execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) to service_role;
 
 -- ── 3. quem tem acesso à origem: só admin passa por cima; a lista da origem vence a do grupo ──
 create or replace function public.fn_escale_tem_acesso_a_origem(p_org uuid, p_pipeline uuid)
@@ -35302,7 +35282,10 @@ begin
   if new.owner_user_id is not null or new.owner_agent_id is not null then return new; end if;
   begin
     if public.fn_user_role_in_org(new.organization_id) is distinct from 'agent' then return new; end if;
-    if public.fn_escale_visualizacao_da_origem(new.organization_id, new.pipeline_id) <> 'own' then return new; end if;
+    -- Só a regra PRÓPRIA da origem: a da organização segue com o POST /api/v1/leads (#2547), como hoje.
+    if not exists (select 1 from public.crm_pipelines p
+                    where p.id = new.pipeline_id and p.organization_id = new.organization_id
+                      and p.settings->>'escale_visualizacao' = 'own') then return new; end if;
     new.owner_user_id := auth.uid();
     new.owner_kind := 'user';
     new.assigned_at := now();
@@ -35399,6 +35382,841 @@ create policy crm_atividades_da_etapa_manager_write on public.crm_atividades_da_
                    and s.organization_id = crm_atividades_da_etapa.organization_id
                    and s.pipeline_id = crm_atividades_da_etapa.pipeline_id)
   );
+
+notify pgrst, 'reload schema';
+
+-- ---- FORK ESCALE · distribuição de dono (migration 9013) ----
+-- manifest: **Distribuição de dono por origem (fork Escale, Fase 1K, D13).** Três tabelas novas, lidas por gerente ou acima da organização e escritas só por funções definer fechadas (o servidor chama com o service role depois de conferir que quem pede é administrador): `crm_distribuicao_de_dono` (quem recebe, com percentual, passo, índice e contador), `crm_distribuicoes_feitas` (cada negócio distribuído) e `crm_distribuicao_alteracoes` (o histórico da configuração: percentual alterado, pessoa entrou, saiu e contagem reiniciada, com o autor — é a auditoria do reset). `fn_escale_salvar_distribuicao` troca a lista inteira (soma 100, todos acima de 0, só quem pode receber) e recomeça o rodízio; `fn_escale_reiniciar_distribuicao` zera contador e índice e apaga as distribuições feitas. `trg_escale_reparte_dono_da_origem` (BEFORE INSERT em `crm_leads`) dá dono ao negócio que nasce sem dono e sem pessoa que o criou, pelo rodízio ponderado da Clint (menor índice; o índice anda maior%/meu%), só entre membros ativos agente, gerente ou administrador com acesso à origem (`fn_escale_recebe_da_origem`, a régua da 9010 com a pessoa como parâmetro); `trg_escale_registra_a_distribuicao` (AFTER INSERT) grava a distribuição feita e emite `lead.assigned`. Falhar ao distribuir vira aviso e não derruba a criação do negócio.
+-- 9013: distribuição de dono (fork Escale).
+
+-- ── AS TABELAS ──────────────────────────────────────────────────────────────
+-- Tabela própria, e não o `settings` da origem: o contador muda a cada negócio,
+-- e o `settings` é gravado inteiro pelo "Salvar" da janela (corrida). O passo
+-- é `maior% / meu%` (quem tem o maior percentual anda 1 por negócio); o
+-- próximo dono é quem tem o MENOR índice (Clint: `inc_index`, `cur_index`).
+create table if not exists public.crm_distribuicao_de_dono (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  pipeline_id uuid not null references public.crm_pipelines(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  percentual numeric(5,2) not null,
+  passo numeric not null,
+  indice numeric not null default 0,
+  contador integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (pipeline_id, user_id),
+  constraint crm_distribuicao_de_dono_percentual_valido check (percentual > 0 and percentual <= 100),
+  constraint crm_distribuicao_de_dono_passo_valido check (passo >= 1),
+  constraint crm_distribuicao_de_dono_contador_valido check (contador >= 0)
+);
+create index if not exists idx_crm_distribuicao_de_dono_org
+  on public.crm_distribuicao_de_dono (organization_id, pipeline_id);
+
+create table if not exists public.crm_distribuicoes_feitas (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  pipeline_id uuid not null references public.crm_pipelines(id) on delete cascade,
+  lead_id uuid not null references public.crm_leads(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  distribuido_em timestamptz not null default now()
+);
+create index if not exists idx_crm_distribuicoes_feitas_origem
+  on public.crm_distribuicoes_feitas (pipeline_id, distribuido_em desc);
+create index if not exists idx_crm_distribuicoes_feitas_pessoa
+  on public.crm_distribuicoes_feitas (pipeline_id, user_id, distribuido_em desc);
+create index if not exists idx_crm_distribuicoes_feitas_lead
+  on public.crm_distribuicoes_feitas (lead_id);
+
+create table if not exists public.crm_distribuicao_alteracoes (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  pipeline_id uuid not null references public.crm_pipelines(id) on delete cascade,
+  evento text not null,
+  pessoa_id uuid references auth.users(id) on delete set null,
+  percentual_antes numeric(5,2),
+  percentual_depois numeric(5,2),
+  autor_id uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  constraint crm_distribuicao_alteracoes_evento_valido
+    check (evento in ('percentual_alterado', 'pessoa_entrou', 'pessoa_saiu', 'contagem_reiniciada'))
+);
+create index if not exists idx_crm_distribuicao_alteracoes_origem
+  on public.crm_distribuicao_alteracoes (pipeline_id, created_at desc);
+
+-- Leitura: gerente ou acima da organização (é o gerente que salva a lista de
+-- pessoas da origem e precisa ver quem está na distribuição). Escrita: nenhuma
+-- policy — só as funções abaixo, que o servidor chama depois de conferir o admin.
+alter table public.crm_distribuicao_de_dono enable row level security;
+alter table public.crm_distribuicoes_feitas enable row level security;
+alter table public.crm_distribuicao_alteracoes enable row level security;
+
+drop policy if exists crm_distribuicao_de_dono_select on public.crm_distribuicao_de_dono;
+create policy crm_distribuicao_de_dono_select on public.crm_distribuicao_de_dono
+  for select to authenticated
+  using (
+    public.fn_role_at_least(organization_id, 'manager')
+    and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)
+  );
+
+drop policy if exists crm_distribuicoes_feitas_select on public.crm_distribuicoes_feitas;
+create policy crm_distribuicoes_feitas_select on public.crm_distribuicoes_feitas
+  for select to authenticated
+  using (
+    public.fn_role_at_least(organization_id, 'manager')
+    and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)
+  );
+
+drop policy if exists crm_distribuicao_alteracoes_select on public.crm_distribuicao_alteracoes;
+create policy crm_distribuicao_alteracoes_select on public.crm_distribuicao_alteracoes
+  for select to authenticated
+  using (
+    public.fn_role_at_least(organization_id, 'manager')
+    and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)
+  );
+
+-- O default ACL do Supabase dá tudo a anon e authenticated ao nascer a tabela. Estas só
+-- se leem pela sessão (a escrita é das funções): fecha o resto, como a 9008 e a 9009.
+revoke all on public.crm_distribuicao_de_dono from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_distribuicao_de_dono from authenticated;
+grant select on public.crm_distribuicao_de_dono to authenticated;
+grant all on public.crm_distribuicao_de_dono to service_role;
+revoke all on public.crm_distribuicoes_feitas from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_distribuicoes_feitas from authenticated;
+grant select on public.crm_distribuicoes_feitas to authenticated;
+grant all on public.crm_distribuicoes_feitas to service_role;
+revoke all on public.crm_distribuicao_alteracoes from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_distribuicao_alteracoes from authenticated;
+grant select on public.crm_distribuicao_alteracoes to authenticated;
+grant all on public.crm_distribuicao_alteracoes to service_role;
+
+-- ── QUEM PODE RECEBER NEGÓCIO DESTA ORIGEM ─────────────────────────────────
+-- Membro ativo (convite aceito, não revogado), papel agente, gerente ou admin
+-- (o viewer seria recusado pelo `trg_lead_so_liga_a_propria_empresa`), e com
+-- acesso à origem pela régua da 9010: admin sempre; senão a lista da origem;
+-- vazia, a do grupo; as duas vazias, todos. Só contam textos com forma de uuid
+-- (a leitura tolerante da 1J: lixo vale como "sem lista").
+create or replace function public.fn_escale_recebe_da_origem(p_org uuid, p_origem uuid, p_user uuid)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_papel text;
+  v_bruta jsonb;
+  v_grupo uuid;
+  v_ids text[];
+begin
+  select uo.role into v_papel
+    from public.user_organizations uo
+   where uo.user_id = p_user
+     and uo.organization_id = p_org
+     and uo.accepted_at is not null
+     and uo.revoked_at is null
+   limit 1;
+  if v_papel is null or v_papel not in ('agent', 'manager', 'admin') then
+    return false;
+  end if;
+  if v_papel = 'admin' then
+    return true;
+  end if;
+
+  select p.settings -> 'escale_pessoas', p.group_id into v_bruta, v_grupo
+    from public.crm_pipelines p
+   where p.id = p_origem
+     and p.organization_id = p_org;
+  if not found then
+    return false;
+  end if;
+
+  for i in 1..2 loop
+    select coalesce(array_agg(lower(e.v #>> '{}')), '{}') into v_ids
+      from jsonb_array_elements(
+        case when jsonb_typeof(v_bruta) = 'array' then v_bruta else '[]'::jsonb end
+      ) as e(v)
+     where jsonb_typeof(e.v) = 'string'
+       and (e.v #>> '{}') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+    exit when cardinality(v_ids) > 0 or i = 2;
+    select g.settings -> 'escale_pessoas' into v_bruta
+      from public.crm_pipeline_groups g
+     where g.id = v_grupo
+       and g.organization_id = p_org;
+  end loop;
+
+  return cardinality(v_ids) = 0 or lower(p_user::text) = any(v_ids);
+end
+$fn$;
+
+revoke all on function public.fn_escale_recebe_da_origem(uuid, uuid, uuid) from public, anon, authenticated;
+
+-- ── SALVAR A LISTA ─────────────────────────────────────────────────────────
+-- Troca a lista inteira numa transação. Valida de novo o que a rota já validou
+-- (soma arredondada 100 ou lista vazia; todos > 0 e <= 100; sem repetição; só
+-- quem pode receber), registra no histórico quem saiu, entrou ou mudou de
+-- percentual, e recomeça o rodízio (índice 0 para todos, como a Clint). Com
+-- `p_reiniciar`, zera também o contador e apaga as distribuições feitas.
+create or replace function public.fn_escale_salvar_distribuicao(
+  p_org uuid,
+  p_origem uuid,
+  p_autor uuid,
+  p_pessoas jsonb,
+  p_reiniciar boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_ids uuid[];
+  v_pcts numeric[];
+  v_n integer;
+  v_soma numeric;
+  v_maior numeric;
+  v_menor numeric;
+begin
+  perform 1 from public.crm_pipelines p where p.id = p_origem and p.organization_id = p_org;
+  if not found then
+    raise exception 'origem_nao_encontrada' using errcode = 'PT404';
+  end if;
+  if p_pessoas is null or jsonb_typeof(p_pessoas) <> 'array' or jsonb_array_length(p_pessoas) > 50 then
+    raise exception 'distribuicao_invalida' using errcode = '22023';
+  end if;
+
+  select coalesce(array_agg((x.e ->> 'user_id')::uuid order by x.o), '{}'),
+         coalesce(array_agg(round((x.e ->> 'percentual')::numeric, 2) order by x.o), '{}')
+    into v_ids, v_pcts
+    from jsonb_array_elements(p_pessoas) with ordinality as x(e, o);
+
+  v_n := cardinality(v_ids);
+  if v_n > 0 then
+    select sum(p), max(p), min(p) into v_soma, v_maior, v_menor from unnest(v_pcts) as p;
+    if (select count(distinct i) from unnest(v_ids) as i) <> v_n
+       or exists (select 1 from unnest(v_pcts) as p where p is null)
+       or v_menor <= 0
+       or v_maior > 100
+       or round(v_soma) <> 100 then
+      raise exception 'distribuicao_invalida' using errcode = '22023';
+    end if;
+    if exists (
+      select 1 from unnest(v_ids) as i
+       where not public.fn_escale_recebe_da_origem(p_org, p_origem, i)
+    ) then
+      raise exception 'pessoa_sem_permissao' using errcode = 'PT422';
+    end if;
+  end if;
+
+  -- A mesma trava do gatilho: salvar e distribuir não se cruzam.
+  perform 1 from public.crm_distribuicao_de_dono d
+    where d.pipeline_id = p_origem
+    order by d.user_id
+    for update;
+
+  insert into public.crm_distribuicao_alteracoes
+    (organization_id, pipeline_id, evento, pessoa_id, percentual_antes, percentual_depois, autor_id)
+  select p_org, p_origem, 'pessoa_saiu', d.user_id, d.percentual, null, p_autor
+    from public.crm_distribuicao_de_dono d
+   where d.pipeline_id = p_origem
+     and not (d.user_id = any(v_ids));
+
+  insert into public.crm_distribuicao_alteracoes
+    (organization_id, pipeline_id, evento, pessoa_id, percentual_antes, percentual_depois, autor_id)
+  select p_org, p_origem, 'pessoa_entrou', n.i, null, n.p, p_autor
+    from unnest(v_ids, v_pcts) as n(i, p)
+   where not exists (
+     select 1 from public.crm_distribuicao_de_dono d where d.pipeline_id = p_origem and d.user_id = n.i
+   );
+
+  insert into public.crm_distribuicao_alteracoes
+    (organization_id, pipeline_id, evento, pessoa_id, percentual_antes, percentual_depois, autor_id)
+  select p_org, p_origem, 'percentual_alterado', n.i, d.percentual, n.p, p_autor
+    from unnest(v_ids, v_pcts) as n(i, p)
+    join public.crm_distribuicao_de_dono d on d.pipeline_id = p_origem and d.user_id = n.i
+   where d.percentual <> n.p;
+
+  delete from public.crm_distribuicao_de_dono d
+   where d.pipeline_id = p_origem
+     and not (d.user_id = any(v_ids));
+
+  if v_n > 0 then
+    insert into public.crm_distribuicao_de_dono (organization_id, pipeline_id, user_id, percentual, passo)
+    select p_org, p_origem, n.i, n.p, v_maior / n.p
+      from unnest(v_ids, v_pcts) as n(i, p)
+    on conflict (pipeline_id, user_id) do update
+      set percentual = excluded.percentual,
+          passo = excluded.passo,
+          updated_at = now();
+  end if;
+
+  update public.crm_distribuicao_de_dono
+     set indice = 0,
+         contador = case when p_reiniciar then 0 else contador end,
+         updated_at = now()
+   where pipeline_id = p_origem;
+
+  if p_reiniciar then
+    delete from public.crm_distribuicoes_feitas where pipeline_id = p_origem;
+    insert into public.crm_distribuicao_alteracoes
+      (organization_id, pipeline_id, evento, pessoa_id, percentual_antes, percentual_depois, autor_id)
+    values (p_org, p_origem, 'contagem_reiniciada', null, null, null, p_autor);
+  end if;
+end
+$fn$;
+
+revoke all on function public.fn_escale_salvar_distribuicao(uuid, uuid, uuid, jsonb, boolean) from public, anon, authenticated;
+grant execute on function public.fn_escale_salvar_distribuicao(uuid, uuid, uuid, jsonb, boolean) to service_role;
+
+-- ── RESETAR A DISTRIBUIÇÃO ─────────────────────────────────────────────────
+-- "Zera o contador de todos os usuários, reinicia o rodízio e apaga o
+-- histórico de distribuições desta origem." O reinício fica no histórico da
+-- configuração, com o autor: é a auditoria do reset.
+create or replace function public.fn_escale_reiniciar_distribuicao(p_org uuid, p_origem uuid, p_autor uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+begin
+  perform 1 from public.crm_pipelines p where p.id = p_origem and p.organization_id = p_org;
+  if not found then
+    raise exception 'origem_nao_encontrada' using errcode = 'PT404';
+  end if;
+  perform 1 from public.crm_distribuicao_de_dono d
+    where d.pipeline_id = p_origem
+    order by d.user_id
+    for update;
+  update public.crm_distribuicao_de_dono
+     set indice = 0, contador = 0, updated_at = now()
+   where pipeline_id = p_origem;
+  delete from public.crm_distribuicoes_feitas where pipeline_id = p_origem;
+  insert into public.crm_distribuicao_alteracoes
+    (organization_id, pipeline_id, evento, pessoa_id, percentual_antes, percentual_depois, autor_id)
+  values (p_org, p_origem, 'contagem_reiniciada', null, null, null, p_autor);
+end
+$fn$;
+
+revoke all on function public.fn_escale_reiniciar_distribuicao(uuid, uuid, uuid) from public, anon, authenticated;
+grant execute on function public.fn_escale_reiniciar_distribuicao(uuid, uuid, uuid) to service_role;
+
+-- ── O GATILHO QUE ESCOLHE O DONO ───────────────────────────────────────────
+-- Só o negócio que nasce sem dono (nem pessoa, nem agente de IA) e sem pessoa
+-- que o criou (`created_by_user_id` nulo: captação, automação, API, agente,
+-- conversa nova). Roda depois da carteira e do dono padrão da 9010 (ordem
+-- alfabética dos BEFORE) e antes de `trg_lead_so_liga_a_propria_empresa`, que
+-- confere o escolhido. Trava as linhas da origem em ordem fixa (duas criações
+-- ao mesmo tempo não pegam o mesmo índice), escolhe o elegível de menor índice
+-- (empate: menor user_id), anda o passo e soma 1 ao contador. Avisa o AFTER por
+-- uma chave de transação. Qualquer falha vira aviso: o negócio nasce sem dono,
+-- como hoje.
+create or replace function public.fn_escale_reparte_dono_da_origem()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_user uuid;
+begin
+  if new.owner_user_id is not null or new.owner_agent_id is not null or new.created_by_user_id is not null then
+    return new;
+  end if;
+
+  begin
+    perform 1 from public.crm_distribuicao_de_dono d
+      where d.pipeline_id = new.pipeline_id
+        and d.organization_id = new.organization_id
+      order by d.user_id
+      for update;
+    if not found then
+      -- A trava pode ter esperado `fn_escale_salvar_distribuicao`, que apaga e
+      -- reinsere as linhas: as apagadas somem para este comando e as novas não
+      -- estavam no retrato dele. O comando seguinte (retrato novo) as enxerga;
+      -- sem esta segunda leitura o negócio nascia sem dono. Segunda vez sem
+      -- linha: a origem não distribui.
+      perform 1 from public.crm_distribuicao_de_dono d
+        where d.pipeline_id = new.pipeline_id
+          and d.organization_id = new.organization_id
+        order by d.user_id
+        for update;
+      if not found then
+        return new;
+      end if;
+    end if;
+
+    select d.user_id into v_user
+      from public.crm_distribuicao_de_dono d
+     where d.pipeline_id = new.pipeline_id
+       and d.organization_id = new.organization_id
+       and public.fn_escale_recebe_da_origem(new.organization_id, new.pipeline_id, d.user_id)
+     order by d.indice, d.user_id
+     limit 1;
+    if v_user is null then
+      return new;
+    end if;
+
+    update public.crm_distribuicao_de_dono
+       set indice = indice + passo,
+           contador = contador + 1,
+           updated_at = now()
+     where pipeline_id = new.pipeline_id
+       and user_id = v_user;
+
+    perform set_config(
+      'escale.distribuidos',
+      coalesce(current_setting('escale.distribuidos', true), '') || new.id::text || ',',
+      true
+    );
+  exception when others then
+    raise warning 'fn_escale_reparte_dono_da_origem: % (%)', sqlerrm, sqlstate;
+    return new;
+  end;
+
+  new.owner_user_id := v_user;
+  new.owner_kind := 'user';
+  new.assigned_at := now();
+  return new;
+end
+$fn$;
+
+revoke all on function public.fn_escale_reparte_dono_da_origem() from public, anon, authenticated;
+
+drop trigger if exists trg_escale_reparte_dono_da_origem on public.crm_leads;
+create trigger trg_escale_reparte_dono_da_origem
+  before insert on public.crm_leads
+  for each row execute function public.fn_escale_reparte_dono_da_origem();
+
+-- ── O GATILHO QUE REGISTRA E ANUNCIA ───────────────────────────────────────
+-- Dono posto num BEFORE INSERT não gera `lead.assigned` (o gatilho de eventos
+-- do original só olha UPDATE). Aqui ele sai, com `via: distribuicao`, pela
+-- mesma chave de transação da 0581 (`deskcomm.desfecho_pelo_negocio`): o push
+-- "Lead atribuído a você" e as automações de `lead.assigned` valem também
+-- para o negócio distribuído. Falha vira aviso.
+create or replace function public.fn_escale_registra_a_distribuicao()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_marca text := coalesce(current_setting('escale.distribuidos', true), '');
+  v_antes text;
+begin
+  if new.owner_user_id is null or position(new.id::text || ',' in v_marca) = 0 then
+    return null;
+  end if;
+
+  begin
+    insert into public.crm_distribuicoes_feitas (organization_id, pipeline_id, lead_id, user_id)
+    values (new.organization_id, new.pipeline_id, new.id, new.owner_user_id);
+
+    v_antes := current_setting('deskcomm.desfecho_pelo_negocio', true);
+    perform set_config('deskcomm.desfecho_pelo_negocio', 'on', true);
+    perform public.fn_log_event(new.organization_id, 'lead.assigned', jsonb_build_object(
+      'lead_id', new.id,
+      'from_user_id', null, 'to_user_id', new.owner_user_id,
+      'from_agent_id', null, 'to_agent_id', null,
+      'owner_kind', 'user',
+      'via', 'distribuicao'));
+    perform set_config('deskcomm.desfecho_pelo_negocio', coalesce(v_antes, ''), true);
+  exception when others then
+    raise warning 'fn_escale_registra_a_distribuicao: % (%)', sqlerrm, sqlstate;
+  end;
+  return null;
+end
+$fn$;
+
+revoke all on function public.fn_escale_registra_a_distribuicao() from public, anon, authenticated;
+
+drop trigger if exists trg_escale_registra_a_distribuicao on public.crm_leads;
+create trigger trg_escale_registra_a_distribuicao
+  after insert on public.crm_leads
+  for each row execute function public.fn_escale_registra_a_distribuicao();
+
+comment on table public.crm_distribuicao_de_dono is
+  'Fork Escale (9013): quem recebe os negócios sem dono de cada origem, com percentual, passo, índice e contador. Gerente+ lê; só as funções escrevem.';
+comment on table public.crm_distribuicoes_feitas is
+  'Fork Escale (9013): cada negócio distribuído (a janela do contador). O reset apaga as da origem.';
+comment on table public.crm_distribuicao_alteracoes is
+  'Fork Escale (9013): o histórico da configuração da distribuição, com o autor (auditoria do reset).';
+
+notify pgrst, 'reload schema';
+
+-- ---- FORK ESCALE · atribuição de ganho (migration 9014) ----
+-- manifest: **Atribuição de ganho por origem (fork Escale, Fase 1K, D14).** "Atribuição de ganho pelo sistema": com `crm_pipelines.settings.escale_so_admin_ganha = true`, `trg_escale_so_admin_marca_ganho` (BEFORE INSERT e BEFORE UPDATE em `crm_leads`, só quando o negócio vira ganho) recusa com `PT403 so_administrador_marca_ganho` quem tem sessão e não é administrador; automação, agente de IA, integração e MCP (sem sessão) seguem ganhando. Crédito do ganho: tabela nova `crm_ganho_do_negocio` (uma linha por negócio ganho, lida por quem vê o negócio, escrita só pelo gatilho e pela correção), preenchida por `trg_escale_registra_o_ganho` com `fn_escale_credito_do_ganho`, que aplica as regras da origem (`escale_atribuicao_de_ganho`: ter concluído N atividades de um tipo, ou o contato ter uma tag, com E/OU) sobre `crm_atividades_do_negocio` (9009): o dono se cumprir; senão quem cumpriu com mais atividades concluídas no negócio; ninguém, o dono. Sair de ganho apaga a linha. `fn_escale_corrigir_ganho` (só service_role) troca a pessoa e a data e grava quem corrigiu. Falhar ao creditar vira aviso e não derruba o ganho.
+-- 9014: atribuição de ganho (fork Escale).
+
+-- ── SÓ O ADMINISTRADOR MARCA GANHO ─────────────────────────────────────────
+-- Roda depois de `trg_crm_lead_close_on_stage` (ordem alfabética dos BEFORE),
+-- que é quem põe `status = 'won'` ao entrar na etapa de ganho; o WHEN vê o
+-- `new` já com o status. Sem sessão (`auth.uid()` nulo: automação, IA,
+-- integração, MCP) passa: é a "atribuição de ganho pelo sistema" (Q3). Com
+-- sessão, só o papel admin (`fn_user_role_in_org` conta a sessão de suporte
+-- completa como admin). O WHEN também dispara quando um negócio já ganho muda
+-- de origem: sem isso, ir e voltar de uma origem sem a regra driblaria a trava.
+create or replace function public.fn_escale_so_admin_marca_ganho()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if not exists (
+    select 1 from public.crm_pipelines p
+     where p.id = new.pipeline_id
+       and p.organization_id = new.organization_id
+       and p.settings -> 'escale_so_admin_ganha' = 'true'::jsonb
+  ) then
+    return new;
+  end if;
+  if coalesce(public.fn_user_role_in_org(new.organization_id), '') = 'admin' then
+    return new;
+  end if;
+  raise exception 'so_administrador_marca_ganho' using errcode = 'PT403';
+end
+$fn$;
+
+revoke all on function public.fn_escale_so_admin_marca_ganho() from public, anon, authenticated;
+
+drop trigger if exists trg_escale_so_admin_marca_ganho on public.crm_leads;
+create trigger trg_escale_so_admin_marca_ganho
+  before update on public.crm_leads
+  for each row
+  when (new.status = 'won'
+        and (old.status is distinct from 'won' or new.pipeline_id is distinct from old.pipeline_id))
+  execute function public.fn_escale_so_admin_marca_ganho();
+
+drop trigger if exists trg_escale_so_admin_marca_ganho_ao_criar on public.crm_leads;
+create trigger trg_escale_so_admin_marca_ganho_ao_criar
+  before insert on public.crm_leads
+  for each row
+  when (new.status = 'won')
+  execute function public.fn_escale_so_admin_marca_ganho();
+
+-- ── SÓ O ADMINISTRADOR MUDA AS REGRAS DO GANHO ─────────────────────────────
+-- A política `crm_pipelines_manager_write` deixa o gerente gravar
+-- `crm_pipelines.settings` direto pelo PostgREST; a conferência de admin da
+-- rota não o alcança. Este gatilho fecha a porta no banco: com sessão, quem não
+-- é administrador (nem suporte com escrita) não muda `escale_so_admin_ganha`
+-- nem `escale_atribuicao_de_ganho`. Sem sessão (serviço, sistema) passa. Na
+-- criação, a chave presente conta como mudança (ausente -> valor).
+create or replace function public.fn_escale_so_admin_muda_regras_de_ganho()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_chave text;
+  v_antes jsonb;
+  v_depois jsonb;
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if public.fn_is_platform_admin_full()
+     or public.fn_role_at_least(new.organization_id, 'admin') then
+    return new;
+  end if;
+  foreach v_chave in array array['escale_so_admin_ganha', 'escale_atribuicao_de_ganho'] loop
+    v_antes := case when tg_op = 'UPDATE' and jsonb_typeof(old.settings) = 'object'
+                    then old.settings -> v_chave end;
+    v_depois := case when jsonb_typeof(new.settings) = 'object'
+                     then new.settings -> v_chave end;
+    if v_antes is distinct from v_depois then
+      raise exception 'so_administrador_muda_regras_do_ganho' using errcode = 'PT403';
+    end if;
+  end loop;
+  return new;
+end
+$fn$;
+
+revoke all on function public.fn_escale_so_admin_muda_regras_de_ganho() from public, anon, authenticated;
+
+drop trigger if exists trg_escale_so_admin_muda_regras_de_ganho on public.crm_pipelines;
+create trigger trg_escale_so_admin_muda_regras_de_ganho
+  before insert or update of settings on public.crm_pipelines
+  for each row
+  execute function public.fn_escale_so_admin_muda_regras_de_ganho();
+
+-- ── O CRÉDITO DO GANHO ─────────────────────────────────────────────────────
+create table if not exists public.crm_ganho_do_negocio (
+  lead_id uuid primary key references public.crm_leads(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  creditado_a uuid references auth.users(id) on delete set null,
+  ganho_em timestamptz not null,
+  pela_regra boolean not null default false,
+  regras jsonb,
+  marcado_por uuid references auth.users(id) on delete set null,
+  corrigido_por uuid references auth.users(id) on delete set null,
+  corrigido_em timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_crm_ganho_do_negocio_org
+  on public.crm_ganho_do_negocio (organization_id, creditado_a);
+
+-- Lê quem vê o negócio (a RLS de `crm_leads`, com o acesso por origem da 9010,
+-- vale dentro do EXISTS). Escrita: nenhuma policy.
+alter table public.crm_ganho_do_negocio enable row level security;
+drop policy if exists crm_ganho_do_negocio_select on public.crm_ganho_do_negocio;
+create policy crm_ganho_do_negocio_select on public.crm_ganho_do_negocio
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.crm_leads l
+       where l.id = crm_ganho_do_negocio.lead_id
+         and l.organization_id = crm_ganho_do_negocio.organization_id
+    )
+  );
+
+-- Idem: só a leitura fica para a sessão (o default ACL do Supabase daria tudo a anon e authenticated).
+revoke all on public.crm_ganho_do_negocio from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_ganho_do_negocio from authenticated;
+grant select on public.crm_ganho_do_negocio to authenticated;
+grant all on public.crm_ganho_do_negocio to service_role;
+
+-- As regras da origem sobre as atividades concluídas no negócio (9009).
+-- Condição completa: atividade com tipo da 1I e vezes de 1 a 999; tag não
+-- vazia (do CONTATO, vale para todos os candidatos). Candidatos: quem concluiu
+-- atividade no negócio e o dono. Cumpre = todas (e) ou alguma (ou). Entre os
+-- que cumprem: o dono, se cumprir; senão quem tem mais atividades concluídas no
+-- negócio; empate, a conclusão mais recente; empate de novo, o menor id.
+-- Ninguém cumpre, ou origem sem regra: o dono, sem regra aplicada.
+create or replace function public.fn_escale_credito_do_ganho(p_lead uuid)
+returns table (o_creditado_a uuid, o_pela_regra boolean, o_regras jsonb)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_org uuid;
+  v_origem uuid;
+  v_dono uuid;
+  v_contato uuid;
+  v_cfg jsonb;
+  v_operador text;
+  v_conds jsonb;
+  v_tags text[];
+  v_cond jsonb;
+  v_cand uuid;
+  v_vale boolean;
+  v_todas boolean;
+  v_alguma boolean;
+  v_total integer;
+  v_ultima timestamptz;
+  v_melhor uuid;
+  v_melhor_total integer := -1;
+  v_melhor_ultima timestamptz;
+  v_dono_cumpre boolean := false;
+begin
+  select l.organization_id, l.pipeline_id, l.owner_user_id, l.contact_id
+    into v_org, v_origem, v_dono, v_contato
+    from public.crm_leads l
+   where l.id = p_lead;
+  if not found then
+    return;
+  end if;
+
+  select p.settings -> 'escale_atribuicao_de_ganho' into v_cfg
+    from public.crm_pipelines p
+   where p.id = v_origem
+     and p.organization_id = v_org;
+  v_operador := case when v_cfg ->> 'operador' = 'ou' then 'ou' else 'e' end;
+
+  select coalesce(jsonb_agg(c.v order by c.o), '[]'::jsonb) into v_conds
+    from jsonb_array_elements(
+      case when jsonb_typeof(v_cfg -> 'condicoes') = 'array' then v_cfg -> 'condicoes' else '[]'::jsonb end
+    ) with ordinality as c(v, o)
+   where (c.v ->> 'tipo' = 'atividade'
+          and c.v ->> 'atividade' in ('whatsapp', 'instagram', 'ligacao', 'email', 'agendamento', 'tarefa', 'reuniao')
+          and coalesce(c.v ->> 'vezes', '') ~ '^[0-9]{1,3}$'
+          and (c.v ->> 'vezes')::integer >= 1)
+      or (c.v ->> 'tipo' = 'tag' and coalesce(btrim(c.v ->> 'tag'), '') <> '');
+
+  if jsonb_array_length(v_conds) = 0 then
+    return query select v_dono, false, null::jsonb;
+    return;
+  end if;
+
+  select coalesce(ct.tags, '{}'::text[]) into v_tags
+    from public.contacts ct
+   where ct.id = v_contato
+     and ct.organization_id = v_org;
+  v_tags := coalesce(v_tags, '{}'::text[]);
+
+  for v_cand in
+    select x.quem from (
+      select distinct a.concluida_por as quem
+        from public.crm_atividades_do_negocio a
+       where a.lead_id = p_lead
+         and a.concluida_por is not null
+         and a.concluida_em is not null
+      union
+      select v_dono where v_dono is not null
+    ) x
+    order by x.quem
+  loop
+    v_todas := true;
+    v_alguma := false;
+    for v_cond in select e.value from jsonb_array_elements(v_conds) as e loop
+      if v_cond ->> 'tipo' = 'tag' then
+        v_vale := exists (
+          select 1 from unnest(v_tags) as t(tag)
+           where left(lower(btrim(t.tag, E' \t\r\n\f\x0b')), 40)
+               = left(lower(btrim(v_cond ->> 'tag', E' \t\r\n\f\x0b')), 40)
+        );
+      else
+        select count(*) >= (v_cond ->> 'vezes')::integer into v_vale
+          from public.crm_atividades_do_negocio a
+         where a.lead_id = p_lead
+           and a.concluida_por = v_cand
+           and a.concluida_em is not null
+           and a.tipo = v_cond ->> 'atividade';
+      end if;
+      v_todas := v_todas and v_vale;
+      v_alguma := v_alguma or v_vale;
+    end loop;
+
+    continue when not (case when v_operador = 'ou' then v_alguma else v_todas end);
+    if v_cand = v_dono then
+      v_dono_cumpre := true;
+    end if;
+    select count(*), max(a.concluida_em) into v_total, v_ultima
+      from public.crm_atividades_do_negocio a
+     where a.lead_id = p_lead
+       and a.concluida_por = v_cand
+       and a.concluida_em is not null;
+    if v_total > v_melhor_total
+       or (v_total = v_melhor_total and v_ultima is not null
+           and (v_melhor_ultima is null or v_ultima > v_melhor_ultima)) then
+      v_melhor := v_cand;
+      v_melhor_total := v_total;
+      v_melhor_ultima := v_ultima;
+    end if;
+  end loop;
+
+  if v_dono_cumpre then
+    return query select v_dono, true, jsonb_build_object('operador', v_operador, 'condicoes', v_conds);
+  elsif v_melhor is not null then
+    return query select v_melhor, true, jsonb_build_object('operador', v_operador, 'condicoes', v_conds);
+  else
+    return query select v_dono, false, null::jsonb;
+  end if;
+end
+$fn$;
+
+revoke all on function public.fn_escale_credito_do_ganho(uuid) from public, anon, authenticated;
+
+-- Vira ganho: grava (ou regrava) o crédito, com quem marcou (nulo = sistema)
+-- e a data do fechamento; a correção anterior se perde (é outro ganho). Sai de
+-- ganho: apaga. Falhar ao creditar vira aviso e não derruba o ganho.
+create or replace function public.fn_escale_registra_o_ganho()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_credito record;
+begin
+  if new.status = 'won' then
+    begin
+      select * into v_credito from public.fn_escale_credito_do_ganho(new.id);
+      insert into public.crm_ganho_do_negocio
+        (lead_id, organization_id, creditado_a, ganho_em, pela_regra, regras, marcado_por)
+      values
+        (new.id, new.organization_id, v_credito.o_creditado_a, coalesce(new.closed_at, now()),
+         coalesce(v_credito.o_pela_regra, false), v_credito.o_regras, auth.uid())
+      on conflict (lead_id) do update
+        set creditado_a = excluded.creditado_a,
+            ganho_em = excluded.ganho_em,
+            pela_regra = excluded.pela_regra,
+            regras = excluded.regras,
+            marcado_por = excluded.marcado_por,
+            corrigido_por = null,
+            corrigido_em = null;
+    exception when others then
+      raise warning 'fn_escale_registra_o_ganho: % (%)', sqlerrm, sqlstate;
+    end;
+  elsif tg_op = 'UPDATE' and old.status = 'won' then
+    delete from public.crm_ganho_do_negocio where lead_id = new.id;
+  end if;
+  return null;
+end
+$fn$;
+
+revoke all on function public.fn_escale_registra_o_ganho() from public, anon, authenticated;
+
+drop trigger if exists trg_escale_registra_o_ganho on public.crm_leads;
+create trigger trg_escale_registra_o_ganho
+  after update on public.crm_leads
+  for each row
+  when (old.status is distinct from new.status)
+  execute function public.fn_escale_registra_o_ganho();
+
+drop trigger if exists trg_escale_registra_o_ganho_ao_criar on public.crm_leads;
+create trigger trg_escale_registra_o_ganho_ao_criar
+  after insert on public.crm_leads
+  for each row
+  when (new.status = 'won')
+  execute function public.fn_escale_registra_o_ganho();
+
+-- ── A CORREÇÃO DO ADMINISTRADOR ────────────────────────────────────────────
+-- A rota confere que quem pede é admin e chama com o service role (N18). Não
+-- mexe em `crm_leads.closed_at`: as métricas do original seguem pelo
+-- fechamento e pelo dono (Q4).
+create or replace function public.fn_escale_corrigir_ganho(
+  p_org uuid,
+  p_lead uuid,
+  p_autor uuid,
+  p_creditado_a uuid,
+  p_ganho_em timestamptz
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $fn$
+begin
+  if p_ganho_em is null or p_ganho_em > now() + interval '1 day' then
+    raise exception 'data_invalida' using errcode = '22023';
+  end if;
+  if p_creditado_a is not null and not exists (
+    select 1 from public.user_organizations uo
+     where uo.user_id = p_creditado_a
+       and uo.organization_id = p_org
+       and uo.accepted_at is not null
+       and uo.revoked_at is null
+       and uo.role in ('agent', 'manager', 'admin')
+  ) then
+    raise exception 'pessoa_invalida' using errcode = 'PT422';
+  end if;
+  update public.crm_ganho_do_negocio g
+     set creditado_a = p_creditado_a,
+         ganho_em = p_ganho_em,
+         corrigido_por = p_autor,
+         corrigido_em = now()
+   where g.lead_id = p_lead
+     and g.organization_id = p_org
+     and exists (
+       select 1 from public.crm_leads l
+        where l.id = p_lead and l.organization_id = p_org and l.status = 'won'
+     );
+  if not found then
+    raise exception 'ganho_nao_encontrado' using errcode = 'PT404';
+  end if;
+end
+$fn$;
+
+revoke all on function public.fn_escale_corrigir_ganho(uuid, uuid, uuid, uuid, timestamptz) from public, anon, authenticated;
+grant execute on function public.fn_escale_corrigir_ganho(uuid, uuid, uuid, uuid, timestamptz) to service_role;
+
+comment on table public.crm_ganho_do_negocio is
+  'Fork Escale (9014): quem leva o crédito de cada negócio ganho, pelas regras da origem; o admin corrige. Lê quem vê o negócio.';
 
 notify pgrst, 'reload schema';
 

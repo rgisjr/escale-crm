@@ -17,6 +17,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { moveLeadSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { recusaDoGanhoPeloBanco } from "@/lib/escale/ganho/recusa";
 import { emitLeadActivity, stageChangeReason } from "@/lib/leads/activity-emitter";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import {
@@ -243,6 +244,9 @@ export async function POST(
     // chegar aqui como 500 — que é o defeito, com outro nome.
     const recusa = recusaDeMotivoDaPerdaPeloBanco(updErr, user.idioma);
     if (recusa) return fail(recusa.codigo, recusa.mensagem, 422, { requestId });
+    // FORK ESCALE · Fase 1K (N16): "só o administrador marca ganho" (gatilho da 9014).
+    const recusaDoGanho = recusaDoGanhoPeloBanco(updErr, user.idioma);
+    if (recusaDoGanho) return fail(recusaDoGanho.codigo, recusaDoGanho.mensagem, 403, { requestId });
     return fail("internal_error", updErr.message, 500, { requestId });
   }
 

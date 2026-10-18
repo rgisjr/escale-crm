@@ -91,3 +91,6 @@ export {
 
 // Fase 1I (playbook e aba Atividades): tarefa, reunião, celular, setas da ordem, compartilhar e a lista dos dias.
 export { Clipboard, Watch, Smartphone, ArrowUp, ArrowDown, Share2, List } from "lucide-react";
+
+// Fase 1K (distribuição, ganho e notificações): troféu do ganho, relógio do histórico, percentual, busca vazia, desfazer e usuário removido.
+export { Award, History, Percent, SearchX, Undo2, UserMinus } from "lucide-react";

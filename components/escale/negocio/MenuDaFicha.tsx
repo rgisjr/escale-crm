@@ -7,6 +7,7 @@ import * as MenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CAIXA_DO_MENU, ITEM_DO_MENU } from "@/components/escale/quadro/estilos-do-menu";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { MoveToOtherPipelineDialog } from "@/components/kanban/MoveToOtherPipelineDialog";
+import { JanelaAtribuicaoDeGanho } from "@/components/escale/negocio/JanelaAtribuicaoDeGanho";
 import { JanelaDeNota } from "@/components/escale/negocio/JanelaDeNota";
 import { NewLeadDialog } from "@/components/kanban/NewLeadDialog";
 import {
@@ -29,6 +30,7 @@ import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 import {
   ArrowRightLeft,
+  Award,
   Briefcase,
   EllipsisVertical,
   StickyNote,
@@ -76,6 +78,7 @@ export function MenuDaFicha({
   const [mudar, setMudar] = useState(false);
   const [excluir, setExcluir] = useState(false);
   const [nota, setNota] = useState(false);
+  const [ganho, setGanho] = useState(false);
 
   return (
     <>
@@ -100,6 +103,13 @@ export function MenuDaFicha({
                 {t("Visualizar contato")}
               </MenuPrimitive.Item>
             )}
+            {/* FORK ESCALE · Fase 1K (D14): o crédito do ganho, só no negócio ganho. */}
+            {lead.status === "won" ? (
+              <MenuPrimitive.Item className={ITEM_DO_MENU} onSelect={() => setGanho(true)}>
+                <Award size={14} aria-hidden />
+                {t("Ver atribuição de ganho")}
+              </MenuPrimitive.Item>
+            ) : null}
             {podeEscrever ? (
               <MenuPrimitive.Item className={ITEM_DO_MENU} onSelect={() => setNovo(true)}>
                 <Briefcase size={14} aria-hidden />
@@ -151,6 +161,9 @@ export function MenuDaFicha({
         pipelineId={pipelineId}
       />
       <JanelaDeNota leadId={lead.id} aberta={nota} onFechar={() => setNota(false)} />
+      {ganho ? (
+        <JanelaAtribuicaoDeGanho aberta aoFechar={() => setGanho(false)} leadId={lead.id} />
+      ) : null}
       <AlertDialog open={excluir} onOpenChange={setExcluir}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -97,6 +97,20 @@ describe("status (C4)", () => {
     expect(grava.ganhar).toHaveBeenCalledWith({ leadId: "n1" });
   });
 
+  it("com 'só o administrador marca ganho' (1K, N21), quem não é admin não vê 'Ganho'; o admin vê", async () => {
+    quadro.settings = { escale_so_admin_ganha: true };
+    org.role = "agent";
+    const { unmount } = render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
+    expect(screen.queryByRole("menuitem", { name: "Ganho" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Perdido" })).toBeInTheDocument();
+    unmount();
+    org.role = "admin";
+    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
+    expect(screen.getByRole("menuitem", { name: "Ganho" })).toBeInTheDocument();
+  });
+
   it("Perdido pede o motivo ao lado e só grava ao escolher", async () => {
     render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));

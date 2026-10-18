@@ -44,8 +44,9 @@ as $$
 $$;
 
 revoke all on function public.fn_escale_visualizacao_da_origem(uuid, uuid) from public;
-revoke execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) from anon;
-grant execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) to authenticated, service_role;
+-- Recebe a organização e não confere quem chama: só as definers deste arquivo a usam (varredura 0149).
+revoke execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) from anon, authenticated;
+grant execute on function public.fn_escale_visualizacao_da_origem(uuid, uuid) to service_role;
 
 -- ── 3. quem tem acesso à origem: só admin passa por cima; a lista da origem vence a do grupo ──
 create or replace function public.fn_escale_tem_acesso_a_origem(p_org uuid, p_pipeline uuid)
@@ -281,7 +282,10 @@ begin
   if new.owner_user_id is not null or new.owner_agent_id is not null then return new; end if;
   begin
     if public.fn_user_role_in_org(new.organization_id) is distinct from 'agent' then return new; end if;
-    if public.fn_escale_visualizacao_da_origem(new.organization_id, new.pipeline_id) <> 'own' then return new; end if;
+    -- Só a regra PRÓPRIA da origem: a da organização segue com o POST /api/v1/leads (#2547), como hoje.
+    if not exists (select 1 from public.crm_pipelines p
+                    where p.id = new.pipeline_id and p.organization_id = new.organization_id
+                      and p.settings->>'escale_visualizacao' = 'own') then return new; end if;
     new.owner_user_id := auth.uid();
     new.owner_kind := 'user';
     new.assigned_at := now();

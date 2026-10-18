@@ -53,6 +53,9 @@ const config = (pessoas: string[], pessoasDoGrupo: string[] = []): Configuracoes
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas,
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
+    notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
   },
   motivos: [],
   campos: [],
@@ -62,6 +65,8 @@ const config = (pessoas: string[], pessoasDoGrupo: string[] = []): Configuracoes
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo,
   podeAdministrar: false,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 });
 
 function abrir(pessoas: string[] = [], pessoasDoGrupo: string[] = []) {

@@ -36,6 +36,9 @@ const CONFIG: ConfiguracoesDaOrigem = {
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas: [],
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
+    notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
   },
   motivos: [],
   campos: [],
@@ -45,6 +48,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo: [],
   podeAdministrar: false,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 };
 
 function abrir(config: ConfiguracoesDaOrigem = CONFIG) {

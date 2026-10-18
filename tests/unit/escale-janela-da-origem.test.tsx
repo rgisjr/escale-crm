@@ -59,6 +59,9 @@ export const CONFIG: ConfiguracoesDaOrigem = {
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas: [],
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
+    notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
   },
   motivos: [],
   campos: [],
@@ -68,6 +71,8 @@ export const CONFIG: ConfiguracoesDaOrigem = {
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo: [],
   podeAdministrar: true,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 };
 
 function abrir(
@@ -150,10 +155,8 @@ describe("<JanelaDaOrigem>", () => {
     const { user } = abrir();
     // O título já aparece com o nome da lista de origens; o menu só depois de ler as configurações.
     await screen.findByRole("navigation", { name: "Configurações da origem" });
-    await user.click(screen.getByRole("button", { name: "Distribuição de dono" }));
-    expect(
-      screen.getByText("Chega na fase 1K, com a distribuição por percentual."),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Visualização de campos" }));
+    expect(screen.getByText("Chega com o módulo Contatos (Fase 2).")).toBeInTheDocument();
   });
 
   it("Etapas e atividades: uma coluna por etapa aberta, Nova atividade ligada, Salvar na origem só com mudança", async () => {

@@ -35,6 +35,9 @@ const CONFIG: ConfiguracoesDaOrigem = {
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas: [],
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
+    notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
   },
   motivos: [
     motivo("Preço", true),
@@ -48,6 +51,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo: [],
   podeAdministrar: true,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 };
 
 async function abrirMotivos(config: ConfiguracoesDaOrigem = CONFIG) {

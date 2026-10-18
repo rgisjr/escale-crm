@@ -36,8 +36,8 @@ describe("o corpo do PATCH", () => {
     ).toBe(false);
     expect(patchDasConfiguracoesSchema.safeParse({ outra: 1 }).success).toBe(false);
   });
-  it("motivos e campos são do administrador", () => {
-    expect([...SECOES_DO_ADMINISTRADOR].sort()).toEqual(["campos", "motivos"]);
+  it("motivos, campos e atribuição são do administrador", () => {
+    expect([...SECOES_DO_ADMINISTRADOR].sort()).toEqual(["atribuicao", "campos", "motivos"]);
     expect(
       secoesDoPatch({ gerais: { moeda: null, tags_padrao: [], visualizacao: "own_and_unassigned" }, campos: { regras: [] } }),
     ).toEqual(["gerais", "campos"]);
@@ -124,6 +124,8 @@ const CONFIG: ConfiguracoesDaOrigem = montarConfiguracoes({
   visualizacaoDaOrganizacao: "own_and_unassigned",
   grupo: null,
   podeAdministrar: true,
+  distribuicao: [],
+  distribuicaoAtualizada: null,
 });
 
 describe("montar", () => {
@@ -180,7 +182,7 @@ describe("rascunho da janela", () => {
     const r = rascunhoInicial(CONFIG);
     expect(r.gerais).toEqual({ nome: "Leads", grupo: "g1", moeda: "BRL", tags: ["vip"], visualizacao: "own_and_unassigned" });
     expect(algoMudou(r, CONFIG)).toBe(false);
-    expect(pedidoDoSalvar(r, CONFIG)).toEqual({ ok: true, mudancaDaOrigem: {}, patch: null });
+    expect(pedidoDoSalvar(r, CONFIG)).toEqual({ ok: true, mudancaDaOrigem: {}, patch: null, distribuicao: null });
   });
 
   it("só o que mudou vai no pedido; moeda igual à da organização vira null", () => {
@@ -192,6 +194,7 @@ describe("rascunho da janela", () => {
     expect(pedidoDoSalvar(r, CONFIG)).toEqual({
       ok: true,
       mudancaDaOrigem: { name: "Leads 2026" },
+      distribuicao: null,
       patch: {
         gerais: { moeda: "USD", tags_padrao: ["vip"], visualizacao: "own_and_unassigned" },
         motivos: { selecionados: ["Preço"], novos: [] },

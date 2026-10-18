@@ -115,6 +115,30 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "(zero para o gerente e para o vizinho), qualquer papel grava a sua, ninguém escreve a de outra pessoa, uma por pessoa, CHECKs e FK.",
   },
   {
+    tabela: "crm_distribuicao_de_dono",
+    razao:
+      "tests/invariants/escale-distribuicao-de-dono.test.ts — fork Escale (migration 9013): gerente e admin leem, agente e viewer " +
+      "leem zero, ninguém com sessão escreve (sem policy de escrita) nem executa as funções (só service_role).",
+  },
+  {
+    tabela: "crm_distribuicoes_feitas",
+    razao:
+      "tests/invariants/escale-distribuicao-de-dono.test.ts — fork Escale (migration 9013): escritas só pelo gatilho da distribuição, " +
+      "lidas por gerente ou acima da organização; o reset as apaga.",
+  },
+  {
+    tabela: "crm_distribuicao_alteracoes",
+    razao:
+      "tests/invariants/escale-distribuicao-de-dono.test.ts — fork Escale (migration 9013): o histórico da configuração, escrito só " +
+      "pelas funções de salvar e reiniciar, com o autor; agente lê zero.",
+  },
+  {
+    tabela: "crm_ganho_do_negocio",
+    razao:
+      "tests/invariants/escale-atribuicao-de-ganho.test.ts — fork Escale (migration 9014): lê quem vê o negócio (a RLS de crm_leads " +
+      "dentro do EXISTS), ninguém com sessão escreve; só o gatilho do ganho e a correção pelo service role gravam.",
+  },
+  {
     tabela: "crm_colunas_das_listas",
     razao:
       "tests/invariants/escale-lista-de-contatos.test.ts — fork Escale (migration 9101): as colunas da lista só para a própria pessoa " +

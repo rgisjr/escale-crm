@@ -19,7 +19,9 @@ import {
   useConfiguracoesDaOrigem,
   useSalvarConfiguracoes,
 } from "@/hooks/escale/useConfiguracoesDaOrigem";
+import { useSalvarDistribuicao } from "@/hooks/escale/useDistribuicao";
 import { useAtualizarOrigem } from "@/hooks/escale/useOrigens";
+import { useTeamMembers } from "@/hooks/team/useTeamMembers";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +42,7 @@ import {
 } from "@/lib/escale/playbook/regras";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/montar";
+import { gravarNaOrdem, planoDeGravacao } from "@/lib/escale/configuracoes/ordem-de-gravacao";
 import {
   algoMudou,
   pedidoDoSalvar,
@@ -63,8 +66,13 @@ import { cn } from "@/lib/utils";
 
 import { AbaDeEtapas } from "./AbaDeEtapas";
 import { EmBreve } from "./EmBreve";
+import { membrosAtivosDaEquipe } from "./ListaDePessoas";
+import { RodapeDaDistribuicao } from "./RodapeDaDistribuicao";
 import { SecaoAlerta } from "./SecaoAlerta";
+import { SecaoAtribuicao } from "./SecaoAtribuicao";
+import { SecaoNotificacoes } from "./SecaoNotificacoes";
 import { SecaoCampos } from "./SecaoCampos";
+import { SecaoDistribuicao } from "./SecaoDistribuicao";
 import { SecaoGerais } from "./SecaoGerais";
 import { SecaoMotivos } from "./SecaoMotivos";
 import { SecaoPermissoes } from "./SecaoPermissoes";
@@ -92,6 +100,10 @@ export interface PropsDaSecao {
  * Guarda o rascunho das subabas (um "Salvar") e o do playbook (o "Salvar na origem", Fase 1I): nome, grupo e padrão vão
  * pelas rotas da 1B; o resto, numa gravação só na rota de configurações. Salvou,
  * fecha. Sem X: fecha com Esc ou Cancelar.
+ *
+ * Fase 1K: a subaba "Distribuição de dono" (só admin), com a rota própria no mesmo "Salvar" e o
+ * "Resetar distribuição" no canto do rodapé. Fase 1K: a subaba "Atribuição de ganho".
+ * Fase 1K: a subaba "Notificações" (aviso dentro do app).
  */
 export function JanelaDaOrigem({
   id,
@@ -104,6 +116,8 @@ export function JanelaDaOrigem({
   const consulta = useConfiguracoesDaOrigem(id);
   const salvar = useSalvarConfiguracoes(id);
   const atualizar = useAtualizarOrigem();
+  const salvarDistribuicao = useSalvarDistribuicao(id);
+  const equipe = useTeamMembers();
   const [aba, setAba] = useState<AbaDaOrigem>(abaInicial);
   const [subaba, setSubaba] = useState<SubabaDaOrigem>("gerais");
   // O rascunho é o que a pessoa mexeu; enquanto não mexe, vale a origem como veio do servidor.
@@ -135,18 +149,13 @@ export function JanelaDaOrigem({
       const base = e ?? inicial;
       return base ? f(base) : e;
     });
-  const ocupado = salvar.isPending || atualizar.isPending;
+  const ocupado = salvar.isPending || atualizar.isPending || salvarDistribuicao.isPending;
   const podeSalvar = !!config && !!rascunho && algoMudou(rascunho, config) && !ocupado;
 
   const menu: Array<{ id: SubabaDaOrigem; rotulo: string; icone: LucideIcon; emBreve?: string }> = [
     { id: "gerais", rotulo: t("Configurações Gerais"), icone: Settings },
     { id: "motivos", rotulo: t("Motivo de Perda"), icone: CircleSlash },
-    {
-      id: "distribuicao",
-      rotulo: t("Distribuição de dono"),
-      icone: Shuffle,
-      emBreve: t("Chega na fase 1K, com a distribuição por percentual."),
-    },
+    { id: "distribuicao", rotulo: t("Distribuição de dono"), icone: Shuffle },
     {
       id: "permissoes",
       rotulo: t("Permissão de usuários"),
@@ -156,7 +165,6 @@ export function JanelaDaOrigem({
       id: "atribuicao",
       rotulo: t("Atribuição de ganho"),
       icone: ReceiptText,
-      emBreve: t("Chega na fase 1K."),
     },
     {
       id: "campos_visiveis",
@@ -170,10 +178,13 @@ export function JanelaDaOrigem({
       id: "notificacoes",
       rotulo: t("Notificações"),
       icone: Bell,
-      emBreve: t("Chega na fase 1K, com os avisos dentro do app."),
     },
   ];
-  const atual = menu.find((m) => m.id === subaba) ?? menu[0]!;
+  // Só o administrador vê a subaba "Distribuição de dono" (Clint).
+  const menuVisivel = menu.filter(
+    (m) => m.id !== "distribuicao" || config?.podeAdministrar === true,
+  );
+  const atual = menuVisivel.find((m) => m.id === subaba) ?? menuVisivel[0]!;
 
   async function aoSalvar() {
     if (!config || !rascunho) return;
@@ -181,7 +192,12 @@ export function JanelaDaOrigem({
     const pedido = pedidoDoSalvar(rascunho, config);
     if (!pedido.ok) {
       const etapa = config.etapas.find((e) => e.id === pedido.etapa)?.name;
-      setErro(etapa ? `${etapa}: ${t(pedido.erro)}` : t(pedido.erro));
+      const membros = membrosAtivosDaEquipe(equipe.data?.data, t("Sem nome"));
+      const nomes = (pedido.usuarios ?? [])
+        .map((u) => membros.find((m) => m.id === u)?.nome ?? u)
+        .join(", ");
+      const texto = t(pedido.erro).split("{usuarios}").join(nomes);
+      setErro(etapa ? `${etapa}: ${texto}` : texto);
       setSubaba(pedido.secao);
       return;
     }
@@ -189,8 +205,35 @@ export function JanelaDaOrigem({
       if (Object.keys(pedido.mudancaDaOrigem).length > 0) {
         onOrigens(await atualizar.mutateAsync({ id, mudanca: pedido.mudancaDaOrigem }));
       }
-      if (pedido.patch) await salvar.mutateAsync(pedido.patch);
-      toast.success(t("Origem alterada com sucesso!"));
+      // A ordem das duas rotas depende da direção da mudança (Q9 da 1J): ver ordem-de-gravacao.ts.
+      const plano = planoDeGravacao({
+        patch: pedido.patch,
+        distribuicao: pedido.distribuicao,
+        distribuidosHoje: config.distribuicao.map((p) => p.userId),
+      });
+      const terminou = await gravarNaOrdem(plano.ordem, {
+        configuracoes: async () => {
+          if (plano.patch) await salvar.mutateAsync(plano.patch);
+        },
+        distribuicao: async () => {
+          if (!pedido.distribuicao) return;
+          try {
+            await salvarDistribuicao.mutateAsync(pedido.distribuicao);
+          } catch (e) {
+            setErro(`${t("Erro ao salvar a distribuição de donos.")} ${textoDoErro(e, t)}`);
+            setSubaba("distribuicao");
+            return false;
+          }
+        },
+      });
+      if (!terminou) return;
+      const soDistribuicao =
+        !!pedido.distribuicao && !pedido.patch && Object.keys(pedido.mudancaDaOrigem).length === 0;
+      toast.success(
+        soDistribuicao
+          ? t("As configurações de distribuição foram salvas com sucesso!")
+          : t("Origem alterada com sucesso!"),
+      );
       // O rascunho do playbook é independente: se há mudança dele por salvar, a janela fica aberta.
       setEditado(null);
       if (!playbookMexido) onFechar();
@@ -226,6 +269,12 @@ export function JanelaDaOrigem({
         return <SecaoAlerta {...props} />;
       case "permissoes":
         return <SecaoPermissoes {...props} />;
+      case "distribuicao":
+        return <SecaoDistribuicao {...props} />;
+      case "atribuicao":
+        return <SecaoAtribuicao {...props} />;
+      case "notificacoes":
+        return <SecaoNotificacoes {...props} />;
       default:
         return null;
     }
@@ -305,7 +354,7 @@ export function JanelaDaOrigem({
                     aria-label={t("Configurações da origem")}
                     className="w-[364px] shrink-0 self-start rounded-[12px] bg-casca-marca-suave py-6"
                   >
-                    {menu.map((m) => (
+                    {menuVisivel.map((m) => (
                       <button
                         key={m.id}
                         type="button"
@@ -334,46 +383,57 @@ export function JanelaDaOrigem({
               )}
             </div>
 
-            <div className="flex justify-end gap-2 px-8 pt-3 pb-[22px]">
-              {aba === "etapas" && playbookMexido ? (
-                <BotaoDaJanela variante="cancelar" onClick={() => setConfirmarDesfazer(true)}>
-                  {t("Desfazer")}
-                </BotaoDaJanela>
+            <div className="flex items-center justify-between gap-2 px-8 pt-3 pb-[22px]">
+              {aba === "geral" &&
+              subaba === "distribuicao" &&
+              config &&
+              rascunho &&
+              config.podeAdministrar ? (
+                <RodapeDaDistribuicao config={config} rascunho={rascunho} mudar={mudar} />
               ) : (
-                <BotaoDaJanela variante="cancelar" onClick={onFechar}>
-                  {t("Cancelar")}
-                </BotaoDaJanela>
+                <span />
               )}
-              {aba === "etapas" ? (
-                <span className="inline-flex">
+              <div className="flex gap-2">
+                {aba === "etapas" && playbookMexido ? (
+                  <BotaoDaJanela variante="cancelar" onClick={() => setConfirmarDesfazer(true)}>
+                    {t("Desfazer")}
+                  </BotaoDaJanela>
+                ) : (
+                  <BotaoDaJanela variante="cancelar" onClick={onFechar}>
+                    {t("Cancelar")}
+                  </BotaoDaJanela>
+                )}
+                {aba === "etapas" ? (
+                  <span className="inline-flex">
+                    <BotaoDaJanela
+                      variante="salvar"
+                      disabled={!playbookMexido || salvarPlaybook.isPending}
+                      title={playbookMexido ? undefined : t("Nenhuma alteração para salvar")}
+                      onClick={() => void aoSalvarPlaybook()}
+                      className="rounded-r-none disabled:pointer-events-auto disabled:cursor-not-allowed"
+                    >
+                      {t("Salvar na origem")}
+                    </BotaoDaJanela>
+                    <BotaoDaJanela
+                      variante="salvar"
+                      disabled
+                      aria-label={t("Mais opções de salvar")}
+                      title={t("Em breve")}
+                      className="rounded-l-none border-l border-white/40 px-2 disabled:pointer-events-auto disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown size={14} aria-hidden />
+                    </BotaoDaJanela>
+                  </span>
+                ) : (
                   <BotaoDaJanela
                     variante="salvar"
-                    disabled={!playbookMexido || salvarPlaybook.isPending}
-                    title={playbookMexido ? undefined : t("Nenhuma alteração para salvar")}
-                    onClick={() => void aoSalvarPlaybook()}
-                    className="rounded-r-none disabled:pointer-events-auto disabled:cursor-not-allowed"
+                    disabled={!podeSalvar}
+                    onClick={() => void aoSalvar()}
                   >
-                    {t("Salvar na origem")}
+                    {t("Salvar")}
                   </BotaoDaJanela>
-                  <BotaoDaJanela
-                    variante="salvar"
-                    disabled
-                    aria-label={t("Mais opções de salvar")}
-                    title={t("Em breve")}
-                    className="rounded-l-none border-l border-white/40 px-2 disabled:pointer-events-auto disabled:cursor-not-allowed"
-                  >
-                    <ChevronDown size={14} aria-hidden />
-                  </BotaoDaJanela>
-                </span>
-              ) : (
-                <BotaoDaJanela
-                  variante="salvar"
-                  disabled={!podeSalvar}
-                  onClick={() => void aoSalvar()}
-                >
-                  {t("Salvar")}
-                </BotaoDaJanela>
-              )}
+                )}
+              </div>
             </div>
             <AlertDialog open={confirmarDesfazer} onOpenChange={setConfirmarDesfazer}>
               <AlertDialogContent>

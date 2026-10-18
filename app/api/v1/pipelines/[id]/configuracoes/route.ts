@@ -19,6 +19,9 @@
  * gerais.visualizacao e permissoes.pessoas (gerente ou acima); a regra da
  * organização é lida por modoDaOrganizacao; a lista do grupo vem junto para a
  * tela dizer se a origem a segue.
+ *
+ * Fase 1K: a resposta traz a distribuição de dono (lida com a sessão); o PATCH de
+ * permissões recusa a lista que deixa de fora quem recebe por distribuição (Q9 da 1J).
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -44,6 +47,8 @@ import {
   respostaDoErroDeGravacao,
   responderComConfiguracoes,
 } from "@/lib/escale/configuracoes/respostas";
+import { lerDistribuicao, papeisAtivos } from "@/lib/escale/distribuicao/ler";
+import { distribuidosForaDaLista, linhasDaTela } from "@/lib/escale/distribuicao/regras";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -114,7 +119,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   if (secoes.some((s) => SECOES_DO_ADMINISTRADOR.includes(s)) && !podeAdministrar) {
     return fail(
       "forbidden",
-      t("Só administrador muda motivos de perda e campos obrigatórios."),
+      t("Só administrador muda motivos de perda, campos obrigatórios e atribuição de ganho."),
       403,
       { requestId },
     );
@@ -122,7 +127,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
 
   const supabase = await createClient();
   let membros: string[] | undefined;
-  if (parsed.data.permissoes) {
+  if (parsed.data.permissoes || parsed.data.notificacoes) {
     const lidos = await membrosAtivos(supabase, orgId);
     if (!lidos.ok) {
       return falhaInesperada(lidos.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
@@ -134,6 +139,47 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     return origem.erro === "nao_encontrada"
       ? fail("not_found", t("Origem não encontrada."), 404, { requestId })
       : falhaInesperada(origem.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
+  }
+
+  // FORK ESCALE · Fase 1K (Q9 da 1J): a lista de pessoas da origem não pode deixar
+  // de fora quem recebe negócios por distribuição (a tela já barra com o texto da Clint).
+  if (parsed.data.permissoes) {
+    const distribuicao = await lerDistribuicao(supabase, orgId, id);
+    if (!distribuicao.ok) {
+      return falhaInesperada(distribuicao.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
+    }
+    // `distribuicao_pendente`: a tela vai salvar a distribuição logo depois (sai um, entra
+    // outro); a lista confere contra quem FICARÁ, não contra quem está gravado. Só vale
+    // para o administrador (é quem salva a distribuição): de quem não é, o campo é
+    // ignorado, senão um gerente mandaria uma lista vazia para desligar a conferência.
+    let linhas = linhasDaTela(distribuicao.pessoas);
+    if (parsed.data.distribuicao_pendente && podeAdministrar) {
+      const pendentes = parsed.data.distribuicao_pendente.map((p) => p.toLowerCase());
+      const papeis = pendentes.length
+        ? await papeisAtivos(supabase, orgId, pendentes)
+        : ({ ok: true, papeis: new Map<string, string>() } as const);
+      if (!papeis.ok) {
+        return falhaInesperada(papeis.causa, { rota: `PATCH ${ROTA}`, operacao: "ler" }, t, requestId);
+      }
+      linhas = pendentes.map((userId) => ({
+        userId,
+        percentual: "",
+        papel: papeis.papeis.get(userId) ?? null,
+      }));
+    }
+    const fora = distribuidosForaDaLista({
+      linhas,
+      pessoas: parsed.data.permissoes.pessoas.map((p) => p.toLowerCase()),
+      pessoasDoGrupo: pessoasDaOrigem(origem.grupo?.settings),
+    });
+    if (fora.length > 0) {
+      return fail(
+        "unprocessable_entity",
+        t("Não é possível salvar. Há usuários na distribuição desta origem fora da lista de permissões."),
+        422,
+        { requestId },
+      );
+    }
   }
 
   const veredito = aplicarConfiguracoes(origem.pipeline.settings, parsed.data, {

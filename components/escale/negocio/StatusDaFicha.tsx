@@ -7,13 +7,15 @@ import { CAIXA_DO_MENU, ITEM_DO_MENU } from "@/components/escale/quadro/estilos-
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { RetomarComoNovoNegocioDialog } from "@/components/kanban/RetomarComoNovoNegocioDialog";
 import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { usePermission } from "@/hooks/auth/AuthProvider";
+import { useActiveOrg, usePermission } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
+import { useBoard } from "@/hooks/kanban/useBoard";
 import { useMotivosDePerdaDoFunil } from "@/hooks/kanban/useMotivosDePerdaDoFunil";
 import { useMoveCard, type RetomadaPendente } from "@/hooks/kanban/useMoveCard";
 import { useLoseLead, useWinLead } from "@/hooks/kanban/useUpdateLead";
 import { opcoesDeMotivoDePerda } from "@/lib/leads/motivos-de-perda-do-funil";
 import { rotuloDoMotivoDePerda } from "@/lib/schemas/leads";
+import { podeMarcarGanho, soAdminGanha } from "@/lib/escale/ganho/regras";
 import { etapaParaReabrir, type StatusDoNegocio } from "@/lib/escale/negocio/regras";
 import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
@@ -78,6 +80,11 @@ export function StatusDaFicha({
 }) {
   const t = useT();
   const pode = usePermission("pipeline.move_card");
+  // FORK ESCALE · Fase 1K (N21): com "só o administrador marca ganho", quem não é admin não vê "Ganho".
+  const papel = useActiveOrg()?.role;
+  const settingsDaOrigem = useBoard(pipelineId).data?.pipeline.settings;
+  const podeGanhar = podeMarcarGanho({ papel, soAdmin: soAdminGanha(settingsDaOrigem) });
+  const opcoes = STATUS.filter((s) => s.valor !== "won" || podeGanhar || lead.status === "won");
   const ganhar = useWinLead(pipelineId);
   const perder = useLoseLead(pipelineId);
   const [retomada, setRetomada] = useState<RetomadaPendente | null>(null);
@@ -165,7 +172,7 @@ export function StatusDaFicha({
             sideOffset={8}
             className={cn(CAIXA_DO_MENU, "min-w-[118px]")}
           >
-            {STATUS.map((s) => (
+            {opcoes.map((s) => (
               <MenuPrimitive.Item
                 key={s.valor}
                 className={cn(ITEM_DO_MENU, s.item, s.valor === lead.status && "bg-casca-raia")}

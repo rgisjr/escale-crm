@@ -34,6 +34,8 @@ export function useSalvarConfiguracoes(id: string) {
     onSuccess: (config) => {
       qc.setQueryData(chaveDasConfiguracoes(id), config);
       void qc.invalidateQueries({ queryKey: chaveDoQuadro(id) });
+      // Quem se pôs na lista de avisos passa a ser avisado sem recarregar (Fase 1K, D15).
+      void qc.invalidateQueries({ queryKey: ["escale", "avisos-da-origem"] });
     },
   });
 }
