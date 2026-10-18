@@ -46,6 +46,22 @@ describe("migration 9013 — distribuição de dono", () => {
     expect(MIGRATION).not.toMatch(/for (insert|update|delete|all) to authenticated/);
   });
 
+  it("as três tabelas nascem fechadas: sem nada a anon, só leitura ao authenticated, tudo ao service_role", () => {
+    for (const tabela of [
+      "crm_distribuicao_de_dono",
+      "crm_distribuicoes_feitas",
+      "crm_distribuicao_alteracoes",
+    ]) {
+      const t = `public.${tabela}`;
+      expect(MIGRATION).toContain(`revoke all on ${t} from anon;`);
+      expect(MIGRATION).toContain(
+        `revoke insert, update, delete, truncate, references, trigger on ${t} from authenticated;`,
+      );
+      expect(MIGRATION).toContain(`grant select on ${t} to authenticated;`);
+      expect(MIGRATION).toContain(`grant all on ${t} to service_role;`);
+    }
+  });
+
   it("toda função é definer com search_path e fechada a public, anon e authenticated", () => {
     for (const f of FUNCOES) {
       expect(MIGRATION).toContain(

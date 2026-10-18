@@ -35470,6 +35470,21 @@ create policy crm_distribuicao_alteracoes_select on public.crm_distribuicao_alte
     and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)
   );
 
+-- O default ACL do Supabase dá tudo a anon e authenticated ao nascer a tabela. Estas só
+-- se leem pela sessão (a escrita é das funções): fecha o resto, como a 9008 e a 9009.
+revoke all on public.crm_distribuicao_de_dono from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_distribuicao_de_dono from authenticated;
+grant select on public.crm_distribuicao_de_dono to authenticated;
+grant all on public.crm_distribuicao_de_dono to service_role;
+revoke all on public.crm_distribuicoes_feitas from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_distribuicoes_feitas from authenticated;
+grant select on public.crm_distribuicoes_feitas to authenticated;
+grant all on public.crm_distribuicoes_feitas to service_role;
+revoke all on public.crm_distribuicao_alteracoes from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_distribuicao_alteracoes from authenticated;
+grant select on public.crm_distribuicao_alteracoes to authenticated;
+grant all on public.crm_distribuicao_alteracoes to service_role;
+
 -- ── QUEM PODE RECEBER NEGÓCIO DESTA ORIGEM ─────────────────────────────────
 -- Membro ativo (convite aceito, não revogado), papel agente, gerente ou admin
 -- (o viewer seria recusado pelo `trg_lead_so_liga_a_propria_empresa`), e com
@@ -35952,6 +35967,12 @@ create policy crm_ganho_do_negocio_select on public.crm_ganho_do_negocio
          and l.organization_id = crm_ganho_do_negocio.organization_id
     )
   );
+
+-- Idem: só a leitura fica para a sessão (o default ACL do Supabase daria tudo a anon e authenticated).
+revoke all on public.crm_ganho_do_negocio from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_ganho_do_negocio from authenticated;
+grant select on public.crm_ganho_do_negocio to authenticated;
+grant all on public.crm_ganho_do_negocio to service_role;
 
 -- As regras da origem sobre as atividades concluídas no negócio (9009).
 -- Condição completa: atividade com tipo da 1I e vezes de 1 a 999; tag não

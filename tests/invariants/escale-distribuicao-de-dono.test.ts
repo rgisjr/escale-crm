@@ -309,10 +309,12 @@ describe("RLS e funções fechadas (N7, N8)", () => {
       sql(`set role authenticated;
            select set_config('request.jwt.claims', '{"sub":"${GOV_ADMIN}"}', false);
            ${script}`);
-    // Sem policy de escrita, a RLS filtra: zero linhas mudam, sem erro.
-    comoAdmin(
-      `update public.crm_distribuicao_de_dono set contador = 99 where pipeline_id = '${P_LIVRE}';`,
-    );
+    // Sem o privilégio de escrita (revoke da 9013), o banco recusa; nada muda.
+    expect(() =>
+      comoAdmin(
+        `update public.crm_distribuicao_de_dono set contador = 99 where pipeline_id = '${P_LIVRE}';`,
+      ),
+    ).toThrow(/permission denied/);
     expect(
       n(
         `select max(contador) from public.crm_distribuicao_de_dono where pipeline_id = '${P_LIVRE}';`,

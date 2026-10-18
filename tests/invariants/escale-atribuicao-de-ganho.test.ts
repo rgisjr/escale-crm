@@ -252,10 +252,13 @@ describe("o crédito do ganho (N17)", () => {
         `select count(*) from public.crm_ganho_do_negocio where lead_id = '${l}'`,
       ),
     ).toBe(1);
-    comoUsuario(
-      GOV_ADMIN,
-      `update public.crm_ganho_do_negocio set creditado_a = '${GOV_MANAGER}' where lead_id = '${l}';`,
-    );
+    // Sem o privilégio de escrita (revoke da 9014), o banco recusa; nada muda.
+    expect(() =>
+      comoUsuario(
+        GOV_ADMIN,
+        `update public.crm_ganho_do_negocio set creditado_a = '${GOV_MANAGER}' where lead_id = '${l}';`,
+      ),
+    ).toThrow(/permission denied/);
     expect(
       texto(`select creditado_a from public.crm_ganho_do_negocio where lead_id = '${l}';`),
     ).toBe(GOV_AGENT_A);

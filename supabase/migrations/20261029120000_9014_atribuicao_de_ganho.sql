@@ -127,6 +127,12 @@ create policy crm_ganho_do_negocio_select on public.crm_ganho_do_negocio
     )
   );
 
+-- Idem: só a leitura fica para a sessão (o default ACL do Supabase daria tudo a anon e authenticated).
+revoke all on public.crm_ganho_do_negocio from anon;
+revoke insert, update, delete, truncate, references, trigger on public.crm_ganho_do_negocio from authenticated;
+grant select on public.crm_ganho_do_negocio to authenticated;
+grant all on public.crm_ganho_do_negocio to service_role;
+
 -- As regras da origem sobre as atividades concluídas no negócio (9009).
 -- Condição completa: atividade com tipo da 1I e vezes de 1 a 999; tag não
 -- vazia (do CONTATO, vale para todos os candidatos). Candidatos: quem concluiu

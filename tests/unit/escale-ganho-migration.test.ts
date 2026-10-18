@@ -31,6 +31,16 @@ describe("migration 9014 — atribuição de ganho", () => {
     expect(MIGRATION).not.toMatch(/for (insert|update|delete|all) to authenticated/);
   });
 
+  it("a tabela nasce fechada: sem nada a anon, só leitura ao authenticated, tudo ao service_role", () => {
+    const t = "public.crm_ganho_do_negocio";
+    expect(MIGRATION).toContain(`revoke all on ${t} from anon;`);
+    expect(MIGRATION).toContain(
+      `revoke insert, update, delete, truncate, references, trigger on ${t} from authenticated;`,
+    );
+    expect(MIGRATION).toContain(`grant select on ${t} to authenticated;`);
+    expect(MIGRATION).toContain(`grant all on ${t} to service_role;`);
+  });
+
   it("toda função é definer, com search_path, fechada; só a correção abre ao service_role", () => {
     for (const f of FUNCOES) {
       expect(MIGRATION).toContain(
