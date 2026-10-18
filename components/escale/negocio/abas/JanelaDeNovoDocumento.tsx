@@ -17,7 +17,7 @@ import { Plus, X } from "@/lib/ui/icons-da-casca";
  * O MODAL "NOVO DOCUMENTO" DA CLINT (fork Escale, Fase 1H; C17; ImportModal).
  * "Adicionar" abre o seletor de arquivos (vários; a lista de extensões da
  * Clint); cada arquivo vira uma linha com ×; o que não serve fica de fora, com
- * o motivo; "Salvar" envia. Sem arrastar, como na Clint.
+ * o motivo; "Salvar" envia e fecha quando tudo subiu; o que falhou fica na lista. Sem arrastar, como na Clint.
  */
 export function JanelaDeNovoDocumento({
   aberta,
@@ -26,7 +26,7 @@ export function JanelaDeNovoDocumento({
 }: {
   aberta: boolean;
   onFechar: () => void;
-  aoSalvar: (arquivos: File[]) => Promise<void>;
+  aoSalvar: (arquivos: File[]) => Promise<File[]>;
 }) {
   const t = useT();
   const id = useId();
@@ -35,10 +35,16 @@ export function JanelaDeNovoDocumento({
   const [recusados, setRecusados] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
 
-  function fechar() {
+  function limparEFechar() {
     setLista([]);
     setRecusados([]);
     onFechar();
+  }
+
+  /** Esc, cortina e Cancelar. Enviando, não fecha: o arquivo que falhar precisa continuar na lista. */
+  function fechar() {
+    if (enviando) return;
+    limparEFechar();
   }
 
   function escolher(arquivos: FileList | null) {
@@ -61,8 +67,10 @@ export function JanelaDeNovoDocumento({
   async function salvar() {
     setEnviando(true);
     try {
-      await aoSalvar(lista);
-      fechar();
+      const falharam = await aoSalvar(lista);
+      // Fecha só quando tudo subiu; senão fica com os que falharam, para tentar de novo.
+      if (falharam.length === 0) limparEFechar();
+      else setLista((atual) => atual.filter((a) => falharam.includes(a)));
     } finally {
       setEnviando(false);
     }

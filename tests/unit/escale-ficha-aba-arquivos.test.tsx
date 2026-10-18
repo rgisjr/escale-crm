@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const permissao = vi.hoisted(() => ({ pode: true }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({
   useUser: () => ({ id: "u1" }),
   useActiveOrg: () => ({ orgId: "org1", role: "agent" }),
+  usePermission: () => permissao.pode,
 }));
 const arquivos = vi.hoisted(() => ({
   lista: [
@@ -35,7 +37,14 @@ const arquivos = vi.hoisted(() => ({
       created_at: "2026-10-10T10:00:00Z",
     },
   ],
-  enviar: vi.fn(async () => ({ enviados: 1, falhas: [] })),
+  enviar: vi.fn(
+    async (
+      _arquivos: File[],
+    ): Promise<{
+      enviados: number;
+      falhas: { arquivo: File; nome: string; mensagem: string | null }[];
+    }> => ({ enviados: 1, falhas: [] }),
+  ),
   excluir: vi.fn(async () => undefined),
 }));
 vi.mock("@/hooks/escale/useArquivosDoContato", () => ({
@@ -49,7 +58,10 @@ import type { Lead } from "@/lib/types/leads";
 
 /** FORK ESCALE · Fase 1H (C17): a aba Arquivos da Clint (print 06). */
 const LEAD = { id: "n1", contact_id: "c1" } as unknown as Lead;
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  permissao.pode = true;
+});
 
 describe("a tabela", () => {
   it("lista nome, tamanho, data e usuário; data desc por padrão; clicar no cabeçalho reordena", async () => {
@@ -122,6 +134,53 @@ describe("a tabela", () => {
 });
 
 describe("Novo arquivo", () => {
+  it("se um envio falha: toast com o nome e o motivo traduzido, e o modal fica aberto só com o que falhou", async () => {
+    const { toast } = await import("sonner");
+    arquivos.enviar.mockImplementationOnce(async (fs: File[]) => ({
+      enviados: 1,
+      falhas: [{ arquivo: fs[0]!, nome: fs[0]!.name, mensagem: null }],
+    }));
+    render(<AbaArquivos lead={LEAD} />);
+    await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
+    const janela = await screen.findByRole("dialog", { name: "Novo documento" });
+    await userEvent.upload(within(janela).getByLabelText("Adicionar"), [
+      new File(["x"], "contrato.pdf", { type: "application/pdf" }),
+      new File(["y"], "foto.png", { type: "image/png" }),
+    ]);
+    await userEvent.click(within(janela).getByRole("button", { name: "Salvar" }));
+    expect(toast.success).toHaveBeenCalledWith("Arquivo(s) enviado(s) com sucesso");
+    expect(toast.error).toHaveBeenCalledWith("contrato.pdf: Erro ao enviar arquivo(s)");
+    expect(screen.getByRole("dialog", { name: "Novo documento" })).toBeInTheDocument();
+    expect(within(janela).getByText("contrato.pdf")).toBeInTheDocument();
+    expect(within(janela).queryByText("foto.png")).toBeNull();
+  });
+
+  it("dois arquivos com o MESMO nome: fica só o que falhou, e o segundo Salvar não reenvia o que subiu", async () => {
+    arquivos.enviar.mockImplementationOnce(async (fs: File[]) => ({
+      enviados: 1,
+      falhas: [{ arquivo: fs[1]!, nome: fs[1]!.name, mensagem: null }],
+    }));
+    render(<AbaArquivos lead={LEAD} />);
+    await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
+    const janela = await screen.findByRole("dialog", { name: "Novo documento" });
+    const primeiro = new File(["x"], "a.pdf", { type: "application/pdf" });
+    const segundo = new File(["yy"], "a.pdf", { type: "application/pdf" });
+    await userEvent.upload(within(janela).getByLabelText("Adicionar"), [primeiro, segundo]);
+    await userEvent.click(within(janela).getByRole("button", { name: "Salvar" }));
+    expect(within(janela).getAllByText("a.pdf")).toHaveLength(1);
+    await userEvent.click(within(janela).getByRole("button", { name: "Salvar" }));
+    expect(arquivos.enviar).toHaveBeenLastCalledWith([segundo]);
+  });
+
+  it("sem permissão (quem só lê): 'Novo arquivo' desligado com 'Sem permissão'", () => {
+    permissao.pode = false;
+    render(<AbaArquivos lead={LEAD} />);
+    for (const b of screen.getAllByRole("button", { name: "Novo arquivo" })) {
+      expect(b).toBeDisabled();
+      expect(b).toHaveAttribute("title", "Sem permissão");
+    }
+  });
+
   it("abre 'Novo documento'; adicionar lista o arquivo; Salvar envia e mostra o toast da Clint", async () => {
     const { toast } = await import("sonner");
     render(<AbaArquivos lead={LEAD} />);

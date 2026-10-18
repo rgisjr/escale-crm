@@ -11,7 +11,10 @@ vi.mock("@/hooks/escale/useNotasDoNegocio", () => ({
   useCriarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useEditarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
-vi.mock("@/hooks/auth/AuthProvider", () => ({ useActiveOrg: () => ({ orgId: "org1" }) }));
+vi.mock("@/hooks/auth/AuthProvider", () => ({
+  useActiveOrg: () => ({ orgId: "org1" }),
+  usePermission: () => true,
+}));
 const contato = vi.hoisted(() => ({
   data: { data: { id: "c1", name: "Ana", tags: ["vip"], custom_fields: {} } },
 }));
@@ -244,10 +247,9 @@ describe("revisão final do PR A", () => {
     render(<TagsDaFicha lead={LEAD} pipelineId="o1" />);
     await userEvent.click(screen.getByRole("button", { name: "Adicionar tags" }));
     await userEvent.click(
-      within(await screen.findByRole("listbox", { name: "Adicione uma tag" })).getByRole(
-        "option",
-        { name: "quente" },
-      ),
+      within(await screen.findByRole("listbox", { name: "Adicione uma tag" })).getByRole("option", {
+        name: "quente",
+      }),
     );
     expect(toast.error).not.toHaveBeenCalled();
     gravar.gravar.mockRejectedValueOnce(new ContatoNaoCarregado());

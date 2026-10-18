@@ -112,10 +112,12 @@ export function MenuDaFicha({
                 {t("Mudar origem")}
               </MenuPrimitive.Item>
             ) : null}
-            <MenuPrimitive.Item className={ITEM_DO_MENU} onSelect={() => setNota(true)}>
-              <StickyNote size={14} aria-hidden />
-              {t("Nova nota")}
-            </MenuPrimitive.Item>
+            {podeEscrever ? (
+              <MenuPrimitive.Item className={ITEM_DO_MENU} onSelect={() => setNota(true)}>
+                <StickyNote size={14} aria-hidden />
+                {t("Nova nota")}
+              </MenuPrimitive.Item>
+            ) : null}
             {podeEscrever ? (
               <>
                 <MenuPrimitive.Separator className="my-1 h-px bg-casca-borda" />

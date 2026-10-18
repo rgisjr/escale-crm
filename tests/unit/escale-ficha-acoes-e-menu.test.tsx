@@ -111,6 +111,14 @@ describe("ações rápidas (C3)", () => {
     expect(screen.getByRole("dialog", { name: "Nova nota" })).toBeInTheDocument();
   });
 
+  it("sem permissão de escrita, o ícone de nota fica desligado com 'Sem permissão' (1H-C)", () => {
+    permissao.pode = false;
+    render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
+    const botao = screen.getByRole("button", { name: "Nova nota" });
+    expect(botao).toBeDisabled();
+    expect(botao).toHaveAttribute("title", "Sem permissão");
+  });
+
   it("'+ Adicionar tags' está ligado (1H, C10)", () => {
     render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
     expect(screen.getByRole("button", { name: /Adicionar tags/ })).toBeEnabled();
@@ -136,7 +144,9 @@ describe("o ⋮ do cabeçalho (C6, print 09)", () => {
       "href",
       "/app/contacts/c1",
     );
-    expect(screen.getByRole("menuitem", { name: "Nova nota" })).not.toHaveAttribute("aria-disabled");
+    expect(screen.getByRole("menuitem", { name: "Nova nota" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
   });
 
   it("Nova nota abre o modal da nota (1H, C15)", async () => {
@@ -188,12 +198,11 @@ describe("o ⋮ do cabeçalho (C6, print 09)", () => {
     expect(nav.push).toHaveBeenCalledWith("/app/pipelines/o1?st=open");
   });
 
-  it("sem permissão de escrita: só Visualizar contato e Nova nota", async () => {
+  it("sem permissão de escrita: só Visualizar contato (1H-C: a nota também é escrita)", async () => {
     permissao.pode = false;
     await abrir();
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
       "Visualizar contato",
-      "Nova nota",
     ]);
   });
 });
