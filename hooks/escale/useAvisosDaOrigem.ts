@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import { apiClient } from "@/lib/api/client";
+import { roleAtLeast } from "@/lib/auth/types";
 import { avisoDoNegocioUmaVez, type OrigemQueAvisa } from "@/lib/escale/notificacoes/regras";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { idiomaAtual } from "@/lib/i18n/IdiomaProvider";
@@ -64,11 +65,15 @@ function entregar(aviso: EntregarAvisoInput) {
  * perda). A RLS entrega só o que a pessoa vê (1J).
  */
 export function useAvisosDaOrigem(): void {
-  const orgId = useActiveOrg()?.orgId ?? null;
+  const org = useActiveOrg();
+  const orgId = org?.orgId ?? null;
+  // A rota pede agente ou acima: para o leitor (viewer) cada carga da casca seria um 403
+  // e uma linha `authz.denied` na auditoria. Quem não pode, nem pergunta.
+  const podeReceber = roleAtLeast(org?.role, "agent");
   const user = useUser();
   const consulta = useQuery({
     queryKey: chaveDosAvisosDaOrigem(orgId),
-    enabled: !!orgId,
+    enabled: !!orgId && podeReceber,
     staleTime: 60_000,
     queryFn: async () =>
       (await apiClient.get<{ data: OrigemQueAvisa[] }>("/api/v1/escale/avisos-da-origem")).data,
