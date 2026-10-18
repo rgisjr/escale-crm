@@ -4,6 +4,7 @@ import {
   ERRO_DA_SOMA,
   ERRO_DO_ZERO,
   dataBr,
+  distribuicaoComLinhas,
   dividirIgual,
   horaBr,
   distribuidosForaDaLista,
@@ -167,5 +168,28 @@ describe("datas e tempo (formato brasileiro, 24 h)", () => {
     expect(tempoRelativo("2026-10-18T11:55:00Z", agora, "pt-BR")).toBe("há 5 minutos");
     expect(tempoRelativo("2026-10-18T09:00:00Z", agora, "pt-BR")).toBe("há 3 horas");
     expect(tempoRelativo("2026-10-16T12:00:00Z", agora, "pt-BR")).toBe("anteontem");
+  });
+});
+
+describe("distribuicaoComLinhas (a caixa 'Reiniciar…' some junto com a edição)", () => {
+  const gravadas = [linha(A, "50"), linha(B, "50")];
+
+  it("voltar às linhas gravadas desliga o reiniciar; editando, ele fica como estava", () => {
+    const editando = { linhas: [linha(A, "60"), linha(B, "40")], reiniciar: true };
+    expect(distribuicaoComLinhas(editando, gravadas, gravadas)).toEqual({
+      linhas: gravadas,
+      reiniciar: false,
+    });
+    expect(distribuicaoComLinhas(editando, [linha(A, "70"), linha(B, "30")], gravadas)).toEqual({
+      linhas: [linha(A, "70"), linha(B, "30")],
+      reiniciar: true,
+    });
+    expect(
+      distribuicaoComLinhas(
+        { linhas: gravadas, reiniciar: false },
+        [linha(A, "60"), linha(B, "40")],
+        gravadas,
+      ).reiniciar,
+    ).toBe(false);
   });
 });

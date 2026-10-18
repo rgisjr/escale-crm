@@ -87,6 +87,20 @@ export function linhasDaTela(pessoas: readonly PessoaNaDistribuicao[]): LinhaDaD
   }));
 }
 
+/**
+ * As linhas novas do rascunho. A caixa "Reiniciar a contagem…" só existe enquanto
+ * há edição; voltando às linhas gravadas ela se desliga, senão o Salvar ficaria
+ * ligado para nada (o pedido da distribuição só sai quando as linhas mudam).
+ */
+export function distribuicaoComLinhas(
+  atual: { linhas: LinhaDaDistribuicao[]; reiniciar: boolean },
+  novas: LinhaDaDistribuicao[],
+  iniciais: readonly LinhaDaDistribuicao[],
+): { linhas: LinhaDaDistribuicao[]; reiniciar: boolean } {
+  const igualAoGravado = JSON.stringify(novas) === JSON.stringify(iniciais);
+  return { linhas: novas, reiniciar: igualAoGravado ? false : atual.reiniciar };
+}
+
 /** Entrou ou saiu alguém: todos com 100/n, duas casas (Clint). */
 export function dividirIgual(linhas: readonly LinhaDaDistribuicao[]): LinhaDaDistribuicao[] {
   if (linhas.length === 0) return [];

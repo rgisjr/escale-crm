@@ -229,6 +229,28 @@ describe("Distribuição de dono", () => {
   });
 });
 
+describe("M6: a caixa 'Reiniciar…' e o Salvar", () => {
+  it("marcar, editar e voltar às linhas gravadas deixa o Salvar desligado (nada a gravar)", async () => {
+    const { user } = abrir();
+    await irPara(user);
+    const ana = await screen.findByRole("textbox", { name: "Percentual % Ana Lima" });
+    const bruno = screen.getByRole("textbox", { name: "Percentual % Bruno Reis" });
+    await user.clear(ana);
+    await user.type(ana, "60");
+    await user.clear(bruno);
+    await user.type(bruno, "40");
+    await user.click(
+      screen.getByRole("checkbox", { name: "Reiniciar a contagem de negócios ao salvar" }),
+    );
+    await user.clear(ana);
+    await user.type(ana, "50");
+    await user.clear(bruno);
+    await user.type(bruno, "50");
+    expect(screen.getByRole("button", { name: "Resetar distribuição" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+  });
+});
+
 describe("Q9 da 1J: a lista de pessoas e a distribuição", () => {
   it("a lista que deixa de fora quem recebe por distribuição não salva e mostra o texto da Clint com os nomes", async () => {
     const { user } = abrir();

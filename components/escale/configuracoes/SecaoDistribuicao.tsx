@@ -12,7 +12,9 @@ import type { Role } from "@/lib/auth/types";
 import { temAcessoAOrigem } from "@/lib/escale/acesso/regras";
 import {
   DISTRIBUICAO_MAX,
+  distribuicaoComLinhas,
   dividirIgual,
+  linhasDaTela,
   tempoRelativo,
   type LinhaDaDistribuicao,
 } from "@/lib/escale/distribuicao/regras";
@@ -65,7 +67,10 @@ export function SecaoDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
   );
   const linhas = rascunho.distribuicao.linhas;
   const mudarLinhas = (novas: LinhaDaDistribuicao[]) =>
-    mudar((r) => ({ ...r, distribuicao: { ...r.distribuicao, linhas: novas } }));
+    mudar((r) => ({
+      ...r,
+      distribuicao: distribuicaoComLinhas(r.distribuicao, novas, linhasDaTela(config.distribuicao)),
+    }));
 
   const opcoes = membros
     .filter((m) => !linhas.some((l) => l.userId === m.id))
