@@ -117,6 +117,7 @@ export function FichaDoNegocio({
       />
       <CabecalhoDaFicha
         lead={ficha.lead}
+        pipelineId={ficha.pipeline.id}
         // C7, C4, C5 e C6, na ordem da Clint (01-017 e print 01).
         direita={
           <>
@@ -139,7 +140,7 @@ export function FichaDoNegocio({
         }
       />
       {/* C3: as ações rápidas e as tags. */}
-      <AcoesDaFicha lead={ficha.lead} />
+      <AcoesDaFicha lead={ficha.lead} pipelineId={ficha.pipeline.id} />
       <AbasDaFicha
         valor={aba}
         // FORK ESCALE · Fase 1G: trocar de aba só muda a URL (sem ir ao servidor).

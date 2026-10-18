@@ -9,7 +9,20 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 const permissao = vi.hoisted(() => ({ pode: true }));
-vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => permissao.pode }));
+vi.mock("@/hooks/auth/AuthProvider", () => ({
+  usePermission: () => permissao.pode,
+  useActiveOrg: () => ({ orgId: "org1" }),
+}));
+// FORK ESCALE · Fase 1H (C10): as tags do cabeçalho leem e gravam o contato.
+vi.mock("@/hooks/contacts/useContact", () => ({
+  useContact: () => ({ data: { data: { id: "c1", name: "Ana", tags: [], custom_fields: {} } } }),
+}));
+vi.mock("@/hooks/escale/useGravarContato", () => ({
+  useGravarContato: () => ({ gravar: vi.fn(async () => undefined) }),
+}));
+vi.mock("@/hooks/contacts/useContactTagVocabulary", () => ({
+  useContactTagVocabulary: () => ({ data: [] }),
+}));
 const lote = vi.hoisted(() => ({ mutate: vi.fn() }));
 vi.mock("@/hooks/kanban/useBulkAction", () => ({
   useBulkAction: () => ({ mutate: lote.mutate, isPending: false }),
@@ -63,7 +76,7 @@ beforeEach(() => {
 
 describe("ações rápidas (C3)", () => {
   it("ligar, conversa e e-mail funcionam quando há dado; sem e-mail, o ícone apagado", () => {
-    render(<AcoesDaFicha lead={LEAD} />);
+    render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
     expect(screen.getByRole("link", { name: "Ligar" })).toHaveAttribute(
       "href",
       "tel:+5543998031566",
@@ -75,13 +88,18 @@ describe("ações rápidas (C3)", () => {
     expect(screen.getByRole("img", { name: "Sem e-mail" })).toBeInTheDocument();
   });
 
-  it("agendar, nota, lembretes e tags: no lugar, desligados com 'Em breve'", () => {
-    render(<AcoesDaFicha lead={LEAD} />);
-    for (const nome of ["Agendar", "Nova nota", "Lembretes", "Adicionar tags"]) {
+  it("agendar, nota e lembretes: no lugar, desligados com 'Em breve'", () => {
+    render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
+    for (const nome of ["Agendar", "Nova nota", "Lembretes"]) {
       const b = screen.getByRole("button", { name: nome });
       expect(b).toBeDisabled();
       expect(b).toHaveAttribute("title", "Em breve");
     }
+  });
+
+  it("'+ Adicionar tags' está ligado (1H, C10)", () => {
+    render(<AcoesDaFicha lead={LEAD} pipelineId="o1" />);
+    expect(screen.getByRole("button", { name: /Adicionar tags/ })).toBeEnabled();
   });
 });
 

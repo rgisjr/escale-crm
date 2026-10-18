@@ -25,6 +25,13 @@ vi.mock("@/hooks/escale/useNegociosRecentes", () => ({
   useChaveDosRecentes: () => "chave",
   useNegociosRecentes: () => ({ registrar: recentes.registrar }),
 }));
+// FORK ESCALE · Fase 1H (C10): o lápis do nome grava o contato (ou o título do negócio).
+vi.mock("@/hooks/escale/useGravarContato", () => ({
+  useGravarContato: () => ({ gravar: vi.fn(async () => undefined) }),
+}));
+vi.mock("@/hooks/kanban/useUpdateLead", () => ({
+  useEditLead: () => ({ mutateAsync: vi.fn(async () => ({})) }),
+}));
 vi.mock("@/components/escale/negocio/ConteudoDaAba", () => ({
   ConteudoDaAba: ({ aba }: { aba: string }) => <p>conteúdo {aba}</p>,
 }));
@@ -166,15 +173,12 @@ describe("<FichaDoNegocio>", () => {
     ).toBeInTheDocument();
   });
 
-  it("o cabeçalho: nome e lápis desligado (editar é 1H)", () => {
+  it("o cabeçalho: nome e o lápis ligado", () => {
     render(<FichaDoNegocio {...PROPS} />);
     expect(
       screen.getByRole("heading", { level: 1, name: "Ana | Nunes Regularize" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Editar nome" })).toHaveAttribute(
-      "title",
-      "Em breve",
-    );
+    expect(screen.getByRole("button", { name: "Editar nome" })).toBeEnabled();
     expect(screen.getByTestId("menu")).toBeInTheDocument();
     expect(screen.getByTestId("status")).toBeInTheDocument();
     expect(screen.getByTestId("dono")).toBeInTheDocument();

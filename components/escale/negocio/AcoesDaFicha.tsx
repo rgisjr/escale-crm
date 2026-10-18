@@ -10,10 +10,10 @@ import {
   Mail,
   MessageCircle,
   Phone,
-  Plus,
   StickyNote,
 } from "@/lib/ui/icons-da-casca";
-import { cn } from "@/lib/utils";
+
+import { TagsDaFicha } from "./TagsDaFicha";
 
 /**
  * AS AÇÕES RÁPIDAS DA FICHA (fork Escale, Fase 1G, C3; print 01).
@@ -28,7 +28,7 @@ const APAGADO =
   "grid size-7 place-items-center rounded-casca-gatilho text-casca-marca opacity-40 [&_svg]:size-4";
 const EM_BREVE = "text-casca-marca disabled:pointer-events-auto disabled:cursor-not-allowed";
 
-export function AcoesDaFicha({ lead }: { lead: Lead }) {
+export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: string }) {
   const t = useT();
   const telefone = lead.contact_phone?.trim() || null;
   const email = lead.contact_email?.trim() || null;
@@ -108,19 +108,8 @@ export function AcoesDaFicha({ lead }: { lead: Lead }) {
       >
         <Bell aria-hidden />
       </BotaoDaCasca>
-      <BotaoDaCasca
-        variante="texto"
-        tamanho="sm"
-        disabled
-        title={t("Em breve")}
-        className={cn(
-          "ml-6 text-casca-texto-2",
-          "disabled:pointer-events-auto disabled:cursor-not-allowed",
-        )}
-      >
-        <Plus aria-hidden />
-        {t("Adicionar tags")}
-      </BotaoDaCasca>
+      {/* A `key` zera a busca e o pedido de remover ao trocar de negócio. */}
+      <TagsDaFicha key={`tags-${lead.id}`} lead={lead} pipelineId={pipelineId} />
     </div>
   );
 }
