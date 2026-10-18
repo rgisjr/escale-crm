@@ -14,6 +14,7 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
     },
   }),
 }));
+vi.mock("@/hooks/escale/useAvisosDaOrigem", () => ({ useAvisosDaOrigem: () => undefined }));
 vi.mock("@/components/shell/AvisoDePropostaEmDestaque", () => ({ AvisoDePropostaEmDestaque: () => null }));
 vi.mock("@/components/escale/menu/ContadorDaFilaDaCasca", () => ({ ContadorDaFilaDaCasca: () => null }));
 vi.mock("@/components/escale/menu/MarcaNoTopo", () => ({ MarcaNoTopo: () => null }));
