@@ -82,36 +82,15 @@ create policy crm_atividades_da_etapa_select on public.crm_atividades_da_etapa
     public.fn_is_platform_admin() or (organization_id in (select public.fn_user_org_ids()))
   );
 
--- Escrever o playbook é configurar a origem: gerente ou acima (PRD §5).
-create policy crm_atividades_da_etapa_manager_write on public.crm_atividades_da_etapa
-  using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'manager'))
-  )
-  with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'manager'))
-  );
+-- A política de escrita do playbook (gerente ou acima, na etapa da própria origem) nasce na 9012: o baseline
+-- não pode criar aqui uma versão intermediária que a 9012 depois troca (cerca baseline-nao-constroi-o-que-derruba).
 
 create policy crm_atividades_do_negocio_select on public.crm_atividades_do_negocio
   for select using (
     public.fn_is_platform_admin() or (organization_id in (select public.fn_user_org_ids()))
   );
 
--- Escrever acompanha a tarefa: agente ou acima (a régua de `crm_tasks_write`).
-create policy crm_atividades_do_negocio_agent_write on public.crm_atividades_do_negocio
-  using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent'))
-  )
-  with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent'))
-  );
+-- A escrita da atividade do negócio (só INSERT, nas colunas da rota) também nasce na 9012, pelo mesmo motivo.
 
 revoke all on public.crm_atividades_da_etapa from anon;
 revoke all on public.crm_atividades_do_negocio from anon;

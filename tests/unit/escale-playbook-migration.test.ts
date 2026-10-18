@@ -57,16 +57,12 @@ describe("playbook: migration 9009 e bloco do baseline", () => {
     expect(sql).toContain(`check (visibilidade in (${lista(VISIBILIDADES_DA_ATIVIDADE)}))`);
   });
 
-  it("RLS ligada nas duas tabelas, sem anon; o playbook só com gerente, a atividade com agente", () => {
+  it("RLS ligada nas duas tabelas e sem anon (as políticas de escrita nascem na 9012)", () => {
     const sql = plano(ler(MIGRATION));
     for (const tabela of ["crm_atividades_da_etapa", "crm_atividades_do_negocio"]) {
       expect(sql).toContain(`alter table public.${tabela} enable row level security;`);
       expect(sql).toContain(`revoke all on public.${tabela} from anon;`);
     }
-    expect(sql).toContain("create policy crm_atividades_da_etapa_manager_write");
-    expect(sql).toContain("public.fn_role_at_least(organization_id, 'manager')");
-    expect(sql).toContain("create policy crm_atividades_do_negocio_agent_write");
-    expect(sql).toContain("public.fn_role_at_least(organization_id, 'agent')");
   });
 
   it("os dois gatilhos são definer, com search_path fixo, fechados e com o disparo certo", () => {
