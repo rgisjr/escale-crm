@@ -282,6 +282,28 @@ describe("RLS e funções fechadas (N7, N8)", () => {
     ).toBe(0);
   });
 
+  it("gerente fora da lista de pessoas da origem não lê a distribuição dela (1J); o admin lê", () => {
+    // P_LISTA tem escale_pessoas = [A]: o gerente não está nela.
+    salvar(P_LISTA, [[GOV_AGENT_A, 100]]);
+    for (const tabela of [
+      "crm_distribuicao_de_dono",
+      "crm_distribuicoes_feitas",
+      "crm_distribuicao_alteracoes",
+    ]) {
+      const q = `select count(*) from public.${tabela} where pipeline_id = '${P_LISTA}'`;
+      expect(countAs(GOV_MANAGER, q)).toBe(0);
+    }
+    const q = `select count(*) from public.crm_distribuicao_de_dono where pipeline_id = '${P_LISTA}'`;
+    expect(countAs(GOV_ADMIN, q)).toBe(1);
+    // E na origem livre (sem lista) o gerente continua lendo.
+    expect(
+      countAs(
+        GOV_MANAGER,
+        `select count(*) from public.crm_distribuicao_de_dono where pipeline_id = '${P_LIVRE}'`,
+      ),
+    ).toBeGreaterThan(0);
+  });
+
   it("ninguém com sessão escreve nas tabelas nem executa as funções", () => {
     const comoAdmin = (script: string) =>
       sql(`set role authenticated;

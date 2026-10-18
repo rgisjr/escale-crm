@@ -65,17 +65,26 @@ alter table public.crm_distribuicao_alteracoes enable row level security;
 drop policy if exists crm_distribuicao_de_dono_select on public.crm_distribuicao_de_dono;
 create policy crm_distribuicao_de_dono_select on public.crm_distribuicao_de_dono
   for select to authenticated
-  using (public.fn_role_at_least(organization_id, 'manager'));
+  using (
+    public.fn_role_at_least(organization_id, 'manager')
+    and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)
+  );
 
 drop policy if exists crm_distribuicoes_feitas_select on public.crm_distribuicoes_feitas;
 create policy crm_distribuicoes_feitas_select on public.crm_distribuicoes_feitas
   for select to authenticated
-  using (public.fn_role_at_least(organization_id, 'manager'));
+  using (
+    public.fn_role_at_least(organization_id, 'manager')
+    and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)
+  );
 
 drop policy if exists crm_distribuicao_alteracoes_select on public.crm_distribuicao_alteracoes;
 create policy crm_distribuicao_alteracoes_select on public.crm_distribuicao_alteracoes
   for select to authenticated
-  using (public.fn_role_at_least(organization_id, 'manager'));
+  using (
+    public.fn_role_at_least(organization_id, 'manager')
+    and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)
+  );
 
 -- ── QUEM PODE RECEBER NEGÓCIO DESTA ORIGEM ─────────────────────────────────
 -- Membro ativo (convite aceito, não revogado), papel agente, gerente ou admin
@@ -317,7 +326,19 @@ begin
       order by d.user_id
       for update;
     if not found then
-      return new;
+      -- A trava pode ter esperado `fn_escale_salvar_distribuicao`, que apaga e
+      -- reinsere as linhas: as apagadas somem para este comando e as novas não
+      -- estavam no retrato dele. O comando seguinte (retrato novo) as enxerga;
+      -- sem esta segunda leitura o negócio nascia sem dono. Segunda vez sem
+      -- linha: a origem não distribui.
+      perform 1 from public.crm_distribuicao_de_dono d
+        where d.pipeline_id = new.pipeline_id
+          and d.organization_id = new.organization_id
+        order by d.user_id
+        for update;
+      if not found then
+        return new;
+      end if;
     end if;
 
     select d.user_id into v_user

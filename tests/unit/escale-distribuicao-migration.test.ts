@@ -37,6 +37,12 @@ describe("migration 9013 — distribuição de dono", () => {
       expect(MIGRATION).toContain(`create policy ${tabela}_select on public.${tabela}`);
     }
     expect(MIGRATION.match(/fn_role_at_least\(organization_id, 'manager'\)/g)).toHaveLength(3);
+    // 1J: gerente que não tem acesso à origem (lista de pessoas) também não lê a distribuição dela.
+    expect(
+      MIGRATION.split(
+        "fn_role_at_least(organization_id, 'manager')\n    and public.fn_escale_tem_acesso_a_origem(organization_id, pipeline_id)",
+      ),
+    ).toHaveLength(4);
     expect(MIGRATION).not.toMatch(/for (insert|update|delete|all) to authenticated/);
   });
 
@@ -75,6 +81,13 @@ describe("migration 9013 — distribuição de dono", () => {
       "trg_lead_so_liga_a_propria_empresa",
     ];
     expect([...nomes].sort()).toEqual(nomes);
+  });
+
+  it("o gatilho de repartição repete a leitura da trava uma vez (as linhas novas do salvar)", () => {
+    const gatilho = MIGRATION.slice(
+      MIGRATION.indexOf("create or replace function public.fn_escale_reparte_dono_da_origem()"),
+    );
+    expect(gatilho.match(/for update;/g)?.length).toBe(2);
   });
 
   it("o baseline traz o bloco idêntico, antes da âncora", () => {
