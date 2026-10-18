@@ -12,7 +12,7 @@ import { AbaContato, AbaEmpresa, AbaNegocio } from "./abas/AbasDeCampos";
 export function ConteudoDaAba({ aba, ficha }: { aba: AbaDoNegocio; ficha: FichaCarregada }) {
   switch (aba) {
     case "atividades":
-      return <AbaAtividades lead={ficha.lead} stages={ficha.stages} />;
+      return <AbaAtividades lead={ficha.lead} stages={ficha.stages} pipeline={ficha.pipeline} />;
     case "contato":
       return <AbaContato lead={ficha.lead} pipeline={ficha.pipeline} />;
     case "empresa":
