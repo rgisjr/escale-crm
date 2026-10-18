@@ -13,6 +13,11 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
   useAssignableMembers: () => ({ data: [{ user_id: "u-ana", full_name: "Ana Atendente" }] }),
 }));
+vi.mock("@/hooks/channels/useChannelSessions", () => ({
+  useChannelSessions: () => ({ data: [] }),
+  channelLabel: () => "",
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/hooks/contacts/useContact", () => ({ useContact: () => ({ data: undefined }) }));
 const engrenagem = vi.hoisted(() => ({ aoConfigurar: vi.fn() }));
 vi.mock("@/lib/escale/configuracoes/abrir", () => ({

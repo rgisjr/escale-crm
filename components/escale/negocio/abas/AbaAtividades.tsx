@@ -33,6 +33,7 @@ import { DetalheDaAtividade } from "./atividades/DetalheDaAtividade";
 import { JanelaEditarDataEHora } from "./atividades/JanelaEditarDataEHora";
 import { JanelaNovaAtividadeDoNegocio } from "./atividades/JanelaNovaAtividadeDoNegocio";
 import { ListaDeAtividades } from "./atividades/ListaDeAtividades";
+import { RodapeDoTipo } from "./atividades/RodapeDoTipo";
 import { TrilhoDeEtapas } from "./atividades/TrilhoDeEtapas";
 
 /**
@@ -199,6 +200,14 @@ export function AbaAtividades({
               aoSalvarConteudo={salvarConteudo(escolhida)}
               podeRemover={podeEditar && podeExcluirAtividade(escolhida)}
               aoRemover={() => void acoes.excluir(escolhida)}
+              rodape={
+                <RodapeDoTipo
+                  lead={lead}
+                  atividade={escolhida}
+                  texto={resolver(escolhida.description)}
+                  alternar={ativ.alternar}
+                />
+              }
             />
           ) : modeloEscolhido ? (
             <DetalheDaAtividade
