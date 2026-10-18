@@ -954,6 +954,9 @@ export const AUDIT_ACTIONS = [
   "lead.note_added",
   "lead.note_edited",
   "lead.note_removed",
+  // FORK ESCALE · Fase 1H: os arquivos do contato (migration 9008). O nome do arquivo nunca vai ao metadata.
+  "contact.file_added",
+  "contact.file_removed",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
