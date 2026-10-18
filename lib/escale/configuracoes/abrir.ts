@@ -14,9 +14,10 @@ import { useT } from "@/hooks/i18n/useT";
  * e fica desligada quando ninguém vai abrir a janela.
  */
 export const EVENTO_DAS_CONFIGURACOES = "escale:configuracoes-da-origem";
+export type AbaDaOrigem = "geral" | "etapas";
 
-export function abrirConfiguracoesDaOrigem(id: string): void {
-  window.dispatchEvent(new CustomEvent(EVENTO_DAS_CONFIGURACOES, { detail: { id } }));
+export function abrirConfiguracoesDaOrigem(id: string, aba: AbaDaOrigem = "geral"): void {
+  window.dispatchEvent(new CustomEvent(EVENTO_DAS_CONFIGURACOES, { detail: { id, aba } }));
 }
 
 /** Quantos painéis escutam agora, e quem quer saber quando isso muda. */
@@ -50,24 +51,31 @@ export function useHaPainelDeOrigens(): boolean {
 export function useEngrenagemDaOrigem(
   id: string,
   podeConfigurar: boolean,
+  aba: AbaDaOrigem = "geral",
 ): { aoConfigurar: (() => void) | undefined; dicaDaEngrenagem: string } {
   const t = useT();
   const haPainel = useHaPainelDeOrigens();
   return {
-    aoConfigurar: haPainel && podeConfigurar ? () => abrirConfiguracoesDaOrigem(id) : undefined,
+    aoConfigurar:
+      haPainel && podeConfigurar ? () => abrirConfiguracoesDaOrigem(id, aba) : undefined,
     dicaDaEngrenagem: haPainel ? t("Sem permissão") : t("Em breve"),
   };
 }
 
-export function useAoAbrirConfiguracoesDaOrigem(aoAbrir: (id: string) => void): void {
+export function useAoAbrirConfiguracoesDaOrigem(
+  aoAbrir: (id: string, aba: AbaDaOrigem) => void,
+): void {
   const ultimo = useRef(aoAbrir);
   useEffect(() => {
     ultimo.current = aoAbrir;
   }, [aoAbrir]);
   useEffect(() => {
     const ouvir = (e: Event) => {
-      const id = (e as CustomEvent<{ id?: unknown }>).detail?.id;
-      if (typeof id === "string" && id.length > 0) ultimo.current(id);
+      const detalhe = (e as CustomEvent<{ id?: unknown; aba?: unknown }>).detail;
+      const id = detalhe?.id;
+      if (typeof id === "string" && id.length > 0) {
+        ultimo.current(id, detalhe?.aba === "etapas" ? "etapas" : "geral");
+      }
     };
     window.addEventListener(EVENTO_DAS_CONFIGURACOES, ouvir);
     ouvintes += 1;

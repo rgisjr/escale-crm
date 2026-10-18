@@ -8,14 +8,22 @@ import {
   type JanelaDaVisualizacao,
 } from "@/components/escale/visualizacoes/JanelasDaVisualizacao";
 import { RodapeDaSelecao } from "@/components/escale/visualizacoes/RodapeDaSelecao";
-import { SecaoVisualizacoes, type AcaoDaVisualizacao } from "@/components/escale/visualizacoes/SecaoVisualizacoes";
+import {
+  SecaoVisualizacoes,
+  type AcaoDaVisualizacao,
+} from "@/components/escale/visualizacoes/SecaoVisualizacoes";
 import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAtualizarVisualizacao } from "@/hooks/escale/useVisualizacoes";
 import { useT } from "@/hooks/i18n/useT";
 import { useAoAbrirConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/abrir";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
-import { filtrarArvore, funilDoCaminho, montarOrigens, type Origens } from "@/lib/escale/origens/regras";
+import {
+  filtrarArvore,
+  funilDoCaminho,
+  montarOrigens,
+  type Origens,
+} from "@/lib/escale/origens/regras";
 import {
   alternarNaSelecao,
   filtrarVisualizacoes,
@@ -60,7 +68,10 @@ const JANELA_DO_GRUPO: Record<
   arquivar: "arquivar-grupo",
   excluir: "excluir-grupo",
 };
-const JANELA_DA_ORIGEM: Record<Exclude<AcaoDaOrigem, "selecionar">, "config-origem" | "arquivar-origem" | "excluir-origem"> = {
+const JANELA_DA_ORIGEM: Record<
+  Exclude<AcaoDaOrigem, "selecionar">,
+  "config-origem" | "arquivar-origem" | "excluir-origem"
+> = {
   configurar: "config-origem",
   arquivar: "arquivar-origem",
   excluir: "excluir-origem",
@@ -125,7 +136,8 @@ export function PainelOrigens({
     setOrigens(doServidor);
   }
   const [visualizacoes, setVisualizacoes] = useState<Visualizacao[]>(visualizacoesDoServidor);
-  const [ultimasDoServidor, setUltimasDoServidor] = useState<Visualizacao[]>(visualizacoesDoServidor);
+  const [ultimasDoServidor, setUltimasDoServidor] =
+    useState<Visualizacao[]>(visualizacoesDoServidor);
   if (visualizacoesDoServidor !== ultimasDoServidor) {
     setUltimasDoServidor(visualizacoesDoServidor);
     setVisualizacoes(visualizacoesDoServidor);
@@ -133,7 +145,9 @@ export function PainelOrigens({
 
   const [painelAberto, setPainelAberto] = useState(preferencias.painelAberto);
   const [listaAberta, setListaAberta] = useState(preferencias.listaAberta);
-  const [visualizacoesAbertas, setVisualizacoesAbertas] = useState(preferencias.visualizacoesAbertas);
+  const [visualizacoesAbertas, setVisualizacoesAbertas] = useState(
+    preferencias.visualizacoesAbertas,
+  );
   const [recentesAbertos, setRecentesAbertos] = useState(preferencias.recentesAbertos);
   const [ocultos, setOcultos] = useState<string[]>(preferencias.ocultos);
   const [verOcultos, setVerOcultos] = useState(false);
@@ -146,10 +160,12 @@ export function PainelOrigens({
   const [novoEm, setNovoEm] = useState<string | null>(null);
   const [janela, setJanela] = useState<Janela | null>(null);
   // Fase 1F (F20): a engrenagem do quadro abre a mesma janela do ⋮ "Configurações".
-  useAoAbrirConfiguracoesDaOrigem((id) => setJanela({ tipo: "config-origem", id }));
+  useAoAbrirConfiguracoesDaOrigem((id, aba) => setJanela({ tipo: "config-origem", id, aba }));
   const [selecao, setSelecao] = useState<Selecao | null>(null);
   const [erroDaSelecao, setErroDaSelecao] = useState<string | null>(null);
-  const [janelaDaVisualizacao, setJanelaDaVisualizacao] = useState<JanelaDaVisualizacao | null>(null);
+  const [janelaDaVisualizacao, setJanelaDaVisualizacao] = useState<JanelaDaVisualizacao | null>(
+    null,
+  );
   const atualizarVisualizacao = useAtualizarVisualizacao();
 
   // O "Negócios" do menu do topo abre o último funil aberto (`/app/escale/negocios`).
@@ -160,7 +176,9 @@ export function PainelOrigens({
   const arvore = useMemo(() => montarOrigens(origens), [origens]);
   const buscando = busca.trim().length > 0;
   const filtrada = buscando ? filtrarArvore(arvore, busca) : arvore;
-  const visiveis = verOcultos ? filtrada.grupos : filtrada.grupos.filter((g) => !ocultos.includes(g.id));
+  const visiveis = verOcultos
+    ? filtrada.grupos
+    : filtrada.grupos.filter((g) => !ocultos.includes(g.id));
   const quantosOcultos = arvore.grupos.filter((g) => ocultos.includes(g.id)).length;
   const nadaAchado = buscando && visiveis.length === 0 && filtrada.semGrupo.length === 0;
   const visualizacoesVisiveis = filtrarVisualizacoes(visualizacoes, busca);
@@ -169,7 +187,10 @@ export function PainelOrigens({
     ? {
         marcadas: selecao.marcadas,
         onAlternar: (ids, marcar) =>
-          setSelecao((atual) => atual && { ...atual, marcadas: alternarNaSelecao(atual.marcadas, ids, marcar) }),
+          setSelecao(
+            (atual) =>
+              atual && { ...atual, marcadas: alternarNaSelecao(atual.marcadas, ids, marcar) },
+          ),
       }
     : undefined;
 
@@ -188,7 +209,10 @@ export function PainelOrigens({
   function alternarVisualizacoes() {
     const proximo = !visualizacoesAbertas;
     setVisualizacoesAbertas(proximo);
-    void guardarPreferenciaDeOrigens({ nome: "visualizacoes", valor: proximo ? "aberta" : "fechada" });
+    void guardarPreferenciaDeOrigens({
+      nome: "visualizacoes",
+      valor: proximo ? "aberta" : "fechada",
+    });
   }
 
   function alternarRecentes() {
@@ -212,7 +236,9 @@ export function PainelOrigens({
     setSelecao({ editando, marcadas: new Set(ids) });
     // Sem a lista aberta o modo seleção seria invisível; não grava a preferência.
     setListaAberta(true);
-    const grupos = origens.funis.filter((f) => ids.includes(f.id)).flatMap((f) => (f.group_id ? [f.group_id] : []));
+    const grupos = origens.funis
+      .filter((f) => ids.includes(f.id))
+      .flatMap((f) => (f.group_id ? [f.group_id] : []));
     setAbertos((atual) => new Set([...atual, ...grupos]));
   }
 
@@ -242,7 +268,11 @@ export function PainelOrigens({
   function acaoDaVisualizacao(id: string, acao: AcaoDaVisualizacao) {
     if (acao === "editar-origens") {
       const alvo = visualizacoes.find((v) => v.id === id);
-      if (alvo) selecionar(origensVivasDaVisualizacao(alvo, origens).map((f) => f.id), id);
+      if (alvo)
+        selecionar(
+          origensVivasDaVisualizacao(alvo, origens).map((f) => f.id),
+          id,
+        );
       return;
     }
     setJanelaDaVisualizacao({ tipo: acao, id });
@@ -311,7 +341,10 @@ export function PainelOrigens({
         </button>
 
         <div data-rolagem-do-painel="" className="min-h-0 flex-1 overflow-y-auto pt-[78px]">
-          <CabecalhoDaSecao icone={<LayoutPanelLeft size={16} className="-scale-x-100" />} titulo={t("Origens")}>
+          <CabecalhoDaSecao
+            icone={<LayoutPanelLeft size={16} className="-scale-x-100" />}
+            titulo={t("Origens")}
+          >
             {podeGerenciar && !selecao && (
               <span className={cn(SO_NO_HOVER, "group-hover/cabecalho:opacity-100")}>
                 <DropdownMenu modal={false}>
@@ -321,10 +354,16 @@ export function PainelOrigens({
                     </button>
                   </DropdownMenuTrigger>
                   <ConteudoDoMenu side="bottom" align="end">
-                    <ItemDoMenu icone={Plus} onSelect={() => setJanela({ tipo: "adicionar-origem", grupoId: null })}>
+                    <ItemDoMenu
+                      icone={Plus}
+                      onSelect={() => setJanela({ tipo: "adicionar-origem", grupoId: null })}
+                    >
                       {t("Adicionar origem")}
                     </ItemDoMenu>
-                    <ItemDoMenu icone={FolderPlus} onSelect={() => setJanela({ tipo: "adicionar-grupo" })}>
+                    <ItemDoMenu
+                      icone={FolderPlus}
+                      onSelect={() => setJanela({ tipo: "adicionar-grupo" })}
+                    >
                       {t("Adicionar grupo de origens")}
                     </ItemDoMenu>
                   </ConteudoDoMenu>
@@ -345,12 +384,18 @@ export function PainelOrigens({
             </button>
             <button
               type="button"
-              aria-label={listaAberta ? t("Recolher a lista de origens") : t("Abrir a lista de origens")}
+              aria-label={
+                listaAberta ? t("Recolher a lista de origens") : t("Abrir a lista de origens")
+              }
               aria-expanded={listaAberta}
               onClick={alternarLista}
               className={cn(BOTAO_DE_ICONE, "text-casca-meta")}
             >
-              {listaAberta ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+              {listaAberta ? (
+                <ChevronUp size={16} aria-hidden />
+              ) : (
+                <ChevronDown size={16} aria-hidden />
+              )}
             </button>
           </CabecalhoDaSecao>
 
@@ -417,16 +462,18 @@ export function PainelOrigens({
               </nav>
 
               {nadaAchado && (
-                <p className="flex h-[34px] items-center px-4 text-xs text-casca-suave">{t("Nada encontrado.")}</p>
+                <p className="flex h-[34px] items-center px-4 text-xs text-casca-suave">
+                  {t("Nada encontrado.")}
+                </p>
               )}
 
               {quantosOcultos > 0 && (
                 <div className="flex h-8 items-center justify-between px-4 text-[11px] text-casca-suave uppercase">
                   <span>
-                    {(quantosOcultos === 1 ? t("{n} grupo oculto") : t("{n} grupos ocultos")).replace(
-                      "{n}",
-                      String(quantosOcultos),
-                    )}
+                    {(quantosOcultos === 1
+                      ? t("{n} grupo oculto")
+                      : t("{n} grupos ocultos")
+                    ).replace("{n}", String(quantosOcultos))}
                   </span>
                   <button
                     type="button"
@@ -438,7 +485,9 @@ export function PainelOrigens({
                 </div>
               )}
 
-              {podeGerenciar && !selecao && <ArquivadosDoPainel arvore={arvore} onOrigens={setOrigens} />}
+              {podeGerenciar && !selecao && (
+                <ArquivadosDoPainel arvore={arvore} onOrigens={setOrigens} />
+              )}
             </div>
           )}
 
@@ -457,7 +506,11 @@ export function PainelOrigens({
 
           {/* Fase 1E: RECENTES (01-010, terceira seção), recolhida por padrão como na Clint. */}
           {!selecao && chaveDeRecentes && (
-            <SecaoRecentes chave={chaveDeRecentes} aberta={recentesAbertos} onAlternar={alternarRecentes} />
+            <SecaoRecentes
+              chave={chaveDeRecentes}
+              aberta={recentesAbertos}
+              onAlternar={alternarRecentes}
+            />
           )}
         </div>
 

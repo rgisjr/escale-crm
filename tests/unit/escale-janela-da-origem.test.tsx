@@ -66,9 +66,18 @@ export const CONFIG: ConfiguracoesDaOrigem = {
   podeAdministrar: true,
 };
 
-function abrir(config: ConfiguracoesDaOrigem = CONFIG, origens: Origens = ORIGENS) {
+function abrir(
+  config: ConfiguracoesDaOrigem = CONFIG,
+  origens: Origens = ORIGENS,
+  playbook: unknown[] = [],
+  abaInicial?: "geral" | "etapas",
+) {
   vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
-    url === "/api/v1/pipelines/f-1/configuracoes" ? { data: config } : { data: [] },
+    url === "/api/v1/pipelines/f-1/configuracoes"
+      ? { data: config }
+      : url === "/api/v1/pipelines/f-1/playbook"
+        ? { data: { atividades: playbook } }
+        : { data: [] },
   );
   const onFechar = vi.fn();
   render(
@@ -79,7 +88,13 @@ function abrir(config: ConfiguracoesDaOrigem = CONFIG, origens: Origens = ORIGEN
         })
       }
     >
-      <JanelaDaOrigem id="f-1" origens={origens} onFechar={onFechar} onOrigens={vi.fn()} />
+      <JanelaDaOrigem
+        id="f-1"
+        origens={origens}
+        onFechar={onFechar}
+        onOrigens={vi.fn()}
+        abaInicial={abaInicial}
+      />
     </QueryClientProvider>,
   );
   return { onFechar, user: userEvent.setup({ pointerEventsCheck: 0 }) };
@@ -137,18 +152,19 @@ describe("<JanelaDaOrigem>", () => {
     ).toBeInTheDocument();
   });
 
-  it("Etapas e atividades: uma coluna por etapa aberta, a bandeira na primeira, Nova atividade e Salvar na origem desligados", async () => {
+  it("Etapas e atividades: uma coluna por etapa aberta, Nova atividade ligada, Salvar na origem só com mudança", async () => {
     const { user } = abrir();
-    // O título já aparece com o nome da lista de origens; o menu só depois de ler as configurações.
     await screen.findByRole("navigation", { name: "Configurações da origem" });
     await user.click(screen.getByRole("tab", { name: "Etapas e atividades" }));
-    const colunas = screen.getAllByRole("region", { name: /Entrada Lead|Em atendimento/ });
+    const colunas = await screen.findAllByRole("region", { name: /Entrada Lead|Em atendimento/ });
     expect(colunas).toHaveLength(2);
     expect(within(colunas[0]!).getByRole("img", { name: "Etapa inicial" })).toBeInTheDocument();
-    expect(within(colunas[0]!).getByText("Nenhuma atividade nessa etapa")).toBeInTheDocument();
-    expect(within(colunas[0]!).getByRole("button", { name: /Nova atividade/ })).toBeDisabled();
+    expect(within(colunas[0]!).getByRole("button", { name: "Nova atividade" })).toBeEnabled();
     expect(screen.queryByRole("region", { name: "Ganho" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Salvar na origem" })).toBeDisabled();
+    expect(screen.getByText("Nenhum modelo")).toBeInTheDocument();
+    const salvar = screen.getByRole("button", { name: "Salvar na origem" });
+    expect(salvar).toBeDisabled();
+    expect(salvar).toHaveAttribute("title", "Nenhuma alteração para salvar");
   });
 
   it("erro ao ler mostra o aviso com Tentar de novo", async () => {
@@ -165,16 +181,69 @@ describe("<JanelaDaOrigem>", () => {
     );
     expect(screen.getByRole("button", { name: "Tentar de novo" })).toBeInTheDocument();
   });
-  it("Etapas: 'Salvar na origem' e a seta desligados têm a dica 'Em breve' e deixam a dica aparecer", async () => {
+  it("Etapas: a seta do salvar continua 'Em breve'", async () => {
     const { user } = abrir();
     await screen.findByRole("navigation", { name: "Configurações da origem" });
     await user.click(screen.getByRole("tab", { name: "Etapas e atividades" }));
-    for (const nome of ["Salvar na origem", "Mais opções de salvar"]) {
-      const botao = screen.getByRole("button", { name: nome });
-      expect(botao).toBeDisabled();
-      expect(botao).toHaveAttribute("title", "Em breve");
-      expect(botao).toHaveClass("disabled:pointer-events-auto", "disabled:cursor-not-allowed");
-    }
+    const seta = await screen.findByRole("button", { name: "Mais opções de salvar" });
+    expect(seta).toBeDisabled();
+    expect(seta).toHaveAttribute("title", "Em breve");
+  });
+
+  it("Etapas: criar uma atividade liga o 'Salvar na origem', que grava a lista e fecha", async () => {
+    vi.mocked(apiClient.put).mockImplementation(async (_url: string, corpo: unknown) => ({
+      data: corpo as { atividades: unknown[] },
+    }));
+    const { user, onFechar } = abrir();
+    await screen.findByRole("navigation", { name: "Configurações da origem" });
+    await user.click(screen.getByRole("tab", { name: "Etapas e atividades" }));
+    const [primeira] = await screen.findAllByRole("region", { name: /Entrada Lead/ });
+    await user.click(within(primeira!).getByRole("button", { name: "Nova atividade" }));
+    await user.type(screen.getByRole("textbox", { name: "Título" }), "Entrada de Lead");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.keyboard("{Escape}");
+    const salvar = screen.getByRole("button", { name: "Salvar na origem" });
+    expect(salvar).toBeEnabled();
+    await user.click(salvar);
+    await waitFor(() => expect(onFechar).toHaveBeenCalled());
+    expect(apiClient.put).toHaveBeenCalledWith("/api/v1/pipelines/f-1/playbook", {
+      atividades: [
+        expect.objectContaining({
+          stage_id: "aaaaaaaa-0000-4000-8000-000000000001",
+          titulo: "Entrada de Lead",
+          tipo: "whatsapp",
+          prazo_minutos: 1440,
+        }),
+      ],
+    });
+  });
+
+  it("Etapas: com mudança, Cancelar vira Desfazer, que pede confirmação e volta ao salvo", async () => {
+    const { user } = abrir();
+    await screen.findByRole("navigation", { name: "Configurações da origem" });
+    await user.click(screen.getByRole("tab", { name: "Etapas e atividades" }));
+    const [primeira] = await screen.findAllByRole("region", { name: /Entrada Lead/ });
+    await user.click(within(primeira!).getByRole("button", { name: "Nova atividade" }));
+    await user.type(screen.getByRole("textbox", { name: "Título" }), "X");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Desfazer" }));
+    expect(
+      screen.getByText(
+        "Ao confirmar esta ação, todas as alterações realizadas serão desfeitas. Tem certeza de que deseja continuar?",
+      ),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Confirmar" }));
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar na origem" })).toBeDisabled();
+  });
+
+  it("abaInicial 'etapas' abre direto em Etapas e atividades (engrenagem da ficha)", async () => {
+    abrir(CONFIG, ORIGENS, [], "etapas");
+    expect(await screen.findByRole("tab", { name: "Etapas e atividades" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("Etapas: a coluna mede 227px (P20)", async () => {

@@ -26,7 +26,7 @@ import {
 import type { Origens } from "@/lib/escale/origens/regras";
 
 /** FORK ESCALE · Fase 1F (F20): a engrenagem da linha de contagem abre as configurações da origem (print 15 da 1E). */
-function Escuta({ aoAbrir }: { aoAbrir: (id: string) => void }) {
+function Escuta({ aoAbrir }: { aoAbrir: (id: string, aba: "geral" | "etapas") => void }) {
   useAoAbrirConfiguracoesDaOrigem(aoAbrir);
   return null;
 }
@@ -75,10 +75,17 @@ describe("a engrenagem da linha de contagem", () => {
     const aoAbrir = vi.fn();
     const { unmount } = render(<Escuta aoAbrir={aoAbrir} />);
     abrirConfiguracoesDaOrigem("f-1");
-    expect(aoAbrir).toHaveBeenCalledWith("f-1");
+    expect(aoAbrir).toHaveBeenCalledWith("f-1", "geral");
     unmount();
     window.dispatchEvent(new CustomEvent(EVENTO_DAS_CONFIGURACOES, { detail: { id: "f-2" } }));
     expect(aoAbrir).toHaveBeenCalledTimes(1);
+  });
+
+  it("a aba pedida vai junto (Fase 1I: a engrenagem da ficha abre em Etapas e atividades)", () => {
+    const aoAbrir = vi.fn();
+    render(<Escuta aoAbrir={aoAbrir} />);
+    abrirConfiguracoesDaOrigem("f-1", "etapas");
+    expect(aoAbrir).toHaveBeenCalledWith("f-1", "etapas");
   });
 });
 
@@ -115,7 +122,7 @@ describe("a engrenagem do quadro (F20): só liga com o painel Origens por perto"
     const engrenagem = screen.getByRole("button", NOME);
     expect(engrenagem).toBeEnabled();
     await userEvent.click(engrenagem);
-    expect(aoAbrir).toHaveBeenCalledWith("f-1");
+    expect(aoAbrir).toHaveBeenCalledWith("f-1", "geral");
   });
 
   it("com o painel e abaixo de gerente: desligada com 'Sem permissão'", () => {

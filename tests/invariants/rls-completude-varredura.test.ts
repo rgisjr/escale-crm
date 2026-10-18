@@ -139,6 +139,19 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "tests/invariants/escale-notas-e-arquivos-rls.test.ts — fork Escale (migration 9008): zero do vizinho, viewer não envia, " +
       "agent envia só como autor, apaga o autor ou gerente.",
   },
+  {
+    tabela: "crm_atividades_da_etapa",
+    razao:
+      "tests/invariants/escale-playbook-de-etapas.test.ts — fork Escale (migration 9009): todo membro lê o playbook da própria organização " +
+      "e ZERO da vizinha nos dois sentidos, agente e viewer não escrevem, gerente escreve só na própria organização, e a função de salvar " +
+      "roda como quem chama (agente recusado) e recusa etapa de outra origem ou fechada.",
+  },
+  {
+    tabela: "crm_atividades_do_negocio",
+    razao:
+      "tests/invariants/escale-playbook-de-etapas.test.ts — fork Escale (migration 9009): todo membro lê as atividades da própria organização " +
+      "e ZERO da vizinha, viewer não escreve, agente escreve; as linhas nascem do gatilho de entrada na etapa e a conclusão grava quem concluiu.",
+  },
   { tabela: "jev_router_decisions", razao: "tests/invariants/jev-roteador-decisoes.test.ts — dois tenants por JWT: leitura local, zero do vizinho; anon sem leitura, authenticated sem escrita; poda com piso no banco." },
   { tabela: "golden_candidates", razao: "tests/invariants/golden-candidates.test.ts — dois tenants reais por JWT (agent): leitura positiva local e ZERO do vizinho nos dois sentidos, a tabela inteira sem filtro igual à própria, anon recusado, e insert/update/delete de authenticated sem efeito (só o servidor grava)." },
   { tabela: "jev_observacoes", razao: "tests/invariants/jev-observacoes.test.ts — dois tenants reais por JWT (agent): leitura positiva local e ZERO do vizinho nos dois sentidos, a tabela inteira sem filtro igual à própria, anon recusado, e insert/update/delete de authenticated sem efeito (só o servidor grava)." },
