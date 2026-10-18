@@ -4,7 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 const permissao = vi.hoisted(() => ({ pode: true }));
-vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => permissao.pode }));
+const org = vi.hoisted(() => ({ role: "agent" as string, visibility_mode: "own_and_unassigned" as string }));
+vi.mock("@/hooks/auth/AuthProvider", () => ({
+  usePermission: () => permissao.pode,
+  useActiveOrg: () => ({ orgId: "o1", role: org.role, visibility_mode: org.visibility_mode }),
+}));
+const quadro = vi.hoisted(() => ({ settings: {} as Record<string, unknown> }));
+vi.mock("@/hooks/kanban/useBoard", () => ({
+  useBoard: () => ({ data: { pipeline: { settings: quadro.settings } } }),
+}));
 const captura = vi.hoisted(() => ({ onRetomada: (_r: unknown) => {} }));
 const motivosDoFunil = vi.hoisted(() => ({ lista: ["Preço", "Sem retorno"] as string[] }));
 const grava = vi.hoisted(() => ({
@@ -69,6 +77,10 @@ const ABERTO = {
 beforeEach(() => {
   for (const f of Object.values(grava)) f.mockReset();
   permissao.pode = true;
+  // Gerente por padrão: os testes antigos trocam o dono; os da 1J escolhem o papel e a regra.
+  org.role = "manager";
+  org.visibility_mode = "own_and_unassigned";
+  quadro.settings = {};
   motivosDoFunil.lista = ["Preço", "Sem retorno"];
 });
 
@@ -178,6 +190,34 @@ describe("status (C4)", () => {
 });
 
 describe("dono (C5, print 10)", () => {
+  it("sob 'só os seus' da origem, quem não é gerente não troca o dono: desligado com o texto da Clint (1J)", () => {
+    quadro.settings = { escale_visualizacao: "own" };
+    org.role = "agent";
+    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    const botao = screen.getByRole("button", { name: "Alterar usuário" });
+    expect(botao).toBeDisabled();
+    expect(botao).toHaveAttribute("title", "As permissões de usuários não permitem você trocar de dono");
+  });
+
+  it("gerente troca sob qualquer regra; agente troca sob 'todos' (1J)", () => {
+    quadro.settings = { escale_visualizacao: "own" };
+    org.role = "manager";
+    const { unmount } = render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    expect(screen.getByRole("button", { name: "Alterar usuário" })).toBeEnabled();
+    unmount();
+    org.role = "agent";
+    quadro.settings = { escale_visualizacao: "all" };
+    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    expect(screen.getByRole("button", { name: "Alterar usuário" })).toBeEnabled();
+  });
+
+  it("sem regra na origem vale a da organização (1J)", () => {
+    org.visibility_mode = "own";
+    org.role = "agent";
+    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    expect(screen.getByRole("button", { name: "Alterar usuário" })).toBeDisabled();
+  });
+
   const abrir = async (lead: Lead = ABERTO) => {
     render(<DonoDaFicha lead={lead} pipelineId="o1" />);
     await userEvent.click(screen.getByRole("button", { name: "Alterar usuário" }));

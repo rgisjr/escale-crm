@@ -10081,6 +10081,29 @@ export const DICIONARIO: Traducoes = {
   "Chamar {nome}": { es: "Llamar a {nome}" },
   "Enviar email": { es: "Enviar email" },
   "Mensagem enviada, mas não consegui concluir a atividade.": { es: "Mensaje enviado, pero no pude completar la actividad." },
+  // ─── FORK ESCALE · acesso por origem (Fase 1J: visualização por origem, permissão de usuários, aviso da ficha) ───
+  "Somente os usuários selecionados poderão ver a origem. Caso nenhum usuário seja selecionado, a visualização não terá restrição.": {
+    es: "Solo los usuarios seleccionados podrán ver el origen. Si no seleccionas ningún usuario, la visualización no tendrá restricción.",
+  },
+  "Somente os usuários selecionados poderão ver a origem. Sem nenhum usuário selecionado, a origem segue as permissões do grupo.": {
+    es: "Solo los usuarios seleccionados podrán ver el origen. Sin ningún usuario seleccionado, el origen sigue los permisos del grupo.",
+  },
+  "Somente os usuários selecionados poderão ver o grupo. Caso nenhum usuário seja selecionado, a visualização não terá restrição.": {
+    es: "Solo los usuarios seleccionados podrán ver el grupo. Si no seleccionas ningún usuario, la visualización no tendrá restricción.",
+  },
+  "Selecione os usuários que poderão visualizar o grupo": { es: "Selecciona los usuarios que podrán ver el grupo" },
+  "Administradores sempre veem os negócios desta origem.": { es: "Los administradores siempre ven los negocios de este origen." },
+  "1 usuário selecionado": { es: "1 usuario seleccionado" },
+  "usuários selecionados": { es: "usuarios seleccionados" },
+  "Adicione um usuário...": { es: "Agrega un usuario..." },
+  "Primeira página": { es: "Primera página" },
+  "Última página": { es: "Última página" },
+  "Usuários": { es: "Usuarios" },
+  "Remover": { es: "Quitar" },
+  "Este usuário não faz parte da equipe.": { es: "Este usuario no forma parte del equipo." },
+  "Você não tem permissão para acessar essa origem.": { es: "No tienes permiso para acceder a este origen." },
+  "Atenção! Esse negócio pertence a outro dono.": { es: "¡Atención! Este negocio pertenece a otro dueño." },
+  "Voltar para listagem de negócios": { es: "Volver a la lista de negocios" },
   // ─── FORK ESCALE · filtros do quadro (Fase 1D: status, filtros, filtros salvos, ordenação) ───
   "Pesquisar nessa origem…": { es: "Buscar en este origen…" },
   "Pesquisar nessa visualização…": { es: "Buscar en esta vista…" },
