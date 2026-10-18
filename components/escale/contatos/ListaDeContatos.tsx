@@ -15,6 +15,7 @@ import {
   useMudarFiltroDaLista,
 } from "@/hooks/escale/useFiltrosDaLista";
 import { useListaDeContatos } from "@/hooks/escale/useListaDeContatos";
+import { useSelecaoDaLista } from "@/hooks/escale/useSelecaoDaLista";
 import { useT } from "@/hooks/i18n/useT";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import {
@@ -38,6 +39,8 @@ import { SeletorDeFiltros } from "./filtros/SeletorDeFiltros";
 import { JanelaNovoNegocio } from "./JanelaNovoNegocio";
 import { MenuNovoContato } from "./MenuNovoContato";
 import { PainelDeColunas } from "./PainelDeColunas";
+import { FaixaDaSelecao } from "./massa/FaixaDaSelecao";
+import { MenuDaSelecao } from "./massa/MenuDaSelecao";
 import { SeloDeMescla } from "./SeloDeMescla";
 import { TabelaDeContatos } from "./TabelaDeContatos";
 
@@ -130,12 +133,21 @@ export function ListaDeContatos({
   const podeCriar = ROLE_RANK[papel] >= ROLE_RANK.agent;
   const podeExcluir = ROLE_RANK[papel] >= ROLE_RANK.manager;
   const podeMesclar = ROLE_RANK[papel] >= ROLE_RANK.manager;
+  // FORK ESCALE · Fase 2B: selecionar e agir em massa é de gerente ou acima (PRD §5).
+  const podeSelecionar = ROLE_RANK[papel] >= ROLE_RANK.manager;
   const total = dados?.total ?? 0;
   const comFiltro = temFiltros(filtros);
   const salvoAtivo = (salvos.data ?? []).find((s) => s.id === filtroSalvoId) ?? null;
   const batendoComSalvo = salvoAtivo !== null && mesmosFiltros(salvoAtivo.criterios, filtros);
   const quantos = chipsDosFiltros(filtros).length;
   const falhou = t("Não consegui completar essa ação. Tente de novo.");
+  const linhas = dados?.linhas ?? [];
+  const sel = useSelecaoDaLista({
+    linhas,
+    total,
+    primeiro: (pagina - 1) * porPagina,
+    chaveDaConsulta: JSON.stringify([buscaDaUrl, visao, f]),
+  });
 
   const mudarPorPagina = (n: number) => {
     setPorPagina(n);
@@ -307,9 +319,17 @@ export function ListaDeContatos({
         />
       ) : null}
 
+      <FaixaDaSelecao
+        modo={sel.modoDaFaixa}
+        naPagina={linhas.length}
+        total={total}
+        aoSelecionarTodos={sel.selecionarTodos}
+        aoLimpar={sel.limpar}
+      />
+
       <div className="min-h-0 flex-1 overflow-auto px-6">
         <TabelaDeContatos
-          linhas={dados?.linhas ?? []}
+          linhas={linhas}
           colunas={colunas.itens}
           carregando={consulta.isLoading}
           erro={consulta.isError}
@@ -317,6 +337,18 @@ export function ListaDeContatos({
           podeVerNegocios={podeCriar}
           podeExcluir={podeExcluir}
           aoAdicionarNegocio={setNovoNegocio}
+          cabecalhoDaSelecao={
+            <MenuDaSelecao
+              estado={sel.estado}
+              podeSelecionar={podeSelecionar}
+              total={total}
+              naPagina={linhas.length}
+              aoMarcarPagina={sel.marcarPagina}
+              aoSelecionarTodos={sel.selecionarTodos}
+              aoSelecionarQuantidade={sel.selecionarQuantidade}
+            />
+          }
+          selecao={{ podeSelecionar, marcada: sel.marcada, aoAlternar: sel.alternar }}
         />
       </div>
 

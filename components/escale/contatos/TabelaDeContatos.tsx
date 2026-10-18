@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { useT } from "@/hooks/i18n/useT";
@@ -22,10 +23,18 @@ const TH =
   "h-[52px] px-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-casca-texto";
 const TD = "px-3 align-middle";
 
+/** Fase 2B: a seleção. Sem ela (ou sem permissão), a caixinha fica desligada, como na Clint. */
+export type SelecaoDaTabela = {
+  podeSelecionar: boolean;
+  marcada: (id: string, indice: number) => boolean;
+  aoAlternar: (id: string, indice: number, marcar: boolean) => void;
+};
+const SELECAO_DESLIGADA: SelecaoDaTabela = { podeSelecionar: false, marcada: () => false, aoAlternar: () => {} };
+
 /**
  * A TABELA DE CONTATOS (Clint `ContactsTableV2`, captura 03-001). "Nome" é
- * fixa; as outras seguem as colunas da pessoa. A caixinha aparece desligada
- * (a seleção é da 2B), como a Clint mostra a quem não tem `CONTACT_BULK_ACTIONS`.
+ * fixa; as outras seguem as colunas da pessoa. A caixinha marca a linha (2B); sem
+ * permissão, aparece desligada, como a Clint mostra a quem não tem `CONTACT_BULK_ACTIONS`.
  */
 export function TabelaDeContatos({
   linhas,
@@ -36,6 +45,8 @@ export function TabelaDeContatos({
   podeVerNegocios,
   podeExcluir,
   aoAdicionarNegocio,
+  cabecalhoDaSelecao,
+  selecao = SELECAO_DESLIGADA,
 }: {
   linhas: LinhaDeContato[];
   colunas: ItemDeColuna[];
@@ -45,8 +56,11 @@ export function TabelaDeContatos({
   podeVerNegocios: boolean;
   podeExcluir: boolean;
   aoAdicionarNegocio: (linha: LinhaDeContato) => void;
+  cabecalhoDaSelecao?: ReactNode;
+  selecao?: SelecaoDaTabela;
 }) {
   const t = useT();
+  const semPermissao = t("Disponível para gerente ou acima.");
   const visiveis = colunas.filter(
     (c) => !(c.tipo === "nativa" && c.chave === "negocios" && !podeVerNegocios),
   );
@@ -97,7 +111,7 @@ export function TabelaDeContatos({
         </tr>
       );
     }
-    return linhas.map((linha) => {
+    return linhas.map((linha, indice) => {
       const nome =
         nomeDoContato({
           name: linha.nome,
@@ -110,12 +124,12 @@ export function TabelaDeContatos({
           aria-label={nome}
           className="group h-16 border-b border-casca-borda hover:bg-casca-raia"
         >
-          <td className={`${TD} w-10`} title={t("Em breve")}>
+          <td className={`${TD} w-10`} title={selecao.podeSelecionar ? undefined : semPermissao}>
             <CaixaDaCasca
-              marcada={false}
-              aoMudar={() => {}}
+              marcada={selecao.marcada(linha.id, indice)}
+              aoMudar={(m) => selecao.aoAlternar(linha.id, indice, m)}
               aria-label={t("Selecionar contato")}
-              desabilitada
+              desabilitada={!selecao.podeSelecionar}
             />
           </td>
           <td className={`${TD} min-w-[240px]`}>
@@ -157,16 +171,13 @@ export function TabelaDeContatos({
     <table className="w-full border-collapse">
       <thead>
         <tr className="border-b border-casca-borda">
-          <th className={`${TH} w-10`} title={t("Em breve")}>
-            <span className="flex items-center gap-1">
-              <CaixaDaCasca
-                marcada={false}
-                aoMudar={() => {}}
-                aria-label={t("Selecionar todos")}
-                desabilitada
-              />
-              <ChevronDown size={12} aria-hidden className="text-casca-meta" />
-            </span>
+          <th className={`${TH} w-10`} title={cabecalhoDaSelecao ? undefined : semPermissao}>
+            {cabecalhoDaSelecao ?? (
+              <span className="flex items-center gap-1">
+                <CaixaDaCasca marcada={false} aoMudar={() => {}} aria-label={t("Selecionar todos")} desabilitada />
+                <ChevronDown size={12} aria-hidden className="text-casca-meta" />
+              </span>
+            )}
           </th>
           <th className={TH}>{t("Nome")}</th>
           {visiveis.map((item) => (
