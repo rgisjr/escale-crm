@@ -62,7 +62,13 @@ export const patchDasConfiguracoesSchema = z
   .strict()
   .refine((p) => Object.values(p).some((v) => v !== undefined), { message: "nada para salvar" });
 export type PatchDasConfiguracoes = z.infer<typeof patchDasConfiguracoesSchema>;
-export type SecaoDasConfiguracoes = "gerais" | "motivos" | "campos" | "alerta" | "permissoes";
+export type SecaoDasConfiguracoes =
+  | "gerais"
+  | "motivos"
+  | "campos"
+  | "alerta"
+  | "permissoes"
+  | "distribuicao";
 
 export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos"];
 

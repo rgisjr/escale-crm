@@ -27,6 +27,8 @@ import {
 import { papeisAtivos } from "@/lib/escale/distribuicao/ler";
 import {
   DISTRIBUICAO_MAX,
+  ERRO_DA_SOMA,
+  ERRO_DO_ZERO,
   erroDaDistribuicao,
   textoDoPercentual,
 } from "@/lib/escale/distribuicao/regras";
@@ -99,7 +101,11 @@ export async function PUT(req: NextRequest, ctx: RouteCtx): Promise<Response> {
       papel: null,
     })),
   );
-  if (erro) return fail("unprocessable_entity", t(erro), 422, { requestId });
+  if (erro) {
+    // Um literal por ramo: `t()` só aceita chave que o código escreveu.
+    const texto = erro === ERRO_DO_ZERO ? t(ERRO_DO_ZERO) : t(ERRO_DA_SOMA);
+    return fail("unprocessable_entity", texto, 422, { requestId });
+  }
   if (new Set(pessoas.map((p) => p.user_id)).size !== pessoas.length) {
     return fail(
       "unprocessable_entity",

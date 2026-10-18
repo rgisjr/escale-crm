@@ -6,6 +6,15 @@
  */
 import type { MudancaDeOrigem } from "@/hooks/escale/useOrigens";
 import type { VisibilityMode } from "@/lib/auth/types";
+import {
+  distribuidosForaDaLista,
+  erroDaDistribuicao,
+  linhasDaTela,
+  pedidoDaDistribuicao,
+  textoDoBloqueio,
+  type LinhaDaDistribuicao,
+  type PedidoDaDistribuicao,
+} from "@/lib/escale/distribuicao/regras";
 import type { MoedaServida } from "@/lib/money";
 
 import {
@@ -44,6 +53,8 @@ export interface RascunhoDaOrigem {
   alerta: AlertaNaTela;
   /** Quem tem acesso à origem (1J); vazia = segue o grupo, ou sem restrição. */
   permissoes: { pessoas: string[] };
+  /** Fase 1K (D13): as linhas da distribuição e o "Reiniciar a contagem de negócios ao salvar". */
+  distribuicao: { linhas: LinhaDaDistribuicao[]; reiniciar: boolean };
 }
 
 /** O exemplo da Clint (01-029): atenção em 4 horas, crítico em 8 horas. */
@@ -83,6 +94,7 @@ export function rascunhoInicial(config: ConfiguracoesDaOrigem): RascunhoDaOrigem
       })),
     },
     permissoes: { pessoas: [...config.fork.pessoas] },
+    distribuicao: { linhas: linhasDaTela(config.distribuicao), reiniciar: false },
   };
 }
 
@@ -145,8 +157,13 @@ export function pedidoDoSalvar(
   r: RascunhoDaOrigem,
   config: ConfiguracoesDaOrigem,
 ):
-  | { ok: true; mudancaDaOrigem: MudancaDeOrigem; patch: PatchDasConfiguracoes | null }
-  | { ok: false; erro: string; secao: SecaoDasConfiguracoes; etapa?: string } {
+  | {
+      ok: true;
+      mudancaDaOrigem: MudancaDeOrigem;
+      patch: PatchDasConfiguracoes | null;
+      distribuicao: PedidoDaDistribuicao | null;
+    }
+  | { ok: false; erro: string; secao: SecaoDasConfiguracoes; etapa?: string; usuarios?: string[] } {
   const inicial = rascunhoInicial(config);
   if (r.gerais.nome.trim() === "")
     return { ok: false, erro: "Nome é um campo obrigatório!", secao: "gerais" };
@@ -200,7 +217,34 @@ export function pedidoDoSalvar(
   if (!igual(r.permissoes, inicial.permissoes)) {
     patch.permissoes = { pessoas: r.permissoes.pessoas };
   }
-  return { ok: true, mudancaDaOrigem, patch: Object.keys(patch).length > 0 ? patch : null };
+  let distribuicao: PedidoDaDistribuicao | null = null;
+  if (!igual(r.distribuicao.linhas, inicial.distribuicao.linhas)) {
+    const erro = erroDaDistribuicao(r.distribuicao.linhas);
+    if (erro) return { ok: false, erro, secao: "distribuicao" };
+    distribuicao = pedidoDaDistribuicao(r.distribuicao.linhas, r.distribuicao.reiniciar);
+  }
+  // Q9 da 1J: a lista de pessoas não pode deixar de fora quem recebe por distribuição.
+  if (!igual(r.permissoes, inicial.permissoes) || distribuicao) {
+    const fora = distribuidosForaDaLista({
+      linhas: r.distribuicao.linhas,
+      pessoas: r.permissoes.pessoas,
+      pessoasDoGrupo: config.pessoasDoGrupo,
+    });
+    if (fora.length > 0) {
+      return {
+        ok: false,
+        erro: textoDoBloqueio(fora.length, r.permissoes.pessoas.length === 0),
+        secao: "permissoes",
+        usuarios: fora,
+      };
+    }
+  }
+  return {
+    ok: true,
+    mudancaDaOrigem,
+    patch: Object.keys(patch).length > 0 ? patch : null,
+    distribuicao,
+  };
 }
 
 export function algoMudou(r: RascunhoDaOrigem, config: ConfiguracoesDaOrigem): boolean {
