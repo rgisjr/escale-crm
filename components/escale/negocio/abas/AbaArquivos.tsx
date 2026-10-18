@@ -88,6 +88,11 @@ const ICONE_DA_FAMILIA: Record<FamiliaDoArquivo, LucideIcon> = {
 };
 const EM_BREVE = "disabled:pointer-events-auto disabled:cursor-not-allowed";
 
+/** Abre o arquivo pela rota de download (302 para a URL assinada), em outra aba. */
+function abrirArquivo(a: Arquivo) {
+  window.open(`${rotaDosArquivos(a.contact_id)}/${a.id}`, "_blank", "noopener,noreferrer");
+}
+
 export function AbaArquivos({ lead }: { lead: Lead }) {
   const t = useT();
   const contactId = lead.contact_id;
@@ -271,7 +276,8 @@ export function AbaArquivos({ lead }: { lead: Lead }) {
               return (
                 <tr
                   key={a.id}
-                  className="group h-14 border-b border-casca-borda last:border-b-0 hover:bg-casca-raia"
+                  onClick={() => abrirArquivo(a)}
+                  className="group h-14 cursor-pointer border-b border-casca-borda last:border-b-0 hover:bg-casca-raia"
                 >
                   <td className="px-3">
                     <span className="flex items-center gap-3">
@@ -299,7 +305,8 @@ export function AbaArquivos({ lead }: { lead: Lead }) {
                       </span>
                     </span>
                   </td>
-                  <td className="px-1">
+                  {/* O ⋯ não abre o arquivo: o clique na linha é só do resto dela. */}
+                  <td className="px-1" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
@@ -311,16 +318,7 @@ export function AbaArquivos({ lead }: { lead: Lead }) {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className={CAIXA_DO_MENU}>
-                        <DropdownMenuItem
-                          className={ITEM_DO_MENU}
-                          onSelect={() =>
-                            window.open(
-                              `${rotaDosArquivos(a.contact_id)}/${a.id}`,
-                              "_blank",
-                              "noopener,noreferrer",
-                            )
-                          }
-                        >
+                        <DropdownMenuItem className={ITEM_DO_MENU} onSelect={() => abrirArquivo(a)}>
                           <Download size={14} aria-hidden />
                           {t("Baixar arquivo")}
                         </DropdownMenuItem>

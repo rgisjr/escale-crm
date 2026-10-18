@@ -77,12 +77,15 @@ function corDoGrupo(grupo: ChaveDoGrupo): string {
 export function CartaoDoHistorico({
   item,
   nota,
+  notaRemovida = false,
   nomesDasEtapas,
   leadId,
   podeEditarNota,
 }: {
   item: TimelineItemView;
   nota?: Nota;
+  /** Só vale "removida" quando a lista de notas carregou e não traz esta; carregando ou com erro, nada aparece. */
+  notaRemovida?: boolean;
   nomesDasEtapas: Readonly<Record<string, string>>;
   leadId: string;
   podeEditarNota: boolean;
@@ -171,7 +174,7 @@ export function CartaoDoHistorico({
               ) : null}
             </div>
           </div>
-        ) : item.type === "note" ? (
+        ) : item.type === "note" && notaRemovida ? (
           <p className="mt-0.5 text-[12px] text-casca-meta">{t("Esta nota foi removida.")}</p>
         ) : null}
         <p className="mt-1 flex items-center gap-1 text-[11px] text-casca-suave">

@@ -83,6 +83,8 @@ vi.mock("@/hooks/escale/useNotasDoNegocio", () => ({
 }));
 
 import { AbaHistorico } from "@/components/escale/negocio/abas/AbaHistorico";
+import { CartaoDoHistorico } from "@/components/escale/negocio/abas/CartaoDoHistorico";
+import type { TimelineItemView } from "@/lib/types/contacts";
 import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 
@@ -136,5 +138,14 @@ describe("AbaHistorico", () => {
     expect(hist.carregarMais).toHaveBeenCalled();
     await userEvent.type(screen.getByRole("searchbox", { name: "Buscar no histórico..." }), "zzzz");
     expect(screen.getByText("Os resultados não foram encontrados.")).toBeInTheDocument();
+  });
+
+  it("só diz que a nota foi removida quando a lista de notas carregou e não a traz", () => {
+    const item = hist.itens[2] as unknown as TimelineItemView;
+    const props = { item, nomesDasEtapas: {}, leadId: "n1", podeEditarNota: false };
+    const { rerender } = render(<CartaoDoHistorico {...props} />);
+    expect(screen.queryByText("Esta nota foi removida.")).toBeNull();
+    rerender(<CartaoDoHistorico {...props} notaRemovida />);
+    expect(screen.getByText("Esta nota foi removida.")).toBeInTheDocument();
   });
 });

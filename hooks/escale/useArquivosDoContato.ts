@@ -59,6 +59,7 @@ export function useExcluirArquivo(contactId: string) {
   return useMutation({
     mutationFn: async (arquivoId: string) =>
       apiClient.delete<void>(`${rotaDosArquivos(contactId)}/${arquivoId}`),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: chaveDosArquivos(contactId) }),
+    // `onSettled`: com falha no bucket a linha já saiu da tabela, e a lista precisa refletir isso.
+    onSettled: () => void qc.invalidateQueries({ queryKey: chaveDosArquivos(contactId) }),
   });
 }

@@ -36,13 +36,13 @@ describe("extensão, tamanho e tipo", () => {
     expect(extensaoDe("Contrato.Final.PDF")).toBe("pdf");
     expect(extensaoDe("semext")).toBeNull();
   });
-  it("validarArquivo aceita a lista da Clint até 25 MB", () => {
+  it("validarArquivo aceita a lista da Clint até 9 MB (teto do corpo atrás do proxy)", () => {
     expect(validarArquivo({ nome: "a.pdf", tamanho: 1 })).toEqual({ ok: true, extensao: "pdf" });
     expect(validarArquivo({ nome: "a.exe", tamanho: 1 })).toEqual({
       ok: false,
       erro: "Tipo de arquivo não suportado.",
     });
-    expect(validarArquivo({ nome: "a.pdf", tamanho: 25 * 1024 * 1024 + 1 })).toEqual({
+    expect(validarArquivo({ nome: "a.pdf", tamanho: 9 * 1024 * 1024 + 1 })).toEqual({
       ok: false,
       erro: "O arquivo {fileName} excede o limite de {maxMb} MB.",
     });

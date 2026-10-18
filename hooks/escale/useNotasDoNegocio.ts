@@ -20,7 +20,6 @@ function useInvalidarNotas(leadId: string) {
     Promise.all([
       qc.invalidateQueries({ queryKey: chaveDasNotas(leadId) }),
       qc.invalidateQueries({ queryKey: ["timeline", leadId] }),
-      qc.invalidateQueries({ queryKey: ["historico-do-negocio", leadId] }),
     ]);
 }
 

@@ -242,7 +242,7 @@ describe("POST upload", () => {
     });
     expect(String(estado.arquivos.at(-1)?.storage_path)).toMatch(new RegExp(`^${ORG}/${CONTATO}/`));
   });
-  it("viewer 403; extensão fora da lista 415; acima de 25 MB 413; contato de outra organização 404", async () => {
+  it("viewer 403; extensão fora da lista 415; acima do teto 413; contato de outra organização 404", async () => {
     sessao("viewer");
     expect((await POST(envio("a.pdf", "application/pdf", 1), ctx())).status).toBe(403);
     sessao("agent");

@@ -99,6 +99,20 @@ describe("a tabela", () => {
     expect(arquivos.excluir).toHaveBeenCalledWith("a1");
   });
 
+  it("clicar na linha abre o arquivo; o clique no ⋯ não abre", async () => {
+    const abrir = vi.spyOn(window, "open").mockImplementation(() => null);
+    render(<AbaArquivos lead={LEAD} />);
+    await userEvent.click(screen.getByText("contrato.pdf"));
+    expect(abrir).toHaveBeenCalledWith(
+      "/api/v1/contacts/c1/arquivos/a1",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    abrir.mockClear();
+    await userEvent.click(screen.getAllByRole("button", { name: "Mais opções" })[0]!);
+    expect(abrir).not.toHaveBeenCalled();
+  });
+
   it("o arquivo de outra pessoa não tem Excluir para agent", async () => {
     render(<AbaArquivos lead={LEAD} />);
     await userEvent.click(screen.getAllByRole("button", { name: "Mais opções" })[1]!);
@@ -125,7 +139,7 @@ describe("Novo arquivo", () => {
     expect(toast.success).toHaveBeenCalledWith("Arquivo(s) enviado(s) com sucesso");
   });
 
-  it("arquivo fora da lista ou acima de 25 MB nem entra na lista, com o aviso", async () => {
+  it("arquivo fora da lista ou acima do teto nem entra na lista, com o aviso", async () => {
     render(<AbaArquivos lead={LEAD} />);
     await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
     const janela = await screen.findByRole("dialog", { name: "Novo documento" });

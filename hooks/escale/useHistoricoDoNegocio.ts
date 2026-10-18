@@ -20,7 +20,7 @@ import type { TimelineItemView } from "@/lib/types/contacts";
 type Pagina = { data: TimelineItemView[]; meta?: { has_more?: boolean; cursor?: string | null } };
 
 export const chaveDoHistorico = (leadId: string, grupo: ChaveDoGrupo) =>
-  ["historico-do-negocio", leadId, grupo] as const;
+  ["timeline", leadId, "historico", grupo] as const;
 
 export function useHistoricoDoNegocio(leadId: string, grupo: ChaveDoGrupo) {
   const qc = useQueryClient();
@@ -45,7 +45,7 @@ export function useHistoricoDoNegocio(leadId: string, grupo: ChaveDoGrupo) {
       table: "crm_lead_activities",
       filter: `lead_id=eq.${leadId}`,
     },
-    onChange: () => void qc.invalidateQueries({ queryKey: ["historico-do-negocio", leadId] }),
+    onChange: () => void qc.invalidateQueries({ queryKey: ["timeline", leadId] }),
   });
 
   const itens = useMemo(() => {
