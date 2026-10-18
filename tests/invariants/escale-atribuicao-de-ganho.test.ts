@@ -107,6 +107,29 @@ describe("só o administrador marca ganho (N15)", () => {
     comoUsuario(GOV_AGENT_A, ganhar(l, P_LIVRE));
     expect(texto(`select status from public.crm_leads where id = '${l}';`)).toBe("won");
   });
+
+  it("ir e voltar de origem não driblou a trava: ganho que muda para a origem travada é recusado ao agente", () => {
+    const l = negocio(P_TRAVADA, GOV_AGENT_A);
+    // 1) o agente leva o negócio para a origem livre, já na etapa de ganho (a livre não recusa)
+    comoUsuario(
+      GOV_AGENT_A,
+      `update public.crm_leads set pipeline_id = '${P_LIVRE}', stage_id = '${GANHO(P_LIVRE)}' where id = '${l}';`,
+    );
+    expect(texto(`select status from public.crm_leads where id = '${l}';`)).toBe("won");
+    // 2) e de volta à travada, na etapa de ganho: o status já era ganho, mas a origem mudou
+    expect(() =>
+      comoUsuario(
+        GOV_AGENT_A,
+        `update public.crm_leads set pipeline_id = '${P_TRAVADA}', stage_id = '${GANHO(P_TRAVADA)}' where id = '${l}';`,
+      ),
+    ).toThrow(/so_administrador_marca_ganho/);
+    // o administrador passa
+    comoUsuario(
+      GOV_ADMIN,
+      `update public.crm_leads set pipeline_id = '${P_TRAVADA}', stage_id = '${GANHO(P_TRAVADA)}' where id = '${l}';`,
+    );
+    expect(texto(`select pipeline_id from public.crm_leads where id = '${l}';`)).toBe(P_TRAVADA);
+  });
 });
 
 describe("só o administrador muda as regras do ganho, mesmo gravando settings direto", () => {

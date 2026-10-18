@@ -50,7 +50,9 @@ describe("migration 9014 — atribuição de ganho", () => {
     expect(["trg_crm_lead_close_on_stage", "trg_escale_so_admin_marca_ganho"].sort()[0]).toBe(
       "trg_crm_lead_close_on_stage",
     );
-    expect(MIGRATION).toContain("when (new.status = 'won' and old.status is distinct from 'won')");
+    expect(MIGRATION).toContain(
+      "when (new.status = 'won'\n        and (old.status is distinct from 'won' or new.pipeline_id is distinct from old.pipeline_id))",
+    );
     expect(MIGRATION).toContain("errcode = 'PT403'");
   });
 

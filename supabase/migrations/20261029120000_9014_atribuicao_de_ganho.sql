@@ -7,7 +7,8 @@
 -- `new` já com o status. Sem sessão (`auth.uid()` nulo: automação, IA,
 -- integração, MCP) passa: é a "atribuição de ganho pelo sistema" (Q3). Com
 -- sessão, só o papel admin (`fn_user_role_in_org` conta a sessão de suporte
--- completa como admin).
+-- completa como admin). O WHEN também dispara quando um negócio já ganho muda
+-- de origem: sem isso, ir e voltar de uma origem sem a regra driblaria a trava.
 create or replace function public.fn_escale_so_admin_marca_ganho()
 returns trigger
 language plpgsql
@@ -39,7 +40,8 @@ drop trigger if exists trg_escale_so_admin_marca_ganho on public.crm_leads;
 create trigger trg_escale_so_admin_marca_ganho
   before update on public.crm_leads
   for each row
-  when (new.status = 'won' and old.status is distinct from 'won')
+  when (new.status = 'won'
+        and (old.status is distinct from 'won' or new.pipeline_id is distinct from old.pipeline_id))
   execute function public.fn_escale_so_admin_marca_ganho();
 
 drop trigger if exists trg_escale_so_admin_marca_ganho_ao_criar on public.crm_leads;
