@@ -34075,10 +34075,20 @@ as $$
   x as (
     select v.*,
       (v.texto is null or btrim(v.texto) = '') as vazio,
-      case when btrim(v.texto) ~ '^-?[0-9]+([.][0-9]+)?$' then btrim(v.texto)::numeric end as numero,
+      -- Número escrito como número ou como texto ("1.500,00", "R$ 10"): o campo de moeda do
+      -- negócio já foi gravado das duas formas (mesma regra de `numeroDoValor`, 1D).
+      case when n.normal ~ '^-?[0-9]+([.][0-9]+)?$' then n.normal::numeric end as numero,
       case when v.alvo ~ '^-?[0-9]+([.][0-9]+)?$' then v.alvo::numeric end as alvo_numero,
       case when v.texto ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' then left(v.texto, 10) end as dia
     from v
+    cross join lateral (
+      select case
+               when l.limpo ~ ',' or l.limpo ~ '^-?[0-9]{1,3}([.][0-9]{3})+$'
+                 then replace(replace(l.limpo, '.', ''), ',', '.')
+               else l.limpo
+             end as normal
+        from (select regexp_replace(coalesce(v.texto, ''), '[^0-9,.-]', '', 'g') as limpo) l
+    ) n
   ),
   y as (
     select x.*,
@@ -34283,8 +34293,21 @@ as $$
      -- a visão pronta
      and (
        p_visao in ('todos', 'pessoais')
-       or (p_visao = 'com_negocio' and public.fn_escale_negocio_passa(c, '{"tem":"com"}'::jsonb))
-       or (p_visao = 'sem_negocio' and public.fn_escale_negocio_passa(c, '{"tem":"sem"}'::jsonb))
+       -- `exists` direto (semi/anti-join): chamar a função por contato não escala em base grande.
+       or (p_visao = 'com_negocio' and exists (
+            select 1
+              from public.crm_leads l
+              join public.crm_pipelines p on p.id = l.pipeline_id
+             where l.contact_id = c.id
+               and l.organization_id = c.organization_id
+               and not p.is_archived))
+       or (p_visao = 'sem_negocio' and not exists (
+            select 1
+              from public.crm_leads l
+              join public.crm_pipelines p on p.id = l.pipeline_id
+             where l.contact_id = c.id
+               and l.organization_id = c.organization_id
+               and not p.is_archived))
      )
      -- Contato › Data de criação (no fuso da organização)
      and (p_filtros ->> 'criado_de' is null

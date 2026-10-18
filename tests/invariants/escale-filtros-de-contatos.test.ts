@@ -22,7 +22,7 @@ import {
 const P = "e5ca1e00-9102-4000-8000-0000000000a1";
 const S1 = "e5ca1e00-9102-4000-8000-0000000000b1";
 const S2 = "e5ca1e00-9102-4000-8000-0000000000b2";
-const C_ANA = "e5ca1e00-9102-4000-8000-0000000000c1"; // celular BR, VIP, negócio aberto do agent B (R$ 2.000, renda 1500)
+const C_ANA = "e5ca1e00-9102-4000-8000-0000000000c1"; // celular BR, VIP, negócio aberto do agent B (R$ 2.000, renda gravada como texto "1.500,00")
 const C_BRUNO = "e5ca1e00-9102-4000-8000-0000000000c2"; // Portugal, frio, negócio perdido por preço, sem dono
 const C_CARLA = "e5ca1e00-9102-4000-8000-0000000000c3"; // sem telefone, Instagram, nasceu em 1990
 const C_DAVI = "e5ca1e00-9102-4000-8000-0000000000c4"; // +55 com 7 dígitos locais: inválido
@@ -53,7 +53,7 @@ beforeAll(() => {
       ('${C_CARLA}', '${GOV_ORG}', 'Filtrodois Carla', null, '{}', '{"link_instagram":"https://instagram.com/carla"}'::jsonb, '1990-05-01', '2026-10-05 12:00-03', now() - interval '2 days'),
       ('${C_DAVI}', '${GOV_ORG}', 'Filtrodois Davi', '+55111234567', '{}', '{}'::jsonb, null, '2026-10-12 12:00-03', now() - interval '3 days');
     insert into public.crm_leads (id, organization_id, pipeline_id, stage_id, title, contact_id, owner_user_id, value_cents, custom_fields) values
-      ('e5ca1e00-9102-4000-8000-0000000000d1', '${GOV_ORG}', '${P}', '${S1}', 'Da Ana', '${C_ANA}', '${GOV_AGENT_B}', 200000, '{"renda":"1500"}'::jsonb);
+      ('e5ca1e00-9102-4000-8000-0000000000d1', '${GOV_ORG}', '${P}', '${S1}', 'Da Ana', '${C_ANA}', '${GOV_AGENT_B}', 200000, '{"renda":"1.500,00"}'::jsonb);
     insert into public.crm_leads (id, organization_id, pipeline_id, stage_id, title, contact_id, status, lost_reason, closed_at) values
       ('e5ca1e00-9102-4000-8000-0000000000d2', '${GOV_ORG}', '${P}', '${S2}', 'Do Bruno', '${C_BRUNO}', 'lost', 'price', now());
   `);
@@ -219,7 +219,7 @@ describe("fn_escale_contatos_do_filtro", () => {
           cond({
             alvo: "negocio",
             chave: "renda",
-            tipo: "texto",
+            tipo: "numero",
             op: "igual",
             valor: "1500",
             padrao: null,
