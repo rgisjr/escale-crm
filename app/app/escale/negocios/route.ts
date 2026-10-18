@@ -11,7 +11,7 @@
  * o público (`NEXT_PUBLIC_APP_URL`): atrás do proxy, `req.url` é 0.0.0.0:3000.
  */
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { env } from "@/lib/env";
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 
 const para = (caminho: string) => NextResponse.redirect(new URL(caminho, env.NEXT_PUBLIC_APP_URL));
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: NextRequest): Promise<NextResponse> {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) return para("/app");
@@ -36,5 +36,8 @@ export async function GET(): Promise<NextResponse> {
   } catch (err) {
     console.error("[escale/negocios] não consegui ler as origens; abro a lista de funis", err);
   }
-  return para(destino ? `/app/pipelines/${destino}` : "/app/kanban");
+  // 1J (Q5): o aviso da Clint de quem caiu num negócio de origem sem acesso segue para o quadro.
+  const aviso =
+    new URL(req.url).searchParams.get("aviso") === "origem-sem-acesso" ? "?aviso=origem-sem-acesso" : "";
+  return para(destino ? `/app/pipelines/${destino}${aviso}` : `/app/kanban${aviso}`);
 }

@@ -1,6 +1,7 @@
 "use client";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useT } from "@/hooks/i18n/useT";
 import { useBoard } from "@/hooks/kanban/useBoard";
 
@@ -102,6 +103,14 @@ export function PipelinePageClient({
   const [etapaDoNovo, setEtapaDoNovo] = useState<string | null>(null);
   // FORK ESCALE · Fase 1E: a janela "Importar negócios" do menu "Negócio +" (casca nova).
   const [importando, setImportando] = useState(false);
+  // FORK ESCALE · Fase 1J (Q5): o aviso da Clint ao cair aqui vindo de um negócio de origem sem acesso.
+  useEffect(() => {
+    if (searchParams.get("aviso") !== "origem-sem-acesso") return;
+    toast.error(t("Você não tem permissão para acessar essa origem."));
+    const busca = new URLSearchParams(searchParams);
+    busca.delete("aviso");
+    router.replace(busca.size > 0 ? `${pathname}?${busca}` : pathname, { scroll: false });
+  }, [searchParams, router, pathname, t]);
   // FORK ESCALE · Fase 1E: quem pode criar também importa e seleciona por etapa (casca nova).
   const podeCriar = ROLE_RANK[role] >= ROLE_RANK.agent;
   /**

@@ -57,9 +57,26 @@ function consulta(tabela: string) {
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({ from: (t: string) => consulta(t) })),
 }));
+const escondido = vi.hoisted(() => ({
+  lead: null as Record<string, unknown> | null,
+  origem: { settings: {} as Record<string, unknown>, group_id: null as string | null },
+  grupo: { settings: {} as Record<string, unknown> },
+}));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: (tabela: string) => {
+      const linha =
+        tabela === "crm_leads" ? escondido.lead : tabela === "crm_pipelines" ? escondido.origem : escondido.grupo;
+      const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data: linha, error: null }) };
+      return q;
+    },
+  }),
+}));
+vi.mock("@/lib/escale/acesso/modo-da-organizacao", () => ({ modoDaOrganizacao: async () => "own_and_unassigned" }));
 vi.mock("@/components/escale/negocio/FichaDoNegocio", () => ({ FichaDoNegocio: () => null }));
 vi.mock("@/app/app/pipelines/[id]/_client", () => ({ PipelinePageClient: () => null }));
 
+import { AvisoDeOutroDono } from "@/components/escale/negocio/AvisoDeOutroDono";
 import LeadPage from "@/app/app/leads/[id]/page";
 import NegocioPage from "@/app/app/negocios/[id]/page";
 import PipelinePage from "@/app/app/pipelines/[id]/page";
@@ -173,5 +190,34 @@ describe("as portas antigas", () => {
       props: { cascaNova: boolean };
     };
     expect(el.props.cascaNova).toBe(true);
+  });
+});
+
+describe("aviso da Clint (1J, Q5)", () => {
+  beforeEach(() => {
+    estado.linhas.crm_leads = null; // a sessão não lê o negócio
+    escondido.lead = null;
+    escondido.origem = { settings: {}, group_id: null };
+    escondido.grupo = { settings: {} };
+  });
+
+  it("origem sem acesso: volta para a lista com o aviso", async () => {
+    escondido.lead = { id: "n1", pipeline_id: "o1", owner_user_id: "u-2", status: "open" };
+    escondido.origem = { settings: { escale_pessoas: ["22222222-2222-4222-8222-222222222222"] }, group_id: null };
+    await expect(NegocioPage(params(LEAD))).rejects.toThrow("REDIRECT /app/escale/negocios?aviso=origem-sem-acesso");
+  });
+
+  it("origem ok, negócio de outro dono sob a regra: a janela 'Dono do negócio'", async () => {
+    escondido.lead = { id: "n1", pipeline_id: "o1", owner_user_id: "u-2", status: "open" };
+    escondido.origem = { settings: {}, group_id: null };
+    const resultado = await NegocioPage(params(LEAD));
+    expect((resultado as { type: unknown }).type).toBe(AvisoDeOutroDono);
+  });
+
+  it("nem o service role acha, ou o negócio está arquivado: 404", async () => {
+    escondido.lead = null;
+    await expect(NegocioPage(params(LEAD))).rejects.toThrow("NOT_FOUND");
+    escondido.lead = { id: "n1", pipeline_id: "o1", owner_user_id: "u-2", status: "archived" };
+    await expect(NegocioPage(params(LEAD))).rejects.toThrow("NOT_FOUND");
   });
 });
