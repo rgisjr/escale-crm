@@ -13,12 +13,13 @@ import { Undo2 } from "@/lib/ui/icons-da-casca";
 import type { PropsDaSecao } from "./JanelaDaOrigem";
 
 /**
- * O CANTO ESQUERDO DO RODAPÉ NA DISTRIBUIÇÃO (fork Escale, Fase 1K; print 01-028
- * e código `us` da Clint). Editando e válido: a caixa "Reiniciar a contagem de
- * negócios ao salvar" (vai no rascunho). Senão: "Resetar distribuição", que é
- * imediato depois do "Sim".
+ * O RESET DA DISTRIBUIÇÃO (fork Escale, Fase 1K; código `us` da Clint). Editando e
+ * válido: a caixa "Reiniciar a contagem de negócios ao salvar" (vai no rascunho).
+ * Senão: "Resetar distribuição", que é imediato depois do "Sim". Na Clint mora no
+ * rodapé da janela; aqui fica logo abaixo da tabela, onde se vê (pedido do usuário,
+ * 18/10). Sem ninguém na distribuição gravada não há contagem a zerar: nada aparece.
  */
-export function RodapeDaDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
+export function ReiniciarDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
   const t = useT();
   const reiniciar = useReiniciarDistribuicao(config.pipeline.id);
   const editando =
@@ -42,6 +43,8 @@ export function RodapeDaDistribuicao({ config, rascunho, mudar }: PropsDaSecao) 
     );
   }
 
+  if (config.distribuicao.length === 0) return null;
+
   return (
     <ConfirmacaoDaCasca
       texto={t(
@@ -60,7 +63,7 @@ export function RodapeDaDistribuicao({ config, rascunho, mudar }: PropsDaSecao) 
         title={t(
           "Zera o contador de todos os usuários, reinicia o rodízio e apaga o histórico de distribuições desta origem.",
         )}
-        className="inline-flex h-8 items-center gap-2 px-2 text-[13px] text-casca-suave hover:text-casca-texto disabled:opacity-60"
+        className="inline-flex h-8 w-fit items-center gap-2 rounded-[6px] border border-casca-borda px-3 text-[13px] text-casca-texto hover:bg-casca-raia disabled:opacity-60"
       >
         <Undo2 size={16} aria-hidden />
         {t("Resetar distribuição")}

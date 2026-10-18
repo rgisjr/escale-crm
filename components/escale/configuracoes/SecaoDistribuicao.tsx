@@ -25,6 +25,7 @@ import { HistoricoDeAlteracoes } from "./HistoricoDeAlteracoes";
 import { HistoricoDeDistribuicoes } from "./HistoricoDeDistribuicoes";
 import type { PropsDaSecao } from "./JanelaDaOrigem";
 import { membrosAtivosDaEquipe } from "./ListaDePessoas";
+import { ReiniciarDistribuicao } from "./ReiniciarDistribuicao";
 
 const PAPEIS_QUE_RECEBEM = ["agent", "manager", "admin"];
 const GRADE = "grid grid-cols-[1fr_16.666%_16.666%_8.333%] items-center";
@@ -235,6 +236,10 @@ export function SecaoDistribuicao({ config, rascunho, mudar }: PropsDaSecao) {
             aria-label={t("Adicionar usuário")}
           />
         </div>
+      ) : null}
+
+      {config.podeAdministrar ? (
+        <ReiniciarDistribuicao config={config} rascunho={rascunho} mudar={mudar} />
       ) : null}
 
       <HistoricoDeAlteracoes
