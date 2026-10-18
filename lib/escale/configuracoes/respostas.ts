@@ -103,6 +103,8 @@ export interface OrigemLida {
   etapas: EtapaDaOrigem[];
   /** O `settings` de todas as origens da organização (o catálogo de motivos). */
   catalogo: unknown[];
+  /** O grupo da origem (1J): a RLS decide se a sessão o vê; sem ele, lista vazia. */
+  grupo: { settings: unknown } | null;
 }
 
 export type LeituraDaOrigem =
@@ -154,6 +156,17 @@ export async function lerOrigemDaConfiguracao(
     is_won?: boolean;
     is_lost?: boolean;
   }>;
+  let grupo: { settings: unknown } | null = null;
+  if (typeof p.group_id === "string") {
+    const g = await supabase
+      .from("crm_pipeline_groups")
+      .select("settings")
+      .eq("id", p.group_id)
+      .eq("organization_id", orgId)
+      .maybeSingle();
+    if (g.error) return { ok: false, erro: "banco", causa: g.error };
+    grupo = g.data ? { settings: (g.data as { settings?: unknown }).settings ?? null } : null;
+  }
   return {
     ok: true,
     pipeline: {
@@ -172,6 +185,7 @@ export async function lerOrigemDaConfiguracao(
       is_lost: e.is_lost === true,
     })),
     catalogo: (todas.data ?? []).map((o) => (o as { settings?: unknown }).settings ?? null),
+    grupo,
   };
 }
 
@@ -179,7 +193,7 @@ export interface ContextoDaResposta {
   orgId: string;
   pipelineId: string;
   moedaDaOrganizacao: MoedaServida;
-  visualizacao: VisibilityMode;
+  visualizacaoDaOrganizacao: VisibilityMode;
   podeAdministrar: boolean;
 }
 
@@ -203,7 +217,8 @@ export async function responderComConfiguracoes(
       etapas: lido.etapas,
       catalogo: lido.catalogo,
       moedaDaOrganizacao: ctx.moedaDaOrganizacao,
-      visualizacao: ctx.visualizacao,
+      visualizacaoDaOrganizacao: ctx.visualizacaoDaOrganizacao,
+      grupo: lido.grupo,
       podeAdministrar: ctx.podeAdministrar,
     }),
     { requestId },

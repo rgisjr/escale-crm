@@ -33,6 +33,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
     motivosInativos: [],
     aoSair: {},
     alerta: { geral: null, etapas: {} },
+    visualizacao: null,
+    pessoas: [],
   },
   motivos: [
     motivo("Preço", true),
@@ -43,6 +45,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
   regras: [],
   moedaDaOrganizacao: "BRL",
   visualizacao: "own_and_unassigned",
+  visualizacaoDaOrganizacao: "own_and_unassigned",
+  pessoasDoGrupo: [],
   podeAdministrar: true,
 };
 

@@ -5,6 +5,7 @@
  * barra o salvar com o texto da Clint e a seção onde está o erro.
  */
 import type { MudancaDeOrigem } from "@/hooks/escale/useOrigens";
+import type { VisibilityMode } from "@/lib/auth/types";
 import type { MoedaServida } from "@/lib/money";
 
 import {
@@ -30,10 +31,19 @@ export interface AlertaNaTela {
 }
 export interface RascunhoDaOrigem {
   /** Sem "tornar padrão" (F12): a origem padrão deixa de existir na tela. */
-  gerais: { nome: string; grupo: string | null; moeda: MoedaServida; tags: string[] };
+  gerais: {
+    nome: string;
+    grupo: string | null;
+    moeda: MoedaServida;
+    tags: string[];
+    /** A regra de quem vê os negócios (1J): a em vigor; salvar grava a escolhida. */
+    visualizacao: VisibilityMode;
+  };
   motivos: { selecionados: string[]; novos: string[] };
   regras: RegraDeCampo[];
   alerta: AlertaNaTela;
+  /** Quem tem acesso à origem (1J); vazia = segue o grupo, ou sem restrição. */
+  permissoes: { pessoas: string[] };
 }
 
 /** O exemplo da Clint (01-029): atenção em 4 horas, crítico em 8 horas. */
@@ -58,6 +68,7 @@ export function rascunhoInicial(config: ConfiguracoesDaOrigem): RascunhoDaOrigem
       grupo: config.pipeline.group_id,
       moeda: config.fork.moeda ?? config.moedaDaOrganizacao,
       tags: [...config.fork.tagsPadrao],
+      visualizacao: config.visualizacao,
     },
     motivos: {
       selecionados: config.motivos.filter((m) => m.selecionado).map((m) => m.rotulo),
@@ -71,6 +82,7 @@ export function rascunhoInicial(config: ConfiguracoesDaOrigem): RascunhoDaOrigem
         limite: naTela(l),
       })),
     },
+    permissoes: { pessoas: [...config.fork.pessoas] },
   };
 }
 
@@ -145,10 +157,15 @@ export function pedidoDoSalvar(
     mudancaDaOrigem.groupId = r.gerais.grupo;
 
   const patch: PatchDasConfiguracoes = {};
-  if (r.gerais.moeda !== inicial.gerais.moeda || !igual(r.gerais.tags, inicial.gerais.tags)) {
+  if (
+    r.gerais.moeda !== inicial.gerais.moeda ||
+    !igual(r.gerais.tags, inicial.gerais.tags) ||
+    r.gerais.visualizacao !== inicial.gerais.visualizacao
+  ) {
     patch.gerais = {
       moeda: r.gerais.moeda === config.moedaDaOrganizacao ? null : r.gerais.moeda,
       tags_padrao: r.gerais.tags,
+      visualizacao: r.gerais.visualizacao,
     };
   }
   if (!igual(r.motivos, inicial.motivos)) {
@@ -179,6 +196,9 @@ export function pedidoDoSalvar(
       return { ok: false, erro: lido.erro, secao: "alerta", ...(etapa ? { etapa } : {}) };
     }
     patch.alerta = lido.alerta;
+  }
+  if (!igual(r.permissoes, inicial.permissoes)) {
+    patch.permissoes = { pessoas: r.permissoes.pessoas };
   }
   return { ok: true, mudancaDaOrigem, patch: Object.keys(patch).length > 0 ? patch : null };
 }

@@ -21,6 +21,20 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/impersonate/support", () => ({ requireSupportWrite: vi.fn(async () => null) }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 
+const acesso = vi.hoisted(() => ({
+  modo: "own" as "all" | "own" | "own_and_unassigned",
+  membros: ["11111111-1111-4111-8111-111111111111", "66666666-6666-4666-8666-666666666666"],
+}));
+vi.mock("@/lib/escale/acesso/modo-da-organizacao", () => ({
+  modoDaOrganizacao: vi.fn(async () => acesso.modo),
+}));
+vi.mock("@/lib/escale/acesso/membros", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/escale/acesso/membros")>()),
+  membrosAtivos: vi.fn(async () => ({ ok: true, ids: acesso.membros })),
+}));
+const MEMBRO_2 = "66666666-6666-4666-8666-666666666666";
+const NAO_MEMBRO = "77777777-7777-4777-8777-777777777777";
+
 const E1 = "aaaaaaaa-0000-4000-8000-000000000001";
 const E2 = "aaaaaaaa-0000-4000-8000-000000000002";
 const EG = "aaaaaaaa-0000-4000-8000-000000000003";
@@ -104,7 +118,7 @@ async function corpo(res: Response) {
   return (await res.json()) as { data?: Record<string, unknown>; error?: { message: string } };
 }
 
-const GERAIS_VAZIO = { gerais: { moeda: null, tags_padrao: [] } };
+const GERAIS_VAZIO = { gerais: { moeda: null, tags_padrao: [], visualizacao: "own_and_unassigned" } };
 
 beforeEach(() => {
   vi.mocked(requireRole).mockReset();
@@ -152,12 +166,25 @@ describe("GET /api/v1/pipelines/:id/configuracoes", () => {
     ]);
   });
 
-  it("traz os campos do CRM, a moeda servida da organização e a visualização padrão", async () => {
+  it("traz os campos do CRM, a moeda servida e a regra em vigor: a da organização quando a origem não tem", async () => {
+    acesso.modo = "own";
     banco();
     const { data } = await corpo(await GET(pedido("GET"), ctx(PIPE)));
     expect((data?.campos as Array<{ campo: string }>).map((c) => c.campo)).toEqual(["proposta"]);
     expect(data?.moedaDaOrganizacao).toBe("BRL");
-    expect(data?.visualizacao).toBe("own_and_unassigned");
+    expect(data?.visualizacao).toBe("own");
+    expect(data?.visualizacaoDaOrganizacao).toBe("own");
+    expect(data?.pessoasDoGrupo).toEqual([]);
+    expect(data?.fork as { visualizacao: unknown; pessoas: unknown }).toMatchObject({ visualizacao: null, pessoas: [] });
+  });
+
+  it("a regra da origem vence a da organização, e a lista de pessoas vem lida", async () => {
+    acesso.modo = "own";
+    banco({ settings: { ...SETTINGS, escale_visualizacao: "all", escale_pessoas: [MEMBRO_2, MEMBRO_2] } });
+    const { data } = await corpo(await GET(pedido("GET"), ctx(PIPE)));
+    expect(data?.visualizacao).toBe("all");
+    expect(data?.visualizacaoDaOrganizacao).toBe("own");
+    expect(data?.fork as { visualizacao: unknown; pessoas: unknown }).toMatchObject({ visualizacao: "all", pessoas: [MEMBRO_2] });
   });
 
   it("origem de outra organização e id inválido são 404", async () => {
@@ -168,16 +195,59 @@ describe("GET /api/v1/pipelines/:id/configuracoes", () => {
 });
 
 describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
+  it("gerais grava a visualização escolhida na origem", async () => {
+    const db = banco();
+    const res = await PATCH(pedido("PATCH", { gerais: { moeda: null, tags_padrao: [], visualizacao: "all" } }), ctx(PIPE));
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    expect(escrita?.patch).toEqual({ settings: { ...SETTINGS, escale_visualizacao: "all" } });
+  });
+
+  it("permissoes grava a lista de pessoas (sem repetição) e audita a seção", async () => {
+    const db = banco();
+    const res = await PATCH(pedido("PATCH", { permissoes: { pessoas: [MEMBRO_2, MEMBRO_2.toUpperCase()] } }), ctx(PIPE));
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    expect(escrita?.patch).toEqual({ settings: { ...SETTINGS, escale_pessoas: [MEMBRO_2] } });
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ metadata: { secoes: ["permissoes"], via: "escale" } }));
+  });
+
+  it("lista vazia apaga a chave (sem restrição)", async () => {
+    const db = banco({ settings: { ...SETTINGS, escale_pessoas: [MEMBRO_2] } });
+    const res = await PATCH(pedido("PATCH", { permissoes: { pessoas: [] } }), ctx(PIPE));
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    expect(escrita?.patch).toEqual({ settings: { ...SETTINGS } });
+  });
+
+  it("quem não é membro ativo não entra na lista (422), e nada é gravado", async () => {
+    const db = banco();
+    const res = await PATCH(pedido("PATCH", { permissoes: { pessoas: [NAO_MEMBRO] } }), ctx(PIPE));
+    expect(res.status).toBe(422);
+    expect((await corpo(res)).error?.message).toBe("Este usuário não faz parte da equipe.");
+    expect(db.escritas.filter((e) => e.table === "crm_pipelines")).toHaveLength(0);
+  });
+
+  it("gerais sem visualizacao é 422 (o campo é obrigatório no patch de gerais)", async () => {
+    banco();
+    expect((await PATCH(pedido("PATCH", { gerais: { moeda: null, tags_padrao: [] } }), ctx(PIPE))).status).toBe(422);
+  });
+
   it("gerais: grava moeda e tags no settings, com a organização no filtro, e audita", async () => {
     const db = banco();
     const res = await PATCH(
-      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: ["Lead Instagram"] } }),
+      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: ["Lead Instagram"], visualizacao: "own_and_unassigned" } }),
       ctx(PIPE),
     );
     expect(res.status).toBe(200);
     const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
     expect(escrita?.patch).toEqual({
-      settings: { ...SETTINGS, escale_moeda: "USD", escale_tags_padrao: ["lead instagram"] },
+      settings: {
+        ...SETTINGS,
+        escale_moeda: "USD",
+        escale_tags_padrao: ["lead instagram"],
+        escale_visualizacao: "own_and_unassigned",
+      },
     });
     expect(escrita?.filtros).toContainEqual(["organization_id", ORG_ID]);
     expect(escrita?.filtros).toContainEqual(["id", PIPE]);
@@ -230,7 +300,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     };
     const db = banco({ settings: guardados });
     const res = await PATCH(
-      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: [] } }),
+      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: [], visualizacao: "own_and_unassigned" } }),
       ctx(PIPE),
     );
     expect(res.status).toBe(200);
@@ -246,7 +316,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
       readError: (table, filtros) => outraGravacaoNoMeio(db)(table, filtros),
     });
     const res = await PATCH(
-      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: [] } }),
+      pedido("PATCH", { gerais: { moeda: "USD", tags_padrao: [], visualizacao: "own_and_unassigned" } }),
       ctx(PIPE),
     );
     expect(res.status).toBe(409);
@@ -276,7 +346,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     const db = banco();
     const res = await PATCH(
       pedido("PATCH", {
-        gerais: { moeda: "USD", tags_padrao: [] },
+        gerais: { moeda: "USD", tags_padrao: [], visualizacao: "own_and_unassigned" },
         motivos: { selecionados: ["Preço"], novos: [] },
       }),
       ctx(PIPE),
@@ -293,7 +363,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     for (const body of [
       { motivos: { selecionados: ["Preço"], novos: [] } },
       { campos: { regras: [] } },
-      { gerais: { moeda: null, tags_padrao: [] }, campos: { regras: [] } },
+      { gerais: { moeda: null, tags_padrao: [], visualizacao: "own_and_unassigned" }, campos: { regras: [] } },
     ]) {
       expect((await PATCH(pedido("PATCH", body), ctx(PIPE))).status).toBe(403);
     }
@@ -348,7 +418,7 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     const db = banco();
     expect((await PATCH(pedido("PATCH", "{nao json"), ctx(PIPE))).status).toBe(400);
     expect(
-      (await PATCH(pedido("PATCH", { gerais: { moeda: "XYZ", tags_padrao: [] } }), ctx(PIPE)))
+      (await PATCH(pedido("PATCH", { gerais: { moeda: "XYZ", tags_padrao: [], visualizacao: "own_and_unassigned" } }), ctx(PIPE)))
         .status,
     ).toBe(422);
     expect((await PATCH(pedido("PATCH", {}), ctx(PIPE))).status).toBe(422);

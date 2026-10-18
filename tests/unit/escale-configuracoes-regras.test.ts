@@ -49,6 +49,8 @@ describe("tipos", () => {
       motivosInativos: [],
       aoSair: {},
       alerta: ALERTA_VAZIO,
+      visualizacao: null,
+      pessoas: [],
     });
   });
   it("moeda só se for servida; tags na régua do contato, sem cliente, até 10", () => {

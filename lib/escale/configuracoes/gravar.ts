@@ -7,6 +7,13 @@
 import { z } from "zod";
 
 import { normalizarTag } from "@/lib/contacts/tag-normalizada";
+import { listaParaGravar } from "@/lib/escale/acesso/membros";
+import {
+  CHAVE_DA_VISUALIZACAO,
+  CHAVE_DAS_PESSOAS,
+  PESSOAS_MAX,
+  VISUALIZACOES,
+} from "@/lib/escale/acesso/regras";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
 
 import { alertaDeTempoSchema, gravarAlerta } from "./alerta";
@@ -30,6 +37,7 @@ export const patchDasConfiguracoesSchema = z
       .object({
         moeda: z.enum(MOEDAS_SERVIDAS).nullable(),
         tags_padrao: z.array(z.string().max(80)).max(20),
+        visualizacao: z.enum(VISUALIZACOES),
       })
       .strict()
       .optional(),
@@ -45,16 +53,20 @@ export const patchDasConfiguracoesSchema = z
       .strict()
       .optional(),
     alerta: alertaDeTempoSchema.optional(),
+    permissoes: z
+      .object({ pessoas: z.array(z.string().uuid()).max(PESSOAS_MAX) })
+      .strict()
+      .optional(),
   })
   .strict()
   .refine((p) => Object.values(p).some((v) => v !== undefined), { message: "nada para salvar" });
 export type PatchDasConfiguracoes = z.infer<typeof patchDasConfiguracoesSchema>;
-export type SecaoDasConfiguracoes = "gerais" | "motivos" | "campos" | "alerta";
+export type SecaoDasConfiguracoes = "gerais" | "motivos" | "campos" | "alerta" | "permissoes";
 
 export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos"];
 
 export function secoesDoPatch(patch: PatchDasConfiguracoes): SecaoDasConfiguracoes[] {
-  return (["gerais", "motivos", "campos", "alerta"] as const).filter((s) => patch[s] !== undefined);
+  return (["gerais", "motivos", "campos", "alerta", "permissoes"] as const).filter((s) => patch[s] !== undefined);
 }
 
 export type VereditoDaGravacao =
@@ -74,7 +86,7 @@ function comChave(
 export function aplicarConfiguracoes(
   settingsAtual: unknown,
   patch: PatchDasConfiguracoes,
-  etapas: { abertas: readonly string[]; vivas: readonly string[] },
+  etapas: { abertas: readonly string[]; vivas: readonly string[]; membros?: readonly string[] },
 ): VereditoDaGravacao {
   let s: Record<string, unknown> = { ...comoRecord(settingsAtual) };
 
@@ -86,9 +98,9 @@ export function aplicarConfiguracoes(
       return { ok: false, erro: "Uma origem tem no máximo 10 tags padrão." };
     const tags = normalizarTagsPadrao(patch.gerais.tags_padrao);
     s = comChave(
-      comChave(s, CHAVE_DA_MOEDA, patch.gerais.moeda),
-      CHAVE_DAS_TAGS,
-      tags.length > 0 ? tags : null,
+      comChave(comChave(s, CHAVE_DA_MOEDA, patch.gerais.moeda), CHAVE_DAS_TAGS, tags.length > 0 ? tags : null),
+      CHAVE_DA_VISUALIZACAO,
+      patch.gerais.visualizacao,
     );
   }
   if (patch.motivos) {
@@ -111,6 +123,15 @@ export function aplicarConfiguracoes(
   }
   if (patch.alerta) {
     s = comChave(s, CHAVE_DO_ALERTA, gravarAlerta(patch.alerta, etapas.vivas));
+  }
+  if (patch.permissoes) {
+    // Sem `membros` (testes puros antigos) qualquer lista passa; a rota sempre manda.
+    const lista = listaParaGravar(
+      patch.permissoes.pessoas,
+      etapas.membros ?? patch.permissoes.pessoas.map((p) => p.toLowerCase()),
+    );
+    if (!lista.ok) return lista;
+    s = comChave(s, CHAVE_DAS_PESSOAS, lista.lista);
   }
   return { ok: true, settings: s };
 }

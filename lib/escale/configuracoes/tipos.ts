@@ -5,7 +5,9 @@
  * O writer do original (`updatePipelineConfig`) troca só as chaves que conhece
  * e preserva o resto. Toda leitura é TOLERANTE: lixo vira "sem configuração".
  */
+import type { VisibilityMode } from "@/lib/auth/types";
 import { normalizarTag } from "@/lib/contacts/tag-normalizada";
+import { pessoasDaOrigem, visualizacaoDaOrigem } from "@/lib/escale/acesso/regras";
 import { MOEDAS_SERVIDAS, type MoedaServida } from "@/lib/money";
 
 import { lerAlerta, type AlertaDeTempo } from "./alerta";
@@ -32,6 +34,10 @@ export interface ConfiguracoesDoFork {
   /** Campo → etapas do "Ao sair" (`["all"]` = todas as abertas). Só na tela. */
   aoSair: Record<string, string[]>;
   alerta: AlertaDeTempo;
+  /** A regra de quem vê os negócios DESTA origem (1J); `null` = segue a organização. */
+  visualizacao: VisibilityMode | null;
+  /** Quem tem acesso à origem (1J); vazia = segue a lista do grupo, ou sem restrição. */
+  pessoas: string[];
 }
 
 export function comoRecord(valor: unknown): Record<string, unknown> {
@@ -81,5 +87,7 @@ export function lerConfiguracoesDoFork(settings: unknown): ConfiguracoesDoFork {
     motivosInativos: textos(s[CHAVE_DOS_INATIVOS]),
     aoSair: lerAoSair(s[CHAVE_DO_AO_SAIR]),
     alerta: lerAlerta(s[CHAVE_DO_ALERTA]),
+    visualizacao: visualizacaoDaOrigem(s),
+    pessoas: pessoasDaOrigem(s),
   };
 }
