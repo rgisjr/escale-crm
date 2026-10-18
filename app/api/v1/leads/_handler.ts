@@ -34,6 +34,7 @@ import {
   settingsDoFunil,
   validaCamposExigidos,
 } from "@/lib/leads/campos-exigidos";
+import { recusaDoGanhoPeloBanco } from "@/lib/escale/ganho/recusa";
 import { ORIGEM_DA_PLANILHA } from "@/lib/leads/planilha";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import { moedaDaOrganizacao } from "@/lib/catalogo/moeda-da-org";
@@ -723,6 +724,19 @@ export async function createLeadHandler(
     );
   }
 
+  // FORK ESCALE · Fase 1K (N16): nascer já em etapa de ganho, sem ser administrador,
+  // numa origem com "só admin ganha" (gatilho da 9014): recusa de negócio, nunca 500.
+  const recusaDoGanhoNoInsert = recusaDoGanhoPeloBanco(insErr, ctx.idioma);
+  if (recusaDoGanhoNoInsert) {
+    throw new ApiError(
+      403,
+      recusaDoGanhoNoInsert.codigo,
+      undefined,
+      ctx.requestId,
+      recusaDoGanhoNoInsert.mensagem,
+    );
+  }
+
   if (insErr || !lead) {
     throw new ApiError(
       500,
@@ -1328,6 +1342,11 @@ export async function moveLeadHandler(
     const recusa = recusaDeMotivoDaPerdaPeloBanco(updErr, ctx.idioma);
     if (recusa) {
       throw new ApiError(422, recusa.codigo, undefined, ctx.requestId, recusa.mensagem);
+    }
+    // FORK ESCALE · Fase 1K (N16): "só o administrador marca ganho" (gatilho da 9014).
+    const recusaDoGanho = recusaDoGanhoPeloBanco(updErr, ctx.idioma);
+    if (recusaDoGanho) {
+      throw new ApiError(403, recusaDoGanho.codigo, undefined, ctx.requestId, recusaDoGanho.mensagem);
     }
     throw new ApiError(500, "internal_error", undefined, ctx.requestId, updErr.message);
   }
