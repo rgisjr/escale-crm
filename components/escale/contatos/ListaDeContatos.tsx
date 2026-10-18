@@ -44,6 +44,7 @@ import { PainelDeColunas } from "./PainelDeColunas";
 import { AcoesEmMassa } from "./massa/AcoesEmMassa";
 import { FaixaDaSelecao } from "./massa/FaixaDaSelecao";
 import { MenuDaSelecao } from "./massa/MenuDaSelecao";
+import { PainelDeExportacoes } from "./massa/PainelDeExportacoes";
 import { SeloDeMescla } from "./SeloDeMescla";
 import { TabelaDeContatos } from "./TabelaDeContatos";
 
@@ -216,6 +217,8 @@ export function ListaDeContatos({
         <h1 className="text-[16px] font-medium text-casca-texto">{t("Contatos")}</h1>
         <div className="flex items-center gap-4">
           {podeMesclar && <SeloDeMescla />}
+          {/* FORK ESCALE · Fase 2B (Q4): minhas exportações e, para o admin, os pedidos para aprovar. */}
+          {podeSelecionar && <PainelDeExportacoes ehAdmin={papel === "admin"} />}
           <MenuNovoContato origens={origens} podeCriar={podeCriar} />
         </div>
       </header>
