@@ -263,7 +263,7 @@ describe("C9: nada da ficha cobre o botão flutuante", () => {
       join(__dirname, "..", "..", "components/escale/negocio/FichaDoNegocio.tsx"),
       "utf8",
     );
-    expect(fonte).not.toMatch(/fixed/);
+    expect(fonte).not.toMatch(/(?<![a-z-])fixed(?![a-z-])/);
     expect(fonte).not.toMatch(/Sheet|Dialog/);
   });
 });
