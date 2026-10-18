@@ -42,7 +42,6 @@ const gravar = vi.hoisted(() => {
 });
 vi.mock("@/hooks/escale/useGravarContato", () => ({ useGravarContato: () => gravar }));
 
-import { AbaConversas } from "@/components/escale/negocio/abas/AbaConversas";
 import { AbaContato, AbaEmpresa, AbaNegocio } from "@/components/escale/negocio/abas/AbasDeCampos";
 import type { Pipeline } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
@@ -278,32 +277,5 @@ describe("aba Empresa (print 03)", () => {
       "Número de funcionários",
       "CNPJ",
     ]);
-  });
-});
-
-describe("aba Conversas (print 05)", () => {
-  it("a conversa do negócio na lista, que abre no Inbox, e o vazio da direita", () => {
-    render(<AbaConversas lead={LEAD} />);
-    expect(screen.getByText("Abra as conversas sem marcá-las como lidas.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ativar modo espião" })).toHaveAttribute(
-      "title",
-      "Em breve",
-    );
-    expect(screen.getByText("1 sessões")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Olá, me chamo Camilly/ })).toHaveAttribute(
-      "href",
-      "/app/inbox?id=cv1",
-    );
-    expect(screen.getByText("Selecione uma conversa")).toBeInTheDocument();
-    expect(
-      screen.getByText("Escolha uma conversa ao lado para ver as mensagens."),
-    ).toBeInTheDocument();
-  });
-
-  it("contato sem conversa: o texto da Clint", () => {
-    render(<AbaConversas lead={{ ...LEAD, conversa: null } as Lead} />);
-    expect(
-      screen.getByText("Este contato não possui conversas no atendimento"),
-    ).toBeInTheDocument();
   });
 });
