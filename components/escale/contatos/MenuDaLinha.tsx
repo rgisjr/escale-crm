@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { useContact } from "@/hooks/contacts/useContact";
-import { mensagemDeBloqueioPorVinculo, useDeleteContact } from "@/hooks/contacts/useDeleteContact";
+import { mensagemDeBloqueioPorVinculo } from "@/hooks/contacts/useDeleteContact";
+import { useExcluirContatoDaLista } from "@/hooks/escale/useExcluirContatoDaLista";
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
@@ -25,7 +26,9 @@ import { cn } from "@/lib/utils";
  * O ⋮ DA LINHA (Clint `bt-row-menu-v2`): "Editar" e, para quem pode excluir,
  * "Excluir" em vermelho com a confirmação em balão da Clint. Antes de confirmar,
  * a checagem de Agenda do original (`/vinculos`): contato com compromisso não
- * se exclui, e o aviso do original explica.
+ * se exclui, e o aviso do original explica. Fase 2B (Q5): a exclusão leva os
+ * negócios do contato, pela rota do fork (`DELETE /api/v1/lista-de-contatos/[id]`),
+ * e o balão ganha a linha que avisa disso.
  */
 export function MenuDaLinha({
   linha,
@@ -37,7 +40,7 @@ export function MenuDaLinha({
   const t = useT();
   const [editando, setEditando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
-  const excluir = useDeleteContact();
+  const excluir = useExcluirContatoDaLista();
   // O contato completo só é buscado quando "Editar" é escolhido.
   const contato = useContact(editando ? linha.id : "");
   const vinculos = useQuery({
@@ -52,6 +55,7 @@ export function MenuDaLinha({
     },
   });
   const bloqueio = confirmando ? mensagemDeBloqueioPorVinculo(vinculos.data, t) : null;
+  const ocupado = excluir.isPending || vinculos.isLoading;
 
   const confirmar = () =>
     excluir.mutate(linha.id, {
@@ -74,7 +78,15 @@ export function MenuDaLinha({
               <EllipsisVertical size={18} aria-hidden />
             </DropdownMenuTrigger>
           </PopoverAnchor>
-          <DropdownMenuContent side="left" align="start" className={CONTEUDO_DO_MENU}>
+          <DropdownMenuContent
+            side="left"
+            align="start"
+            className={CONTEUDO_DO_MENU}
+            // Escolhido "Excluir", o foco não volta ao ⋮: voltar contaria como "fora" do balão e o fecharia ao abrir.
+            onCloseAutoFocus={(e) => {
+              if (confirmando) e.preventDefault();
+            }}
+          >
             <DropdownMenuItem className={ITEM_DO_MENU} onSelect={() => setEditando(true)}>
               <Pencil size={14} aria-hidden />
               {t("Editar")}
@@ -102,6 +114,9 @@ export function MenuDaLinha({
           ) : (
             <>
               <p>{t("Tem certeza que deseja excluir o contato selecionado?")}</p>
+              <p className="mt-1 text-[12px] text-casca-suave">
+                {t("Os negócios associados ao contato também serão excluídos.")}
+              </p>
               <div className="mt-3 flex justify-end gap-2">
                 <button
                   type="button"
@@ -113,7 +128,8 @@ export function MenuDaLinha({
                 <button
                   type="button"
                   onClick={confirmar}
-                  disabled={excluir.isPending || vinculos.isLoading}
+                  disabled={ocupado}
+                  title={ocupado ? t("Aguarde…") : undefined}
                   className="h-8 rounded-[4px] bg-casca-alerta px-3 font-medium text-white hover:brightness-95 disabled:opacity-60"
                 >
                   {t("Excluir")}

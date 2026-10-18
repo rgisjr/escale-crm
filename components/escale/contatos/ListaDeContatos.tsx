@@ -7,6 +7,7 @@ import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover } from "@/components/ui/popover";
 import { useColunasDaLista, useSalvarColunasDaLista } from "@/hooks/escale/useColunasDaLista";
+import { useAcompanharAcoes } from "@/hooks/escale/useAcompanharAcoes";
 import { useEstadoDaListaDeContatos } from "@/hooks/escale/useEstadoDaListaDeContatos";
 import {
   useCriarFiltroDaLista,
@@ -15,6 +16,7 @@ import {
   useMudarFiltroDaLista,
 } from "@/hooks/escale/useFiltrosDaLista";
 import { useListaDeContatos } from "@/hooks/escale/useListaDeContatos";
+import { useSelecaoDaLista } from "@/hooks/escale/useSelecaoDaLista";
 import { useT } from "@/hooks/i18n/useT";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import {
@@ -27,6 +29,7 @@ import {
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
 import { CHAVE_DO_POR_PAGINA, POR_PAGINA, POR_PAGINA_PADRAO } from "@/lib/escale/contatos/regras";
+import { alvoDaSelecao } from "@/lib/escale/contatos/selecao";
 import { Bookmark, RefreshCw, Search } from "@/lib/ui/icons-da-casca";
 
 import type { OrigemParaCriar } from "./CamposDaOportunidade";
@@ -38,6 +41,10 @@ import { SeletorDeFiltros } from "./filtros/SeletorDeFiltros";
 import { JanelaNovoNegocio } from "./JanelaNovoNegocio";
 import { MenuNovoContato } from "./MenuNovoContato";
 import { PainelDeColunas } from "./PainelDeColunas";
+import { AcoesEmMassa } from "./massa/AcoesEmMassa";
+import { FaixaDaSelecao } from "./massa/FaixaDaSelecao";
+import { MenuDaSelecao } from "./massa/MenuDaSelecao";
+import { PainelDeExportacoes } from "./massa/PainelDeExportacoes";
 import { SeloDeMescla } from "./SeloDeMescla";
 import { TabelaDeContatos } from "./TabelaDeContatos";
 
@@ -130,12 +137,22 @@ export function ListaDeContatos({
   const podeCriar = ROLE_RANK[papel] >= ROLE_RANK.agent;
   const podeExcluir = ROLE_RANK[papel] >= ROLE_RANK.manager;
   const podeMesclar = ROLE_RANK[papel] >= ROLE_RANK.manager;
+  // FORK ESCALE · Fase 2B: selecionar e agir em massa é de gerente ou acima (PRD §5).
+  const podeSelecionar = ROLE_RANK[papel] >= ROLE_RANK.manager;
   const total = dados?.total ?? 0;
   const comFiltro = temFiltros(filtros);
   const salvoAtivo = (salvos.data ?? []).find((s) => s.id === filtroSalvoId) ?? null;
   const batendoComSalvo = salvoAtivo !== null && mesmosFiltros(salvoAtivo.criterios, filtros);
   const quantos = chipsDosFiltros(filtros).length;
   const falhou = t("Não consegui completar essa ação. Tente de novo.");
+  const linhas = dados?.linhas ?? [];
+  const sel = useSelecaoDaLista({
+    linhas,
+    total,
+    primeiro: (pagina - 1) * porPagina,
+    chaveDaConsulta: JSON.stringify([buscaDaUrl, visao, f]),
+  });
+  const acompanhamento = useAcompanharAcoes();
 
   const mudarPorPagina = (n: number) => {
     setPorPagina(n);
@@ -200,6 +217,8 @@ export function ListaDeContatos({
         <h1 className="text-[16px] font-medium text-casca-texto">{t("Contatos")}</h1>
         <div className="flex items-center gap-4">
           {podeMesclar && <SeloDeMescla />}
+          {/* FORK ESCALE · Fase 2B (Q4): minhas exportações e, para o admin, os pedidos para aprovar. */}
+          {podeSelecionar && <PainelDeExportacoes ehAdmin={papel === "admin"} />}
           <MenuNovoContato origens={origens} podeCriar={podeCriar} />
         </div>
       </header>
@@ -307,9 +326,17 @@ export function ListaDeContatos({
         />
       ) : null}
 
+      <FaixaDaSelecao
+        modo={sel.modoDaFaixa}
+        naPagina={linhas.length}
+        total={total}
+        aoSelecionarTodos={sel.selecionarTodos}
+        aoLimpar={sel.limpar}
+      />
+
       <div className="min-h-0 flex-1 overflow-auto px-6">
         <TabelaDeContatos
-          linhas={dados?.linhas ?? []}
+          linhas={linhas}
           colunas={colunas.itens}
           carregando={consulta.isLoading}
           erro={consulta.isError}
@@ -317,6 +344,18 @@ export function ListaDeContatos({
           podeVerNegocios={podeCriar}
           podeExcluir={podeExcluir}
           aoAdicionarNegocio={setNovoNegocio}
+          cabecalhoDaSelecao={
+            <MenuDaSelecao
+              estado={sel.estado}
+              podeSelecionar={podeSelecionar}
+              total={total}
+              naPagina={linhas.length}
+              aoMarcarPagina={sel.marcarPagina}
+              aoSelecionarTodos={sel.selecionarTodos}
+              aoSelecionarQuantidade={sel.selecionarQuantidade}
+            />
+          }
+          selecao={{ podeSelecionar, marcada: sel.marcada, aoAlternar: sel.alternar }}
         />
       </div>
 
@@ -331,6 +370,15 @@ export function ListaDeContatos({
         />
       </footer>
 
+      {podeSelecionar && sel.quantidade > 0 ? (
+        <AcoesEmMassa
+          quantidade={sel.quantidade}
+          alvo={alvoDaSelecao(sel.selecao, { q: buscaDaUrl, v: visao, f })}
+          origens={origens}
+          aoLimpar={sel.limpar}
+          aoPedir={acompanhamento.acompanhar}
+        />
+      ) : null}
       <JanelaNovoNegocio
         contato={novoNegocio}
         aoFechar={() => setNovoNegocio(null)}
