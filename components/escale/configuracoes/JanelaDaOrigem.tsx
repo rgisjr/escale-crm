@@ -68,6 +68,7 @@ import { EmBreve } from "./EmBreve";
 import { membrosAtivosDaEquipe } from "./ListaDePessoas";
 import { RodapeDaDistribuicao } from "./RodapeDaDistribuicao";
 import { SecaoAlerta } from "./SecaoAlerta";
+import { SecaoAtribuicao } from "./SecaoAtribuicao";
 import { SecaoCampos } from "./SecaoCampos";
 import { SecaoDistribuicao } from "./SecaoDistribuicao";
 import { SecaoGerais } from "./SecaoGerais";
@@ -99,7 +100,7 @@ export interface PropsDaSecao {
  * fecha. Sem X: fecha com Esc ou Cancelar.
  *
  * Fase 1K: a subaba "Distribuição de dono" (só admin), com a rota própria no mesmo "Salvar" e o
- * "Resetar distribuição" no canto do rodapé.
+ * "Resetar distribuição" no canto do rodapé. Fase 1K: a subaba "Atribuição de ganho".
  */
 export function JanelaDaOrigem({
   id,
@@ -161,7 +162,6 @@ export function JanelaDaOrigem({
       id: "atribuicao",
       rotulo: t("Atribuição de ganho"),
       icone: ReceiptText,
-      emBreve: t("Chega na fase 1K."),
     },
     {
       id: "campos_visiveis",
@@ -257,6 +257,8 @@ export function JanelaDaOrigem({
         return <SecaoPermissoes {...props} />;
       case "distribuicao":
         return <SecaoDistribuicao {...props} />;
+      case "atribuicao":
+        return <SecaoAtribuicao {...props} />;
       default:
         return null;
     }

@@ -8,6 +8,7 @@
 import type { VisibilityMode } from "@/lib/auth/types";
 import { normalizarTag } from "@/lib/contacts/tag-normalizada";
 import { pessoasDaOrigem, visualizacaoDaOrigem } from "@/lib/escale/acesso/regras";
+import { lerAtribuicao, soAdminGanha, type AtribuicaoDeGanho } from "@/lib/escale/ganho/regras";
 import { MOEDAS_SERVIDAS, type MoedaServida } from "@/lib/money";
 
 import { lerAlerta, type AlertaDeTempo } from "./alerta";
@@ -38,6 +39,10 @@ export interface ConfiguracoesDoFork {
   visualizacao: VisibilityMode | null;
   /** Quem tem acesso à origem (1J); vazia = segue a lista do grupo, ou sem restrição. */
   pessoas: string[];
+  /** Fase 1K (D14): só o admin põe o negócio em Ganho nesta origem. */
+  soAdminGanha: boolean;
+  /** Fase 1K (D14): as regras do crédito do ganho. */
+  atribuicao: AtribuicaoDeGanho;
 }
 
 export function comoRecord(valor: unknown): Record<string, unknown> {
@@ -89,5 +94,7 @@ export function lerConfiguracoesDoFork(settings: unknown): ConfiguracoesDoFork {
     alerta: lerAlerta(s[CHAVE_DO_ALERTA]),
     visualizacao: visualizacaoDaOrigem(s),
     pessoas: pessoasDaOrigem(s),
+    soAdminGanha: soAdminGanha(s),
+    atribuicao: lerAtribuicao(s),
   };
 }

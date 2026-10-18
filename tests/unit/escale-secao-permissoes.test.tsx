@@ -53,6 +53,8 @@ const config = (pessoas: string[], pessoasDoGrupo: string[] = []): Configuracoes
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas,
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
   },
   motivos: [],
   campos: [],

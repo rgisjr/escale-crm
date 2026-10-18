@@ -195,6 +195,31 @@ describe("GET /api/v1/pipelines/:id/configuracoes", () => {
 });
 
 describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
+  it("atribuicao grava as duas chaves (só admin) e audita a seção", async () => {
+    authOk("admin");
+    const db = banco();
+    const res = await PATCH(
+      pedido("PATCH", {
+        atribuicao: { so_admin: true, operador: "ou", condicoes: [{ tipo: "atividade", vezes: 2, atividade: "ligacao" }] },
+      }),
+      ctx(PIPE),
+    );
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    expect(escrita?.patch).toEqual({
+      settings: {
+        ...SETTINGS,
+        escale_so_admin_ganha: true,
+        escale_atribuicao_de_ganho: { operador: "ou", condicoes: [{ tipo: "atividade", vezes: 2, atividade: "ligacao" }] },
+      },
+    });
+  });
+
+  it("atribuicao é só do administrador (gerente: 403)", async () => {
+    banco();
+    const res = await PATCH(pedido("PATCH", { atribuicao: { so_admin: true, operador: "e", condicoes: [] } }), ctx(PIPE));
+    expect(res.status).toBe(403);
+  });
   it("gerais grava a visualização escolhida na origem", async () => {
     const db = banco();
     const res = await PATCH(pedido("PATCH", { gerais: { moeda: null, tags_padrao: [], visualizacao: "all" } }), ctx(PIPE));

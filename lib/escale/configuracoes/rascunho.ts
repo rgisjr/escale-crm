@@ -15,6 +15,7 @@ import {
   type LinhaDaDistribuicao,
   type PedidoDaDistribuicao,
 } from "@/lib/escale/distribuicao/regras";
+import { atribuicaoDaTela, patchDaAtribuicao, type AtribuicaoNaTela } from "@/lib/escale/ganho/regras";
 import type { MoedaServida } from "@/lib/money";
 
 import {
@@ -55,6 +56,8 @@ export interface RascunhoDaOrigem {
   permissoes: { pessoas: string[] };
   /** Fase 1K (D13): as linhas da distribuição e o "Reiniciar a contagem de negócios ao salvar". */
   distribuicao: { linhas: LinhaDaDistribuicao[]; reiniciar: boolean };
+  /** Fase 1K (D14): a caixa "só o admin dá ganho" e as regras do crédito do ganho. */
+  atribuicao: AtribuicaoNaTela;
 }
 
 /** O exemplo da Clint (01-029): atenção em 4 horas, crítico em 8 horas. */
@@ -95,6 +98,7 @@ export function rascunhoInicial(config: ConfiguracoesDaOrigem): RascunhoDaOrigem
     },
     permissoes: { pessoas: [...config.fork.pessoas] },
     distribuicao: { linhas: linhasDaTela(config.distribuicao), reiniciar: false },
+    atribuicao: atribuicaoDaTela(config.fork),
   };
 }
 
@@ -216,6 +220,11 @@ export function pedidoDoSalvar(
   }
   if (!igual(r.permissoes, inicial.permissoes)) {
     patch.permissoes = { pessoas: r.permissoes.pessoas };
+  }
+  if (!igual(r.atribuicao, inicial.atribuicao)) {
+    const lido = patchDaAtribuicao(r.atribuicao);
+    if (!lido.ok) return { ok: false, erro: lido.erro, secao: "atribuicao" };
+    patch.atribuicao = lido.patch;
   }
   let distribuicao: PedidoDaDistribuicao | null = null;
   if (!igual(r.distribuicao.linhas, inicial.distribuicao.linhas)) {

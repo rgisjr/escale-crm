@@ -62,6 +62,8 @@ const CONFIG = {
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas: [],
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
   },
   moedaDaOrganizacao: "BRL",
   visualizacao: "own_and_unassigned",

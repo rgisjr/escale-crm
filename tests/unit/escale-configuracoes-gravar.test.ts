@@ -36,8 +36,8 @@ describe("o corpo do PATCH", () => {
     ).toBe(false);
     expect(patchDasConfiguracoesSchema.safeParse({ outra: 1 }).success).toBe(false);
   });
-  it("motivos e campos são do administrador", () => {
-    expect([...SECOES_DO_ADMINISTRADOR].sort()).toEqual(["campos", "motivos"]);
+  it("motivos, campos e atribuição são do administrador", () => {
+    expect([...SECOES_DO_ADMINISTRADOR].sort()).toEqual(["atribuicao", "campos", "motivos"]);
     expect(
       secoesDoPatch({ gerais: { moeda: null, tags_padrao: [], visualizacao: "own_and_unassigned" }, campos: { regras: [] } }),
     ).toEqual(["gerais", "campos"]);

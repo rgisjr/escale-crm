@@ -119,7 +119,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   if (secoes.some((s) => SECOES_DO_ADMINISTRADOR.includes(s)) && !podeAdministrar) {
     return fail(
       "forbidden",
-      t("Só administrador muda motivos de perda e campos obrigatórios."),
+      t("Só administrador muda motivos de perda, campos obrigatórios e atribuição de ganho."),
       403,
       { requestId },
     );

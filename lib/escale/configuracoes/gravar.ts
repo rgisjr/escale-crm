@@ -15,6 +15,7 @@ import {
   VISUALIZACOES,
   pessoasDaOrigem,
 } from "@/lib/escale/acesso/regras";
+import { atribuicaoSchema, gravarAtribuicao } from "@/lib/escale/ganho/regras";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
 
 import { alertaDeTempoSchema, gravarAlerta } from "./alerta";
@@ -58,6 +59,7 @@ export const patchDasConfiguracoesSchema = z
       .object({ pessoas: z.array(z.string().uuid()).max(PESSOAS_MAX) })
       .strict()
       .optional(),
+    atribuicao: atribuicaoSchema.optional(),
   })
   .strict()
   .refine((p) => Object.values(p).some((v) => v !== undefined), { message: "nada para salvar" });
@@ -68,12 +70,13 @@ export type SecaoDasConfiguracoes =
   | "campos"
   | "alerta"
   | "permissoes"
-  | "distribuicao";
+  | "distribuicao"
+  | "atribuicao";
 
-export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos"];
+export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos", "atribuicao"];
 
 export function secoesDoPatch(patch: PatchDasConfiguracoes): SecaoDasConfiguracoes[] {
-  return (["gerais", "motivos", "campos", "alerta", "permissoes"] as const).filter((s) => patch[s] !== undefined);
+  return (["gerais", "motivos", "campos", "alerta", "permissoes", "atribuicao"] as const).filter((s) => patch[s] !== undefined);
 }
 
 export type VereditoDaGravacao =
@@ -138,5 +141,6 @@ export function aplicarConfiguracoes(
     if (!lista.ok) return lista;
     s = comChave(s, CHAVE_DAS_PESSOAS, lista.lista);
   }
+  if (patch.atribuicao) s = gravarAtribuicao(s, patch.atribuicao);
   return { ok: true, settings: s };
 }

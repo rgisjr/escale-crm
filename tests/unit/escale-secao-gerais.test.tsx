@@ -36,6 +36,8 @@ const CONFIG: ConfiguracoesDaOrigem = {
     alerta: { geral: null, etapas: {} },
     visualizacao: null,
     pessoas: [],
+    soAdminGanha: false,
+    atribuicao: { operador: "e", condicoes: [] },
   },
   motivos: [],
   campos: [],
