@@ -33940,7 +33940,7 @@ do $f$ begin perform public.fn_aplicar_travas_de_suporte(); end $f$;
 notify pgrst, 'reload schema';
 
 -- ---- FORK ESCALE · notas e arquivos da ficha (migration 9008) ----
--- manifest: **Notas e arquivos da ficha do negócio (fork Escale, Fase 1H).** Duas tabelas novas. `crm_notas_do_negocio`: a nota que a pessoa escreve no negócio ("Nova nota" da Clint), com autor, texto (1 a 4.000 caracteres) e o contato; vista por quem vê o negócio (`fn_can_view_lead` via `crm_leads`, com a sessão de quem olha), escrita por agent+ como autor (`user_id = auth.uid()`), editada e apagada pelo autor ou por gerente+. `crm_arquivos_do_contato`: o arquivo enviado junto do contato (na Clint o arquivo é do contato, não do negócio), com o negócio de onde foi enviado, nome, extensão, mime, tamanho e o caminho no bucket; vista pela organização (como `contacts`), enviada por agent+ como autor, apagada pelo autor ou por gerente+. FKs compostas com `on delete cascade` para o negócio (ganha o índice único `uq_crm_leads_org_id`), o contato e o autor. Bucket privado `arquivos-do-contato` (50 MB), sem policy em `storage.objects`: só o service role lê e grava, por rota (doutrina da 0464/0483). Garante também o índice único `uq_contacts_org_id` (o mesmo da 0611, `if not exists`): o baseline é aplicado em ordem e a 0611 mora mais adiante nele, então a FK composta para `contacts` precisa do alvo já no bloco. Policies de UPDATE e DELETE separadas (nunca `for all`, que abriria leitura e escrita fora da regra do negócio); a pessoa só edita o `texto` da nota (grant por coluna) e o arquivo não se edita. Travas de suporte nas duas tabelas.
+-- manifest: **Notas e arquivos da ficha do negócio (fork Escale, Fase 1H).** Duas tabelas novas. `crm_notas_do_negocio`: a nota que a pessoa escreve no negócio ("Nova nota" da Clint), com autor, texto (1 a 4.000 caracteres) e o contato; vista por quem vê o negócio (`fn_can_view_lead` via `crm_leads`, com a sessão de quem olha), escrita por agent+ como autor (`user_id = auth.uid()`), editada e apagada pelo autor ou por gerente+. `crm_arquivos_do_contato`: o arquivo enviado junto do contato (na Clint o arquivo é do contato, não do negócio), com o negócio de onde foi enviado, nome, extensão, mime, tamanho e o caminho no bucket; vista pela organização (como `contacts`), enviada por agent+ como autor, apagada pelo autor ou por gerente+. FKs compostas com `on delete cascade` para o negócio (ganha o índice único `uq_crm_leads_org_id`), o contato e o autor. Bucket privado `arquivos-do-contato` (50 MB), sem policy em `storage.objects`: só o service role lê e grava, por rota (doutrina da 0464/0483). Garante também o índice único `uq_contacts_org_id` (o mesmo da 0611, `if not exists`): o baseline é aplicado em ordem e a 0611 mora mais adiante nele, então a FK composta para `contacts` precisa do alvo já no bloco. Policies de UPDATE e DELETE separadas (nunca `for all`, que abriria leitura e escrita fora da regra do negócio); a pessoa só edita o `texto` da nota (grant por coluna) e o arquivo não se edita. Autoria e data não se falsificam: um trigger de INSERT nas duas tabelas (`fn_escale_carimbar_autoria`, definer só porque `authenticated` não lê `auth.users`, fechada para todo papel) grava `created_at = now()` e, com sessão (`auth.uid()`), o `user_nome` do perfil de quem grava; sem sessão (service role, rotas) o nome informado fica. A nota repete a visibilidade do negócio nas policies de UPDATE e DELETE (um comando sem filtro não passa pelo SELECT) e o caminho do arquivo é amarrado à pasta da organização (`org/…`, sem `..`). Travas de suporte nas duas tabelas.
 -- 9008: notas do negócio e arquivos do contato (fork Escale).
 
 -- A FK composta para o negócio precisa do alvo único (o mesmo desenho da 9003 para crm_pipelines).
@@ -33949,6 +33949,34 @@ create unique index if not exists uq_crm_leads_org_id on public.crm_leads (organ
 -- O alvo da FK composta para contacts é o da 0611 (mesmo nome, `if not exists`). No baseline a 0611
 -- vem DEPOIS deste bloco; sem esta linha a instalação nova falha em "no unique constraint matching".
 create unique index if not exists uq_contacts_org_id on public.contacts (organization_id, id);
+
+-- ── 0. carimbo de autoria e data (BEFORE INSERT nas duas tabelas) ─────────────
+-- `authenticated` tem INSERT em toda coluna pelo PostgREST, então nome do autor e data seriam
+-- falsificáveis. O trigger sobrescreve `created_at` sempre e, com sessão, o `user_nome` com o nome
+-- do perfil (user_metadata.full_name do Auth, o mesmo que a sessão do app expõe). Sem sessão
+-- (service role: rotas e seeds) o nome informado é respeitado. Sem HTTP: lê só a linha de quem grava.
+-- `security definer` é o mínimo necessário (auth.users não é legível por authenticated); search_path
+-- vazio, só `auth.uid()` do próprio JWT, e a função não é chamável por ninguém (trigger dispara sem EXECUTE).
+create or replace function public.fn_escale_carimbar_autoria()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $f$
+begin
+  new.created_at := now();
+  if auth.uid() is not null then
+    new.user_nome := (
+      select nullif(btrim(u.raw_user_meta_data ->> 'full_name'), '')
+        from auth.users u
+       where u.id = auth.uid()
+    );
+  end if;
+  return new;
+end;
+$f$;
+
+revoke execute on function public.fn_escale_carimbar_autoria() from public, anon, authenticated;
 
 -- ── 1. notas do negócio ───────────────────────────────────────────────────────
 create table if not exists public.crm_notas_do_negocio (
@@ -34005,20 +34033,29 @@ create policy crm_notas_do_negocio_insert on public.crm_notas_do_negocio
 
 -- Edita e apaga o autor, ou gerente ou acima (PRD §5). UMA policy por comando, nunca `for all`:
 -- policies permissivas somam por OR e a `for all` também valeria para SELECT e INSERT, abrindo a
--- leitura e a escrita fora da regra do negócio (achado do revisor). Para UPDATE/DELETE com WHERE o
--- Postgres ainda exige que a linha passe no SELECT, então só edita/apaga quem vê o negócio.
+-- leitura e a escrita fora da regra do negócio (achado do revisor). A visibilidade do negócio é
+-- repetida AQUI, nas duas policies: o Postgres só confronta a linha com a policy de SELECT quando o
+-- comando LÊ coluna (WHERE/RETURNING). Um UPDATE/DELETE sem filtro não lê nada, então sem este
+-- `exists` o autor alcançaria a nota de um negócio que deixou de enxergar. A subconsulta roda sob a
+-- RLS de quem escreve, e `crm_leads` aplica `fn_can_view_lead`.
 create policy crm_notas_do_negocio_dono_ou_gerente_write on public.crm_notas_do_negocio
   for update using (
     public.fn_is_platform_admin_full()
     or ((organization_id in (select public.fn_user_org_ids()))
         and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager')))
+        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
+        and exists (select 1 from public.crm_leads l
+                     where l.id = crm_notas_do_negocio.lead_id
+                       and l.organization_id = crm_notas_do_negocio.organization_id))
   )
   with check (
     public.fn_is_platform_admin_full()
     or ((organization_id in (select public.fn_user_org_ids()))
         and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager')))
+        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
+        and exists (select 1 from public.crm_leads l
+                     where l.id = crm_notas_do_negocio.lead_id
+                       and l.organization_id = crm_notas_do_negocio.organization_id))
   );
 
 create policy crm_notas_do_negocio_dono_ou_gerente_delete on public.crm_notas_do_negocio
@@ -34026,7 +34063,10 @@ create policy crm_notas_do_negocio_dono_ou_gerente_delete on public.crm_notas_do
     public.fn_is_platform_admin_full()
     or ((organization_id in (select public.fn_user_org_ids()))
         and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager')))
+        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
+        and exists (select 1 from public.crm_leads l
+                     where l.id = crm_notas_do_negocio.lead_id
+                       and l.organization_id = crm_notas_do_negocio.organization_id))
   );
 
 revoke all on public.crm_notas_do_negocio from anon;
@@ -34042,6 +34082,11 @@ drop trigger if exists trg_crm_notas_do_negocio_updated_at on public.crm_notas_d
 create trigger trg_crm_notas_do_negocio_updated_at
   before update on public.crm_notas_do_negocio
   for each row execute function public.fn_set_updated_at();
+
+drop trigger if exists trg_crm_notas_do_negocio_carimbo on public.crm_notas_do_negocio;
+create trigger trg_crm_notas_do_negocio_carimbo
+  before insert on public.crm_notas_do_negocio
+  for each row execute function public.fn_escale_carimbar_autoria();
 
 -- ── 2. arquivos do contato ────────────────────────────────────────────────────
 create table if not exists public.crm_arquivos_do_contato (
@@ -34108,6 +34153,27 @@ grant select, insert, update, delete on public.crm_arquivos_do_contato to authen
 grant all on public.crm_arquivos_do_contato to service_role;
 revoke truncate, references, trigger on public.crm_arquivos_do_contato from authenticated;
 revoke update on public.crm_arquivos_do_contato from authenticated;
+
+drop trigger if exists trg_crm_arquivos_do_contato_carimbo on public.crm_arquivos_do_contato;
+create trigger trg_crm_arquivos_do_contato_carimbo
+  before insert on public.crm_arquivos_do_contato
+  for each row execute function public.fn_escale_carimbar_autoria();
+
+-- O caminho no bucket nasce dentro da pasta da organização (a rota monta `org/contato/id.ext`) e sem
+-- `..`. Não cita contact_id de propósito: a mesclagem de contatos reaponta `contact_id` e o objeto
+-- continua na pasta antiga. `add constraint` não tem `if not exists`, então a guarda é no catálogo.
+do $c$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conname = 'crm_arquivos_do_contato_caminho_valido'
+       and conrelid = 'public.crm_arquivos_do_contato'::regclass
+  ) then
+    alter table public.crm_arquivos_do_contato
+      add constraint crm_arquivos_do_contato_caminho_valido
+      check (storage_path like organization_id::text || '/%' and storage_path !~ '\.\.');
+  end if;
+end $c$;
 
 -- ── 3. bucket privado ─────────────────────────────────────────────────────────
 -- Sem policy em storage.objects (doutrina da 0464/0483): o service role ignora a

@@ -78,9 +78,59 @@ describe("notas e arquivos: migration 9008 e bloco do baseline", () => {
 
   it("nenhuma policy é `for all` (somaria leitura e escrita por OR); a pessoa só edita o texto da nota", () => {
     const sql = ler(MIGRATION);
-    expect(sql).not.toMatch(/^s*for all/m);
+    expect(sql).not.toMatch(/^\s*for\s+all\b/m);
     expect(sql).toContain("grant update (texto) on public.crm_notas_do_negocio to authenticated;");
     expect(sql).toContain("revoke update on public.crm_arquivos_do_contato from authenticated;");
+  });
+
+  it("UPDATE e DELETE da nota repetem a regra de visibilidade do negócio (não dependem do SELECT)", () => {
+    const sql = ler(MIGRATION);
+    for (const policy of ["dono_ou_gerente_write", "dono_ou_gerente_delete"]) {
+      const inicio = sql.indexOf(`create policy crm_notas_do_negocio_${policy} on`);
+      expect(inicio).toBeGreaterThan(-1);
+      const fim = sql.indexOf(";\n\n", inicio);
+      const corpo = sql.slice(inicio, fim);
+      expect(corpo).toMatch(/exists \(select 1 from public\.crm_leads l/);
+      expect(corpo).toContain("l.organization_id = crm_notas_do_negocio.organization_id");
+    }
+  });
+
+  it("a autoria e a data são carimbadas pelo banco no INSERT das duas tabelas (trigger, sem HTTP)", () => {
+    const sql = ler(MIGRATION);
+    expect(sql).toContain("new.created_at := now();");
+    expect(sql).toContain("raw_user_meta_data ->> 'full_name'");
+    expect(sql).toContain("auth.uid() is not null");
+    expect(sql).toContain("set search_path = ''");
+    expect(sql).toContain(
+      "revoke execute on function public.fn_escale_carimbar_autoria() from public, anon, authenticated;",
+    );
+    for (const tabela of ["crm_notas_do_negocio", "crm_arquivos_do_contato"]) {
+      expect(sql).toMatch(
+        new RegExp(
+          String.raw`create trigger trg_${tabela}_carimbo\s+before insert on public\.${tabela}\s+for each row execute function public\.fn_escale_carimbar_autoria\(\)`,
+        ),
+      );
+    }
+    expect(sql).not.toMatch(/net\.http|pg_net|http_post/i);
+  });
+
+  it("o caminho do arquivo nasce dentro da pasta da organização, sem `..` e sem citar contact_id", () => {
+    const sql = ler(MIGRATION);
+    const inicio = sql.indexOf("add constraint crm_arquivos_do_contato_caminho_valido");
+    expect(inicio).toBeGreaterThan(-1);
+    const constraint = sql.slice(inicio, sql.indexOf(";", inicio));
+    expect(constraint).toContain(
+      String.raw`check (storage_path like organization_id::text || '/%' and storage_path !~ '\.\.')`,
+    );
+    expect(constraint).not.toContain("contact_id");
+    expect(sql).toMatch(/if not exists \(\s*select 1 from pg_constraint/);
+  });
+
+  it("nenhum arquivo do commit carrega o byte de controle 0x08 (backspace)", () => {
+    const arquivos = [MIGRATION, "supabase/baseline.sql", __filename.slice(RAIZ.length + 1)];
+    for (const caminho of arquivos) {
+      expect(ler(caminho).includes(String.fromCharCode(8))).toBe(false);
+    }
   });
 
   it("o bucket é privado, de 50 MB, sem policy de escrita em storage.objects", () => {
