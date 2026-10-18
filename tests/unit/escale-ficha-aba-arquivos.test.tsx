@@ -37,7 +37,12 @@ const arquivos = vi.hoisted(() => ({
       created_at: "2026-10-10T10:00:00Z",
     },
   ],
-  enviar: vi.fn(async () => ({ enviados: 1, falhas: [] })),
+  enviar: vi.fn(
+    async (): Promise<{
+      enviados: number;
+      falhas: { nome: string; mensagem: string | null }[];
+    }> => ({ enviados: 1, falhas: [] }),
+  ),
   excluir: vi.fn(async () => undefined),
 }));
 vi.mock("@/hooks/escale/useArquivosDoContato", () => ({
@@ -127,6 +132,27 @@ describe("a tabela", () => {
 });
 
 describe("Novo arquivo", () => {
+  it("se um envio falha: toast com o nome e o motivo traduzido, e o modal fica aberto só com o que falhou", async () => {
+    const { toast } = await import("sonner");
+    arquivos.enviar.mockResolvedValueOnce({
+      enviados: 1,
+      falhas: [{ nome: "contrato.pdf", mensagem: null }],
+    });
+    render(<AbaArquivos lead={LEAD} />);
+    await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
+    const janela = await screen.findByRole("dialog", { name: "Novo documento" });
+    await userEvent.upload(within(janela).getByLabelText("Adicionar"), [
+      new File(["x"], "contrato.pdf", { type: "application/pdf" }),
+      new File(["y"], "foto.png", { type: "image/png" }),
+    ]);
+    await userEvent.click(within(janela).getByRole("button", { name: "Salvar" }));
+    expect(toast.success).toHaveBeenCalledWith("Arquivo(s) enviado(s) com sucesso");
+    expect(toast.error).toHaveBeenCalledWith("contrato.pdf: Erro ao enviar arquivo(s)");
+    expect(screen.getByRole("dialog", { name: "Novo documento" })).toBeInTheDocument();
+    expect(within(janela).getByText("contrato.pdf")).toBeInTheDocument();
+    expect(within(janela).queryByText("foto.png")).toBeNull();
+  });
+
   it("sem permissão (quem só lê): 'Novo arquivo' desligado com 'Sem permissão'", () => {
     permissao.pode = false;
     render(<AbaArquivos lead={LEAD} />);

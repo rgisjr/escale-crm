@@ -16,10 +16,15 @@ export function useArquivosDoContato(contactId: string | null) {
   });
 }
 
+/** Um arquivo que não subiu: a mensagem já vem traduzida pela rota; `null` = sem mensagem (rede, 5xx sem corpo). */
+export interface FalhaDoEnvio {
+  nome: string;
+  mensagem: string | null;
+}
+
 export interface ResultadoDoEnvio {
   enviados: number;
-  /** "nome.ext: mensagem" por arquivo que falhou. */
-  falhas: string[];
+  falhas: FalhaDoEnvio[];
 }
 
 export function useEnviarArquivos(contactId: string, leadId: string | null) {
@@ -42,10 +47,10 @@ export function useEnviarArquivos(contactId: string, leadId: string | null) {
             const corpo = (await res.json().catch(() => null)) as {
               error?: { message?: string };
             } | null;
-            resultado.falhas.push(`${arquivo.name}: ${corpo?.error?.message ?? res.statusText}`);
+            resultado.falhas.push({ nome: arquivo.name, mensagem: corpo?.error?.message ?? null });
           }
         } catch {
-          resultado.falhas.push(`${arquivo.name}: falha de rede`);
+          resultado.falhas.push({ nome: arquivo.name, mensagem: null });
         }
       }
       return resultado;
