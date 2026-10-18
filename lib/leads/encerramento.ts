@@ -25,6 +25,7 @@ import { ApiError } from "@/lib/api/types";
 import { audit } from "@/lib/audit";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
+import { recusaDoGanhoPeloBanco } from "@/lib/escale/ganho/recusa";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import {
   recusaDeCamposObrigatorios,
@@ -267,6 +268,11 @@ export async function encerraDemanda(
     const recusa = recusaDeMotivoDaPerdaPeloBanco(updErr, ctx.idioma);
     if (recusa) {
       throw new ApiError(422, recusa.codigo, undefined, ctx.requestId, recusa.mensagem);
+    }
+    // FORK ESCALE · Fase 1K (N16): "só o administrador marca ganho" (gatilho da 9014).
+    const recusaDoGanho = recusaDoGanhoPeloBanco(updErr, ctx.idioma);
+    if (recusaDoGanho) {
+      throw new ApiError(403, recusaDoGanho.codigo, undefined, ctx.requestId, recusaDoGanho.mensagem);
     }
     throw new ApiError(500, "internal_error", undefined, ctx.requestId, updErr.message);
   }

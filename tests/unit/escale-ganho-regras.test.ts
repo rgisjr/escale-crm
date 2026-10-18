@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { MENSAGEM_DO_GANHO_BLOQUEADO, recusaDoGanhoPeloBanco } from "@/lib/escale/ganho/recusa";
@@ -151,4 +153,13 @@ describe("quem ganha e as frases", () => {
     expect(recusaDoGanhoPeloBanco({ code: "23514", message: "x" }, "pt-BR")).toBeNull();
     expect(recusaDoGanhoPeloBanco(null, "pt-BR")).toBeNull();
   });
+});
+
+describe("os encaixes da recusa do ganho (N16)", () => {
+  it.each(["app/api/v1/leads/[id]/move/route.ts", "lib/leads/encerramento.ts", "app/api/v1/leads/bulk/route.ts"])(
+    "%s traduz a recusa do banco",
+    (arquivo) => {
+      expect(readFileSync(join(process.cwd(), arquivo), "utf8")).toContain("recusaDoGanhoPeloBanco(");
+    },
+  );
 });
