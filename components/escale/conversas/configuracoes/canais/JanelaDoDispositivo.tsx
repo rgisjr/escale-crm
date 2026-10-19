@@ -10,17 +10,25 @@ import {
 import { AbasDaCasca } from "@/components/escale/ui/AbasDaCasca";
 import { AjudaDaCasca } from "@/components/escale/ui/AjudaDaCasca";
 import { InterruptorDaCasca } from "@/components/escale/ui/InterruptorDaCasca";
+import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import type { ChannelSession } from "@/hooks/channels/useChannelSessions";
 import {
+  useExcluirDispositivo,
   useGravarRoteamento,
   useRenomearDispositivo,
   useRoteamentoDosCanais,
 } from "@/hooks/escale/useDispositivosDaCasca";
+import {
+  useCriacaoDeNegocio,
+  useOrigensDaCriacao,
+  useSalvarCriacaoDeNegocio,
+} from "@/hooks/escale/useCriacaoDeNegocio";
 import { useSetorDoDispositivo, useSetores } from "@/hooks/escale/useSetores";
 import { useT } from "@/hooks/i18n/useT";
 import { useTeamMembers } from "@/hooks/team/useTeamMembers";
+import { validarCriacao, type CriacaoEmEdicao } from "@/lib/escale/conversas/criacao-de-negocio";
 import {
   ativarTodosNoDispositivo,
   ligarNoDispositivo,
@@ -28,15 +36,17 @@ import {
 } from "@/lib/escale/conversas/canais";
 import { grupoDoDispositivo } from "@/lib/escale/conversas/nova-conversa";
 import { formatarTelefone } from "@/lib/escale/contatos/regras";
-import { Search, Smartphone, X } from "@/lib/ui/icons-da-casca";
+import { Search, Smartphone, Trash2, X } from "@/lib/ui/icons-da-casca";
 
+import { AbaCriacaoDeNegocio } from "./AbaCriacaoDeNegocio";
 import { FotoDaPessoa } from "../FotoDaPessoa";
 
 /**
  * "INFORMAÇÕES DO DISPOSITIVO" (c101–c103, 16/10-04; E2; N10, N11). Nome e
  * setor salvam no rodapé; cada atendente salva na hora (o PATCH dos
  * responsáveis do original troca a lista do canal). Admin aparece ligado e
- * apagado ("Usuário administrador"). "Criação de negócio" é da 3E.
+ * apagado ("Usuário administrador"). A aba "Criação de negócio" (3E, F1) e o
+ * rodapé da Clint ("Remover dispositivo" + "Salvar alterações") entram na 3E.
  */
 export function JanelaDoDispositivo({
   aberta,
@@ -60,6 +70,13 @@ export function JanelaDoDispositivo({
   const gravarRoteamento = useGravarRoteamento();
   const renomear = useRenomearDispositivo();
   const setorDoDispositivo = useSetorDoDispositivo();
+  // FORK ESCALE · Fase 3E: a criação de negócio do dispositivo (rascunho na janela) e o remover.
+  const criacaoLida = useCriacaoDeNegocio(aberta && dispositivo ? dispositivo.id : null);
+  const origensDaCriacao = useOrigensDaCriacao(aberta && aba === "criacao").data ?? [];
+  const salvarCriacao = useSalvarCriacaoDeNegocio();
+  const excluir = useExcluirDispositivo();
+  const [criacao, setCriacao] = useState<CriacaoEmEdicao | null>(null);
+  const [removendo, setRemovendo] = useState(false);
   const setorAtual = dispositivo
     ? (setores.find((s) => s.ids_dos_dispositivos.includes(dispositivo.id))?.id ?? "")
     : "";
@@ -71,6 +88,9 @@ export function JanelaDoDispositivo({
     setSetorId(setorAtual);
     setBusca("");
   }, [aberta, dispositivo, setorAtual]);
+  useEffect(() => {
+    if (aberta) setCriacao(criacaoLida.data ? criacaoLida.data.criacao : null);
+  }, [aberta, criacaoLida.data]);
 
   const pessoas = useMemo(
     () =>
@@ -119,6 +139,20 @@ export function JanelaDoDispositivo({
         channel_session_id: dispositivo.id,
         setor_id: setorId || null,
       });
+    if (
+      ehAdmin &&
+      criacao &&
+      criacaoLida.data &&
+      JSON.stringify(criacao) !== JSON.stringify(criacaoLida.data.criacao)
+    ) {
+      const v = validarCriacao(criacao, t);
+      if (!v.ok) {
+        setAba("criacao");
+        toast.error(v.erro);
+        return;
+      }
+      await salvarCriacao.mutateAsync({ canalId: dispositivo.id, criacao: v.valor });
+    }
     toast.success(t("As alterações foram salvas."));
     aoFechar();
   };
@@ -140,7 +174,17 @@ export function JanelaDoDispositivo({
         />
       </div>
       {aba === "criacao" ? (
-        <p className="px-6 py-10 text-center text-[13px] text-casca-suave">{t("Em breve")}</p>
+        criacao ? (
+          <AbaCriacaoDeNegocio
+            rascunho={criacao}
+            aoMudar={setCriacao}
+            configurado={!!criacaoLida.data?.configurado}
+            origens={origensDaCriacao}
+            podeEditar={ehAdmin}
+          />
+        ) : (
+          <p className="px-6 py-10 text-center text-[13px] text-casca-suave">{t("Carregando…")}</p>
+        )
       ) : (
         <div className="flex max-h-[520px] flex-col gap-5 overflow-y-auto px-6 py-5">
           <div className="flex items-start gap-4 border-b border-casca-borda pb-5">
@@ -300,18 +344,46 @@ export function JanelaDoDispositivo({
       )}
       <div className="px-6 pb-4">
         <RodapeDaJanela>
-          <BotaoDaJanela variante="cancelar" onClick={aoFechar}>
-            {t("Cancelar")}
-          </BotaoDaJanela>
+          {ehAdmin ? (
+            <button
+              type="button"
+              onClick={() => setRemovendo(true)}
+              className="mr-auto flex items-center gap-1.5 text-[13px] font-medium text-casca-alerta"
+            >
+              <Trash2 size={14} aria-hidden />
+              {t("Remover dispositivo")}
+            </button>
+          ) : null}
           <BotaoDaJanela
             variante="salvar"
-            disabled={!ehAdmin || renomear.isPending || setorDoDispositivo.isPending}
+            disabled={
+              !ehAdmin ||
+              renomear.isPending ||
+              setorDoDispositivo.isPending ||
+              salvarCriacao.isPending
+            }
             onClick={() => void salvar()}
           >
             {t("Salvar alterações")}
           </BotaoDaJanela>
         </RodapeDaJanela>
       </div>
+      <JanelaDeConfirmacao
+        aberta={removendo}
+        aoFechar={() => setRemovendo(false)}
+        perigo
+        ocupado={excluir.isPending}
+        aoConfirmar={() =>
+          excluir.mutate(dispositivo.id, {
+            onSuccess: () => {
+              setRemovendo(false);
+              aoFechar();
+            },
+          })
+        }
+      >
+        <p>{t("Você tem certeza que deseja remover?")}</p>
+      </JanelaDeConfirmacao>
     </JanelaDaCasca>
   );
 }

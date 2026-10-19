@@ -52,6 +52,14 @@ vi.mock("@/hooks/escale/useDispositivosDaCasca", () => ({
   useRenomearDispositivo: () => ({ mutateAsync: renomear, isPending: false }),
   useExcluirDispositivo: () => ({ mutate: excluir, isPending: false }),
 }));
+const criacaoLida = vi.hoisted(() => ({
+  data: { configurado: false, criacao: { ligado: false, regras: [] } },
+}));
+vi.mock("@/hooks/escale/useCriacaoDeNegocio", () => ({
+  useCriacaoDeNegocio: () => criacaoLida,
+  useOrigensDaCriacao: () => ({ data: [] }),
+  useSalvarCriacaoDeNegocio: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock("@/hooks/escale/useSetores", () => ({
   useSetores: () => ({
     data: [
@@ -192,5 +200,15 @@ describe("JanelaDoDispositivo (c101, c102)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
     await vi.waitFor(() => expect(renomear).toHaveBeenCalledWith({ id: "d1", nome: "Sara" }));
     expect(setorDoDispositivo).not.toHaveBeenCalled();
+  });
+
+  it("a aba Criação de negócio mostra o cartão e o rodapé traz Remover dispositivo (3E)", () => {
+    wrap(
+      <JanelaDoDispositivo aberta aoFechar={vi.fn()} dispositivo={(sessoes[0] ?? null) as never} />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Criação de negócio" }));
+    expect(screen.getByText("Criar um negócio automaticamente")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Remover dispositivo/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).toBeNull();
   });
 });
