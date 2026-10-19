@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 
 import { patchConversationHandler } from "@/app/api/v1/conversations/_handler";
 import { ApiError } from "@/lib/api/types";
+import { requireSupportWrite } from "@/lib/impersonate/support";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 
@@ -12,7 +13,9 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** "Reabrir atendimento" (C2): o `PATCH status=open` do original, mais o evento. */
 export async function POST(_req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, true, async ({ authz, supabase, conversa, requestId }) => {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
     try {
       const reaberta = await patchConversationHandler(
         supabase,

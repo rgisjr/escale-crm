@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 
+import { requireSupportWrite } from "@/lib/impersonate/support";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { lerJson } from "@/lib/escale/origens/respostas";
@@ -19,7 +20,9 @@ const corpoSchema = z.object({ expected_revision: z.number().int().positive().op
  * pela sessão) mais o evento que a thread da Clint mostra.
  */
 export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, true, async ({ authz, supabase, conversa, requestId, t }) => {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId, t }) => {
     const lido = await lerJson(req);
     const parsed = corpoSchema.safeParse(lido.ok ? lido.json : {});
     if (!parsed.success)

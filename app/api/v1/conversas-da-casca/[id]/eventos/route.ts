@@ -15,7 +15,7 @@ const EVENTOS_MAX = 200;
 
 /** Os eventos da thread (C2, C4): as atribuições do original e os eventos do fork, pela sessão. */
 export async function GET(_req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, false, async ({ authz, supabase, conversa, requestId }) => {
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
     const [atribuicoes, proprios] = await Promise.all([
       supabase
         .from("conversation_assignment_events")

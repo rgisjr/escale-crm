@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 
 import { noContent, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { requireSupportWrite } from "@/lib/impersonate/support";
 import { camposParaEntrarEmEspera, camposParaSairDaEspera } from "@/lib/escale/conversas/espera";
 
 import { comAConversa, gravarEvento } from "../_comum";
@@ -11,7 +12,9 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** "Colocar em espera" (C2; decisão 2): o snooze do original sem fim, com a marca "sem lembrete". */
 export async function POST(_req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, true, async ({ authz, supabase, conversa, requestId }) => {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
     const campos = camposParaEntrarEmEspera(authz.user.id, new Date(), conversa.metadata);
     const { error } = await supabase
       .from("conversations")
@@ -34,7 +37,9 @@ export async function POST(_req: NextRequest, ctx: Ctx): Promise<Response> {
 
 /** "Remover espera". */
 export async function DELETE(_req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, true, async ({ authz, supabase, conversa, requestId }) => {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
     const { error } = await supabase
       .from("conversations")
       .update(camposParaSairDaEspera(conversa.metadata))

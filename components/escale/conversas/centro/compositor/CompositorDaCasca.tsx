@@ -71,10 +71,8 @@ export function CompositorDaCasca({
   const campoRef = useRef<HTMLTextAreaElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
   const provider = conversa.channel_sessions?.provider ?? null;
-  const contato = {
-    name: conversa.contacts?.name ?? null,
-    displayName: conversa.contacts?.display_name ?? null,
-  };
+  const apelido = conversa.contacts ? conversa.contacts.display_name : null;
+  const contato = { name: conversa.contacts?.name ?? null, displayName: apelido };
   const nomeParaOModelo = nomeDoContato(conversa.contacts) ?? conversa.contacts?.phone_number ?? "";
   const fechada = conversa.status === "closed";
   const slash = useMemo(() => resolveSlash(texto), [texto]);

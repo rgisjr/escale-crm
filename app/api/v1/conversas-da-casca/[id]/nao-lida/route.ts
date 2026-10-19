@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 
 import { ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { requireSupportWrite } from "@/lib/impersonate/support";
 
 import { comAConversa } from "../_comum";
 
@@ -10,7 +11,9 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** "Marcar como não lida" (C1): a bolha volta à linha. Pela sessão (policy de update do agente). */
 export async function POST(_req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, true, async ({ authz, supabase, conversa, requestId }) => {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
     const { error } = await supabase
       .from("conversations")
       .update({ unread_count_for_assignee: 1 })

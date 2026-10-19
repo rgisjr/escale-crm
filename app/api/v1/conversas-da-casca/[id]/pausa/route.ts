@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { fail, noContent, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { requireSupportWrite } from "@/lib/impersonate/support";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { pausaEnrollment, retomaEnrollment } from "@/lib/followup/intervencao";
 import { logger } from "@/lib/logger";
@@ -46,7 +47,7 @@ async function enrollmentsAtivos(
 
 /** O estado do cartão "Pausar automação" (D4): a pausa, se o agente está de pé, os follow-ups. */
 export async function GET(_req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, false, async ({ authz, supabase, conversa, requestId }) => {
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
     const { data: pausa } = await supabase
       .from("crm_pausas_de_automacao")
       .select("conversation_id, ate, user_id, enrollments, created_at")
@@ -75,7 +76,9 @@ export async function GET(_req: NextRequest, ctx: Ctx): Promise<Response> {
 
 /** "Pausar" (todas por um prazo, até retomar, ou data e hora). */
 export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, true, async ({ authz, supabase, conversa, requestId, t }) => {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId, t }) => {
     const lido = await lerJson(req);
     const parsed = corpoSchema.safeParse(lido.ok ? lido.json : null);
     if (!parsed.success)
@@ -140,7 +143,9 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
 
 /** "Retomar". */
 export async function DELETE(_req: NextRequest, ctx: Ctx): Promise<Response> {
-  return comAConversa(ctx.params, true, async ({ authz, supabase, conversa, requestId }) => {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
     const { data } = await supabase
       .from("crm_pausas_de_automacao")
       .select("conversation_id, ate, user_id, enrollments, created_at")

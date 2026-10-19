@@ -6,7 +6,6 @@ import { requireRole, type RoleCheck } from "@/lib/auth/require-role";
 import type { TipoDeEvento } from "@/lib/escale/conversas/eventos";
 import { lerUuid } from "@/lib/escale/origens/preferencias";
 import { traduzir } from "@/lib/i18n/dicionario";
-import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ConversaVisivel {
@@ -57,13 +56,11 @@ export async function gravarEvento(
 type Ok = Extract<RoleCheck, { ok: true }>;
 
 /**
- * O esqueleto de toda rota da conversa na casca: só escrita de verdade
- * (`requireSupportWrite`), agente ou acima, id válido, a conversa visível pela
+ * O esqueleto de toda rota da conversa na casca: agente ou acima, id válido, a conversa visível pela
  * sessão (404 se não), e o `t` do idioma de quem pede.
  */
 export async function comAConversa(
   params: Promise<{ id: string }>,
-  escreve: boolean,
   corpo: (e: {
     authz: Ok;
     supabase: SupabaseClient;
@@ -73,10 +70,6 @@ export async function comAConversa(
   }) => Promise<Response>,
 ): Promise<Response> {
   const requestId = randomUUID();
-  if (escreve) {
-    const supportDenied = await requireSupportWrite();
-    if (supportDenied) return supportDenied;
-  }
   const authz = await requireRole("agent", { requestId, resource: "conversations" });
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
