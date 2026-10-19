@@ -1,20 +1,23 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { TemplateFormDialog } from "@/app/app/templates/_components/TemplateFormDialog";
+import { JanelaRespostaRapida } from "@/components/escale/conversas/configuracoes/respostas/JanelaRespostaRapida";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useAuth } from "@/hooks/auth/AuthProvider";
+import { useRespostasDaConversa } from "@/hooks/escale/useRespostasRapidas";
+import { useSetores } from "@/hooks/escale/useSetores";
 import { useT } from "@/hooks/i18n/useT";
-import { useMessageTemplates, type MessageTemplate } from "@/hooks/inbox/useMessageTemplates";
+import { comBarra, type RespostaLida } from "@/lib/escale/conversas/respostas";
 import { interpolateTemplate, type TemplateContact } from "@/lib/inbox/template-vars";
 import { Search, Settings, X } from "@/lib/ui/icons-da-casca";
 
 /**
  * RESPOSTAS RÁPIDAS (c09; C6; N12): os `message_templates` do original em
  * "Gerais" (compartilhadas) e "Minhas". O painel abre acima do compositor,
- * 600×384; "+ Nova resposta" é o `TemplateFormDialog` do original. O filtro
- * por setor fica "Em breve" (3C).
+ * 600×384; lê as respostas do canal e do setor da conversa (3C, N14);
+ * "+ Nova resposta" abre a janela "Criar Resposta rápida".
  */
 export function PainelRespostasRapidas({
   aberto,
@@ -22,7 +25,9 @@ export function PainelRespostasRapidas({
   termoInicial,
   contato,
   aoEscolher,
+  conversationId,
 }: {
+  conversationId: string;
   aberto: boolean;
   aoFechar: () => void;
   termoInicial: string;
@@ -30,27 +35,27 @@ export function PainelRespostasRapidas({
   aoEscolher: (texto: string) => void;
 }) {
   const t = useT();
-  const { user, activeOrg } = useAuth();
-  const { data: respostas = [] } = useMessageTemplates();
+  const { user } = useAuth();
+  const [setorEscolhido, setSetorEscolhido] = useState<string>("");
+  const { data } = useRespostasDaConversa(conversationId, setorEscolhido || null, aberto);
+  const { data: setores = [] } = useSetores(aberto);
+  const respostas: RespostaLida[] = useMemo(() => data?.respostas ?? [], [data]);
   const [busca, setBusca] = useState(termoInicial);
   const [ordem, setOrdem] = useState<"az" | "za">("az");
   const [nova, setNova] = useState(false);
   const grupos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    const bate = (r: MessageTemplate) =>
-      !termo ||
-      r.title.toLowerCase().includes(termo) ||
-      r.body.toLowerCase().includes(termo) ||
-      (r.shortcut ?? "").toLowerCase().includes(termo);
-    const ordenar = (a: MessageTemplate, b: MessageTemplate) =>
-      (ordem === "az" ? 1 : -1) * a.title.localeCompare(b.title, "pt-BR");
+    const bate = (r: RespostaLida) =>
+      !termo || r.atalho.toLowerCase().includes(termo) || r.corpo.toLowerCase().includes(termo);
+    const ordenar = (a: RespostaLida, b: RespostaLida) =>
+      (ordem === "az" ? 1 : -1) * a.atalho.localeCompare(b.atalho, "pt-BR");
     return {
-      gerais: respostas.filter((r) => r.owner_user_id === null && bate(r)).sort(ordenar),
-      minhas: respostas.filter((r) => r.owner_user_id === user.id && bate(r)).sort(ordenar),
+      gerais: respostas.filter((r) => r.compartilhada && bate(r)).sort(ordenar),
+      minhas: respostas.filter((r) => r.dono === user.id && bate(r)).sort(ordenar),
     };
   }, [respostas, busca, ordem, user.id]);
   if (!aberto) return null;
-  const grupo = (titulo: string, itens: MessageTemplate[]) =>
+  const grupo = (titulo: string, itens: RespostaLida[]) =>
     itens.length === 0 ? null : (
       <div>
         <div className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
@@ -61,14 +66,13 @@ export function PainelRespostasRapidas({
             key={r.id}
             type="button"
             className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-casca-raia"
-            onClick={() => aoEscolher(interpolateTemplate(r.body, contato))}
+            onClick={() => aoEscolher(interpolateTemplate(r.corpo, contato))}
           >
             <span className="shrink-0 rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 font-mono text-[11px] text-casca-suave">
-              /{r.shortcut ?? "—"}
+              {comBarra(r.atalho)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[12px] font-medium text-casca-texto">{r.title}</span>
-              <span className="block truncate text-[11px] text-casca-suave">{r.body}</span>
+              <span className="block truncate text-[12px] text-casca-texto">{r.corpo}</span>
             </span>
           </button>
         ))}
@@ -83,14 +87,14 @@ export function PainelRespostasRapidas({
         <span className="flex-1 text-[13px] font-medium text-casca-texto">
           {t("Respostas rápidas")}
         </span>
-        <a
-          href="/app/templates"
+        <Link
+          href="/app/inbox/configuracoes/respostas-rapidas"
           className="grid size-6 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
           aria-label={t("Configurar respostas rápidas")}
           title={t("Configurar respostas rápidas")}
         >
           <Settings size={14} aria-hidden />
-        </a>
+        </Link>
         <BotaoDaCasca variante="texto" tamanho="sm" onClick={() => setNova(true)}>
           + {t("Nova resposta")}
         </BotaoDaCasca>
@@ -115,11 +119,14 @@ export function PainelRespostasRapidas({
           />
         </div>
         <SeletorDaCasca
-          valor="todos"
-          opcoes={[{ valor: "todos", rotulo: t("Todos os setores") }]}
-          aoMudar={() => undefined}
-          desabilitado
-          dica={t("Em breve")}
+          valor={setorEscolhido}
+          vazio={t("Setor da conversa")}
+          opcoes={setores.map((s) => ({ valor: s.id, rotulo: s.nome }))}
+          aoMudar={setSetorEscolhido}
+          desabilitado={!data?.podeOutrosSetores}
+          dica={
+            data?.podeOutrosSetores ? undefined : t("Consultar respostas rápidas de outros setores")
+          }
           aria-label={t("Setor")}
         />
         <SeletorDaCasca
@@ -141,11 +148,7 @@ export function PainelRespostasRapidas({
           </p>
         ) : null}
       </div>
-      <TemplateFormDialog
-        open={nova}
-        onOpenChange={setNova}
-        canShare={activeOrg?.role !== "agent"}
-      />
+      <JanelaRespostaRapida aberta={nova} aoFechar={() => setNova(false)} resposta={null} />
     </div>
   );
 }

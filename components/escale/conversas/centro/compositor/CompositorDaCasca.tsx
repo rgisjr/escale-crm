@@ -298,6 +298,7 @@ export function CompositorDaCasca({
         tabIndex={-1}
       />
       <PainelRespostasRapidas
+        conversationId={conversationId}
         aberto={painel === "respostas"}
         aoFechar={() => setPainel(null)}
         termoInicial={slash.open ? slash.query : ""}
