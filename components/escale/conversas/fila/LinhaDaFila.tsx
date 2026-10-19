@@ -13,6 +13,8 @@ import { corDaEspera, textoDaEspera, type Visualizacao } from "@/lib/escale/conv
 import { corDoAvatar } from "@/lib/escale/quadro/aparencia";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { AlarmClock, CheckCheck, ChevronDown, Pin, UserX, X } from "@/lib/ui/icons-da-casca";
+import { MonogramaDoSetor } from "@/components/escale/conversas/configuracoes/MonogramaDoSetor";
+import type { SetorDaConversa } from "@/lib/escale/conversas/setores-banco";
 import { cn } from "@/lib/utils";
 
 import { FotoDaConversa } from "./FotoDaConversa";
@@ -38,6 +40,7 @@ export function LinhaDaFila({
   visualizacao,
   agora,
   agendadas = 0,
+  setor,
 }: {
   conversa: ConversationWithContact;
   selecionada: boolean;
@@ -48,6 +51,8 @@ export function LinhaDaFila({
   agora: Date;
   /** FORK ESCALE · Fase 3B: quantas mensagens agendadas a conversa tem (o "⏱ n"). */
   agendadas?: number;
+  /** FORK ESCALE · Fase 3C: o setor da conversa (selo da segunda linha). */
+  setor?: SetorDaConversa;
 }) {
   const t = useT();
   const nome = rotuloDoContato(conversa.contacts ?? null, t);
@@ -56,7 +61,8 @@ export function LinhaDaFila({
   const espera = visualizacao.campos.tempoSemResposta ? aguardandoHa(conversa, agora) : null;
   const tags = visualizacao.campos.tags ? (conversa.contacts?.tags ?? []).slice(0, 3) : [];
   const mostraAgendadas = visualizacao.campos.mensagensAgendadas && agendadas > 0;
-  const segundaLinha = espera !== null || tags.length > 0 || mostraAgendadas;
+  const mostraSetor = visualizacao.campos.setor && !!setor?.setor;
+  const segundaLinha = espera !== null || tags.length > 0 || mostraAgendadas || mostraSetor;
 
   return (
     <div className="relative">
@@ -126,6 +132,21 @@ export function LinhaDaFila({
           </span>
           {segundaLinha ? (
             <span className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {mostraSetor && setor?.setor ? (
+                <span
+                  title={
+                    setor.em_transferencia
+                      ? `${t("Em transferência para")} ${setor.setor.nome}`
+                      : `${t("Setor:")} ${setor.setor.nome}`
+                  }
+                >
+                  <MonogramaDoSetor
+                    setor={setor.setor}
+                    tamanho="linha"
+                    tracejado={setor.em_transferencia}
+                  />
+                </span>
+              ) : null}
               {espera !== null ? (
                 <span
                   data-cor={corDaEspera(espera, visualizacao)}

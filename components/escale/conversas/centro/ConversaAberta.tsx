@@ -20,6 +20,7 @@ import { JanelaAgendarMensagem } from "@/components/escale/conversas/agendadas/J
 import { BarraDeStatus } from "./BarraDeStatus";
 import { CabecalhoDaConversa } from "./CabecalhoDaConversa";
 import { CompositorDaCasca } from "./compositor/CompositorDaCasca";
+import { FaixaEmTransferencia } from "./FaixaEmTransferencia";
 import { ThreadDaCasca, ultimaMensagem } from "./thread/ThreadDaCasca";
 
 /**
@@ -156,6 +157,7 @@ export function ConversaAberta({
           onAbrirConversa={aoAbrirConversa}
         />
       ) : null}
+      <FaixaEmTransferencia conversa={conversa} />
       <CompositorDaCasca
         key={`compositor:${conversa.id}`}
         conversationId={conversa.id}

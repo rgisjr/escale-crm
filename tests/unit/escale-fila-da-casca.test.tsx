@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { VISUALIZACAO_PADRAO } from "@/lib/escale/conversas/visualizacao";
 
+vi.mock("@/hooks/escale/useSetores", () => ({ useSetoresDasConversas: () => ({}) }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({
   useAuth: () => ({ activeOrg: { orgId: "org1", role: "agent" }, user: { id: "u1" } }),

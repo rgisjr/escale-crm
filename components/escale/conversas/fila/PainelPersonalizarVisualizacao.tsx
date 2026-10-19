@@ -22,7 +22,7 @@ import { CheckCheck, SlidersHorizontal, X } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 /** Toggles que dependem de outras fases ficam desligados com "Em breve" (N16). */
-const EM_BREVE: ReadonlySet<CampoDaLinha> = new Set(["setor", "empresa"]);
+const EM_BREVE: ReadonlySet<CampoDaLinha> = new Set(["empresa"]);
 const LIMITES = ["amarelo", "vermelho"] as const;
 const ROTULO_DO_LIMITE = {
   amarelo: "Amarelo a partir de",

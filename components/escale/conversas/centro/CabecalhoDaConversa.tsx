@@ -14,6 +14,7 @@ import { Copy, Ellipsis, MailOpen, MessageSquare, Search } from "@/lib/ui/icons-
 import { InstagramLogo } from "@/lib/ui/icons";
 
 import { SeletorDeAtendente } from "./SeletorDeAtendente";
+import { SeletorDeSetor } from "./SeletorDeSetor";
 
 const ITEM =
   "flex h-9 w-full items-center gap-3 px-3 text-left text-[12px] text-casca-texto hover:bg-casca-raia disabled:cursor-not-allowed disabled:opacity-50";
@@ -74,6 +75,7 @@ export function CabecalhoDaConversa({
           {dispositivo ? `${canal} - ${dispositivo}` : canal}
         </div>
       </div>
+      <SeletorDeSetor conversa={conversa} />
       <SeletorDeAtendente conversa={conversa} />
       <BotaoDaCasca
         variante="icone"
