@@ -38,14 +38,25 @@ export function JanelaNovoContato({
   aberta,
   aoFechar,
   origens,
+  // FORK ESCALE · Fase 3A: "Criar "{termo}"" da Nova conversa abre a janela com o nome já escrito
+  // e recebe o contato criado para seguir à escolha do dispositivo.
+  nomeInicial,
+  aoCriar,
 }: {
   aberta: boolean;
   aoFechar: () => void;
   origens: OrigemParaCriar[];
+  nomeInicial?: string;
+  aoCriar?: (contato: { id: string; nome: string }) => void;
 }) {
   const t = useT();
   const qc = useQueryClient();
-  const [nome, setNome] = useState("");
+  const [nome, setNome] = useState(nomeInicial ?? "");
+  const [vistoInicial, setVistoInicial] = useState(nomeInicial);
+  if (vistoInicial !== nomeInicial) {
+    setVistoInicial(nomeInicial);
+    setNome(nomeInicial ?? "");
+  }
   const [email, setEmail] = useState("");
   const [ddi, setDdi] = useState<string>(PAISES_DO_TELEFONE[0].ddi);
   const [numero, setNumero] = useState("");
@@ -135,6 +146,7 @@ export function JanelaNovoContato({
           </Link>
         ) : undefined,
       });
+      aoCriar?.({ id: contatoId, nome: nomeLimpo });
       fechar();
     } finally {
       setGravando(false);

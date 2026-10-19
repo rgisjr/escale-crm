@@ -148,6 +148,12 @@ body:has([data-escale-casca]) {
   --color-casca-seta: #cccccc;
   --color-casca-caixa: #dfe2fd;
   --color-casca-caixa-borda: #d5dcff;
+  /* Fase 3A (c23, c54, c16): a faixa do modo espião, a conversa fixada, a pílula de atraso e o amarelo do tempo sem resposta */
+  --color-casca-espiao: #a7f3d0;
+  --color-casca-espiao-texto: #047857;
+  --color-casca-fixada: #d1fae5;
+  --color-casca-atraso: #fee2e2;
+  --color-casca-atencao: #faa200;
   /* onde a Clint usa o roxo dela entra a marca da organização, no mesmo lugar */
   --color-casca-marca: var(--color-accent);
   --color-casca-marca-forte: color-mix(in oklab, var(--color-accent) 85%, black);
@@ -218,6 +224,11 @@ body:has([data-escale-casca]) {
   --color-casca-seta: #4a5068;
   --color-casca-caixa: #2a2f42;
   --color-casca-caixa-borda: #3a4160;
+  --color-casca-espiao: #064e3b;
+  --color-casca-espiao-texto: #6ee7b7;
+  --color-casca-fixada: #12332b;
+  --color-casca-atraso: #4a2024;
+  --color-casca-atencao: #faa200;
   --color-casca-marca: var(--color-accent);
   --color-casca-marca-forte: color-mix(in oklab, var(--color-accent) 85%, white);
   --color-casca-marca-suave: color-mix(in oklab, var(--color-accent) 16%, #181b26);
