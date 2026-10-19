@@ -166,6 +166,13 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "só enquanto ela está em preparo; zero para os outros.",
   },
   {
+    tabela: "crm_preferencias_de_conversas",
+    razao:
+      "tests/invariants/escale-preferencias-de-conversas.test.ts — fork Escale (migration 9201): cada pessoa lê e escreve " +
+      "só as suas (zero para a outra pessoa e para o vizinho), uma linha por chave, chave fora da lista recusada, " +
+      "viewer escreve, FK da pessoa.",
+  },
+  {
     tabela: "crm_campos_do_negocio",
     razao:
       "tests/invariants/escale-campos-do-crm.test.ts — fork Escale (migration 9006): todo membro lê, só administrador escreve " +
