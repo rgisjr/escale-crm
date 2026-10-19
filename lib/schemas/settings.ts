@@ -167,6 +167,8 @@ export const customFieldSchema = z.object({
     "number",
     "currency",
     "date",
+    // FORK ESCALE · Fase 2C: "Data e Hora" da Clint.
+    "datetime",
     "select",
     "multiselect",
     "boolean",

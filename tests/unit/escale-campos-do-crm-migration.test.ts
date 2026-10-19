@@ -107,7 +107,8 @@ describe("campos do CRM: migration 9006 e bloco do baseline", () => {
   });
 
   it("o tipo aceito pelo banco é o mesmo do customFieldSchema", () => {
-    const sql = ler(MIGRATION);
+    // FORK ESCALE · Fase 2C: a 9104 reescreve a função (acrescenta datetime); vale a última.
+    const sql = ler("supabase/migrations/20261102120000_9104_campos_por_objeto.sql");
     const lista = /\(p->>'type'\) in \(([^)]*)\)/.exec(sql)?.[1] ?? "";
     const tipos = lista.split(",").map((t) => t.trim().replace(/'/g, ""));
     expect([...tipos].sort()).toEqual([...customFieldSchema.shape.type.options].sort());
