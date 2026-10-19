@@ -186,6 +186,18 @@ describe("Em transferência e o gatilho", () => {
 });
 
 describe("permissões por pessoa e fn_crm_pode", () => {
+  it("sem FK direta para organizations: o embed user_organizations → organizations do original não fica ambíguo (PGRST201)", () => {
+    expect(
+      sql(`select count(*) from pg_constraint
+            where conrelid = 'public.crm_permissoes_de_atendimento'::regclass and contype = 'f'
+              and confrelid = 'public.organizations'::regclass;`).trim(),
+    ).toBe("0");
+    expect(
+      sql(`select count(*) from pg_constraint
+            where conname = 'crm_permissoes_de_atendimento_pessoa_fk' and confdeltype = 'c';`).trim(),
+    ).toBe("1");
+  });
+
   it("a pessoa lê as suas; admin grava; agente não; o padrão vem do papel", () => {
     expect(writeCountAs(
         GOV_AGENT_A,

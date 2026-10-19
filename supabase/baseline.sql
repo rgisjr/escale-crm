@@ -37152,7 +37152,7 @@ grant execute on function public.fn_crm_papel_padrao(text) to authenticated, ser
 
 -- 2. Permissões por pessoa ---------------------------------------------------
 create table if not exists public.crm_permissoes_de_atendimento (
-  organization_id uuid not null references public.organizations(id) on delete cascade,
+  organization_id uuid not null,
   user_id uuid not null,
   chave text not null,
   ligado boolean not null,
@@ -37166,6 +37166,13 @@ create table if not exists public.crm_permissoes_de_atendimento (
   constraint crm_permissoes_de_atendimento_pessoa_fk foreign key (user_id, organization_id)
     references public.user_organizations (user_id, organization_id) on delete cascade
 );
+-- Sem FK direta para organizations: com ela e a composta para user_organizations,
+-- o PostgREST enxerga um muitos-para-muitos user_organizations↔organizations por
+-- esta tabela e o embed `user_organizations → organizations` do original quebra
+-- (PGRST201, medido em produção na escale.13). A composta já amarra a organização
+-- e cascateia com ela.
+alter table public.crm_permissoes_de_atendimento
+  drop constraint if exists crm_permissoes_de_atendimento_organization_id_fkey;
 alter table public.crm_permissoes_de_atendimento enable row level security;
 drop policy if exists crm_permissoes_de_atendimento_select on public.crm_permissoes_de_atendimento;
 drop policy if exists crm_permissoes_de_atendimento_write on public.crm_permissoes_de_atendimento;
