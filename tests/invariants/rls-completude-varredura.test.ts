@@ -198,6 +198,16 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "(zero para gerente, agente, viewer e vizinho), a projeção em cada origem, a adoção só de administrador e a junção idempotente.",
   },
   {
+    tabela: "crm_grupos_de_campos",
+    razao:
+      "tests/invariants/escale-campos-por-objeto.test.ts — fork Escale (migration 9104): todo membro lê, só administrador escreve (zero para gerente, agente, viewer e vizinho); o grupo padrão não se apaga.",
+  },
+  {
+    tabela: "crm_campos_do_crm",
+    razao:
+      "tests/invariants/escale-campos-por-objeto.test.ts — fork Escale (migration 9104): todo membro lê, só administrador escreve; chave única por objeto; campo padrão não se apaga nem se renomeia; definição validada por fn_escale_campo_valido.",
+  },
+  {
     tabela: "crm_notas_do_negocio",
     razao:
       "tests/invariants/escale-notas-e-arquivos-rls.test.ts — fork Escale (migration 9008): dois tenants reais por JWT " +

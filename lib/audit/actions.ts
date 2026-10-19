@@ -986,6 +986,13 @@ export const AUDIT_ACTIONS = [
   "crm_field_group.created",
   "crm_field_group.updated",
   "crm_field_group.deleted",
+  // FORK ESCALE · Fase 2D: empresas da casca (migration 9105).
+  "companies.created_by_escale",
+  "companies.updated_by_escale",
+  "companies.deleted_by_escale",
+  "companies.contact_linked",
+  "companies.contact_unlinked",
+  "companies.primary_changed",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o

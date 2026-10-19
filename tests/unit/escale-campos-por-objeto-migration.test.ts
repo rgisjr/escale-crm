@@ -21,10 +21,10 @@ describe("migration 9104 (campos por objeto)", () => {
     }
   });
 
-  it("o negócio ganha grupo e papel; a empresa ganha custom_fields", () => {
+  it("o negócio ganha grupo e papel (o custom_fields da empresa está na 9105)", () => {
     expect(MIGRATION).toContain("alter table public.crm_campos_do_negocio add column if not exists grupo_id uuid");
     expect(MIGRATION).toContain("alter table public.crm_campos_do_negocio add column if not exists papel_minimo text");
-    expect(MIGRATION).toContain("alter table public.companies add column if not exists custom_fields jsonb not null default '{}'::jsonb");
+    expect(MIGRATION).not.toContain("public.companies");
   });
 
   it("a semente é definer fechada e a validação aceita datetime", () => {
@@ -46,6 +46,7 @@ describe("migration 9104 (campos por objeto)", () => {
     expect(i9103).toBeGreaterThan(-1);
     expect(i9104).toBeGreaterThan(i9103);
     expect(i0323).toBeGreaterThan(i9104);
-    expect(BASELINE).toContain(MIGRATION.trimEnd());
+    // Outro bloco do fork pode ter entrado entre o corpo e o fecho (a chamada das travas): confere o corpo.
+    expect(BASELINE).toContain(MIGRATION.slice(0, MIGRATION.lastIndexOf("do $f$")).trimEnd());
   });
 });

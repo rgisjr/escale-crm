@@ -103,7 +103,7 @@ Do catálogo `C:\Documentos\projetos claude\reverse engenering - Copia\clint-mod
 - Repositório: `C:\Documentos\projetos claude\Deskcom CRM\repo` (**da Frente A**: não troque de branch nele, não faça stash, não mexa nos arquivos). **Worktree da Frente B:** `C:\Documentos\projetos claude\Deskcom CRM\wt-frente-b`. Todo comando roda dentro dela.
 - **Branches:** PR A `feat/fase-2d-empresas-banco`; PR B `feat/fase-2d-empresas-telas`. Cada uma de `escale-crm/main` (Tasks 1 e 7 provam).
 - **Base:** `escale-crm/main` com a 2C inteira mergeada (a última migration da Frente B é a 9104).
-- **Migration:** **9105**, `supabase/migrations/20261103120000_9105_empresas.sql`. Antes de criar: `bash scripts/checar-colisao-de-migration.sh escale-crm/main`; se 9105 já existir em outra branch, PARE e pergunte.
+- **Migration:** **9105**, `supabase/migrations/20261105120000_9105_empresas.sql`. Antes de criar: `bash scripts/checar-colisao-de-migration.sh escale-crm/main`; se 9105 já existir em outra branch, PARE e pergunte.
 - **PR:** para `rgisjr/escale-crm`, base `main`. **Merge direto na `main` ao terminar cada PR** (regra de 18/10).
 - **Proibido:** push em `origin` (Rafael), tag, release, VPS e gravar no banco de produção no meio da frente.
 
@@ -178,7 +178,7 @@ Os do fork que mudam: `lib/escale/menu-do-topo.ts`, `lib/escale/contatos/{lista,
 | Arquivo | Novo/alterado | PR | Responsabilidade |
 |---|---|---|---|
 | `lib/escale/empresas/regras.ts` | novo | A | escopos, consulta, CNPJ, colunas nativas, nova empresa, desfecho da remoção, campos fixos ↔ colunas |
-| `supabase/migrations/20261103120000_9105_empresas.sql`, `supabase/baseline.sql` | novo / bloco | A | módulo, principal único, funções definer, lista invoker, filtro da empresa, 9102 recriadas |
+| `supabase/migrations/20261105120000_9105_empresas.sql`, `supabase/baseline.sql` | novo / bloco | A | módulo, principal único, funções definer, lista invoker, filtro da empresa, 9102 recriadas |
 | `lib/escale/empresas/banco.ts` | novo | A | ler a lista, a ficha, os contatos, os negócios e a empresa do contato; chamar as funções |
 | `app/api/v1/empresas/route.ts`, `[id]/route.ts`, `[id]/contatos/route.ts`, `[id]/contatos/[contatoId]/route.ts`, `[id]/principal/route.ts`, `[id]/negocios/route.ts`, `app/api/v1/contatos/[id]/empresa/route.ts` | novos | A | rotas |
 | `lib/escale/contatos/{lista,filtros,compilar-filtros,opcoes-do-filtro,origens-da-pagina}.ts`, `components/escale/contatos/TabelaDeContatos.tsx`, `components/escale/contatos/filtros/SecaoCamposDoFiltro.tsx` | alterados | A | empresa na linha, na busca e no filtro |
@@ -413,7 +413,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 2: Migration 9105 — módulo ligado, principal único, funções e a lista
 
 **Files:**
-- Create: `supabase/migrations/20261103120000_9105_empresas.sql`, `tests/unit/escale-empresas-migration.test.ts`, `tests/invariants/escale-empresas.test.ts`
+- Create: `supabase/migrations/20261105120000_9105_empresas.sql`, `tests/unit/escale-empresas-migration.test.ts`, `tests/invariants/escale-empresas.test.ts`
 - Modify: `supabase/baseline.sql` (bloco depois do da 9104)
 
 **Interfaces:**
@@ -439,7 +439,7 @@ Create `tests/unit/escale-empresas-migration.test.ts`:
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const ARQUIVO = "supabase/migrations/20261103120000_9105_empresas.sql";
+const ARQUIVO = "supabase/migrations/20261105120000_9105_empresas.sql";
 const BASELINE = readFileSync("supabase/baseline.sql", "utf8");
 const MIGRATION = existsSync(ARQUIVO) ? readFileSync(ARQUIVO, "utf8") : "";
 
@@ -507,7 +507,7 @@ Expected: FAIL.
 
 - [ ] **Step 2: A migration**
 
-Create `supabase/migrations/20261103120000_9105_empresas.sql` (a primeira linha é uma só):
+Create `supabase/migrations/20261105120000_9105_empresas.sql` (a primeira linha é uma só):
 
 ```sql
 -- manifest: **Empresas da casca (fork Escale, Fase 2D).** Liga o módulo `crm_b2b` na instalação (`platform_config MODULO_CRM_B2B = ligado`), um contato principal por empresa (`uq_company_people_um_principal`), as escritas da casca em `people`/`company_people`/`companies` por funções definer fechadas ao `service_role` (`fn_escale_pessoa_do_contato`, `fn_escale_criar_empresa`, `fn_escale_vincular_contato_a_empresa`, `fn_escale_desvincular_contato_da_empresa`, `fn_escale_tornar_principal`, `fn_escale_excluir_empresa`), a lista invoker `fn_escale_lista_de_empresas` (página, total, contatos, negócios e valor em aberto com a RLS de quem olha), o filtro por campos da empresa (`fn_escale_empresa_passa`, `fn_escale_grupo_da_empresa_passa`) e as funções da 9102 `fn_escale_contato_passa` (alvo `empresa`) e `fn_escale_contatos_do_filtro` (busca pelo nome da empresa) recriadas.
@@ -1122,7 +1122,7 @@ Expected: tudo PASS (os testes da 9102 continuam verdes com as funções recriad
 
 ```bash
 corepack pnpm vitest run tests/unit/escale-empresas-migration.test.ts tests/unit/escale-filtros-de-contatos-migration.test.ts tests/unit/manifest-x-migrations.test.ts
-git add supabase/migrations/20261103120000_9105_empresas.sql supabase/baseline.sql tests/unit/escale-empresas-migration.test.ts tests/invariants/escale-empresas.test.ts
+git add supabase/migrations/20261105120000_9105_empresas.sql supabase/baseline.sql tests/unit/escale-empresas-migration.test.ts tests/invariants/escale-empresas.test.ts
 git commit -m "feat(escale): migration 9105 — módulo de empresas ligado, vínculo pela casca, lista de empresas e a empresa no filtro de contatos (Fase 2D)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
