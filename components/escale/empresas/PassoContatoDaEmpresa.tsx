@@ -9,13 +9,22 @@ import { formatarTelefone } from "@/lib/escale/contatos/regras";
 import { Search, Star } from "@/lib/ui/icons-da-casca";
 
 export type EscolhaDoContato =
-  | { modo: "existente"; contato: { id: string; nome: string } | null }
+  | { modo: "existente"; contato: { id: string; nome: string; temEmpresa?: boolean } | null }
   | { modo: "novo"; nome: string; ddi: string; telefone: string; email: string };
 
-interface Achado { id: string; nome: string; telefone: string | null; email: string | null }
+interface Achado { id: string; nome: string; telefone: string | null; email: string | null; empresa?: { id: string; nome: string } | null }
 
 /** O passo "Contato" da "Nova empresa": vincular existente ou criar novo (vira o principal). */
-export function PassoContatoDaEmpresa({ valor, aoMudar }: { valor: EscolhaDoContato; aoMudar: (v: EscolhaDoContato) => void }) {
+export function PassoContatoDaEmpresa({
+  valor,
+  aoMudar,
+  soExistente = false,
+}: {
+  valor: EscolhaDoContato;
+  aoMudar: (v: EscolhaDoContato) => void;
+  /** A janela "Vincular existente" não oferece "Criar novo". */
+  soExistente?: boolean;
+}) {
   const t = useT();
   const [busca, setBusca] = useState("");
   const [achados, setAchados] = useState<Achado[] | null>(null);
@@ -26,19 +35,21 @@ export function PassoContatoDaEmpresa({ valor, aoMudar }: { valor: EscolhaDoCont
     const timer = setTimeout(async () => {
       const r = await fetch(`/api/v1/lista-de-contatos?n=10${termo.length >= 2 ? `&q=${encodeURIComponent(termo)}` : ""}`);
       const corpo = await r.json().catch(() => null);
-      setAchados(((corpo?.data?.linhas ?? []) as Achado[]).map((l) => ({ id: l.id, nome: l.nome, telefone: l.telefone, email: l.email })));
+      setAchados(((corpo?.data?.linhas ?? []) as Achado[]).map((l) => ({ id: l.id, nome: l.nome, telefone: l.telefone, email: l.email, empresa: l.empresa ?? null })));
     }, 300);
     return () => clearTimeout(timer);
   }, [busca, valor.modo]);
 
   return (
     <div className="flex flex-col gap-4">
+      {soExistente ? null : (
       <AlternanciaDaCasca
         aria-label={t("Contato")}
         valor={valor.modo}
         opcoes={[{ valor: "existente", rotulo: t("Vincular existente") }, { valor: "novo", rotulo: t("Criar novo") }]}
         aoMudar={(m) => aoMudar(m === "novo" ? { modo: "novo", nome: "", ddi: "55", telefone: "", email: "" } : { modo: "existente", contato: null })}
       />
+      )}
       {valor.modo === "existente" ? (
         <div className="flex flex-col gap-2">
           <label className="relative block">
@@ -57,7 +68,7 @@ export function PassoContatoDaEmpresa({ valor, aoMudar }: { valor: EscolhaDoCont
                   key={c.id}
                   role="option"
                   aria-selected={escolhido}
-                  onClick={() => aoMudar({ modo: "existente", contato: { id: c.id, nome: c.nome } })}
+                  onClick={() => aoMudar({ modo: "existente", contato: { id: c.id, nome: c.nome, temEmpresa: Boolean(c.empresa) } })}
                   className={`flex cursor-pointer items-center justify-between rounded-[6px] px-3 py-2 ${escolhido ? "bg-casca-marca-suave" : "hover:bg-casca-raia"}`}
                 >
                   <span>
