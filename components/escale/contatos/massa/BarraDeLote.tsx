@@ -11,12 +11,13 @@ export const BOTAO_DA_BARRA_DE_LOTE =
  * A BARRA DE AÇÕES EM MASSA (prints 2b-29, 2b-30, 2b-37 e 2b-39; Clint
  * `index-aSHo0T15`): fixa no rodapé, centralizada, na cor da marca: "×" (Remover
  * selecionados), o número em branco (sem selo), a palavra SELECIONADOS, a divisória
- * e as ações. "Campos" espera a 2C (Q3).
+ * e as ações. "Campos" abre o painel de campos (2C).
  */
 export function BarraDeLote({
   quantidade,
   aoLimpar,
   aoCriarNegocio,
+  painelDeCampos,
   painelDeTag,
   aoExportar,
   aoExcluir,
@@ -24,6 +25,7 @@ export function BarraDeLote({
   quantidade: number;
   aoLimpar: () => void;
   aoCriarNegocio: () => void;
+  painelDeCampos: ReactNode;
   painelDeTag: ReactNode;
   aoExportar: () => void;
   aoExcluir: () => void;
@@ -50,9 +52,7 @@ export function BarraDeLote({
       <button type="button" onClick={aoCriarNegocio} className={BOTAO_DA_BARRA_DE_LOTE}>
         {t("Criar negócio")}
       </button>
-      <button type="button" disabled title={t("Em breve")} className={BOTAO_DA_BARRA_DE_LOTE}>
-        {t("Campos")}
-      </button>
+      {painelDeCampos}
       {painelDeTag}
       <button type="button" onClick={aoExportar} className={BOTAO_DA_BARRA_DE_LOTE}>
         {t("Exportar")}

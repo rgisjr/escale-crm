@@ -205,8 +205,8 @@ export function rotuloDoItem(
   rotulosDosCampos: Record<string, string> = {},
 ): string {
   if (item.tipo === "nativa") return t(rotulos[item.chave] ?? item.chave);
-  const doCatalogo = rotulosDosCampos[item.chave];
-  if (doCatalogo) return t(doCatalogo);
   const campo = CAMPOS_DO_CONTATO_2A.find((c) => c.chave === item.chave);
-  return campo ? t(campo.rotulo) : item.chave;
+  if (campo) return t(campo.rotulo);
+  // O rótulo do campo do catálogo é dado do operador: não passa por t().
+  return rotulosDosCampos[item.chave] ?? item.chave;
 }

@@ -46,7 +46,11 @@ export type Dependencias = {
   db: SupabaseClient;
   agora: () => number;
   criarNegocio: (ctx: Ctx, input: Record<string, unknown>) => Promise<unknown>;
-  mudarContato: (ctx: Ctx, id: string, input: { tags: string[] }) => Promise<unknown>;
+  mudarContato: (
+    ctx: Ctx,
+    id: string,
+    input: { tags?: string[]; custom_fields?: Record<string, unknown> },
+  ) => Promise<unknown>;
   excluirContato: (ctx: Ctx, id: string) => Promise<unknown>;
 };
 
@@ -69,6 +73,7 @@ type ContatoDoLote = {
   display_name?: string | null;
   phone_number?: string | null;
   tags?: string[] | null;
+  custom_fields?: Record<string, unknown> | null;
 };
 
 const resultado = (
@@ -96,7 +101,7 @@ async function lerContatos(
 ): Promise<Map<string, ContatoDoLote>> {
   const { data, error } = await db
     .from("contacts")
-    .select("id, name, display_name, phone_number, tags")
+    .select("id, name, display_name, phone_number, tags, custom_fields")
     .eq("organization_id", org)
     .in("id", ids);
   if (error) throw new Error(error.message);
@@ -138,6 +143,16 @@ async function agir(
       source: "manual",
       via_planilha: true,
     });
+    return;
+  }
+  if (acao.acao === "alterar_campo" || acao.acao === "limpar_campo") {
+    // Fase 2C: o PATCH do contato substitui `custom_fields`; vai o objeto inteiro, com a chave mexida.
+    const chave = String(p.chave ?? "");
+    if (!/^[a-z][a-z0-9_]{0,39}$/.test(chave) || chave.startsWith("link_")) throw new Error("Campo inválido.");
+    const campos = { ...(c.custom_fields ?? {}) };
+    if (acao.acao === "alterar_campo") campos[chave] = p.valor;
+    else delete campos[chave];
+    await deps.mudarContato(ctx, id, { custom_fields: campos });
     return;
   }
   const tag = normalizarTags([String(p.tag ?? "")])[0];

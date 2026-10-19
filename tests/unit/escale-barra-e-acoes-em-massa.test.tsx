@@ -20,6 +20,12 @@ vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
 vi.mock("@/components/tags/CoresDasEtiquetas", () => ({ useCorDaEtiqueta: () => null }));
 
 const ALVO: AlvoDaAcao = { tipo: "filtro", v: "todos", quantidade: null, excluidos: [] };
+const CAMPOS = [
+  { chave: "cargo", rotulo: "Cargo", tipo: "text" as const },
+  { chave: "porte", rotulo: "Porte", tipo: "select" as const, opcoes: [{ value: "g", label: "Grande" }] },
+  { chave: "nascimento", rotulo: "Data de nascimento", tipo: "date" as const },
+  { chave: "link_site", rotulo: "Site", tipo: "url" as const },
+];
 const ORIGENS = [{ id: "o1", nome: "Leads INSS", etapas: [{ id: "e1", nome: "Entrada" }] }];
 
 function montar() {
@@ -31,6 +37,7 @@ function montar() {
         quantidade={3}
         alvo={ALVO}
         origens={ORIGENS}
+        camposDoContato={CAMPOS}
         aoLimpar={aoLimpar}
         aoPedir={aoPedir}
       />
@@ -49,11 +56,46 @@ beforeEach(() => {
 });
 
 describe("AcoesEmMassa (prints 2b-29 a 2b-39)", () => {
-  it("a barra: número, SELECIONADOS, as ações e 'Campos' em breve", () => {
+  it("a barra: número, SELECIONADOS, as ações e 'Campos' ligado (2C)", () => {
     montar();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("selecionados")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Campos" })).toHaveAttribute("title", "Em breve");
+    expect(screen.getByRole("button", { name: "Campos" })).not.toBeDisabled();
+  });
+
+  it("Campos › só os campos do catálogo; escolher, digitar e Aplicar manda alterar_campo (2b-32, 2b-33)", async () => {
+    const { aoPedir } = montar();
+    fireEvent.click(screen.getByRole("button", { name: "Campos" }));
+    expect(screen.getByRole("button", { name: "Aplicar" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("combobox", { name: "Campo" }));
+    expect(screen.queryByRole("option", { name: "Data de nascimento" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Site" })).toBeNull();
+    fireEvent.click(screen.getByRole("option", { name: "Cargo" }));
+    fireEvent.change(screen.getByPlaceholderText("Digite o valor"), { target: { value: "CEO" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    await waitFor(() =>
+      expect(pedidoEnviado()?.[1]).toMatchObject({
+        acao: "alterar_campo",
+        parametros: { chave: "cargo", valor: "CEO" },
+      }),
+    );
+    expect(aoPedir).toHaveBeenCalledWith("a1", "alterar_campo");
+  });
+
+  it("Campos › Limpar campo manda limpar_campo sem valor; campo de seleção oferece as opções", async () => {
+    montar();
+    fireEvent.click(screen.getByRole("button", { name: "Campos" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Campo" }));
+    fireEvent.click(screen.getByRole("option", { name: "Porte" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Valor" }));
+    expect(screen.getByRole("option", { name: "Grande" })).toBeInTheDocument();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.click(screen.getByRole("radio", { name: "Limpar campo" }));
+    expect(screen.queryByRole("combobox", { name: "Valor" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    await waitFor(() =>
+      expect(pedidoEnviado()?.[1]).toMatchObject({ acao: "limpar_campo", parametros: { chave: "porte" } }),
+    );
   });
 
   it("Exportar: confirma, pede, limpa a seleção, acompanha e avisa que foi para aprovação (Q4)", async () => {

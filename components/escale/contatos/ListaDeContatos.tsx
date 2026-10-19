@@ -388,6 +388,7 @@ export function ListaDeContatos({
           quantidade={sel.quantidade}
           alvo={alvoDaSelecao(sel.selecao, { q: buscaDaUrl, v: visao, f })}
           origens={origens}
+          camposDoContato={camposDoContato}
           aoLimpar={sel.limpar}
           aoPedir={acompanhamento.acompanhar}
         />

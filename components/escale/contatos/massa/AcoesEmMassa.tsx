@@ -8,10 +8,13 @@ import { useT } from "@/hooks/i18n/useT";
 import type { AlvoDaAcao } from "@/lib/escale/contatos/selecao";
 import type { AcaoEmMassa, PedidoDeAcao } from "@/lib/escale/massa/tipos";
 
+import type { CampoDeColuna } from "@/lib/escale/contatos/regras";
+
 import type { OrigemParaCriar } from "../CamposDaOportunidade";
 import { BOTAO_DA_BARRA_DE_LOTE, BarraDeLote } from "./BarraDeLote";
 import { JanelaCriarNegocios, type NovoNegocioEmMassa } from "./JanelaCriarNegocios";
 import { JanelaExcluirContatos } from "./JanelaExcluirContatos";
+import { PainelDeCampos } from "./PainelDeCampos";
 import { PainelDeTag } from "./PainelDeTag";
 import { avisoNaFila, falhaDoPedido } from "./textosDasAcoes";
 
@@ -27,12 +30,15 @@ export function AcoesEmMassa({
   quantidade,
   alvo,
   origens,
+  camposDoContato,
   aoLimpar,
   aoPedir,
 }: {
   quantidade: number;
   alvo: AlvoDaAcao;
   origens: OrigemParaCriar[];
+  /** Fase 2C: os campos do catálogo do contato (rótulo e tipo) para o painel "Campos". */
+  camposDoContato: CampoDeColuna[];
   aoLimpar: () => void;
   aoPedir: (id: string, acao: AcaoEmMassa) => void;
 }) {
@@ -66,6 +72,13 @@ export function AcoesEmMassa({
         quantidade={quantidade}
         aoLimpar={aoLimpar}
         aoCriarNegocio={() => setJanela("negocio")}
+        painelDeCampos={
+          <PainelDeCampos
+            classeDoGatilho={BOTAO_DA_BARRA_DE_LOTE}
+            camposDoContato={camposDoContato}
+            aoAplicar={(acao, parametros) => enviar(acao, parametros)}
+          />
+        }
         painelDeTag={
           <PainelDeTag
             classeDoGatilho={BOTAO_DA_BARRA_DE_LOTE}

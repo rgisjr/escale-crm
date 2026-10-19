@@ -10,6 +10,8 @@ export const ACOES_EM_MASSA = [
   "remover_tag",
   "exportar",
   "excluir",
+  "alterar_campo",
+  "limpar_campo",
 ] as const;
 export type AcaoEmMassa = (typeof ACOES_EM_MASSA)[number];
 export const EVENTO_DA_ACAO_EM_MASSA = "contatos.acao_em_massa_requested";
@@ -18,6 +20,8 @@ export const CONTATOS_POR_ACAO_MAX = 100_000;
 
 const uuid = z.string().uuid();
 const tag = z.string().trim().min(1).max(40);
+/** Fase 2C: a chave de um campo do catálogo do contato (nunca os links). */
+const chaveDoCampo = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/).refine((c) => !c.startsWith("link_"));
 
 const alvoSchema = z.discriminatedUnion("tipo", [
   z.object({ tipo: z.literal("ids"), ids: z.array(uuid).min(1).max(IDS_MAX) }).strict(),
@@ -58,6 +62,16 @@ export const pedidoDeAcaoSchema = z.discriminatedUnion("acao", [
     .strict(),
   z.object({ ...base, acao: z.literal("exportar"), parametros: z.object({}).strict() }).strict(),
   z.object({ ...base, acao: z.literal("excluir"), parametros: z.object({}).strict() }).strict(),
+  z
+    .object({
+      ...base,
+      acao: z.literal("alterar_campo"),
+      parametros: z.object({ chave: chaveDoCampo, valor: z.unknown() }).strict(),
+    })
+    .strict(),
+  z
+    .object({ ...base, acao: z.literal("limpar_campo"), parametros: z.object({ chave: chaveDoCampo }).strict() })
+    .strict(),
 ]);
 export type PedidoDeAcao = z.infer<typeof pedidoDeAcaoSchema>;
 
