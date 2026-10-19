@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { apiClient } from "@/lib/api/client";
+import { lerEmLotes } from "@/lib/escale/conversas/lotes";
 import type {
   AgendadaLida,
   ListaDeAgendadas,
@@ -86,11 +87,15 @@ export function useContagemDeAgendadas(conversationIds: readonly string[]): Reco
   const q = useQuery({
     queryKey: [...CHAVE_DA_CONTAGEM, ids.join(",")],
     enabled: ids.length > 0,
+    // Em lotes: depois do "Carregar mais" a fila passa do limite de ids das rotas.
     queryFn: async () =>
-      apiClient.get<{ data: Record<string, number> }>(
-        `/api/v1/mensagens-agendadas/contagem?conversation_ids=${encodeURIComponent(ids.join(","))}`,
+      lerEmLotes(ids, async (lote) =>
+        (
+          await apiClient.get<{ data: Record<string, number> }>(
+            `/api/v1/mensagens-agendadas/contagem?conversation_ids=${encodeURIComponent(lote.join(","))}`,
+          )
+        ).data,
       ),
-    select: (r) => r.data,
     staleTime: 30_000,
   });
   return q.data ?? {};

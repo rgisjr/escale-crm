@@ -51,8 +51,8 @@ describe("crm_mensagens_agendadas", () => {
     expect(countAs(GOV_AGENT_B, `select count(*) from ${AG}`)).toBe(1);
     expect(countAs(GOV_MANAGER, `select count(*) from ${AG}`)).toBe(1);
     expect(countAs(VIZINHO, `select count(*) from ${AG}`)).toBe(0);
-    expect(() => writeCountAs(GOV_AGENT_B, agendar(GOV_AGENT_A))).toThrow();
-    expect(() => writeCountAs(GOV_VIEWER, agendar(GOV_VIEWER))).toThrow();
+    expect(writeCountAs(GOV_AGENT_B, agendar(GOV_AGENT_A))).toBe(0);
+    expect(writeCountAs(GOV_VIEWER, agendar(GOV_VIEWER))).toBe(0);
   });
 
   it("remover: o outro agente não; quem criou sim; o gerente sim; só pendente vira removida", () => {
@@ -60,9 +60,7 @@ describe("crm_mensagens_agendadas", () => {
     expect(
       writeCountAs(GOV_AGENT_B, `update ${AG} set status = 'removida' where id = '${id}'`),
     ).toBe(0);
-    expect(() =>
-      writeCountAs(GOV_AGENT_A, `update ${AG} set status = 'enviada' where id = '${id}'`),
-    ).toThrow();
+    expect(writeCountAs(GOV_AGENT_A, `update ${AG} set status = 'enviada' where id = '${id}'`)).toBe(0);
     expect(
       writeCountAs(GOV_AGENT_A, `update ${AG} set status = 'removida' where id = '${id}'`),
     ).toBe(1);
@@ -76,7 +74,8 @@ describe("crm_mensagens_agendadas", () => {
   });
 
   it("os CHECKs: tipo, status e conteúdo coerente", () => {
-    expect(() => sql(agendar(GOV_AGENT_A, "audio") + ";")).toThrow(/tipo_valido/);
+    // Tipo inválido também fere o CHECK de conteúdo, e o Postgres acusa o primeiro pelo nome.
+    expect(() => sql(agendar(GOV_AGENT_A, "audio") + ";")).toThrow(/tipo_valido|conteudo/);
     expect(() =>
       sql(`insert into ${AG} (organization_id, conversation_id, contact_id, channel_session_id, tipo, corpo, template, enviar_em, criado_por)
            values ('${GOV_ORG}', '${GOV_CONV_UNASSIGNED}', '${GOV_CONTACT_1}', '${GOV_SESSION}', 'template', 'x', '{}', now(), '${GOV_AGENT_A}');`),
@@ -100,12 +99,10 @@ describe("crm_pausas_de_automacao", () => {
     ).toThrow(/pkey|duplicate/);
     expect(countAs(GOV_AGENT_B, `select count(*) from ${PA}`)).toBe(1);
     expect(countAs(VIZINHO, `select count(*) from ${PA}`)).toBe(0);
-    expect(() =>
-      writeCountAs(
+    expect(writeCountAs(
         GOV_AGENT_B,
         `insert into ${PA} (conversation_id, organization_id, ate, user_id) values ('${GOV_CONV_UNASSIGNED}', '${GOV_ORG}', null, '${GOV_AGENT_A}')`,
-      ),
-    ).toThrow();
+      )).toBe(0);
     expect(
       writeCountAs(
         GOV_AGENT_B,
@@ -123,12 +120,10 @@ describe("crm_eventos_da_conversa", () => {
         `insert into ${EV} (organization_id, conversation_id, tipo, user_id) values ('${GOV_ORG}', '${GOV_CONV_UNASSIGNED}', 'espera', '${GOV_AGENT_A}')`,
       ),
     ).toBe(1);
-    expect(() =>
-      writeCountAs(
+    expect(writeCountAs(
         GOV_AGENT_A,
         `insert into ${EV} (organization_id, conversation_id, tipo, user_id) values ('${GOV_ORG}', '${GOV_CONV_UNASSIGNED}', 'espera', '${GOV_AGENT_B}')`,
-      ),
-    ).toThrow();
+      )).toBe(0);
     expect(() =>
       sql(
         `insert into ${EV} (organization_id, conversation_id, tipo, user_id) values ('${GOV_ORG}', '${GOV_CONV_UNASSIGNED}', 'inventado', null);`,

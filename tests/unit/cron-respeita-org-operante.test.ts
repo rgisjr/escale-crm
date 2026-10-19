@@ -52,6 +52,8 @@ const SEM_FILTRO: Record<string, string> = {
   "agenda-google-refresh": "renova token do Google Agenda: deliberadamente não gatilhado (spec §4)",
   "agenda-google-sync": "sincronia com o Google Agenda: deliberadamente não gatilhada (spec §4)",
   "agent-dispatcher": "no-op permanente desde a convergência; não há o que filtrar",
+  "pausas-de-automacao":
+    "fork Escale: só devolve à fila os follow-ups de uma pausa vencida e apaga a linha; escrita interna, sem custo nem saída (o envio do follow-up passa pela régua dele)",
   "canal-mudo-watcher": "só abre aviso na Central da própria org; sem custo nem saída",
   "case-stale-watcher": "só reabre aviso de caso na Central; sem custo nem saída",
   "channel-health": "só pergunta ao transporte se a sessão está de pé; nenhuma mensagem ao cliente",

@@ -105,10 +105,14 @@ create policy crm_pausas_de_automacao_write on public.crm_pausas_de_automacao
   for all using (
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_pausas_de_automacao.organization_id)
   ) with check (
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
     and user_id = auth.uid()
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_pausas_de_automacao.organization_id)
   );
 revoke all on public.crm_pausas_de_automacao from anon;
 grant select, insert, update, delete on public.crm_pausas_de_automacao to authenticated;
@@ -144,12 +148,35 @@ create policy crm_eventos_da_conversa_insert on public.crm_eventos_da_conversa
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
     and user_id = auth.uid()
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_eventos_da_conversa.organization_id)
   );
 revoke all on public.crm_eventos_da_conversa from anon;
 grant select, insert on public.crm_eventos_da_conversa to authenticated;
 grant all on public.crm_eventos_da_conversa to service_role;
 comment on table public.crm_eventos_da_conversa is
   'Os eventos que a thread da Clint mostra (fork Escale, migration 9202; C2): espera, espera removida, encerrado, reaberto. Quem vê a conversa (RLS de conversations) vê os eventos; o sistema (service role) grava a espera removida pela mensagem do cliente.';
+
+-- 4. LGPD: anonimizar o contato apaga as agendadas dele -----------------------
+-- O texto agendado fala com a pessoa e o envio pendente não tem mais destinatário:
+-- apaga na virada de is_anonymized, a porta dos dois caminhos (o desenho da 0391).
+create or replace function public.fn_crm_apaga_agendadas_de_contato_anonimizado()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path to 'public', 'pg_temp'
+as $$
+begin
+  delete from public.crm_mensagens_agendadas where contact_id = new.id;
+  return new;
+end$$;
+revoke all on function public.fn_crm_apaga_agendadas_de_contato_anonimizado() from public, anon, authenticated;
+drop trigger if exists trg_contacts_anonimizado_limpa_agendadas on public.contacts;
+create trigger trg_contacts_anonimizado_limpa_agendadas
+  after update of is_anonymized on public.contacts
+  for each row
+  when (new.is_anonymized = true and coalesce(old.is_anonymized, false) = false)
+  execute function public.fn_crm_apaga_agendadas_de_contato_anonimizado();
 
 do $f$ begin perform public.fn_aplicar_travas_de_suporte(); end $f$;
 notify pgrst, 'reload schema';

@@ -5,6 +5,11 @@ import { fail, noContent, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { lerJson } from "@/lib/escale/origens/respostas";
+import {
+  juntarEnrollments,
+  SILENCIO_DURAVEL,
+  silencioDaPausa,
+} from "@/lib/escale/conversas/pausa";
 import { pausaEnrollment, retomaEnrollment } from "@/lib/followup/intervencao";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -14,7 +19,6 @@ import { comAConversa } from "../_comum";
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 const corpoSchema = z.object({ ate: z.string().datetime().nullable() });
-const SILENCIO_DURAVEL = "infinity";
 const ATIVOS = ["active", "waiting_reply"] as const;
 
 interface PausaLida {
@@ -94,7 +98,7 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
     }
     const { error } = await supabase
       .from("conversations")
-      .update({ bot_silenced_until: ate ?? SILENCIO_DURAVEL })
+      .update({ bot_silenced_until: silencioDaPausa(conversa.bot_silenced_until, ate) })
       .eq("organization_id", authz.org.orgId)
       .eq("id", conversa.id);
     if (error) throw error;
@@ -117,12 +121,20 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
           conversation_id: conversa.id,
         });
     }
+    const { data: anterior } = await supabase
+      .from("crm_pausas_de_automacao")
+      .select("enrollments")
+      .eq("conversation_id", conversa.id)
+      .maybeSingle();
     const pausa = {
       conversation_id: conversa.id,
       organization_id: authz.org.orgId,
       ate,
       user_id: authz.user.id,
-      enrollments: pausados,
+      enrollments: juntarEnrollments(
+        (anterior as { enrollments: string[] } | null)?.enrollments ?? [],
+        pausados,
+      ),
     };
     const { error: erroDaPausa } = await supabase
       .from("crm_pausas_de_automacao")

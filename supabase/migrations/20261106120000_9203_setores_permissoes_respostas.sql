@@ -134,13 +134,13 @@ drop policy if exists crm_setor_do_dispositivo_write on public.crm_setor_do_disp
 create policy crm_setores_select on public.crm_setores
   for select using (public.fn_is_platform_admin() or organization_id in (select public.fn_user_org_ids()));
 create policy crm_setores_write on public.crm_setores
-  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
-  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
+  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
+  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
 create policy crm_setores_membros_select on public.crm_setores_membros
   for select using (public.fn_is_platform_admin() or organization_id in (select public.fn_user_org_ids()));
 create policy crm_setores_membros_write on public.crm_setores_membros
-  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
-  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
+  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
+  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
 create policy crm_setor_do_dispositivo_select on public.crm_setor_do_dispositivo
   for select using (public.fn_is_platform_admin() or organization_id in (select public.fn_user_org_ids()));
 create policy crm_setor_do_dispositivo_write on public.crm_setor_do_dispositivo
@@ -159,14 +159,19 @@ comment on table public.crm_setores is
 create table if not exists public.crm_setor_da_conversa (
   conversation_id uuid primary key references public.conversations(id) on delete cascade,
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  setor_id uuid references public.crm_setores(id) on delete set null,
+  setor_id uuid,
   em_transferencia boolean not null default false,
-  setor_anterior_id uuid references public.crm_setores(id) on delete set null,
+  setor_anterior_id uuid,
   atendente_anterior_id uuid,
   transferido_por uuid,
   transferido_em timestamptz,
   updated_at timestamptz not null default now(),
-  constraint crm_setor_da_conversa_transferencia_tem_setor check (not em_transferencia or setor_id is not null)
+  constraint crm_setor_da_conversa_transferencia_tem_setor check (not em_transferencia or setor_id is not null),
+  -- FK composta: o setor é da organização da conversa; apagar o setor solta só a coluna (pg15+).
+  constraint crm_setor_da_conversa_setor_fk foreign key (organization_id, setor_id)
+    references public.crm_setores (organization_id, id) on delete set null (setor_id),
+  constraint crm_setor_da_conversa_setor_anterior_fk foreign key (organization_id, setor_anterior_id)
+    references public.crm_setores (organization_id, id) on delete set null (setor_anterior_id)
 );
 create index if not exists idx_crm_setor_da_conversa_setor on public.crm_setor_da_conversa (organization_id, setor_id);
 alter table public.crm_setor_da_conversa enable row level security;
@@ -188,10 +193,31 @@ create policy crm_setor_da_conversa_write on public.crm_setor_da_conversa
   ) with check (
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
+    -- só a conversa que a pessoa já vê: sem isso o atendente se daria leitura pelo setor
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_setor_da_conversa.organization_id)
   );
 revoke all on public.crm_setor_da_conversa from anon;
 grant select, insert, update, delete on public.crm_setor_da_conversa to authenticated;
 grant all on public.crm_setor_da_conversa to service_role;
+-- Apagar o setor de uma transferência em aberto: a FK põe setor_id nulo e a
+-- conversa sai da transferência (o check exige setor enquanto em transferência).
+create or replace function public.fn_crm_setor_da_conversa_sem_setor()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.setor_id is null and new.em_transferencia then
+    new.em_transferencia := false;
+    new.setor_anterior_id := null;
+    new.atendente_anterior_id := null;
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.fn_crm_setor_da_conversa_sem_setor() from public, anon, authenticated;
+drop trigger if exists trg_crm_setor_da_conversa_sem_setor on public.crm_setor_da_conversa;
+create trigger trg_crm_setor_da_conversa_sem_setor
+  before insert or update on public.crm_setor_da_conversa
+  for each row execute function public.fn_crm_setor_da_conversa_sem_setor();
 comment on table public.crm_setor_da_conversa is
   'O setor explícito da conversa e o estado "Em transferência" (fork Escale, migration 9203; C3, E3). Sem linha, vale o setor do dispositivo (fn_crm_setor_efetivo). A transferência termina quando alguém assume (trg_crm_conclui_transferencia).';
 
@@ -258,9 +284,11 @@ create table if not exists public.crm_respostas_rapidas_extras (
 );
 create table if not exists public.crm_respostas_rapidas_setores (
   template_id uuid not null references public.message_templates(id) on delete cascade,
-  setor_id uuid not null references public.crm_setores(id) on delete cascade,
+  setor_id uuid not null,
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  primary key (template_id, setor_id)
+  primary key (template_id, setor_id),
+  constraint crm_respostas_rapidas_setores_setor_fk foreign key (organization_id, setor_id)
+    references public.crm_setores (organization_id, id) on delete cascade
 );
 create index if not exists idx_crm_respostas_rapidas_setores_setor on public.crm_respostas_rapidas_setores (setor_id);
 alter table public.crm_respostas_rapidas_extras enable row level security;

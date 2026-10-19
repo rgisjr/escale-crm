@@ -35,6 +35,15 @@ const NAV_ALLOWLIST: Record<string, string> = {
   "/app/ai/agents/new":
     "sub-fluxo de criar agente, alcançado pelo botão dentro da lista de Agentes",
   "/app/team/invite": "sub-fluxo de convite, alcançado de dentro de Equipe",
+  "/app/inbox/configuracoes":
+    "hub de configurações de Conversas da casca Escale (Fase 3C), alcançado pelo ⚙ do cabeçalho da tela de Conversas",
+  "/app/inbox/configuracoes/canais": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/mensagens-agendadas":
+    "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/respostas-rapidas":
+    "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/setores": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/usuarios": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/campaigns/new":
     "sub-fluxo de criar campanha, alcançado pelo botão dentro da lista de Campanhas",
   "/app/campaigns/settings":
