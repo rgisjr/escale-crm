@@ -94,3 +94,6 @@ export { Clipboard, Watch, Smartphone, ArrowUp, ArrowDown, Share2, List } from "
 
 // Fase 1K (distribuição, ganho e notificações): troféu do ganho, relógio do histórico, percentual, busca vazia, desfazer e usuário removido.
 export { Award, History, Percent, SearchX, Undo2, UserMinus } from "lucide-react";
+
+// Fase 2C (campos por objeto): ícones dos tipos de campo da Clint.
+export { AlignLeft, Coins, Hash, ToggleLeft, Type } from "lucide-react";

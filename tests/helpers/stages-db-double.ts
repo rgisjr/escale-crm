@@ -505,7 +505,7 @@ export function comAutoria(
   return { ...patch, last_change_actor_kind: quem, last_change_at: expect.any(String) };
 }
 
-export function authOk(role: "manager" | "admin" = "manager"): void {
+export function authOk(role: "viewer" | "agent" | "manager" | "admin" = "manager"): void {
   const user: AuthUser = {
     id: USER_ID,
     email: "a@example.com",

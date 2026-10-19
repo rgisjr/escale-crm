@@ -966,6 +966,14 @@ export const AUDIT_ACTIONS = [
   "contacts.export_approved",
   "contacts.export_rejected",
   "contacts.export_downloaded",
+  // FORK ESCALE · Fase 2C: catálogo de campos por objeto (migration 9104).
+  "crm_field.created",
+  "crm_field.updated",
+  "crm_field.deleted",
+  "crm_field.reordered",
+  "crm_field_group.created",
+  "crm_field_group.updated",
+  "crm_field_group.deleted",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
