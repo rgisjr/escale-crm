@@ -11,6 +11,7 @@ import type { EventHandler, EventRow, HandlerResult } from "@/lib/event-log/disp
 import type { Role } from "@/lib/auth/types";
 import { modoDaOrganizacao } from "@/lib/escale/acesso/modo-da-organizacao";
 import { pessoasDaOrigem, podeVerNegocio, regraEmVigor } from "@/lib/escale/acesso/regras";
+import { ORIGEM_DA_PLANILHA } from "@/lib/leads/planilha";
 import { truncar } from "@/lib/notifications/push_payload";
 import { vapidPronto } from "@/lib/notifications/vapid";
 import { enviarPushAoUsuario } from "@/lib/notifications/web_push";
@@ -43,12 +44,16 @@ async function handle(row: EventRow): Promise<HandlerResult> {
   const admin = createAdminClient();
   const { data: lead, error: erroDoLead } = await admin
     .from("crm_leads")
-    .select("id, title, pipeline_id, owner_user_id, created_by_user_id")
+    .select("id, title, pipeline_id, owner_user_id, created_by_user_id, source")
     .eq("id", leadId)
     .eq("organization_id", row.organization_id)
     .maybeSingle();
   if (erroDoLead) return resultado("error", "leitura_do_negocio");
   if (!lead) return resultado("skipped", "negocio_sumiu");
+  // FORK ESCALE · Fase 2F (N11): a importação cria um negócio por linha; um push por linha seria barulho.
+  if (evento === "lead.created" && (lead as { source?: string | null }).source === ORIGEM_DA_PLANILHA) {
+    return resultado("skipped", "veio_da_planilha");
+  }
   const l = lead as {
     title?: string | null;
     pipeline_id: string;

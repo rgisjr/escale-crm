@@ -1006,6 +1006,11 @@ export const AUDIT_ACTIONS = [
   "companies.contact_linked",
   "companies.contact_unlinked",
   "companies.primary_changed",
+  // FORK ESCALE · Fase 2F: importar contatos e negócios (migration 9107).
+  "contacts.import_started",
+  "contacts.import_canceled",
+  "contacts.import_row_resolved",
+  "contacts.import_rows_resolved",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o

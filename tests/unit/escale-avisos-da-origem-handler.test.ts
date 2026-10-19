@@ -155,4 +155,15 @@ describe("avisosDaOrigemHandler", () => {
       expect.objectContaining({ title: "Negócio ganho" }),
     );
   });
+
+  it("negócio que veio da planilha não manda o push de novo negócio (Fase 2F)", async () => {
+    adminFalso({
+      crm_leads: [{ id: "lead-1", title: "Maria", pipeline_id: "p-1", owner_user_id: null, created_by_user_id: null, source: "importacao_planilha" }],
+      crm_pipelines: [{ id: "p-1", name: "Clayton", group_id: null, settings: { escale_notificacoes: { novo_negocio: { pessoas: [A] } } } }],
+      user_organizations: [{ user_id: A, role: "agent" }],
+    });
+    const r = await avisosDaOrigemHandler.handle(evento("lead.created"));
+    expect(r.status).toBe("skipped");
+    expect(enviarPushAoUsuario).not.toHaveBeenCalled();
+  });
 });
