@@ -1,3 +1,4 @@
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { AgendadaLida } from "@/lib/escale/conversas/agendadas";
 
 export const COLUNAS_DA_AGENDADA =
@@ -49,11 +50,7 @@ export function agendadaLida(linha: unknown): AgendadaLida {
     erro: l.erro,
     created_at: l.created_at,
     contato: {
-      nome:
-        l.contacts?.name?.trim() ||
-        l.contacts?.display_name?.trim() ||
-        l.contacts?.phone_number ||
-        "",
+      nome: nomeDoContato(l.contacts) ?? l.contacts?.phone_number ?? "",
       telefone: l.contacts?.phone_number ?? null,
       tem_foto: !!l.contacts?.avatar_storage_path,
     },

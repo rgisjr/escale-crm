@@ -56,3 +56,13 @@ export function inicialDoAtendente(nome: string | null | undefined): string {
   const limpo = (nome ?? "").trim();
   return limpo ? limpo[0]!.toUpperCase() : "";
 }
+
+/** "WhatsApp" ou "Instagram" pelo provedor e pela plataforma social do canal (cabeçalho da conversa, 3B). */
+export function rotuloDoCanal(
+  canal: { provider?: string | null; social_platform?: string | null } | null | undefined,
+): string {
+  if (!canal) return "";
+  return canal.social_platform === "instagram" || canal.provider === "zernio_social"
+    ? "Instagram"
+    : "WhatsApp";
+}

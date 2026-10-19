@@ -273,6 +273,11 @@
   --color-casca-fixada: var(--color-success-bg);
   --color-casca-atraso: var(--color-error-bg);
   --color-casca-atencao: var(--color-warning);
+  --color-casca-painel-chat: var(--color-surface-elevated);
+  --color-casca-nota: var(--color-warning-bg);
+  --color-casca-nota-borda: var(--color-warning);
+  --color-casca-pausa: var(--color-warning-bg);
+  --color-casca-pausa-texto: var(--color-warning);
   --radius-casca-gatilho: 6px;
   --radius-casca-card: 10px;
   --radius-casca-raia: 16px;
@@ -674,6 +679,11 @@
   --color-casca-fixada: var(--color-casca-fixada);
   --color-casca-atraso: var(--color-casca-atraso);
   --color-casca-atencao: var(--color-casca-atencao);
+  --color-casca-painel-chat: var(--color-casca-painel-chat);
+  --color-casca-nota: var(--color-casca-nota);
+  --color-casca-nota-borda: var(--color-casca-nota-borda);
+  --color-casca-pausa: var(--color-casca-pausa);
+  --color-casca-pausa-texto: var(--color-casca-pausa-texto);
   --radius-casca-gatilho: var(--radius-casca-gatilho);
   --radius-casca-card: var(--radius-casca-card);
   --radius-casca-raia: var(--radius-casca-raia);
