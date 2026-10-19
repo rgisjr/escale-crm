@@ -36,6 +36,8 @@ const TIPO_DO_CAMPO: Record<CustomFieldDef["type"], TipoFiltravel> = {
   number: "numero",
   currency: "numero",
   date: "data",
+  // FORK ESCALE · Fase 2C: "Data e Hora" filtra como data.
+  datetime: "data",
 };
 
 export const CAMPOS_DO_CONTATO: readonly CampoFiltravel[] = [

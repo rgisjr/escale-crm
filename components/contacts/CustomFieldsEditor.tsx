@@ -35,6 +35,8 @@ export type CustomFieldType =
   | "number"
   | "currency"
   | "date"
+  // FORK ESCALE · Fase 2C: "Data e Hora" da Clint.
+  | "datetime"
   | "select"
   | "multiselect"
   | "boolean"
@@ -171,6 +173,20 @@ export function CustomFieldsEditor({ fields, value, onChange, disabled, classNam
                   type="date"
                   value={typeof v === "string" ? v : ""}
                   onChange={(e) => set(f.key, e.target.value)}
+                  disabled={disabled}
+                />
+              </div>
+            );
+          // FORK ESCALE · Fase 2C: datetime cai no controle nativo; a casca usa o SeletorDeDataEHora.
+          case "datetime":
+            return (
+              <div key={f.key} className="space-y-2">
+                {labelEl}
+                <Input
+                  id={id}
+                  type="datetime-local"
+                  value={typeof v === "string" ? v.slice(0, 16) : ""}
+                  onChange={(e) => set(f.key, e.target.value || null)}
                   disabled={disabled}
                 />
               </div>
