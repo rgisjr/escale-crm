@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import { colunasDoCelular } from "@/components/inbox/InboxLayout";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useFilaDeConversas } from "@/hooks/escale/useFilaDeConversas";
@@ -172,116 +173,123 @@ export function ConversasDaCasca({
 
   return (
     <OpenConversationProvider conversationId={selectedId}>
-      <div
-        className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] w-full flex-col"
-        data-realtime-status={fila.realtimeStatus}
-      >
-        <TopoDasConversas aoNovaConversa={abrirNova} novaAberta={modoDoCentro === "nova"} />
+      {/* As dicas do "?" (AjudaDaCasca) no painel, na Nova conversa e nas
+          Configurações pedem um TooltipProvider acima; a página não tem outro. */}
+      <TooltipProvider delayDuration={150}>
         <div
-          className={cn(
-            "grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]",
-            !configuracao && "xl:grid-cols-[320px_minmax(0,1fr)_384px]",
-          )}
+          className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] w-full flex-col"
+          data-realtime-status={fila.realtimeStatus}
         >
+          <TopoDasConversas aoNovaConversa={abrirNova} novaAberta={modoDoCentro === "nova"} />
           <div
             className={cn(
-              "h-full min-h-0 flex-col border-r border-casca-borda md:flex",
-              configuracao ? "hidden" : colunas.lista,
+              "grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]",
+              !configuracao && "xl:grid-cols-[320px_minmax(0,1fr)_384px]",
             )}
           >
-            <BarraDaFila
-              busca={busca}
-              aoBuscar={setBusca}
-              preset={preset}
-              aoMudarPreset={mudarPreset}
-              ordem={ordem}
-              aoMudarOrdem={mudarOrdem}
-              espiao={espiao}
-              aoMudarEspiao={mudarEspiao}
-              personalizando={personalizando}
-              aoPersonalizar={() => setPersonalizando((v) => !v)}
-              visualizacaoForaDoPadrao={
-                preferencias.data.visualizacao !== undefined &&
-                !ehVisualizacaoPadrao(preferencias.data.visualizacao)
-              }
-            />
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <ListaDaFila
-                fila={fila}
-                itens={itens}
-                fixada={fixada}
-                selectedId={selectedId}
-                aoSelecionar={selecionar}
-                aoSoltarFixada={() => selecionar(null)}
-                temFiltro={preset !== PRESET_PADRAO || buscaValeConsulta(busca)}
-                aoIniciar={abrirNova}
-                visualizacao={preferencias.data.visualizacao}
+            <div
+              className={cn(
+                "h-full min-h-0 flex-col border-r border-casca-borda md:flex",
+                configuracao ? "hidden" : colunas.lista,
+              )}
+            >
+              <BarraDaFila
+                busca={busca}
+                aoBuscar={setBusca}
+                preset={preset}
+                aoMudarPreset={mudarPreset}
+                ordem={ordem}
+                aoMudarOrdem={mudarOrdem}
+                espiao={espiao}
+                aoMudarEspiao={mudarEspiao}
+                personalizando={personalizando}
+                aoPersonalizar={() => setPersonalizando((v) => !v)}
+                visualizacaoForaDoPadrao={
+                  preferencias.data.visualizacao !== undefined &&
+                  !ehVisualizacaoPadrao(preferencias.data.visualizacao)
+                }
               />
-            </div>
-          </div>
-
-          {configuracao ? (
-            <div className="h-full min-h-0 min-w-0" data-testid="area-de-configuracao">
-              {configuracao}
-            </div>
-          ) : (
-            <>
-              <div
-                className={cn("relative h-full min-h-0 min-w-0 flex-col md:flex", colunas.conversa)}
-              >
-                {espiao ? <FaixaDoModoEspiao aoDesativar={() => mudarEspiao(false)} /> : null}
-                {personalizando ? (
-                  <PainelPersonalizarVisualizacao
-                    visualizacao={preferencias.data.visualizacao}
-                    aoFechar={() => setPersonalizando(false)}
-                  />
-                ) : null}
-                <div className="min-h-0 flex-1">
-                  {modoDoCentro === "conversa" && conversa ? (
-                    <ConversaAberta
-                      conversa={conversa}
-                      rascunho={rascunho}
-                      aoAbrirConversa={selecionar}
-                      aoAbrirFicha={() => setFichaAberta(true)}
-                      aoMudarNaoLida={setNaoLidaManual}
-                    />
-                  ) : modoDoCentro === "nova" ? (
-                    <NovaConversa
-                      aoAbrirConversa={selecionar}
-                      aoCancelar={() => setModo("vazio")}
-                      origens={origens}
-                    />
-                  ) : naoEncontrada ? (
-                    <div className="flex h-full items-center justify-center px-6 text-center text-[13px] text-casca-suave">
-                      {t("Conversa não encontrada ou fora do seu acesso.")}
-                    </div>
-                  ) : (
-                    <CentroVazio semCanal={semCanal} aoIniciar={abrirNova} />
-                  )}
-                </div>
-              </div>
-
-              <div className="hidden h-full min-h-0 border-l border-casca-borda xl:block">
-                <PainelDoContato
-                  conversa={conversa}
-                  aoAbrirConversa={selecionar}
-                  origens={origens}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <ListaDaFila
+                  fila={fila}
+                  itens={itens}
+                  fixada={fixada}
+                  selectedId={selectedId}
+                  aoSelecionar={selecionar}
+                  aoSoltarFixada={() => selecionar(null)}
+                  temFiltro={preset !== PRESET_PADRAO || buscaValeConsulta(busca)}
+                  aoIniciar={abrirNova}
+                  visualizacao={preferencias.data.visualizacao}
                 />
               </div>
-              <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
-                <SheetContent side="right" className="w-[min(24rem,90vw)] overflow-y-auto p-0">
-                  <SheetTitle className="sr-only">{t("Ficha do contato")}</SheetTitle>
+            </div>
+
+            {configuracao ? (
+              <div className="h-full min-h-0 min-w-0" data-testid="area-de-configuracao">
+                {configuracao}
+              </div>
+            ) : (
+              <>
+                <div
+                  className={cn(
+                    "relative h-full min-h-0 min-w-0 flex-col md:flex",
+                    colunas.conversa,
+                  )}
+                >
+                  {espiao ? <FaixaDoModoEspiao aoDesativar={() => mudarEspiao(false)} /> : null}
+                  {personalizando ? (
+                    <PainelPersonalizarVisualizacao
+                      visualizacao={preferencias.data.visualizacao}
+                      aoFechar={() => setPersonalizando(false)}
+                    />
+                  ) : null}
+                  <div className="min-h-0 flex-1">
+                    {modoDoCentro === "conversa" && conversa ? (
+                      <ConversaAberta
+                        conversa={conversa}
+                        rascunho={rascunho}
+                        aoAbrirConversa={selecionar}
+                        aoAbrirFicha={() => setFichaAberta(true)}
+                        aoMudarNaoLida={setNaoLidaManual}
+                      />
+                    ) : modoDoCentro === "nova" ? (
+                      <NovaConversa
+                        aoAbrirConversa={selecionar}
+                        aoCancelar={() => setModo("vazio")}
+                        origens={origens}
+                      />
+                    ) : naoEncontrada ? (
+                      <div className="flex h-full items-center justify-center px-6 text-center text-[13px] text-casca-suave">
+                        {t("Conversa não encontrada ou fora do seu acesso.")}
+                      </div>
+                    ) : (
+                      <CentroVazio semCanal={semCanal} aoIniciar={abrirNova} />
+                    )}
+                  </div>
+                </div>
+
+                <div className="hidden h-full min-h-0 border-l border-casca-borda xl:block">
                   <PainelDoContato
                     conversa={conversa}
                     aoAbrirConversa={selecionar}
                     origens={origens}
                   />
-                </SheetContent>
-              </Sheet>
-            </>
-          )}
+                </div>
+                <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
+                  <SheetContent side="right" className="w-[min(24rem,90vw)] overflow-y-auto p-0">
+                    <SheetTitle className="sr-only">{t("Ficha do contato")}</SheetTitle>
+                    <PainelDoContato
+                      conversa={conversa}
+                      aoAbrirConversa={selecionar}
+                      origens={origens}
+                    />
+                  </SheetContent>
+                </Sheet>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
     </OpenConversationProvider>
   );
 }
