@@ -102,6 +102,8 @@ export type LinhaDeContato = {
   origem: string;
   nascimento: string | null;
   links: Record<string, string>;
+  /** Fase 2C: os campos personalizados (sem os links). */
+  campos: Record<string, unknown>;
 };
 
 export type PaginaDeContatos = {
@@ -218,6 +220,7 @@ export async function listarContatos(
       origem: c.source,
       nascimento: c.birthdate,
       links,
+      campos: Object.fromEntries(Object.entries(c.custom_fields ?? {}).filter(([k]) => !k.startsWith("link_"))),
     });
   }
   return { linhas, total: Number(primeira.total), pagina: consulta.p, porPagina: consulta.n };

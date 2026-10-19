@@ -36,11 +36,23 @@ describe("o corpo do PATCH", () => {
     ).toBe(false);
     expect(patchDasConfiguracoesSchema.safeParse({ outra: 1 }).success).toBe(false);
   });
-  it("motivos, campos e atribuição são do administrador", () => {
-    expect([...SECOES_DO_ADMINISTRADOR].sort()).toEqual(["atribuicao", "campos", "motivos"]);
+  it("motivos, campos, campos visíveis e atribuição são do administrador", () => {
+    expect([...SECOES_DO_ADMINISTRADOR].sort()).toEqual(["atribuicao", "campos", "campos_visiveis", "motivos"]);
     expect(
       secoesDoPatch({ gerais: { moeda: null, tags_padrao: [], visualizacao: "own_and_unassigned" }, campos: { regras: [] } }),
     ).toEqual(["gerais", "campos"]);
+  });
+});
+
+describe("campos_visiveis (Fase 2C)", () => {
+  it("grava escale_campos_ocultos e apaga a chave quando tudo é vazio", () => {
+    const v1 = aplicarConfiguracoes(SETTINGS, { campos_visiveis: { usar_do_grupo: false, contato: ["cargo"], negocio: [], empresa: [] } }, ETAPAS);
+    expect(v1.ok && v1.settings.escale_campos_ocultos).toEqual({ usar_do_grupo: false, contato: ["cargo"], negocio: [], empresa: [] });
+    const v2 = aplicarConfiguracoes(v1.ok ? v1.settings : {}, { campos_visiveis: { usar_do_grupo: false, contato: [], negocio: [], empresa: [] } }, ETAPAS);
+    expect(v2.ok && "escale_campos_ocultos" in v2.settings).toBe(false);
+  });
+  it("aparece em secoesDoPatch", () => {
+    expect(secoesDoPatch({ campos_visiveis: { usar_do_grupo: true, contato: [], negocio: [], empresa: [] } })).toEqual(["campos_visiveis"]);
   });
 });
 

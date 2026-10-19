@@ -6,6 +6,7 @@
  */
 import type { MudancaDeOrigem } from "@/hooks/escale/useOrigens";
 import type { VisibilityMode } from "@/lib/auth/types";
+import { type CamposOcultos, OCULTOS_VAZIOS } from "@/lib/escale/campos/ocultos";
 import {
   distribuidosForaDaLista,
   erroDaDistribuicao,
@@ -65,6 +66,8 @@ export interface RascunhoDaOrigem {
   atribuicao: AtribuicaoNaTela;
   /** Fase 1K (D15): quem é avisado do novo negócio e da mudança de status. */
   notificacoes: NotificacoesDaOrigem;
+  /** Fase 2C (D4): a "Visualização de campos" (os desligados por objeto e "usar do grupo"). */
+  camposOcultos: CamposOcultos;
 }
 
 /** O exemplo da Clint (01-029): atenção em 4 horas, crítico em 8 horas. */
@@ -112,6 +115,12 @@ export function rascunhoInicial(config: ConfiguracoesDaOrigem): RascunhoDaOrigem
         status: [...config.fork.notificacoes.mudancaDeStatus.status],
         pessoas: [...config.fork.notificacoes.mudancaDeStatus.pessoas],
       },
+    },
+    camposOcultos: {
+      usar_do_grupo: (config.fork.camposOcultos ?? OCULTOS_VAZIOS).usar_do_grupo,
+      contato: [...(config.fork.camposOcultos ?? OCULTOS_VAZIOS).contato],
+      negocio: [...(config.fork.camposOcultos ?? OCULTOS_VAZIOS).negocio],
+      empresa: [...(config.fork.camposOcultos ?? OCULTOS_VAZIOS).empresa],
     },
   };
 }
@@ -222,6 +231,9 @@ export function pedidoDoSalvar(
       };
     }
     patch.campos = { regras: r.regras };
+  }
+  if (!igual(r.camposOcultos, inicial.camposOcultos)) {
+    patch.campos_visiveis = r.camposOcultos;
   }
   if (!igual(r.alerta, inicial.alerta)) {
     const lido = alertaDaTela(r.alerta);

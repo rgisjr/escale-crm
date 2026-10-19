@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { Catalogo, TipoDoMotor } from "@/lib/escale/campos/regras";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { dataBrDoIso } from "@/lib/escale/filtros/periodo";
 
@@ -226,6 +227,38 @@ export const CAMPOS_DO_CONTATO_DO_FILTRO: readonly CampoDoFiltro[] = [
     tipo: (c.chave === "nascimento" ? "data" : "texto") as TipoDeCampo,
   })),
 ];
+
+/** O tipo do motor de campos → o tipo do filtro (Fase 2C). */
+export function tipoDoFiltro(tipo: TipoDoMotor): TipoDeCampo {
+  switch (tipo) {
+    case "number":
+    case "currency":
+      return "numero";
+    case "select":
+      return "opcao";
+    case "multiselect":
+      return "opcoes";
+    case "boolean":
+      return "booleano";
+    case "date":
+    case "datetime":
+      return "data";
+    default:
+      return "texto";
+  }
+}
+
+/** Os campos do contato no seletor do filtro: fixos (2A/2B) + catálogo (2C), em ordem alfabética (2b-22). */
+export function camposDoContatoDoFiltro(catalogo: Catalogo): CampoDoFiltro[] {
+  const doCatalogo: CampoDoFiltro[] = catalogo.campos.map((c) => ({
+    alvo: "contato",
+    chave: c.chave,
+    rotulo: String(c.definicao.label),
+    tipo: tipoDoFiltro(c.definicao.type),
+    ...(c.definicao.options ? { opcoes: c.definicao.options } : {}),
+  }));
+  return [...CAMPOS_DO_CONTATO_DO_FILTRO, ...doCatalogo].sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));
+}
 
 export const CAMPO_VALOR_DO_NEGOCIO: CampoDoFiltro = {
   alvo: "negocio",

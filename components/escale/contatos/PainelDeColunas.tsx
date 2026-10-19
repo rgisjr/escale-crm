@@ -7,7 +7,7 @@ import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/hooks/i18n/useT";
 import {
-  CAMPOS_DO_CONTATO_2A,
+  type CampoDeColuna,
   COLUNAS_NATIVAS,
   COLUNAS_PADRAO,
   type ItemDeColuna,
@@ -35,9 +35,11 @@ import { rotuloDoItem } from "./CelulasDoContato";
 export function PainelDeColunas({
   itens,
   aoMudar,
+  camposDoContato,
 }: {
   itens: ItemDeColuna[];
   aoMudar: (itens: ItemDeColuna[]) => void;
+  camposDoContato: CampoDeColuna[];
 }) {
   const t = useT();
   const [busca, setBusca] = useState("");
@@ -52,13 +54,14 @@ export function PainelDeColunas({
     tipo: "nativa",
     chave,
   }));
-  const camposFora: ItemDeColuna[] = CAMPOS_DO_CONTATO_2A.filter(
+  const camposFora: ItemDeColuna[] = camposDoContato.filter(
     (c) => !naTabela.has(`campo:${c.chave}`),
   ).map((c) => ({
     tipo: "campo",
     chave: c.chave,
   }));
-  const rotulo = (item: ItemDeColuna) => rotuloDoItem(item, t, ROTULO_DA_COLUNA);
+  const rotulos = Object.fromEntries(camposDoContato.map((c) => [c.chave, c.rotulo]));
+  const rotulo = (item: ItemDeColuna) => rotuloDoItem(item, t, ROTULO_DA_COLUNA, rotulos);
 
   const tirar = (item: ItemDeColuna) =>
     aoMudar(itens.filter((i) => chaveDoItem(i) !== chaveDoItem(item)));

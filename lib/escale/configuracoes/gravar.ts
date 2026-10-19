@@ -15,6 +15,7 @@ import {
   VISUALIZACOES,
   pessoasDaOrigem,
 } from "@/lib/escale/acesso/regras";
+import { CHAVE_DOS_OCULTOS, camposOcultosSchema } from "@/lib/escale/campos/ocultos";
 import { atribuicaoSchema, gravarAtribuicao } from "@/lib/escale/ganho/regras";
 import { gravarNotificacoes, notificacoesSchema } from "@/lib/escale/notificacoes/regras";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
@@ -56,6 +57,8 @@ export const patchDasConfiguracoesSchema = z
       .strict()
       .optional(),
     alerta: alertaDeTempoSchema.optional(),
+    /** Fase 2C (D4): a "Visualização de campos"; só administrador. */
+    campos_visiveis: camposOcultosSchema.optional(),
     permissoes: z
       .object({ pessoas: z.array(z.string().uuid()).max(PESSOAS_MAX) })
       .strict()
@@ -80,16 +83,17 @@ export type SecaoDasConfiguracoes =
   | "gerais"
   | "motivos"
   | "campos"
+  | "campos_visiveis"
   | "alerta"
   | "permissoes"
   | "distribuicao"
   | "atribuicao"
   | "notificacoes";
 
-export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos", "atribuicao"];
+export const SECOES_DO_ADMINISTRADOR: readonly SecaoDasConfiguracoes[] = ["motivos", "campos", "campos_visiveis", "atribuicao"];
 
 export function secoesDoPatch(patch: PatchDasConfiguracoes): SecaoDasConfiguracoes[] {
-  return (["gerais", "motivos", "campos", "alerta", "permissoes", "atribuicao", "notificacoes"] as const).filter((s) => patch[s] !== undefined);
+  return (["gerais", "motivos", "campos", "campos_visiveis", "alerta", "permissoes", "atribuicao", "notificacoes"] as const).filter((s) => patch[s] !== undefined);
 }
 
 export type VereditoDaGravacao =
@@ -143,6 +147,11 @@ export function aplicarConfiguracoes(
       CHAVE_DO_AO_SAIR,
       Object.keys(v.aoSair).length > 0 ? v.aoSair : null,
     );
+  }
+  if (patch.campos_visiveis) {
+    const o = patch.campos_visiveis;
+    const vazio = !o.usar_do_grupo && !o.contato.length && !o.negocio.length && !o.empresa.length;
+    s = comChave(s, CHAVE_DOS_OCULTOS, vazio ? null : o);
   }
   if (patch.alerta) {
     s = comChave(s, CHAVE_DO_ALERTA, gravarAlerta(patch.alerta, etapas.vivas));

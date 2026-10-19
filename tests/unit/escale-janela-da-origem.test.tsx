@@ -60,6 +60,7 @@ export const CONFIG: ConfiguracoesDaOrigem = {
     visualizacao: null,
     pessoas: [],
     soAdminGanha: false,
+    camposOcultos: { usar_do_grupo: false, contato: [], negocio: [], empresa: [] },
     atribuicao: { operador: "e", condicoes: [] },
     notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
   },
@@ -70,6 +71,7 @@ export const CONFIG: ConfiguracoesDaOrigem = {
   visualizacao: "own_and_unassigned",
   visualizacaoDaOrganizacao: "own_and_unassigned",
   pessoasDoGrupo: [],
+  ocultosDoGrupo: null,
   podeAdministrar: true,
   distribuicao: [],
   distribuicaoAtualizada: null,
@@ -151,12 +153,13 @@ describe("<JanelaDaOrigem>", () => {
     expect(onFechar).toHaveBeenCalled();
   });
 
-  it("subaba de outra fase mostra Em breve", async () => {
+  it("Visualização de campos deixou de ser Em breve (Fase 2C)", async () => {
     const { user } = abrir();
     // O título já aparece com o nome da lista de origens; o menu só depois de ler as configurações.
     await screen.findByRole("navigation", { name: "Configurações da origem" });
     await user.click(screen.getByRole("button", { name: "Visualização de campos" }));
-    expect(screen.getByText("Chega com o módulo Contatos (Fase 2).")).toBeInTheDocument();
+    expect(await screen.findByText("Configure aqui a sua visualização de campos.")).toBeInTheDocument();
+    expect(screen.queryByText("Chega com o módulo Contatos (Fase 2).")).toBeNull();
   });
 
   it("Etapas e atividades: uma coluna por etapa aberta, Nova atividade ligada, Salvar na origem só com mudança", async () => {

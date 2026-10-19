@@ -2,9 +2,14 @@ import { redirect } from "next/navigation";
 
 import type { OrigemParaCriar } from "@/components/escale/contatos/CamposDaOportunidade";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { lerCatalogo, semearSeVazio } from "@/lib/escale/campos/banco";
+import { CATALOGO_VAZIO, catalogoVisivel } from "@/lib/escale/campos/regras";
+import { logger } from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 
+import { camposDoContatoDoFiltro } from "./filtros";
 import { opcoesDoFiltroDasOrigens, type OpcoesDoFiltro } from "./opcoes-do-filtro";
 
 type EtapaLida = {
@@ -54,10 +59,21 @@ export async function origensDaPagina(): Promise<{
       .sort((a, b) => Number(a.position) - Number(b.position))
       .map((s) => ({ id: s.id, nome: s.name })),
   }));
+  // FORK ESCALE · Fase 2C: os campos do catálogo do contato que o papel de quem olha enxerga.
+  let catalogo = CATALOGO_VAZIO;
+  try {
+    await semearSeVazio(createAdminClient(), activeOrg.orgId);
+    catalogo = catalogoVisivel(await lerCatalogo(supabase, activeOrg.orgId, "contato"), activeOrg.role as Role);
+  } catch (err) {
+    logger.error("contatos.origens-da-pagina.catalogo", { err });
+  }
   // FORK ESCALE · Fase 2B: o painel de filtros oferece todas as etapas (ganho e perda também).
   return {
     origens,
     papel: activeOrg.role as Role,
-    opcoesDoFiltro: opcoesDoFiltroDasOrigens(lidas),
+    opcoesDoFiltro: {
+      ...opcoesDoFiltroDasOrigens(lidas),
+      camposDoContato: camposDoContatoDoFiltro(catalogo),
+    },
   };
 }

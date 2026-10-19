@@ -36,6 +36,7 @@ const linha = (extra: Partial<LinhaDeContato>): LinhaDeContato => ({
   origem: "manual",
   nascimento: null,
   links: {},
+  campos: {},
   ...extra,
 });
 
@@ -53,6 +54,31 @@ const props = {
 };
 
 describe("TabelaDeContatos (03-001)", () => {
+  it("uma coluna de campo personalizado mostra o valor pelo tipo (moeda em R$, seleção pelo rótulo, data em dd/mm/aaaa)", () => {
+    const camposDoContato = [
+      { chave: "renda", rotulo: "Renda", tipo: "currency" as const },
+      { chave: "origem", rotulo: "Origem do lead", tipo: "select" as const, opcoes: [{ value: "org", label: "Orgânico" }] },
+      { chave: "desde", rotulo: "Cliente desde", tipo: "date" as const },
+    ];
+    const colunas = [
+      { tipo: "campo" as const, chave: "renda" },
+      { tipo: "campo" as const, chave: "origem" },
+      { tipo: "campo" as const, chave: "desde" },
+    ];
+    envolver(
+      <TabelaDeContatos
+        {...props}
+        colunas={colunas}
+        camposDoContato={camposDoContato}
+        linhas={[linha({ campos: { renda: 1500.5, origem: "org", desde: "2026-10-01" } })]}
+      />,
+    );
+    expect(screen.getByRole("columnheader", { name: "Renda" })).toBeInTheDocument();
+    expect(screen.getByText("R$ 1.500,50")).toBeInTheDocument();
+    expect(screen.getByText("Orgânico")).toBeInTheDocument();
+    expect(screen.getByText("01/10/2026")).toBeInTheDocument();
+  });
+
   it("cabeçalho NOME, CONTATO, TAGS, NEGÓCIOS e a caixinha desligada sem permissão", () => {
     envolver(<TabelaDeContatos {...props} linhas={[linha({})]} />);
     for (const r of ["Nome", "Contato", "Tags", "Negócios"]) {

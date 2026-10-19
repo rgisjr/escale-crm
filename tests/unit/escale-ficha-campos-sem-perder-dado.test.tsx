@@ -17,6 +17,30 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/api/client", () => ({ apiClient: { get: api.get, patch: api.patch } }));
 
+// FORK ESCALE · Fase 2C: o contato lê o catálogo do contato (as chaves colidem de propósito com as colunas).
+const CATALOGO_DO_CONTATO = vi.hoisted(() => {
+  const campo = (chave: string, label: string, posicao: number) => ({
+    id: "c-" + chave,
+    objeto: "contato",
+    chave,
+    definicao: { label, type: "text" },
+    grupo_id: "g1",
+    papel_minimo: null,
+    posicao,
+    padrao: false,
+  });
+  return {
+    grupos: [{ id: "g1", chave: "informacoes_gerais", nome: "Informações Gerais", posicao: 0, padrao: true }],
+    campos: [campo("notas", "Notas", 0), campo("obs", "Observação", 1), campo("nome", "Apelido", 2), campo("email", "Email secundário", 3), campo("codigo", "Código", 4)],
+  };
+});
+vi.mock("@/hooks/escale/useCatalogoDeCampos", () => ({
+  useCatalogoDeCampos: () => ({ catalogo: CATALOGO_DO_CONTATO, carregando: false, erro: false }),
+}));
+vi.mock("@/hooks/escale/useOcultosDaOrigem", () => ({
+  useOcultosDaOrigem: () => ({ usar_do_grupo: false, contato: [], negocio: [], empresa: [] }),
+}));
+
 import { AbaContato } from "@/components/escale/negocio/abas/AbasDeCampos";
 import type { Pipeline } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
@@ -37,7 +61,6 @@ const PIPELINE = {
       // Chaves que colidem com as colunas e com o prefixo dos links (I5).
       { key: "nome", label: "Apelido", type: "text" },
       { key: "email", label: "Email secundário", type: "text" },
-      { key: "link_x", label: "Código", type: "text" },
     ],
   },
 } as unknown as Pipeline;
@@ -103,7 +126,7 @@ describe("I1: duas gravações seguidas não se desfazem", () => {
 });
 
 describe("I5: o campo do CRM grava em custom_fields, qualquer que seja a chave", () => {
-  it("chaves nome, email e link_x do CRM não vão para as colunas nem para os links", async () => {
+  it("chaves nome, email e codigo do CRM não vão para as colunas nem para os links", async () => {
     const erro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     renderizar();
     await userEvent.type(await screen.findByRole("textbox", { name: "Apelido" }), "Aninha{Enter}");
@@ -114,7 +137,7 @@ describe("I5: o campo do CRM grava em custom_fields, qualquer que seja a chave",
     await userEvent.type(screen.getByRole("textbox", { name: "Código" }), "XPTO{Enter}");
     await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2));
     expect(api.patch.mock.calls[1]![1]).toEqual({
-      custom_fields: { cargo: "CEO", link_site: "https://a.com/", nome: "Aninha", link_x: "XPTO" },
+      custom_fields: { cargo: "CEO", link_site: "https://a.com/", nome: "Aninha", codigo: "XPTO" },
     });
     // O Email da coluna e o do CRM convivem na mesma lista: as chaves do React não se repetem.
     expect(screen.getByRole("textbox", { name: "Email" })).toHaveValue("ana@b.co");

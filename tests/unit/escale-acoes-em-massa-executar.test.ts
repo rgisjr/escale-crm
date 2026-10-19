@@ -101,6 +101,43 @@ describe("processarAcaoEmMassa", () => {
     }
   });
 
+  it("alterar_campo mescla o custom_fields do contato; limpar_campo tira a chave (Fase 2C)", async () => {
+    const montar = (tipo: string, parametros: object) =>
+      banco({
+        crm_acoes_em_massa: [acao(tipo, parametros)],
+        crm_acoes_em_massa_itens: [
+          { data: [{ contact_id: "c1" }], error: null },
+          { data: [], error: null },
+        ],
+        contacts: [{ data: [{ id: "c1", tags: [], custom_fields: { renda: "10", cargo: "x" } }], error: null }],
+      });
+    const a = montar("alterar_campo", { chave: "cargo", valor: "CEO" });
+    const d1 = deps(a.db);
+    expect((await processarAcaoEmMassa(evento(), d1)).status).toBe("ok");
+    expect(d1.mudarContato).toHaveBeenCalledWith(expect.anything(), "c1", {
+      custom_fields: { renda: "10", cargo: "CEO" },
+    });
+    const b = montar("limpar_campo", { chave: "renda" });
+    const d2 = deps(b.db);
+    expect((await processarAcaoEmMassa(evento(), d2)).status).toBe("ok");
+    expect(d2.mudarContato).toHaveBeenCalledWith(expect.anything(), "c1", { custom_fields: { cargo: "x" } });
+  });
+
+  it("alterar_campo com chave de link vira falha do contato, sem gravar", async () => {
+    const { db, anotado } = banco({
+      crm_acoes_em_massa: [acao("alterar_campo", { chave: "link_site", valor: "x" })],
+      crm_acoes_em_massa_itens: [
+        { data: [{ contact_id: "c1" }], error: null },
+        { data: [], error: null },
+      ],
+      contacts: [{ data: [{ id: "c1", tags: [], custom_fields: {} }], error: null }],
+    });
+    const d = deps(db);
+    await processarAcaoEmMassa(evento(), d);
+    expect(d.mudarContato).not.toHaveBeenCalled();
+    expect(anotado.at(-1)).toMatchObject({ corpo: { status: "concluida", feitos: 0, falhas: 1 } });
+  });
+
   it("incluir tag: marca o lote antes de agir, pula quem já tem, grava as contagens e conclui", async () => {
     const { db, anotado } = banco({
       crm_acoes_em_massa: [acao("incluir_tag", { tag: "vip" })],

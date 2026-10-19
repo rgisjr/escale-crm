@@ -43,6 +43,8 @@ export interface CampoEditavel {
   obrigatorioNaEtapa?: boolean;
   /** Só leitura (o "Valor" de um negócio ganho ou perdido, por exemplo). */
   travado?: boolean;
+  /** Fase 2C: a chave do grupo do catálogo ("informacoes_gerais" quando falta). */
+  grupo?: string;
 }
 
 /** As chaves fixas do contato; o resto vai em `custom_fields`. */
@@ -123,6 +125,28 @@ export function dataIsoDeBr(texto: string): string | null {
   return bate ? `${a}-${m}-${d}` : null;
 }
 
+/** Fase 2C: "Data e Hora" mostra "dd/mm/aaaa HH:mm" (24 h), sem fuso (o valor guardado é local). */
+export function dataHoraBrDeIso(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : iso;
+}
+
+export function dataHoraIsoDeBr(texto: string): string | null {
+  const limpo = texto.trim();
+  const iso = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(limpo);
+  const br = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/.exec(limpo);
+  const [a, m, d, h, mi] = iso ? iso.slice(1) : br ? [br[3], br[2], br[1], br[4], br[5]] : [];
+  if (!a || !m || !d || !h || !mi) return null;
+  const data = new Date(Number(a), Number(m) - 1, Number(d), Number(h), Number(mi));
+  const bate =
+    data.getFullYear() === Number(a) &&
+    data.getMonth() === Number(m) - 1 &&
+    data.getDate() === Number(d) &&
+    data.getHours() === Number(h) &&
+    data.getMinutes() === Number(mi);
+  return bate ? `${a}-${m}-${d}T${h}:${mi}` : null;
+}
+
 /**
  * O telefone como a tela mostra: o canônico BR vira "(43) 99803-1566" (o mesmo
  * formatador da lista de contatos); outro país vira "+351 912345678"; o que não
@@ -151,6 +175,8 @@ export function valorParaLeitura(
       return Array.isArray(bruto) ? bruto.map(rotuloDa).join(", ") || null : String(bruto);
     case "date":
       return typeof bruto === "string" ? dataBrDeIso(bruto) : String(bruto);
+    case "datetime":
+      return typeof bruto === "string" ? dataHoraBrDeIso(bruto) : String(bruto);
     case "currency":
       return typeof bruto === "number" ? textoDeReais(bruto) : String(bruto);
     case "number":
@@ -182,6 +208,10 @@ export function valorParaGravar(tipo: TipoDeCampoDaFicha, texto: string): ValorP
       return iso
         ? { ok: true, valor: iso }
         : { ok: false, erro: "Digite uma data válida (dd/mm/aaaa)." };
+    }
+    case "datetime": {
+      const iso = dataHoraIsoDeBr(limpo);
+      return iso ? { ok: true, valor: iso } : { ok: false, erro: "Data e hora inválidas." };
     }
     case "email":
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpo)
@@ -271,6 +301,8 @@ export function patchDoContato(
     if (chave === CHAVE_NOME) return { name: String(valor) };
     if (chave === CHAVE_TELEFONE) return { phone_number: String(valor) };
     if (chave === CHAVE_EMAIL) return { email: String(valor) };
+    // FORK ESCALE · Fase 2C: "Data de nascimento" é fixo do contato.
+    if (chave === "nascimento") return { birthdate: String(valor) };
     return null;
   }
   if (origem === "link") {

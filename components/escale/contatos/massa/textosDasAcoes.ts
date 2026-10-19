@@ -35,6 +35,11 @@ export function avisoNaFila(
       return t(
         "Contato(s) com a remoção da tag estão na fila de atualização. O processo pode levar alguns segundos.",
       );
+    case "alterar_campo":
+    case "limpar_campo":
+      return t(
+        "Contatos com o campo alterado estão na fila de atualização. O processo pode levar alguns segundos.",
+      );
     case "exportar":
       return status === "aguardando_aprovacao"
         ? t("A exportação foi enviada para aprovação de um administrador.")
@@ -57,6 +62,9 @@ export function falhaDoPedido(t: Traduzir, acao: AcaoEmMassa): string {
       return t("Falha ao adicionar tags aos contatos, tente novamente ou chame o suporte.");
     case "remover_tag":
       return t("Falha ao remover tag do(s) contato(s), tente novamente ou chame o suporte.");
+    case "alterar_campo":
+    case "limpar_campo":
+      return t("Falha ao alterar o campo dos contatos, tente novamente ou chame o suporte.");
     case "exportar":
       return t("Falha ao exportar os contatos, tente novamente ou chame o suporte.");
     case "excluir":
@@ -78,6 +86,10 @@ export function avisoDoFim(t: Traduzir, a: ResumoDaAcao): { ok: boolean; texto: 
       return { ok: true, texto: t("As tags foram adicionadas aos contatos.") };
     case "remover_tag":
       return { ok: true, texto: t("A tag foi removida do(s) contato(s).") };
+    case "alterar_campo":
+      return { ok: true, texto: t("O campo foi alterado nos contatos.") };
+    case "limpar_campo":
+      return { ok: true, texto: t("O campo foi limpo nos contatos.") };
     case "exportar":
       return { ok: true, texto: t("Os contatos foram exportados com sucesso.") };
     case "excluir":

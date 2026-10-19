@@ -7,6 +7,7 @@ import { SeletorMultiploDaCasca } from "@/components/escale/ui/SeletorMultiploDa
 import { useT } from "@/hooks/i18n/useT";
 import {
   dataBrDeIso,
+  dataHoraBrDeIso,
   simboloDaMoeda,
   textoDeNumero,
   textoDeReais,
@@ -257,6 +258,7 @@ function textoDoValor(campo: CampoEditavel): string {
   if (campo.tipo === "currency" && typeof v === "number") return textoDeReais(v);
   if (campo.tipo === "number" && typeof v === "number") return textoDeNumero(v);
   if (campo.tipo === "date" && typeof v === "string") return dataBrDeIso(v);
+  if (campo.tipo === "datetime" && typeof v === "string") return dataHoraBrDeIso(v);
   if (campo.tipo === "phone") return textoDeTelefone(v);
   return String(v);
 }

@@ -4,6 +4,7 @@
  */
 import type { VisibilityMode } from "@/lib/auth/types";
 import { pessoasDaOrigem, regraEmVigor } from "@/lib/escale/acesso/regras";
+import { CHAVE_DOS_OCULTOS, type CamposOcultos, lerOcultos } from "@/lib/escale/campos/ocultos";
 import type { PessoaNaDistribuicao } from "@/lib/escale/distribuicao/regras";
 import type { MoedaServida } from "@/lib/money";
 
@@ -34,6 +35,8 @@ export interface ConfiguracoesDaOrigem {
   visualizacaoDaOrganizacao: VisibilityMode;
   /** A lista do grupo da origem (1J, Q6): se a origem não tem lista, é esta que vale. */
   pessoasDoGrupo: string[];
+  /** Fase 2C: a "Visualização de campos" do grupo; `null` = o grupo não tem (a caixa fica desligada). */
+  ocultosDoGrupo: CamposOcultos | null;
   podeAdministrar: boolean;
   /** Fase 1K (D13): quem recebe os negócios sem dono, na ordem em que entrou. Vazia para quem não é gerente. */
   distribuicao: PessoaNaDistribuicao[];
@@ -79,6 +82,10 @@ export function montarConfiguracoes(entrada: {
     visualizacao: regraEmVigor(pipeline.settings, entrada.visualizacaoDaOrganizacao),
     visualizacaoDaOrganizacao: entrada.visualizacaoDaOrganizacao,
     pessoasDoGrupo: pessoasDaOrigem(entrada.grupo?.settings),
+    ocultosDoGrupo:
+      entrada.grupo?.settings && typeof entrada.grupo.settings === "object" && CHAVE_DOS_OCULTOS in entrada.grupo.settings
+        ? lerOcultos(entrada.grupo.settings)
+        : null,
     podeAdministrar: entrada.podeAdministrar,
     distribuicao: [...entrada.distribuicao],
     distribuicaoAtualizada: entrada.distribuicaoAtualizada,
