@@ -9,6 +9,7 @@ import { useGravarContato } from "@/hooks/escale/useGravarContato";
 import type { QuadroDoNegocio } from "@/hooks/escale/useNegocioDaConversa";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import {
   CHAVE_EMAIL,
@@ -48,7 +49,7 @@ export function SecaoContato({
       origem: "coluna",
       rotulo: t("Nome"),
       tipo: "text",
-      valor: contato?.name ?? conversa.contacts?.display_name ?? null,
+      valor: nomeDoContato(contato ?? conversa.contacts),
     },
     {
       chave: CHAVE_EMAIL,

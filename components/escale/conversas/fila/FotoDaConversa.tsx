@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { ChannelLogo } from "@/components/inbox/ChannelLogo";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { corDoAvatar, inicialDoNome } from "@/lib/escale/quadro/aparencia";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +25,7 @@ export function FotoDaConversa({
 }) {
   const [falhou, setFalhou] = useState(false);
   const c = conversa.contacts;
-  const nome = c?.display_name ?? c?.name ?? "";
+  const nome = nomeDoContato(c) ?? "";
   const temFoto = Boolean(c?.avatar_storage_path) && !falhou && Boolean(c?.id);
   return (
     <span className={cn("relative shrink-0", className)}>

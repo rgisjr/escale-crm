@@ -23,6 +23,11 @@ import { cn } from "@/lib/utils";
 
 /** Toggles que dependem de outras fases ficam desligados com "Em breve" (N16). */
 const EM_BREVE: ReadonlySet<CampoDaLinha> = new Set(["setor", "empresa"]);
+const LIMITES = ["amarelo", "vermelho"] as const;
+const ROTULO_DO_LIMITE = {
+  amarelo: "Amarelo a partir de",
+  vermelho: "Vermelho a partir de",
+} as const;
 
 /**
  * "PERSONALIZAR VISUALIZAÇÃO" (02-008, c44–c46): o painel de 355px sobre a
@@ -49,7 +54,7 @@ export function PainelPersonalizarVisualizacao({
   const linhaDoLimite = (qual: "amarelo" | "vermelho", rotulo: string) => {
     const l = visualizacao.limites[qual];
     return (
-      <div className="flex h-9 items-center gap-2 pl-4">
+      <div key={qual} className="flex h-9 items-center gap-2 pl-4">
         <label htmlFor={`limite-${qual}`} className="w-[120px] text-[12px] text-casca-suave">
           {rotulo}
         </label>
@@ -113,7 +118,7 @@ export function PainelPersonalizarVisualizacao({
             </span>
             <span className="flex items-center justify-between gap-2">
               <span className="truncate text-[12px] text-casca-suave">
-                Oi! Ainda tenho interesse…
+                {t("Oi! Ainda tenho interesse…")}
               </span>
               <span className="flex shrink-0 items-center gap-1.5">
                 {visualizacao.campos.atendente ? (
@@ -191,8 +196,7 @@ export function PainelPersonalizarVisualizacao({
               </div>
               {campo === "tempoSemResposta" && ligado && limitesAbertos ? (
                 <div className="pb-2">
-                  {linhaDoLimite("amarelo", t("Amarelo a partir de"))}
-                  {linhaDoLimite("vermelho", t("Vermelho a partir de"))}
+                  {LIMITES.map((l) => linhaDoLimite(l, t(ROTULO_DO_LIMITE[l])))}
                 </div>
               ) : null}
             </li>

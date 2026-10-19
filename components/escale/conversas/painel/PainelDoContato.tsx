@@ -12,6 +12,8 @@ import { Loader2, MessageCircle } from "@/lib/ui/icons-da-casca";
 
 import { VazioDaCasca } from "../centro/VazioDaCasca";
 import { CabecalhoDoContato } from "./CabecalhoDoContato";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
+
 import { CartaoDoNegocio } from "./CartaoDoNegocio";
 import { ProximoNegocioDaConversa } from "./ProximoNegocioDaConversa";
 import { SecoesDoPainel } from "./SecoesDoPainel";
@@ -20,10 +22,11 @@ import { SecoesDoPainel } from "./SecoesDoPainel";
 function linhaDoContato(c: ConversationWithContact): LinhaDeContato | null {
   const contato = c.contacts;
   if (!contato?.id) return null;
+  const { display_name: apelido = null } = contato;
   return {
     id: contato.id,
-    nome: contato.name ?? contato.display_name ?? "",
-    display_name: contato.display_name ?? null,
+    nome: nomeDoContato(contato) ?? "",
+    display_name: apelido,
     telefone: contato.phone_number ?? null,
     email: null,
     instagram: null,

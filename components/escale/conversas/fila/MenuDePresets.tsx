@@ -33,6 +33,8 @@ const ICONE: Record<Preset, LucideIcon> = {
   fechadas: Archive,
 };
 
+const PRESETS_DO_TOPO: readonly Preset[] = ["todos", "nao_lidas"];
+
 const CABECALHO =
   "px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
 
@@ -95,8 +97,7 @@ export function MenuDePresets({
           sideOffset={6}
           className={cn(CAIXA_DO_MENU, "w-[224px]")}
         >
-          {item("todos")}
-          {item("nao_lidas")}
+          {PRESETS_DO_TOPO.map(item)}
           <p className={CABECALHO}>{t("Status")}</p>
           {PRESETS_DE_STATUS.map(item)}
           <p className={CABECALHO}>{t("Salvos")}</p>

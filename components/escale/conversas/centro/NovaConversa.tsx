@@ -17,6 +17,7 @@ import {
   candidatosParaConversaNova,
   elegiveisParaConversaNova,
 } from "@/lib/channels/conversa-nova";
+import { nomeDoCanal } from "@/lib/channels/estado";
 import { formatarTelefone } from "@/lib/escale/contatos/regras";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import {
@@ -287,7 +288,7 @@ export function NovaConversa({
                               >
                                 <span className="flex min-w-0 flex-col">
                                   <span className="truncate text-[12px] text-casca-texto">
-                                    {c.display_name ?? c.waha_session_name ?? t("Número sem nome")}
+                                    {nomeDoCanal(c, t)}
                                   </span>
                                   <span className="text-[11px] text-casca-suave">
                                     {formatarTelefone(c.phone_number)}
