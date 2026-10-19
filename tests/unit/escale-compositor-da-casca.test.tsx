@@ -40,20 +40,43 @@ vi.mock("@/hooks/inbox/useUploadMedia", () => ({
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
   useAssignableMembers: () => ({ data: [{ user_id: "u2", role: "agent", full_name: "Bia" }] }),
 }));
-vi.mock("@/hooks/inbox/useMessageTemplates", () => ({
-  useMessageTemplates: () => ({
-    data: [
-      {
-        id: "t1",
-        title: "Boas-vindas",
-        body: "Olá {{nome}}, tudo bem?",
-        shortcut: "oi",
-        owner_user_id: null,
-      },
-      { id: "t2", title: "Minha", body: "Só minha", shortcut: "mi", owner_user_id: "u1" },
-    ],
+vi.mock("@/hooks/escale/useRespostasRapidas", () => ({
+  useRespostasDaConversa: () => ({
+    data: {
+      respostas: [
+        {
+          id: "t1",
+          atalho: "oi",
+          corpo: "Olá {{nome}}, tudo bem?",
+          canais: ["whatsapp"],
+          compartilhada: true,
+          todos_os_setores: true,
+          setores: [],
+          dono: null,
+          criada_por: null,
+          atualizada_em: "",
+        },
+        {
+          id: "t2",
+          atalho: "mi",
+          corpo: "Só minha",
+          canais: ["whatsapp"],
+          compartilhada: false,
+          todos_os_setores: true,
+          setores: [],
+          dono: "u1",
+          criada_por: "u1",
+          atualizada_em: "",
+        },
+      ],
+      setorDaConversa: null,
+      podeOutrosSetores: false,
+    },
   }),
+  useSalvarResposta: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+vi.mock("@/hooks/escale/useSetores", () => ({ useSetores: () => ({ data: [] }) }));
+vi.mock("@/hooks/escale/usePermissoesDeAtendimento", () => ({ useMinhasPermissoes: () => ({}) }));
 vi.mock("@/hooks/escale/useModelosDeMensagem", () => ({
   useModelosDeMensagem: () => ({
     modelos: [],
@@ -71,10 +94,6 @@ vi.mock("@/components/inbox/composer/EmojiButton", () => ({
   EmojiButton: ({ onPick }: { onPick: (e: string) => void }) => (
     <button type="button" aria-label="Emoji" onClick={() => onPick("😀")} />
   ),
-}));
-vi.mock("@/app/app/templates/_components/TemplateFormDialog", () => ({
-  TemplateFormDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="nova-resposta" /> : null,
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
@@ -162,7 +181,7 @@ describe("CompositorDaCasca (c02)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Emoji" }));
     expect((campo as HTMLTextAreaElement).value).toContain("😀");
     fireEvent.change(campo, { target: { value: "/oi" } });
-    expect(await screen.findByText("Boas-vindas")).toBeInTheDocument();
+    expect(await screen.findByText("/oi", { selector: "span" })).toBeInTheDocument();
   });
   it("com bloqueio mostra o motivo no lugar do campo; fechada mostra 'Reabra o atendimento…'", () => {
     const { rerender } = wrap(
@@ -270,6 +289,7 @@ describe("PainelRespostasRapidas (c09) e JanelaNotaInterna (c12)", () => {
     const escolher = vi.fn();
     wrap(
       <PainelRespostasRapidas
+        conversationId="c1"
         aberto
         aoFechar={vi.fn()}
         termoInicial=""
@@ -279,12 +299,12 @@ describe("PainelRespostasRapidas (c09) e JanelaNotaInterna (c12)", () => {
     );
     expect(screen.getByText("Gerais")).toBeInTheDocument();
     expect(screen.getByText("Minhas")).toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText("Buscar"), { target: { value: "boas" } });
-    expect(screen.queryByText("Minha")).toBeNull();
-    fireEvent.click(screen.getByText("Boas-vindas"));
+    fireEvent.change(screen.getByPlaceholderText("Buscar"), { target: { value: "oi" } });
+    expect(screen.queryByText("/mi")).toBeNull();
+    fireEvent.click(screen.getByText("/oi"));
     expect(escolher).toHaveBeenCalledWith("Olá Ana Souza, tudo bem?");
     fireEvent.click(screen.getByRole("button", { name: /Nova resposta/ }));
-    expect(screen.getByTestId("nova-resposta")).toBeInTheDocument();
+    expect(screen.getByText("Criar Resposta rápida")).toBeInTheDocument();
 
     const fechar = vi.fn();
     criarNota.mockResolvedValue({ data: {} });

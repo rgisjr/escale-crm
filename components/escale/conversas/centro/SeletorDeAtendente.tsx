@@ -9,6 +9,8 @@ import { useT } from "@/hooks/i18n/useT";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { useClaimConversation } from "@/hooks/inbox/useClaimConversation";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
+import { useLiberarDeOutro } from "@/hooks/escale/useSetores";
 import { useReleaseConversation } from "@/hooks/inbox/useReleaseConversation";
 import { useTransferConversation } from "@/hooks/inbox/useTransferConversation";
 import { corDoAvatar, inicialDoNome } from "@/lib/escale/quadro/aparencia";
@@ -48,7 +50,12 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
   const souOAtendente = atualId === user.id;
   const nomeAtual =
     conversa.assigned_to_user_name?.trim() || (atualId ? t("Atendente") : t("Sem atendente"));
-  const ocupado = transferir.isPending || reivindicar.isPending || liberar.isPending;
+  const minhas = useMinhasPermissoes();
+  const liberarDeOutro = useLiberarDeOutro();
+  const podeLiberarOutros =
+    minhas.CHAT_CHANGE_ATTENDANT_ALL === true || minhas.CHAT_CHANGE_ATTENDANT_TEAM === true;
+  const ocupado =
+    transferir.isPending || reivindicar.isPending || liberar.isPending || liberarDeOutro.isPending;
 
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -66,7 +73,18 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
     setAberto(false);
     if (id === atualId) return;
     if (id === null) {
-      liberar.mutate({ conversation_id: conversa.id }, { onError: aoConflito });
+      if (souOAtendente) liberar.mutate({ conversation_id: conversa.id }, { onError: aoConflito });
+      else
+        liberarDeOutro.mutate(conversa.id, {
+          onError: (err) => {
+            const status = (err as { status?: number }).status;
+            if (status === 403)
+              toast.error(
+                t("Só o atendente atual ou quem pode alterar atendentes libera a conversa."),
+              );
+            else aoConflito(err);
+          },
+        });
     } else if (id === user.id) {
       reivindicar.mutate(
         { conversation_id: conversa.id, expected_assignee: atualId },
@@ -76,7 +94,7 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
       transferir.mutate({ conversation_id: conversa.id, to_user_id: id }, { onError: aoConflito });
     }
   };
-  const podeLiberar = atualId === null || souOAtendente;
+  const podeLiberar = atualId === null || souOAtendente || podeLiberarOutros;
 
   return (
     <Popover.Root
@@ -123,7 +141,11 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
             role="option"
             aria-selected={atualId === null}
             aria-disabled={!podeLiberar}
-            title={podeLiberar ? undefined : t("Só o atendente atual pode liberar a conversa.")}
+            title={
+              podeLiberar
+                ? undefined
+                : t("Só o atendente atual ou quem pode alterar atendentes libera a conversa.")
+            }
             className={LINHA}
             onClick={() => podeLiberar && escolher(null)}
           >

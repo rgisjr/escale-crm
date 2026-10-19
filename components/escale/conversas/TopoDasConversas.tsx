@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { Plus, Settings } from "@/lib/ui/icons-da-casca";
@@ -16,16 +18,14 @@ export function TopoDasConversas({
     <div className="flex h-12 shrink-0 items-center justify-between border-b border-casca-borda pr-4 pl-6">
       <h1 className="text-[16px] font-medium text-casca-texto">{t("Conversas")}</h1>
       <div className="flex items-center gap-2">
-        <BotaoDaCasca
-          variante="icone"
-          tamanho="md"
-          disabled
-          title={t("Em breve")}
+        <Link
+          href="/app/inbox/configuracoes"
           aria-label={t("Configurações")}
-          className="disabled:pointer-events-auto disabled:cursor-not-allowed"
+          title={t("Configurações")}
+          className="grid size-8 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
         >
           <Settings size={16} aria-hidden />
-        </BotaoDaCasca>
+        </Link>
         <BotaoDaCasca
           variante="marca"
           tamanho="md"

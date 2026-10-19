@@ -28,6 +28,16 @@ vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
     ],
   }),
 }));
+vi.mock("@/hooks/escale/usePermissoesDeAtendimento", () => ({ useMinhasPermissoes: () => ({}) }));
+vi.mock("@/hooks/escale/useSetores", () => ({
+  useSetores: () => ({ data: [] }),
+  useSetoresDasConversas: () => ({}),
+  useAlterarSetor: () => ({
+    alterar: { mutate: vi.fn(), isPending: false },
+    cancelar: { mutate: vi.fn(), isPending: false },
+  }),
+  useLiberarDeOutro: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const transfer = vi.fn();
 const claim = vi.fn();
@@ -131,7 +141,10 @@ describe("SeletorDeAtendente (c04)", () => {
     fireEvent.change(await screen.findByPlaceholderText("Buscar por…"), { target: { value: "" } });
     const semAtendente = screen.getByRole("option", { name: /Sem atendente/ });
     expect(semAtendente).toHaveAttribute("aria-disabled", "true");
-    expect(semAtendente).toHaveAttribute("title", "Só o atendente atual pode liberar a conversa.");
+    expect(semAtendente).toHaveAttribute(
+      "title",
+      "Só o atendente atual ou quem pode alterar atendentes libera a conversa.",
+    );
   });
   it("quando sou o atendente, 'Sem atendente' libera; escolher outro transfere", async () => {
     wrap(

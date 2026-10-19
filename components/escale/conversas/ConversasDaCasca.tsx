@@ -1,6 +1,6 @@
 "use client";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { colunasDoCelular } from "@/components/inbox/InboxLayout";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -54,10 +54,13 @@ export function ConversasDaCasca({
   initialSelectedId = null,
   rascunho = null,
   origens = [],
+  configuracao,
 }: {
   initialSelectedId?: string | null;
   rascunho?: AvisoDeRascunho | null;
   origens?: OrigemParaCriar[];
+  /** FORK ESCALE · Fase 3C: uma tela de configuração no lugar do centro e do painel (a fila fica). */
+  configuracao?: ReactNode;
 }) {
   const t = useT();
   const { activeOrg } = useAuth();
@@ -142,6 +145,10 @@ export function ConversasDaCasca({
 
   const selecionar = useCallback(
     (id: string | null) => {
+      if (configuracao && id) {
+        router.push(`/app/inbox?id=${id}`);
+        return;
+      }
       setSelectedId(id);
       setNaoLidaManual(null);
       if (id) setModo("vazio");
@@ -152,7 +159,7 @@ export function ConversasDaCasca({
       const query = params.toString();
       window.history.pushState(null, "", query ? `${pathname}?${query}` : pathname);
     },
-    [pathname, searchParams],
+    [pathname, searchParams, configuracao, router],
   );
   const abrirNova = useCallback(() => {
     setPersonalizando(false);
@@ -170,11 +177,16 @@ export function ConversasDaCasca({
         data-realtime-status={fila.realtimeStatus}
       >
         <TopoDasConversas aoNovaConversa={abrirNova} novaAberta={modoDoCentro === "nova"} />
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_384px]">
+        <div
+          className={cn(
+            "grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]",
+            !configuracao && "xl:grid-cols-[320px_minmax(0,1fr)_384px]",
+          )}
+        >
           <div
             className={cn(
               "h-full min-h-0 flex-col border-r border-casca-borda md:flex",
-              colunas.lista,
+              configuracao ? "hidden" : colunas.lista,
             )}
           >
             <BarraDaFila
@@ -208,48 +220,66 @@ export function ConversasDaCasca({
             </div>
           </div>
 
-          <div className={cn("relative h-full min-h-0 min-w-0 flex-col md:flex", colunas.conversa)}>
-            {espiao ? <FaixaDoModoEspiao aoDesativar={() => mudarEspiao(false)} /> : null}
-            {personalizando ? (
-              <PainelPersonalizarVisualizacao
-                visualizacao={preferencias.data.visualizacao}
-                aoFechar={() => setPersonalizando(false)}
-              />
-            ) : null}
-            <div className="min-h-0 flex-1">
-              {modoDoCentro === "conversa" && conversa ? (
-                <ConversaAberta
+          {configuracao ? (
+            <div className="h-full min-h-0 min-w-0" data-testid="area-de-configuracao">
+              {configuracao}
+            </div>
+          ) : (
+            <>
+              <div
+                className={cn("relative h-full min-h-0 min-w-0 flex-col md:flex", colunas.conversa)}
+              >
+                {espiao ? <FaixaDoModoEspiao aoDesativar={() => mudarEspiao(false)} /> : null}
+                {personalizando ? (
+                  <PainelPersonalizarVisualizacao
+                    visualizacao={preferencias.data.visualizacao}
+                    aoFechar={() => setPersonalizando(false)}
+                  />
+                ) : null}
+                <div className="min-h-0 flex-1">
+                  {modoDoCentro === "conversa" && conversa ? (
+                    <ConversaAberta
+                      conversa={conversa}
+                      rascunho={rascunho}
+                      aoAbrirConversa={selecionar}
+                      aoAbrirFicha={() => setFichaAberta(true)}
+                      aoMudarNaoLida={setNaoLidaManual}
+                    />
+                  ) : modoDoCentro === "nova" ? (
+                    <NovaConversa
+                      aoAbrirConversa={selecionar}
+                      aoCancelar={() => setModo("vazio")}
+                      origens={origens}
+                    />
+                  ) : naoEncontrada ? (
+                    <div className="flex h-full items-center justify-center px-6 text-center text-[13px] text-casca-suave">
+                      {t("Conversa não encontrada ou fora do seu acesso.")}
+                    </div>
+                  ) : (
+                    <CentroVazio semCanal={semCanal} aoIniciar={abrirNova} />
+                  )}
+                </div>
+              </div>
+
+              <div className="hidden h-full min-h-0 border-l border-casca-borda xl:block">
+                <PainelDoContato
                   conversa={conversa}
-                  rascunho={rascunho}
                   aoAbrirConversa={selecionar}
-                  aoAbrirFicha={() => setFichaAberta(true)}
-                  aoMudarNaoLida={setNaoLidaManual}
-                />
-              ) : modoDoCentro === "nova" ? (
-                <NovaConversa
-                  aoAbrirConversa={selecionar}
-                  aoCancelar={() => setModo("vazio")}
                   origens={origens}
                 />
-              ) : naoEncontrada ? (
-                <div className="flex h-full items-center justify-center px-6 text-center text-[13px] text-casca-suave">
-                  {t("Conversa não encontrada ou fora do seu acesso.")}
-                </div>
-              ) : (
-                <CentroVazio semCanal={semCanal} aoIniciar={abrirNova} />
-              )}
-            </div>
-          </div>
-
-          <div className="hidden h-full min-h-0 border-l border-casca-borda xl:block">
-            <PainelDoContato conversa={conversa} aoAbrirConversa={selecionar} origens={origens} />
-          </div>
-          <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
-            <SheetContent side="right" className="w-[min(24rem,90vw)] overflow-y-auto p-0">
-              <SheetTitle className="sr-only">{t("Ficha do contato")}</SheetTitle>
-              <PainelDoContato conversa={conversa} aoAbrirConversa={selecionar} origens={origens} />
-            </SheetContent>
-          </Sheet>
+              </div>
+              <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
+                <SheetContent side="right" className="w-[min(24rem,90vw)] overflow-y-auto p-0">
+                  <SheetTitle className="sr-only">{t("Ficha do contato")}</SheetTitle>
+                  <PainelDoContato
+                    conversa={conversa}
+                    aoAbrirConversa={selecionar}
+                    origens={origens}
+                  />
+                </SheetContent>
+              </Sheet>
+            </>
+          )}
         </div>
       </div>
     </OpenConversationProvider>

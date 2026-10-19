@@ -192,6 +192,47 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "agente grava com o próprio user_id; vizinho zero; tipo fechado.",
   },
   {
+    tabela: "crm_setores",
+    razao:
+      "tests/invariants/escale-setores-9203.test.ts — fork Escale (migration 9203): a organização lê; escreve quem tem " +
+      "'Editar ou excluir setores' (fn_crm_pode: admin por padrão, gerente com exceção); vizinho zero; nome único por organização.",
+  },
+  {
+    tabela: "crm_setores_membros",
+    razao:
+      "tests/invariants/escale-setores-9203.test.ts — fork Escale (migration 9203): mesma régua de crm_setores; membro é " +
+      "pessoa da organização (FK em user_organizations).",
+  },
+  {
+    tabela: "crm_setor_do_dispositivo",
+    razao:
+      "tests/invariants/escale-setores-9203.test.ts — fork Escale (migration 9203): a organização lê; só admin grava " +
+      "(como as rotas de dispositivo do original); FK composta com channel_sessions e crm_setores.",
+  },
+  {
+    tabela: "crm_setor_da_conversa",
+    razao:
+      "tests/invariants/escale-setores-9203.test.ts — fork Escale (migration 9203): lê quem vê a conversa (inclusive pela " +
+      "policy do setor); agente+ que vê a conversa grava; a transferência termina no gatilho quando alguém assume.",
+  },
+  {
+    tabela: "crm_permissoes_de_atendimento",
+    razao:
+      "tests/invariants/escale-setores-9203.test.ts — fork Escale (migration 9203): a pessoa lê as suas, admin lê e grava " +
+      "todas; CHECK das chaves editáveis; vizinho zero.",
+  },
+  {
+    tabela: "crm_respostas_rapidas_extras",
+    razao:
+      "tests/invariants/escale-setores-9203.test.ts — fork Escale (migration 9203): lê quem lê o message_templates; grava " +
+      "pela regra do original (a própria, agente; a compartilhada, gerente).",
+  },
+  {
+    tabela: "crm_respostas_rapidas_setores",
+    razao:
+      "tests/invariants/escale-setores-9203.test.ts — fork Escale (migration 9203): a mesma régua de crm_respostas_rapidas_extras.",
+  },
+  {
     tabela: "crm_campos_do_negocio",
     razao:
       "tests/invariants/escale-campos-do-crm.test.ts — fork Escale (migration 9006): todo membro lê, só administrador escreve " +

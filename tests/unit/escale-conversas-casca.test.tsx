@@ -80,9 +80,9 @@ describe("ConversasDaCasca (c01, c23)", () => {
     envolver(<ConversasDaCasca />);
     expect(screen.getByRole("heading", { name: "Conversas" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Nova conversa" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Configurações" })).toHaveAttribute(
-      "title",
-      "Em breve",
+    expect(screen.getByRole("link", { name: "Configurações" })).toHaveAttribute(
+      "href",
+      "/app/inbox/configuracoes",
     );
     expect(screen.getByText("Envie e receba mensagens dos seus clientes")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Iniciar uma conversa" }).length).toBeGreaterThan(
