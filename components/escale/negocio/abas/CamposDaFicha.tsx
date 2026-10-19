@@ -11,6 +11,7 @@ import {
   valorParaLeitura,
   type CampoEditavel,
 } from "@/lib/escale/negocio/campos";
+import { GRUPO_PADRAO } from "@/lib/escale/campos/regras";
 import { ChevronDown, Search, Settings } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,7 @@ import { EditorDeCampo } from "./EditorDeCampo";
 /**
  * A MOLDURA "CAMPOS DE …" DA CLINT (fork Escale, Fases 1G e 1H; prints 02 a 04).
  *
- * Um grupo só ("Informações Gerais"; os grupos são da Fase 2, N3). A faixa tem
+ * Os grupos vêm do catálogo (Fase 2C); sem `grupos`, um só ("Informações Gerais"). A faixa tem
  * "Ocultar/Mostrar vazios" (por tipo, no localStorage; a flag da Clint é
  * invertida: o padrão é mostrar tudo) e "Gerenciar campos" (link para a tela de
  * campos, só para quem administra). A busca filtra pelo rótulo. Com `aoSalvar`,
@@ -46,6 +47,8 @@ export function CamposDaFicha({
   gerenciarHref,
   dicaDoVazio,
   aviso,
+  grupos,
+  aoGerenciar,
 }: {
   icone: ReactNode;
   titulo: string;
@@ -59,9 +62,15 @@ export function CamposDaFicha({
   dicaDoVazio?: string | null;
   /** Uma linha embaixo da faixa (o contato que não carregou, por exemplo). */
   aviso?: string;
+  /** Fase 2C: os grupos do catálogo, na ordem; sem eles, um grupo só. */
+  grupos?: Array<{ chave: string; nome: string }>;
+  /** Fase 2C: abre a janela "Gerenciamento de campos" (administrador); vale mais que `gerenciarHref`. */
+  aoGerenciar?: () => void;
 }) {
   const t = useT();
   const [busca, setBusca] = useState("");
+  const [grupoEscolhido, setGrupoEscolhido] = useState<string | null>(null);
+  const [mostrarOcultos, setMostrarOcultos] = useState(false);
   const [ocultarVazios, setOcultarVazios] = useState(false);
   useEffect(() => {
     let guardado = false;
@@ -73,9 +82,31 @@ export function CamposDaFicha({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a escolha guardada só existe no navegador, depois de montar
     setOcultarVazios(guardado);
   }, [tipo]);
+  const listaDeGrupos = useMemo(
+    () => grupos ?? [{ chave: GRUPO_PADRAO, nome: t("Informações Gerais") }],
+    [grupos, t],
+  );
+  const grupoDe = (c: CampoEditavel) => c.grupo ?? GRUPO_PADRAO;
+  // Um grupo cuja lista fica vazia com "Ocultar vazios" é "oculto" (Clint).
+  const gruposOcultos = useMemo(
+    () =>
+      ocultarVazios
+        ? listaDeGrupos.filter((g) => filtrarCampos(campos.filter((c) => grupoDe(c) === g.chave), "", true).length === 0)
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- grupoDe é uma função pura do módulo
+    [campos, listaDeGrupos, ocultarVazios],
+  );
+  const gruposDaColuna = listaDeGrupos.filter((g) => mostrarOcultos || !gruposOcultos.some((o) => o.chave === g.chave));
+  const grupoAtivo =
+    gruposDaColuna.find((g) => g.chave === grupoEscolhido)?.chave ?? gruposDaColuna[0]?.chave ?? GRUPO_PADRAO;
   const visiveis = useMemo(
-    () => filtrarCampos(campos, busca, ocultarVazios),
-    [campos, busca, ocultarVazios],
+    () =>
+      filtrarCampos(
+        busca.trim() ? campos : campos.filter((c) => (c.grupo ?? GRUPO_PADRAO) === grupoAtivo),
+        busca,
+        ocultarVazios,
+      ),
+    [campos, busca, ocultarVazios, grupoAtivo],
   );
 
   function alternarVazios() {
@@ -107,7 +138,18 @@ export function CamposDaFicha({
           >
             {ocultarVazios ? t("Mostrar vazios") : t("Ocultar vazios")}
           </BotaoDaCasca>
-          {gerenciarHref ? (
+          {aoGerenciar ? (
+            <BotaoDaCasca
+              variante="texto"
+              tamanho="sm"
+              title={t("Configure quais campos aparecem e em que ordem")}
+              className={BOTAO_DA_FAIXA}
+              onClick={aoGerenciar}
+            >
+              <Settings aria-hidden />
+              {t("Gerenciar campos")}
+            </BotaoDaCasca>
+          ) : gerenciarHref ? (
             <Link
               href={gerenciarHref}
               title={t("Configure quais campos aparecem e em que ordem")}
@@ -143,12 +185,40 @@ export function CamposDaFicha({
           aria-label={t("Grupos de campos")}
           className="w-[238px] shrink-0 border-r border-casca-borda p-2"
         >
-          <span
-            aria-current="true"
-            className="flex h-9 items-center rounded-md border-l-2 border-casca-marca bg-casca-raia px-3 text-[13px] font-semibold text-casca-texto"
-          >
-            {t("Informações Gerais")}
-          </span>
+          {gruposDaColuna.map((g) => {
+            const ativo = g.chave === grupoAtivo;
+            return (
+              <button
+                key={g.chave}
+                type="button"
+                aria-current={ativo ? "true" : undefined}
+                onClick={() => {
+                  setGrupoEscolhido(g.chave);
+                  setBusca("");
+                }}
+                className={cn(
+                  "flex h-[38px] w-full items-center truncate border-l-2 px-3 text-left text-[13px] text-casca-texto",
+                  ativo
+                    ? "border-casca-marca bg-casca-marca-suave font-medium"
+                    : "border-transparent hover:bg-casca-raia",
+                )}
+              >
+                {g.nome}
+              </button>
+            );
+          })}
+          {gruposOcultos.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setMostrarOcultos((v) => !v)}
+              className="mt-2 flex h-8 w-full items-center justify-between px-3 text-[12px] text-casca-marca"
+            >
+              <span>{mostrarOcultos ? t("Esconder grupos ocultos") : t("Exibir grupos ocultos")}</span>
+              <span className="text-casca-suave">
+                {t("Ocultos")} · {gruposOcultos.length}
+              </span>
+            </button>
+          ) : null}
         </nav>
         <div className="min-w-0 flex-1">
           <div className="border-b border-casca-borda p-4">

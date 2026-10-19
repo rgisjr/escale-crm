@@ -42,6 +42,51 @@ const gravar = vi.hoisted(() => {
 });
 vi.mock("@/hooks/escale/useGravarContato", () => ({ useGravarContato: () => gravar }));
 
+// FORK ESCALE · Fase 2C: os catálogos por objeto (grupos de verdade) e os ocultos por origem.
+const G1 = "00000000-0000-4000-8000-0000000000a1";
+const G2 = "00000000-0000-4000-8000-0000000000a2";
+const GRUPO_GERAL = { id: G1, chave: "informacoes_gerais", nome: "Informações Gerais", posicao: 0, padrao: true };
+const GRUPO_KAIO = { id: G2, chave: "kaio_ia", nome: "Kaio IA", posicao: 1, padrao: false };
+const campoDoCatalogo = (objeto: string, chave: string, label: string, type: string, padrao = false, grupo = G1) => ({
+  id: `${objeto}-${chave}`,
+  objeto,
+  chave,
+  definicao: { label, type },
+  grupo_id: grupo,
+  papel_minimo: null,
+  posicao: 0,
+  padrao,
+});
+const CATALOGOS_PADRAO = () => ({
+  contato: {
+    grupos: [GRUPO_GERAL],
+    campos: [campoDoCatalogo("contato", "cargo", "Cargo", "text"), campoDoCatalogo("contato", "notas", "Notas", "text")],
+  },
+  empresa: {
+    grupos: [GRUPO_GERAL],
+    campos: [
+      campoDoCatalogo("empresa", "site", "Site", "url", true),
+      campoDoCatalogo("empresa", "categoria", "Categoria", "text", true),
+      campoDoCatalogo("empresa", "segmento", "Segmento", "text", true),
+      campoDoCatalogo("empresa", "numero_de_funcionarios", "Número de funcionários", "number", true),
+    ],
+  },
+  negocio: { grupos: [GRUPO_GERAL], campos: [] },
+});
+const catalogos = vi.hoisted(() => ({ atual: {} as Record<string, unknown> }));
+const ocultosDaOrigem = vi.hoisted(() => ({
+  valor: { usar_do_grupo: false, contato: [] as string[], negocio: [] as string[], empresa: [] as string[] },
+}));
+vi.mock("@/hooks/escale/useCatalogoDeCampos", () => ({
+  useCatalogoDeCampos: (objeto: string) => ({ catalogo: catalogos.atual[objeto], carregando: false, erro: false }),
+}));
+vi.mock("@/hooks/escale/useOcultosDaOrigem", () => ({ useOcultosDaOrigem: () => ocultosDaOrigem.valor }));
+vi.mock("@/components/escale/campos/JanelaDeGerenciarCampos", () => ({
+  JanelaDeGerenciarCampos: ({ objetoInicial }: { objetoInicial: string }) => (
+    <div role="dialog" aria-label="Gerenciamento de campos">{`janela:${objetoInicial}`}</div>
+  ),
+}));
+
 import { AbaContato, AbaEmpresa, AbaNegocio } from "@/components/escale/negocio/abas/AbasDeCampos";
 import type { Pipeline } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
@@ -77,6 +122,8 @@ describe("aba Negócio (print 04, C14)", () => {
     editar.mutateAsync.mockClear();
     permissao.pode = true;
     window.localStorage.clear();
+    catalogos.atual = CATALOGOS_PADRAO();
+    ocultosDaOrigem.valor = { usar_do_grupo: false, contato: [], negocio: [], empresa: [] };
   });
 
   it("Valor e os campos do CRM num grupo só, cada um num input; a lista com ▾", () => {
@@ -87,6 +134,7 @@ describe("aba Negócio (print 04, C14)", () => {
         "Informações Gerais",
       ),
     ).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByRole("link", { name: "Gerenciar campos" })).toBeNull();
     expect(screen.getByRole("textbox", { name: "Valor" })).toHaveValue("1.500,00");
     expect(screen.getByRole("combobox", { name: "origem_organico" })).toHaveTextContent("Google");
     expect(screen.getByRole("textbox", { name: "Notas" })).toHaveAttribute(
@@ -166,18 +214,53 @@ describe("aba Negócio (print 04, C14)", () => {
     expect(busca.className).toContain("[&::-webkit-search-cancel-button]:appearance-none");
   });
 
-  it("Gerenciar campos leva à tela de campos para quem administra; para os outros fica desligado", () => {
+  it("Gerenciar campos abre a janela para quem administra; para os outros fica desligado", async () => {
     const { unmount } = render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
-    expect(screen.getByRole("link", { name: "Gerenciar campos" })).toHaveAttribute(
-      "href",
-      "/app/settings/tenant/pipelines",
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Gerenciar campos" }));
+    expect(screen.getByRole("dialog", { name: "Gerenciamento de campos" })).toHaveTextContent("janela:negocio");
     unmount();
     permissao.pode = false;
     render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
     const botao = screen.getByRole("button", { name: "Gerenciar campos" });
     expect(botao).toBeDisabled();
     expect(botao).toHaveAttribute("title", "Só quem administra a conta gerencia os campos.");
+  });
+
+  it("os grupos do catálogo: o ativo filtra a lista e a busca procura em todos (1g-04)", async () => {
+    catalogos.atual = {
+      ...CATALOGOS_PADRAO(),
+      negocio: { grupos: [GRUPO_GERAL, GRUPO_KAIO], campos: [campoDoCatalogo("negocio", "notas", "Notas", "text", false, G2)] },
+    };
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    const nav = screen.getByRole("navigation", { name: "Grupos de campos" });
+    expect(within(nav).getByText("Kaio IA")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Notas" })).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Valor" })).toBeInTheDocument();
+    await userEvent.click(within(nav).getByText("Kaio IA"));
+    expect(screen.getByRole("textbox", { name: "Notas" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Valor" })).toBeNull();
+    await userEvent.type(screen.getByRole("searchbox", { name: "Pesquisar campos..." }), "valor");
+    expect(screen.getByRole("textbox", { name: "Valor" })).toBeInTheDocument();
+  });
+
+  it("campo oculto na origem some se estiver vazio e aparece se estiver preenchido (D4)", () => {
+    ocultosDaOrigem.valor = { usar_do_grupo: false, contato: [], negocio: ["notas", "origem_organico"], empresa: [] };
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    expect(screen.queryByRole("textbox", { name: "Notas" })).toBeNull();
+    expect(screen.getByRole("combobox", { name: "origem_organico" })).toHaveTextContent("Google");
+  });
+
+  it("um grupo que fica vazio com Ocultar vazios sai da coluna e volta em Exibir grupos ocultos", async () => {
+    catalogos.atual = {
+      ...CATALOGOS_PADRAO(),
+      negocio: { grupos: [GRUPO_GERAL, GRUPO_KAIO], campos: [campoDoCatalogo("negocio", "notas", "Notas", "text", false, G2)] },
+    };
+    render(<AbaNegocio lead={LEAD} pipeline={PIPELINE} />);
+    const nav = screen.getByRole("navigation", { name: "Grupos de campos" });
+    await userEvent.click(screen.getByRole("button", { name: "Ocultar vazios" }));
+    expect(within(nav).queryByText("Kaio IA")).toBeNull();
+    await userEvent.click(within(nav).getByRole("button", { name: /Exibir grupos ocultos/ }));
+    expect(within(nav).getByText("Kaio IA")).toBeInTheDocument();
   });
 
   it("um campo condicional escondido não aparece (camposVisiveis)", () => {
@@ -201,7 +284,11 @@ describe("aba Negócio (print 04, C14)", () => {
 });
 
 describe("aba Contato (print 02, C10)", () => {
-  beforeEach(() => gravar.enviado.mockClear());
+  beforeEach(() => {
+    gravar.enviado.mockClear();
+    catalogos.atual = CATALOGOS_PADRAO();
+    ocultosDaOrigem.valor = { usar_do_grupo: false, contato: [], negocio: [], empresa: [] };
+  });
 
   it("Nome, Telefone (para exibição), Email, os links e os campos do CRM, cada um num input", () => {
     render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
@@ -214,6 +301,9 @@ describe("aba Contato (print 02, C10)", () => {
     );
     expect(screen.getByRole("textbox", { name: "Site" })).toHaveValue("");
     expect(screen.getByRole("textbox", { name: "Notas" })).toHaveValue("");
+    // Fase 2C: fixos da Clint — Documento (só leitura) e Data de nascimento.
+    expect(screen.getByRole("textbox", { name: "Documento" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Data de nascimento" })).toHaveValue("");
   });
 
   it("editar o nome grava name; um campo do CRM grava custom_fields INTEIRO; o telefone vai canônico", async () => {
@@ -264,6 +354,11 @@ describe("aba Contato (print 02, C10)", () => {
 });
 
 describe("aba Empresa (print 03)", () => {
+  beforeEach(() => {
+    permissao.pode = true;
+    catalogos.atual = CATALOGOS_PADRAO();
+  });
+
   it("Empresa: os oito campos da Clint, vazios até a 1H vincular a empresa (Q6)", () => {
     render(<AbaEmpresa />);
     expect(screen.getByRole("heading", { name: "Campos de empresa" })).toBeInTheDocument();

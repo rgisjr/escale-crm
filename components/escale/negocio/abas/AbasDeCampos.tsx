@@ -1,24 +1,31 @@
 "use client";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { JanelaDeGerenciarCampos } from "@/components/escale/campos/JanelaDeGerenciarCampos";
 import { usePermission } from "@/hooks/auth/AuthProvider";
 import { useContact } from "@/hooks/contacts/useContact";
+import { useCatalogoDeCampos } from "@/hooks/escale/useCatalogoDeCampos";
 import { useGravarContato } from "@/hooks/escale/useGravarContato";
+import { useOcultosDaOrigem } from "@/hooks/escale/useOcultosDaOrigem";
 import { useT } from "@/hooks/i18n/useT";
 import { useEditLead } from "@/hooks/kanban/useUpdateLead";
-import { phoneForDisplay } from "@/lib/channels/phone-variants";
+import {
+  camposDaEmpresaComGrupos,
+  camposDoContatoComGrupos,
+  gruposDaFicha,
+} from "@/lib/escale/campos/da-ficha";
+import { esconderOcultos } from "@/lib/escale/campos/ocultos";
+import { GRUPO_PADRAO } from "@/lib/escale/campos/regras";
 import { dadosDeFiltro } from "@/lib/escale/filtros/dados-do-quadro";
 import {
   CHAVE_EMAIL,
-  CHAVE_NOME,
   CHAVE_TELEFONE,
   patchDoContato,
   type CampoEditavel,
 } from "@/lib/escale/negocio/campos";
 import type { Pipeline } from "@/lib/kanban/types";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
-import { TIPOS_DE_LINK, chaveDoLink, lerLinks } from "@/lib/leads/links-de-contato";
 import { MOEDA_PADRAO } from "@/lib/money";
 import { camposVisiveis } from "@/lib/schemas/mostrar-quando";
 import type { Lead } from "@/lib/types/leads";
@@ -63,40 +70,23 @@ function ContatoEditavel({
   const { gravar } = useGravarContato(contactId, pipeline.id);
   const contato = data?.data ?? null;
   const carregado = contato !== null;
-  const camposDoContato = useMemo(() => contato?.custom_fields ?? {}, [contato]);
-  const links = lerLinks(camposDoContato);
+  const [janela, setJanela] = useState(false);
+  const { catalogo } = useCatalogoDeCampos("contato");
+  const ocultos = useOcultosDaOrigem(pipeline);
 
-  const campos: CampoEditavel[] = [
-    {
-      chave: CHAVE_NOME,
-      origem: "coluna",
-      rotulo: t("Nome"),
-      tipo: "text",
-      valor: contato?.name ?? dadosDeFiltro(lead)?.contato_nome ?? null,
-    },
-    {
-      chave: CHAVE_TELEFONE,
-      origem: "coluna",
-      rotulo: t("Telefone"),
-      tipo: "phone",
-      valor: phoneForDisplay(contato?.phone_number ?? lead.contact_phone) || null,
-    },
-    {
-      chave: CHAVE_EMAIL,
-      origem: "coluna",
-      rotulo: t("Email"),
-      tipo: "email",
-      valor: contato?.email ?? lead.contact_email ?? null,
-    },
-    ...TIPOS_DE_LINK.map((tipo) => ({
-      chave: chaveDoLink(tipo.id),
-      origem: "link" as const,
-      rotulo: t(tipo.rotulo),
-      tipo: "url" as const,
-      valor: links[tipo.id] ?? null,
-    })),
-    ...camposDoCrm(pipeline, camposDoContato),
-  ];
+  // Fase 2C: fixos + catálogo do contato em grupos; o oculto sem valor some.
+  const campos: CampoEditavel[] = useMemo(
+    () =>
+      esconderOcultos(
+        camposDoContatoComGrupos(contato, catalogo, t, {
+          nome: dadosDeFiltro(lead)?.contato_nome ?? null,
+          telefone: lead.contact_phone ?? null,
+          email: lead.contact_email ?? null,
+        }),
+        ocultos.contato,
+      ),
+    [contato, catalogo, t, lead, ocultos.contato],
+  );
 
   const aoSalvar = useCallback(
     async (campo: CampoEditavel, valor: unknown) => {
@@ -124,44 +114,47 @@ function ContatoEditavel({
 
   // Carregando ou com erro: a moldura só leitura, sem nenhum editor (C1).
   return (
-    <CamposDaFicha
-      icone={<User size={16} />}
-      titulo={t("Campos de contato")}
-      tipo="contato"
-      campos={campos}
-      aoSalvar={carregado ? aoSalvar : undefined}
-      dicaDoVazio={null}
-      aviso={!carregado && isError ? t("Não consegui carregar o contato.") : undefined}
-      gerenciarHref={administra ? ROTA_DE_GERENCIAR_CAMPOS : null}
-    />
+    <>
+      <CamposDaFicha
+        icone={<User size={16} />}
+        titulo={t("Campos de contato")}
+        tipo="contato"
+        campos={campos}
+        grupos={gruposDaFicha(catalogo)}
+        aoSalvar={carregado ? aoSalvar : undefined}
+        dicaDoVazio={null}
+        aviso={!carregado && isError ? t("Não consegui carregar o contato.") : undefined}
+        gerenciarHref={administra ? ROTA_DE_GERENCIAR_CAMPOS : null}
+        aoGerenciar={administra ? () => setJanela(true) : undefined}
+      />
+      {janela ? <JanelaDeGerenciarCampos aberta aoFechar={() => setJanela(false)} objetoInicial="contato" /> : null}
+    </>
   );
 }
 
 export function AbaEmpresa() {
   const t = useT();
-  /** Os oito campos da empresa na Clint (print 03). A empresa do negócio é da Fase 2 (Q2). */
-  const campos: CampoEditavel[] = [
-    { chave: "Nome da empresa", rotulo: t("Nome da empresa"), tipo: "text", valor: null },
-    { chave: "Site", rotulo: t("Site"), tipo: "text", valor: null },
-    { chave: "Cidade", rotulo: t("Cidade"), tipo: "text", valor: null },
-    { chave: "Estado", rotulo: t("Estado"), tipo: "text", valor: null },
-    { chave: "Categoria", rotulo: t("Categoria"), tipo: "text", valor: null },
-    { chave: "Segmento", rotulo: t("Segmento"), tipo: "text", valor: null },
-    {
-      chave: "Número de funcionários",
-      rotulo: t("Número de funcionários"),
-      tipo: "text",
-      valor: null,
-    },
-    { chave: "CNPJ", rotulo: t("CNPJ"), tipo: "text", valor: null },
-  ];
+  const administra = usePermission("settings.write");
+  const [janela, setJanela] = useState(false);
+  const { catalogo } = useCatalogoDeCampos("empresa");
+  // Os oito campos da empresa na Clint (print 03). A empresa do contato chega na Fase 2D: até lá, só leitura.
+  const campos = useMemo(
+    () => camposDaEmpresaComGrupos(null, catalogo).map((c) => ({ ...c, rotulo: t(c.rotulo) })),
+    [catalogo, t],
+  );
   return (
-    <CamposDaFicha
-      icone={<Building2 size={16} />}
-      titulo={t("Campos de empresa")}
-      tipo="empresa"
-      campos={campos}
-    />
+    <>
+      <CamposDaFicha
+        icone={<Building2 size={16} />}
+        titulo={t("Campos de empresa")}
+        tipo="empresa"
+        campos={campos}
+        grupos={gruposDaFicha(catalogo)}
+        dicaDoVazio={t("A empresa do contato chega na Fase 2D.")}
+        aoGerenciar={administra ? () => setJanela(true) : undefined}
+      />
+      {janela ? <JanelaDeGerenciarCampos aberta aoFechar={() => setJanela(false)} objetoInicial="empresa" /> : null}
+    </>
   );
 }
 
@@ -183,16 +176,37 @@ export function AbaNegocio({ lead, pipeline }: { lead: Lead; pipeline: Pipeline 
   const administra = usePermission("settings.write");
   const editar = useEditLead(pipeline.id);
   const moeda = lead.currency ?? MOEDA_PADRAO;
-  const campos: CampoEditavel[] = [
-    {
-      chave: CHAVE_DO_VALOR,
-      origem: "coluna",
-      rotulo: t("Valor"),
-      tipo: "currency",
-      valor: lead.value_cents == null ? null : lead.value_cents / 100,
-    },
-    ...camposDoCrm(pipeline, lead.custom_fields ?? {}),
-  ];
+  const [janela, setJanela] = useState(false);
+  const { catalogo } = useCatalogoDeCampos("negocio");
+  const ocultos = useOcultosDaOrigem(pipeline);
+  // O grupo de cada campo do negócio, pelo catálogo; sem grupo, o padrão.
+  const grupoPorChave = useMemo(() => {
+    const chaveDoGrupo = new Map(catalogo.grupos.map((g) => [g.id, g.chave]));
+    return new Map(
+      catalogo.campos.map((c) => [c.chave, (c.grupo_id && chaveDoGrupo.get(c.grupo_id)) || GRUPO_PADRAO]),
+    );
+  }, [catalogo]);
+  const campos: CampoEditavel[] = useMemo(
+    () =>
+      esconderOcultos(
+        [
+          {
+            chave: CHAVE_DO_VALOR,
+            origem: "coluna" as const,
+            rotulo: t("Valor"),
+            tipo: "currency" as const,
+            valor: lead.value_cents == null ? null : lead.value_cents / 100,
+            grupo: GRUPO_PADRAO,
+          },
+          ...camposDoCrm(pipeline, lead.custom_fields ?? {}).map((c) => ({
+            ...c,
+            grupo: grupoPorChave.get(c.chave) ?? GRUPO_PADRAO,
+          })),
+        ],
+        ocultos.negocio,
+      ),
+    [t, lead.value_cents, lead.custom_fields, pipeline, grupoPorChave, ocultos.negocio],
+  );
 
   const aoSalvar = useCallback(
     async (campo: CampoEditavel, valor: unknown) => {
@@ -217,14 +231,19 @@ export function AbaNegocio({ lead, pipeline }: { lead: Lead; pipeline: Pipeline 
   );
 
   return (
-    <CamposDaFicha
-      icone={<Target size={16} />}
-      titulo={t("Campos de negócio")}
-      tipo="negocio"
-      campos={campos}
-      moeda={moeda}
-      aoSalvar={aoSalvar}
-      gerenciarHref={administra ? ROTA_DE_GERENCIAR_CAMPOS : null}
-    />
+    <>
+      <CamposDaFicha
+        icone={<Target size={16} />}
+        titulo={t("Campos de negócio")}
+        tipo="negocio"
+        campos={campos}
+        grupos={gruposDaFicha(catalogo)}
+        moeda={moeda}
+        aoSalvar={aoSalvar}
+        gerenciarHref={administra ? ROTA_DE_GERENCIAR_CAMPOS : null}
+        aoGerenciar={administra ? () => setJanela(true) : undefined}
+      />
+      {janela ? <JanelaDeGerenciarCampos aberta aoFechar={() => setJanela(false)} objetoInicial="negocio" /> : null}
+    </>
   );
 }
