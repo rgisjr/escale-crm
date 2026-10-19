@@ -52,7 +52,7 @@ describe("mapeamento da importação (Fase 2F)", () => {
     ).toEqual(["name", "company", "phone", "none", "deal_custom:produto", "origin_name"]);
     const deContato = opcoesDoMapeamento("contato", catalogos);
     expect(sugerirMapeamento(["Título", "Valor"], "contato", deContato).map((c) => c.para)).toEqual(["none", "none"]);
-    expect(sugerirMapeamento(["DDI"], "contato", deContato)[0].para).toBe("ddi");
+    expect(sugerirMapeamento(["DDI"], "contato", deContato)[0]?.para).toBe("ddi");
   });
 
   it("válido com um identificador; o aviso sem o nome da empresa", () => {

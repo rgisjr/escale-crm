@@ -338,7 +338,7 @@ export function classificar(
     for (const [chave, valor] of Object.entries(l.campos)) comparar(`campo:${chave}`, alvo.campos[chave], valor);
 
     if (diferencas.length > 0) {
-      const [primeira, ...outras] = diferencas;
+      const [primeira, ...outras] = diferencas as [Diferenca, ...Diferenca[]];
       detalhe.campo = primeira.campo;
       detalhe.valorAtual = primeira.valorAtual;
       detalhe.valorDoArquivo = primeira.valorDoArquivo;
