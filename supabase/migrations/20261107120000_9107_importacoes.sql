@@ -1,4 +1,4 @@
--- manifest: **Importar contatos e negócios (fork Escale, Fase 2F).** A importação (`crm_importacoes`: tipo, arquivo, mapeamento, configuração, decisões, nível, status e contagens) e as linhas do arquivo (`crm_importacoes_linhas`: bruto, normalizado, status, motivo, detalhe, resoluções e o que criou), só leitura para gerente ou acima da organização; toda escrita é do service role (as rotas, depois de conferir o papel, e o consumidor do `event_log`). Funções fechadas ao `service_role`: `fn_escale_enfileirar_importacao` (conta as linhas, põe na fila e emite `contatos.importacao_requested`), `fn_escale_contar_importacao` (refaz as contagens e fecha a importação), `fn_escale_cancelar_importacao`, `fn_escale_reabrir_importacao` (resolver em lote), `fn_escale_apagar_linhas_antigas` (LGPD: linhas de importações terminadas há mais de 30 dias) e a definer `fn_escale_empresa_da_importacao` (acha ou cria a empresa e vincula o contato pela `fn_escale_vincular_contato_a_empresa` da 2D).
+-- manifest: **Importar contatos e negócios (fork Escale, Fase 2F).** A importação (`crm_importacoes`: tipo, arquivo, mapeamento, configuração, decisões, nível, status e contagens) e as linhas do arquivo (`crm_importacoes_linhas`: bruto, normalizado, status, motivo, detalhe, resoluções e o que criou), só leitura para gerente ou acima da organização; toda escrita é do service role (as rotas, depois de conferir o papel, e o consumidor do `event_log`). Funções fechadas ao `service_role`: `fn_escale_enfileirar_importacao` (conta as linhas, põe na fila e emite `contatos.importacao_requested`), `fn_escale_contar_importacao` (refaz as contagens e fecha a importação), `fn_escale_cancelar_importacao`, `fn_escale_reabrir_importacao` (resolver em lote), `fn_escale_limpar_linhas_antigas` (LGPD: linhas de importações terminadas há mais de 30 dias) e a definer `fn_escale_empresa_da_importacao` (acha ou cria a empresa e vincula o contato pela `fn_escale_vincular_contato_a_empresa` da 2D).
 -- 9107: importar contatos e negócios (fork Escale, Frente B).
 
 -- ── 1. As tabelas ────────────────────────────────────────────────────────────
@@ -269,7 +269,7 @@ end;
 $$;
 
 -- ── 7. LGPD: as linhas das importações terminadas há mais de 30 dias ─────────
-create or replace function public.fn_escale_apagar_linhas_antigas(p_org uuid)
+create or replace function public.fn_escale_limpar_linhas_antigas(p_org uuid)
 returns integer
 language plpgsql
 security invoker
@@ -296,12 +296,12 @@ revoke all on function public.fn_escale_contar_importacao(uuid) from public, ano
 revoke all on function public.fn_escale_enfileirar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_cancelar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) from public, anon, authenticated;
-revoke all on function public.fn_escale_apagar_linhas_antigas(uuid) from public, anon, authenticated;
+revoke all on function public.fn_escale_limpar_linhas_antigas(uuid) from public, anon, authenticated;
 grant execute on function public.fn_escale_contar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_enfileirar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_cancelar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) to service_role;
-grant execute on function public.fn_escale_apagar_linhas_antigas(uuid) to service_role;
+grant execute on function public.fn_escale_limpar_linhas_antigas(uuid) to service_role;
 
 -- ── 8. A empresa da linha (N9) ───────────────────────────────────────────────
 -- Pelo CNPJ, senão pelo nome (sem maiúsculas), senão — sem nome e sem CNPJ — a

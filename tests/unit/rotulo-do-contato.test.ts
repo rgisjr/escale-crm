@@ -238,6 +238,12 @@ describe("a sétima cópia não nasce", () => {
       trecho: "display_name: data.display_name ?? null,",
       motivo: "o export de LGPD entrega as DUAS colunas do titular cruas; não decide nome",
     },
+    // ── Fase 3D ─────────────────────────────────────────────────────────────
+    {
+      arquivo: "components/escale/conversas/filtros/SecaoCanaisDaFila.tsx",
+      trecho: 'rotulo: c.display_name?.trim() || c.phone_number || t("Sem nome"),',
+      motivo: "rótulo do CANAL (channel_sessions) na seção Canais do filtro da fila, não de contato",
+    },
   ];
 
   /**

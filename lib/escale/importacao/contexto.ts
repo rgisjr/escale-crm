@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { phoneLookupVariants } from "@/lib/channels/phone-variants";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 import type {
   ContatoExistente,
@@ -88,7 +89,7 @@ export async function lerContextoDaRodada(
   if (importacao.tipo === "negocio") {
     const { data, error } = await db
       .from("crm_pipelines")
-      .select("id, name, crm_stages(id, name, position, is_archived, is_won, is_lost)")
+      .select("id, name, crm_stages!crm_stages_pipeline_id_fkey(id, name, position, is_archived, is_won, is_lost)")
       .eq("organization_id", org)
       .eq("is_archived", false)
       .order("position", { ascending: true });
@@ -212,7 +213,7 @@ export async function lerContextoDoLote(
     const empresaId = c.person_id ? empresaDaPessoa.get(c.person_id) : undefined;
     return {
       id: c.id,
-      nome: c.name ?? c.display_name ?? null,
+      nome: nomeDoContato(c),
       email: c.email,
       telefone: c.phone_number,
       instagram: typeof campos.link_instagram === "string" ? campos.link_instagram : null,

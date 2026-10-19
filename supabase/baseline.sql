@@ -59107,7 +59107,7 @@ end;
 $$;
 
 -- ── 7. LGPD: as linhas das importações terminadas há mais de 30 dias ─────────
-create or replace function public.fn_escale_apagar_linhas_antigas(p_org uuid)
+create or replace function public.fn_escale_limpar_linhas_antigas(p_org uuid)
 returns integer
 language plpgsql
 security invoker
@@ -59134,12 +59134,12 @@ revoke all on function public.fn_escale_contar_importacao(uuid) from public, ano
 revoke all on function public.fn_escale_enfileirar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_cancelar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) from public, anon, authenticated;
-revoke all on function public.fn_escale_apagar_linhas_antigas(uuid) from public, anon, authenticated;
+revoke all on function public.fn_escale_limpar_linhas_antigas(uuid) from public, anon, authenticated;
 grant execute on function public.fn_escale_contar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_enfileirar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_cancelar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) to service_role;
-grant execute on function public.fn_escale_apagar_linhas_antigas(uuid) to service_role;
+grant execute on function public.fn_escale_limpar_linhas_antigas(uuid) to service_role;
 
 -- ── 8. A empresa da linha (N9) ───────────────────────────────────────────────
 -- Pelo CNPJ, senão pelo nome (sem maiúsculas), senão — sem nome e sem CNPJ — a
