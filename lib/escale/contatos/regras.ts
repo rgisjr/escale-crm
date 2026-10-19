@@ -148,8 +148,8 @@ export function camposDeColuna(catalogo: Catalogo): CampoDeColuna[] {
   return [...fixos, ...doCatalogo].sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));
 }
 
-export type ItemDeColuna =
-  { tipo: "nativa"; chave: ColunaNativa } | { tipo: "campo"; chave: string };
+/** A chave da nativa é da lista: contatos usam `ColunaNativa`; empresas, as suas (Fase 2D). */
+export type ItemDeColuna = { tipo: "nativa"; chave: string } | { tipo: "campo"; chave: string };
 
 export const COLUNAS_PADRAO: ItemDeColuna[] = [
   { tipo: "nativa", chave: "contato" },
@@ -172,18 +172,22 @@ export function chaveDoItem(item: ItemDeColuna): string {
 }
 
 /** A preferência guardada → lista limpa; ausente ou estragada → o padrão. */
-export function lerColunas(guardado: unknown): ItemDeColuna[] {
-  if (!guardado || typeof guardado !== "object") return COLUNAS_PADRAO;
+export function lerColunas(
+  guardado: unknown,
+  opcoes: { aceitarNativas?: readonly string[]; padrao?: readonly ItemDeColuna[] } = {},
+): ItemDeColuna[] {
+  const aceitas: readonly string[] = opcoes.aceitarNativas ?? COLUNAS_NATIVAS;
+  const padrao = [...(opcoes.padrao ?? COLUNAS_PADRAO)];
+  if (!guardado || typeof guardado !== "object") return padrao;
   const itens = (guardado as { itens?: unknown }).itens;
-  if (!Array.isArray(itens)) return COLUNAS_PADRAO;
+  if (!Array.isArray(itens)) return padrao;
   const vistos = new Set<string>();
   const saida: ItemDeColuna[] = [];
   for (const bruto of itens) {
     const lido = itemSchema.safeParse(bruto);
     if (!lido.success) continue;
     const item = lido.data;
-    if (item.tipo === "nativa" && !(COLUNAS_NATIVAS as readonly string[]).includes(item.chave))
-      continue;
+    if (item.tipo === "nativa" && !aceitas.includes(item.chave)) continue;
     const chave = `${item.tipo}:${item.chave}`;
     if (vistos.has(chave)) continue;
     vistos.add(chave);

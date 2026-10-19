@@ -12,11 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useT } from "@/hooks/i18n/useT";
 import type { AcaoDeCriar } from "@/lib/escale/menu-do-topo";
-import { FileText, Megaphone, Plus, UserPlus } from "@/lib/ui/icons-da-casca";
+import { Building2, FileText, Megaphone, Plus, UserPlus } from "@/lib/ui/icons-da-casca";
 
 import { CONTEUDO_DO_MENU, ITEM_DO_MENU, SOMBRA_DO_MENU } from "./estilos";
 
-const ICONE = { contato: UserPlus, campanha: Megaphone, proposta: FileText } as const;
+const ICONE = { contato: UserPlus, empresa: Building2, campanha: Megaphone, proposta: FileText } as const;
 
 /**
  * O "Novo +" azul do topo da Clint: 53×22, `#597EFF` (copiado; não é a marca),

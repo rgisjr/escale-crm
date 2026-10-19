@@ -223,6 +223,41 @@ describe("/api/v1/colunas-das-listas", () => {
     ]);
   });
 
+  it("PUT de empresas aceita as nativas da lista de empresas e descarta as de contatos (Fase 2D)", async () => {
+    const gravado: unknown[] = [];
+    banco({ tabelas: { crm_colunas_das_listas: { data: null, error: null } }, gravado });
+    const res = await PUT_COLUNAS(
+      pedido("/api/v1/colunas-das-listas", {
+        method: "PUT",
+        body: JSON.stringify({
+          lista: "empresas",
+          itens: [
+            { tipo: "nativa", chave: "valor_aberto" },
+            { tipo: "nativa", chave: "tags" },
+          ],
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(gravado).toEqual([
+      {
+        insert: {
+          organization_id: ORG_ID,
+          user_id: USER_ID,
+          lista: "empresas",
+          colunas: { itens: [{ tipo: "nativa", chave: "valor_aberto" }] },
+        },
+      },
+    ]);
+  });
+
+  it("GET de empresas sem preferência devolve as cinco colunas da Clint", async () => {
+    banco({ tabelas: { crm_colunas_das_listas: { data: null, error: null } } });
+    const res = await GET_COLUNAS(pedido("/api/v1/colunas-das-listas?lista=empresas"));
+    const corpo = (await res.json()) as { data: { itens: Array<{ chave: string }> } };
+    expect(corpo.data.itens.map((i) => i.chave)).toEqual(["contato_principal", "segmento", "contatos", "valor_aberto", "negocios"]);
+  });
+
   it("PUT com corpo inválido é 422; suporte somente leitura é barrado antes", async () => {
     banco({});
     const ruim = await PUT_COLUNAS(

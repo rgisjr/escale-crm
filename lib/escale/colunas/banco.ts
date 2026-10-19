@@ -1,10 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { type ItemDeColuna, lerColunas } from "@/lib/escale/contatos/regras";
+import { COLUNAS_NATIVAS, COLUNAS_PADRAO, type ItemDeColuna, lerColunas } from "@/lib/escale/contatos/regras";
+import { COLUNAS_NATIVAS_DE_EMPRESAS, COLUNAS_PADRAO_DE_EMPRESAS } from "@/lib/escale/empresas/regras";
 
-/** As listas da casca que têm "Personalizar colunas" (fork Escale, 9101). Empresas chega na 2D. */
+/** As listas da casca que têm "Personalizar colunas" (fork Escale, 9101; empresas na 2D). */
 export const LISTAS_COM_COLUNAS = ["contatos", "empresas"] as const;
 export type ListaComColunas = (typeof LISTAS_COM_COLUNAS)[number];
+
+export const NATIVAS_POR_LISTA: Record<ListaComColunas, readonly string[]> = {
+  contatos: COLUNAS_NATIVAS,
+  empresas: COLUNAS_NATIVAS_DE_EMPRESAS,
+};
+export const PADRAO_POR_LISTA: Record<ListaComColunas, readonly ItemDeColuna[]> = {
+  contatos: COLUNAS_PADRAO,
+  empresas: COLUNAS_PADRAO_DE_EMPRESAS,
+};
+
+/** As colunas gravadas, só com as nativas daquela lista e os campos válidos; estragadas, o padrão da lista. */
+export function lerColunasDaLista(lista: ListaComColunas, bruto: unknown): ItemDeColuna[] {
+  return lerColunas(bruto, { aceitarNativas: NATIVAS_POR_LISTA[lista], padrao: PADRAO_POR_LISTA[lista] });
+}
 
 type ErroDoBanco = { code?: string; message?: string };
 
@@ -22,7 +37,7 @@ export async function lerColunasDaPessoa(
     .eq("lista", lista)
     .maybeSingle();
   if (error) throw error;
-  return lerColunas((data as { colunas?: unknown } | null)?.colunas ?? null);
+  return lerColunasDaLista(lista, (data as { colunas?: unknown } | null)?.colunas ?? null);
 }
 
 /** Lê antes e atualiza ou insere; o índice único barra duas abas ao mesmo tempo (23505). */

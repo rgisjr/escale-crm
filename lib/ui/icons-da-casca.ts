@@ -103,3 +103,6 @@ export { ContactRound, UserRoundPlus, SquarePen, Ellipsis } from "lucide-react";
 
 // Fase 3B (conversa aberta): relógio, câmera, pausa, ampulheta, microfone, enviar, atalhos e o assistente.
 export { AlarmClock, Camera, CirclePause, Hourglass, Lightbulb, MailOpen, Mic, PenLine, Play, RotateCcw, Smile, Workflow, Image as ImageIcon } from "lucide-react";
+
+// Fase 2D (empresas): a estrela do contato principal.
+export { Star } from "lucide-react";

@@ -49,6 +49,7 @@ export function CamposDaFicha({
   aviso,
   grupos,
   aoGerenciar,
+  linhaEspecial,
 }: {
   icone: ReactNode;
   titulo: string;
@@ -66,6 +67,8 @@ export function CamposDaFicha({
   grupos?: Array<{ chave: string; nome: string }>;
   /** Fase 2C: abre a janela "Gerenciamento de campos" (administrador); vale mais que `gerenciarHref`. */
   aoGerenciar?: () => void;
+  /** Fase 2D: uma linha que o chamador desenha no lugar do editor (o seletor da empresa); `null` = linha comum. */
+  linhaEspecial?: (campo: CampoEditavel) => ReactNode | null;
 }) {
   const t = useT();
   const [busca, setBusca] = useState("");
@@ -250,7 +253,9 @@ export function CamposDaFicha({
                     ) : null}
                   </dt>
                   <dd className="[&_[role=combobox]]:h-8">
-                    {aoSalvar ? (
+                    {linhaEspecial?.(c) ? (
+                      linhaEspecial(c)
+                    ) : aoSalvar ? (
                       <EditorDeCampo
                         campo={c}
                         moeda={moeda}

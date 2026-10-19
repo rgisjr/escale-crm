@@ -8,10 +8,7 @@ import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/hooks/i18n/useT";
 import {
   type CampoDeColuna,
-  COLUNAS_NATIVAS,
-  COLUNAS_PADRAO,
   type ItemDeColuna,
-  ROTULO_DA_COLUNA,
   chaveDoItem,
   mesmasColunas,
 } from "@/lib/escale/contatos/regras";
@@ -35,11 +32,21 @@ import { rotuloDoItem } from "./CelulasDoContato";
 export function PainelDeColunas({
   itens,
   aoMudar,
-  camposDoContato,
+  nativas,
+  campos,
+  tituloDosCampos,
+  padrao,
 }: {
   itens: ItemDeColuna[];
   aoMudar: (itens: ItemDeColuna[]) => void;
-  camposDoContato: CampoDeColuna[];
+  /** As colunas nativas da lista (rótulo já na língua da tela). */
+  nativas: ReadonlyArray<{ chave: string; rotulo: string }>;
+  /** Os campos que podem virar coluna. */
+  campos: CampoDeColuna[];
+  /** Já traduzido por quem chama. */
+  tituloDosCampos: string;
+  /** As colunas de fábrica da lista: "Redefinir" volta para elas. */
+  padrao: readonly ItemDeColuna[];
 }) {
   const t = useT();
   const [busca, setBusca] = useState("");
@@ -48,20 +55,18 @@ export function PainelDeColunas({
     rotulo.toLocaleLowerCase("pt-BR").includes(busca.trim().toLocaleLowerCase("pt-BR"));
   const naTabela = new Set(itens.map(chaveDoItem));
 
-  const nativasFora: ItemDeColuna[] = COLUNAS_NATIVAS.filter(
-    (c) => !naTabela.has(`nativa:${c}`),
-  ).map((chave) => ({
-    tipo: "nativa",
-    chave,
-  }));
-  const camposFora: ItemDeColuna[] = camposDoContato.filter(
+  const nativasFora: ItemDeColuna[] = nativas
+    .filter((c) => !naTabela.has(`nativa:${c.chave}`))
+    .map((c) => ({ tipo: "nativa", chave: c.chave }));
+  const camposFora: ItemDeColuna[] = campos.filter(
     (c) => !naTabela.has(`campo:${c.chave}`),
   ).map((c) => ({
     tipo: "campo",
     chave: c.chave,
   }));
-  const rotulos = Object.fromEntries(camposDoContato.map((c) => [c.chave, c.rotulo]));
-  const rotulo = (item: ItemDeColuna) => rotuloDoItem(item, t, ROTULO_DA_COLUNA, rotulos);
+  const rotulos = Object.fromEntries(campos.map((c) => [c.chave, c.rotulo]));
+  const rotulosDasNativas = Object.fromEntries(nativas.map((c) => [c.chave, c.rotulo]));
+  const rotulo = (item: ItemDeColuna) => rotuloDoItem(item, t, rotulosDasNativas, rotulos);
 
   const tirar = (item: ItemDeColuna) =>
     aoMudar(itens.filter((i) => chaveDoItem(i) !== chaveDoItem(item)));
@@ -131,10 +136,10 @@ export function PainelDeColunas({
           <span className="grid size-5 place-items-center rounded-full bg-casca-marca text-[11px] font-semibold text-white">
             {itens.length}
           </span>
-          {!mesmasColunas(itens, COLUNAS_PADRAO) && (
+          {!mesmasColunas(itens, padrao) && (
             <button
               type="button"
-              onClick={() => aoMudar(COLUNAS_PADRAO)}
+              onClick={() => aoMudar([...padrao])}
               className="ml-auto text-[12px] font-medium text-casca-marca hover:underline"
             >
               {t("Redefinir")}
@@ -218,7 +223,7 @@ export function PainelDeColunas({
             <section className="mt-2 border-t border-casca-borda pt-1">
               <div className="flex items-center gap-1">
                 <User size={12} aria-hidden className="text-casca-meta" />
-                {cabecaDoGrupo("campos", t("Campos do contato"))}
+                {cabecaDoGrupo("campos", tituloDosCampos)}
               </div>
               {!fechados.campos &&
                 camposVisiveis.map((item) => (
