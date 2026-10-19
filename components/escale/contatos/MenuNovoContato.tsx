@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 
+import { AcompanharImportacoes } from "@/components/escale/importacao/AcompanharImportacoes";
 import { JanelaDeImportacao } from "@/components/escale/importacao/JanelaDeImportacao";
 import { CONTEUDO_DO_MENU, ITEM_DO_MENU } from "@/components/escale/menu/estilos";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
@@ -58,6 +59,7 @@ export function MenuNovoContato({
       <JanelaNovoContato aberta={novo} aoFechar={() => setNovo(false)} origens={origens} />
       {/* FORK ESCALE · Fase 2F: o assistente de importação de 5 passos da Clint. */}
       <JanelaDeImportacao aberta={importar} aoFechar={() => setImportar(false)} tipoInicial="contato" />
+      <AcompanharImportacoes />
     </>
   );
 }
