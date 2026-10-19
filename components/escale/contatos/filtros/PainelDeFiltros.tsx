@@ -73,6 +73,7 @@ export function PainelDeFiltros({
         filtros={filtros}
         aoMudar={aoMudar}
         camposDoNegocio={opcoes.camposDoNegocio}
+        camposDoContato={opcoes.camposDoContato}
       />
     );
   };

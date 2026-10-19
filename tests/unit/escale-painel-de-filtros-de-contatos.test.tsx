@@ -4,7 +4,12 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PainelDeFiltros } from "@/components/escale/contatos/filtros/PainelDeFiltros";
-import type { FiltrosDeContatos, SecaoDoFiltro, TagsDoFiltro } from "@/lib/escale/contatos/filtros";
+import {
+  camposDoContatoDoFiltro,
+  type FiltrosDeContatos,
+  type SecaoDoFiltro,
+  type TagsDoFiltro,
+} from "@/lib/escale/contatos/filtros";
 import type { OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
@@ -28,6 +33,13 @@ const OPCOES: OpcoesDoFiltro = {
   camposDoNegocio: [
     { alvo: "negocio", chave: "valor", rotulo: "Valor do negócio", tipo: "numero" },
   ],
+  // Fase 2C: os fixos do contato mais um campo do catálogo (Renda).
+  camposDoContato: camposDoContatoDoFiltro({
+    grupos: [],
+    campos: [
+      { id: "c1", objeto: "contato", chave: "renda", definicao: { label: "Renda", type: "currency" }, grupo_id: null, papel_minimo: null, posicao: 0, padrao: false },
+    ],
+  }),
 };
 const SO_QUALQUER: TagsDoFiltro = {
   combinar: "ou",
@@ -187,6 +199,18 @@ describe("PainelDeFiltros (prints 2b-05 a 2b-23)", () => {
     });
     expect(screen.getByText("Grupo 1")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Adicionar grupo" })).toBeInTheDocument();
+  });
+
+  it("Campos › o grupo Contato lista o campo do catálogo (Renda) com os operadores de número (2C)", () => {
+    render(<Painel espia={vi.fn()} />);
+    abrir("Campos");
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar condição" }));
+    const campos = seletor("Escolher campo");
+    fireEvent.click(within(campos).getByRole("button", { name: "Contato" }));
+    fireEvent.click(within(campos).getByRole("button", { name: "Renda" }));
+    for (const op of ["Igual", "Maior que", "Menor que"]) {
+      expect(screen.getByRole("radio", { name: op })).toBeInTheDocument();
+    }
   });
 
   it("Campos › a busca abre o grupo do que achou; número no formato brasileiro vira número", () => {

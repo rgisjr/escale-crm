@@ -6,7 +6,6 @@ import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import {
-  CAMPOS_DO_CONTATO_DO_FILTRO,
   CONTEM_MAX,
   ROTULO_DO_OPERADOR,
   contarContem,
@@ -282,14 +281,16 @@ export function SecaoCamposDoFiltro({
   filtros,
   aoMudar,
   camposDoNegocio,
+  camposDoContato,
 }: {
   filtros: FiltrosDeContatos;
   aoMudar: (f: FiltrosDeContatos) => void;
   camposDoNegocio: readonly CampoDoFiltro[];
+  camposDoContato: readonly CampoDoFiltro[];
 }) {
   const t = useT();
   const grupos: GrupoDoFiltro[] = filtros.campos?.grupos ?? [];
-  const todos = [...CAMPOS_DO_CONTATO_DO_FILTRO, ...camposDoNegocio];
+  const todos = [...camposDoContato, ...camposDoNegocio];
   const noLimite = contarContem(filtros) >= CONTEM_MAX;
 
   return (

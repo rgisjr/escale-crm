@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { compilarFiltros } from "@/lib/escale/contatos/compilar-filtros";
 import {
   CONTEM_MAX,
+  camposDoContatoDoFiltro,
   chipsDosFiltros,
   contarNaSecao,
   diaValido,
@@ -310,5 +311,20 @@ describe("opcoesDoFiltroDasOrigens", () => {
 
   it("campos do negócio: o valor primeiro, depois os do CRM", () => {
     expect(opcoes.camposDoNegocio.map((c) => c.chave)).toEqual(["valor", "cpf_cliente"]);
+  });
+});
+
+describe("camposDoContatoDoFiltro (Fase 2C)", () => {
+  it("junta os fixos com o catálogo, em ordem alfabética, com o tipo do filtro", () => {
+    const campos = camposDoContatoDoFiltro({
+      grupos: [],
+      campos: [
+        { id: "c1", objeto: "contato", chave: "renda", definicao: { label: "Renda", type: "currency" }, grupo_id: null, papel_minimo: null, posicao: 0, padrao: false },
+        { id: "c2", objeto: "contato", chave: "origem", definicao: { label: "Canal", type: "select", options: [{ value: "a", label: "A" }] }, grupo_id: null, papel_minimo: null, posicao: 1, padrao: false },
+      ],
+    });
+    expect(campos.map((c) => c.rotulo).slice(0, 3)).toEqual(["Canal", "Data de nascimento", "Email"]);
+    expect(campos.find((c) => c.chave === "renda")).toMatchObject({ alvo: "contato", tipo: "numero" });
+    expect(campos.find((c) => c.chave === "origem")).toMatchObject({ tipo: "opcao", opcoes: [{ value: "a", label: "A" }] });
   });
 });
