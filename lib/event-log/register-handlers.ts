@@ -15,6 +15,8 @@ import { lgpdExportHandler } from "@/workers/lgpd-export-worker.handler";
 import { lgpdRedactHandler } from "@/workers/lgpd-redact-worker.handler";
 // FORK ESCALE · Fase 2B: as ações em massa da lista de contatos.
 import { acaoEmMassaHandler } from "@/lib/escale/massa/handler";
+// FORK ESCALE · Fase 2F: as importações de contatos e negócios.
+import { importacaoHandler } from "@/lib/escale/importacao/handler";
 import { automationRulesHandler } from "@/lib/automation/engine.handler";
 import { followupReactivityHandler } from "@/lib/followup/reactivity.handler";
 import { campanhaRespostaHandler } from "@/lib/campanhas/resposta.handler";
@@ -61,6 +63,7 @@ export function ensureHandlersRegistered(): void {
   registerHandler(lgpdRedactHandler);
   // FORK ESCALE · Fase 2B: escrita interna pedida pela própria organização (lotes com orçamento).
   registerHandler(acaoEmMassaHandler);
+  registerHandler(importacaoHandler);
   registerHandler(automationRulesHandler);
   registerHandler(followupGatilhoEtapaHandler);
   // Escrita curta no banco (um item na Central), vizinha do gatilho de etapa
