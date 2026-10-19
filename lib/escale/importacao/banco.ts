@@ -9,7 +9,12 @@ import { lerCatalogo } from "@/lib/escale/campos/banco";
 
 import type { CatalogosDaImportacao } from "./mapeamento";
 import { definicoesDosCatalogos, lerPlanilha, marcarRepetidas, normalizarLinha } from "./linhas";
-import { PAGINA_DA_LISTA, type ImportacaoLida, type PedidoDeImportacao } from "./tipos";
+import { acaoValida, type Acao, type Motivo } from "./regras";
+import type { Resolucao } from "./classificar";
+import { lerContextoDaRodada, type Importacao, type LinhaParaProcessar } from "./contexto";
+import { contarImportacao, processarLinhas, type Dependencias } from "./executar";
+import type { StatusDaLinha } from "./textos";
+import { PAGINA_DA_LISTA, type ImportacaoLida, type LinhaLida, type PedidoDeImportacao } from "./tipos";
 
 export class ErroDaImportacao extends Error {
   constructor(
@@ -154,4 +159,127 @@ export async function lerImportacao(sb: SupabaseClient, orgId: string, id: strin
     origem_nome = (o.data as { name?: string } | null)?.name ?? null;
   }
   return { ...i, origem_nome };
+}
+
+export const LINHAS_DO_RELATORIO_MAX = 500;
+const COLUNAS_DA_LINHA_LIDA = "id, numero, status, motivo, normalizado, detalhe, resolucoes, mensagem, com_aviso";
+
+export async function linhasDaImportacao(
+  sb: SupabaseClient,
+  orgId: string,
+  id: string,
+  quais: "revisar" | "relatorio",
+): Promise<LinhaLida[]> {
+  let q = sb.from("crm_importacoes_linhas").select(COLUNAS_DA_LINHA_LIDA).eq("organization_id", orgId).eq("importacao_id", id);
+  q =
+    quais === "revisar"
+      ? q.eq("status", "revisar").order("motivo", { ascending: true }).order("numero", { ascending: true }).limit(500)
+      : q.or("status.in.(pulada,erro),com_aviso.eq.true").order("numero", { ascending: true }).limit(LINHAS_DO_RELATORIO_MAX + 1);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as unknown as LinhaLida[];
+}
+
+export async function cancelarImportacao(admin: SupabaseClient, id: string): Promise<void> {
+  const { error } = await admin.rpc("fn_escale_cancelar_importacao", { p_importacao: id });
+  if (error) throw new ErroDaImportacao("estado", "Só se cancela uma importação na fila ou importando.");
+}
+
+async function conferirEscolha(sb: SupabaseClient, orgId: string, motivo: Motivo, r: Resolucao, detalhe: Record<string, unknown>) {
+  if (r.acao !== "PICK_MANUALLY") return;
+  if (motivo === "ORIGIN_NAME_NOT_FOUND") {
+    const { data } = await sb
+      .from("crm_pipelines")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("id", r.dados?.origemId ?? "")
+      .eq("is_archived", false)
+      .maybeSingle();
+    if (!data) throw new ErroDaImportacao("origem", "Escolha uma origem");
+    return;
+  }
+  const { data } = await sb
+    .from("crm_stages")
+    .select("id, pipeline_id, is_archived, is_won, is_lost")
+    .eq("organization_id", orgId)
+    .eq("id", r.dados?.etapaId ?? "")
+    .maybeSingle();
+  const e = data as { pipeline_id: string; is_archived: boolean; is_won: boolean; is_lost: boolean } | null;
+  if (!e || e.pipeline_id !== detalhe.origemId || e.is_archived || e.is_won || e.is_lost) {
+    throw new ErroDaImportacao("origem", "Escolha uma etapa");
+  }
+}
+
+const COLUNAS_PARA_PROCESSAR = "id, numero, normalizado, repetida_de, resolucoes";
+
+export async function resolverLinha(
+  sb: SupabaseClient,
+  deps: Dependencias,
+  ctx: { orgId: string; importacaoId: string; linhaId: string; resolucao: Resolucao },
+): Promise<{ status: StatusDaLinha; motivo: Motivo | null; importacao: string }> {
+  const { orgId, importacaoId, linhaId, resolucao } = ctx;
+  const { data: lida, error } = await sb
+    .from("crm_importacoes_linhas")
+    .select("id, status, motivo, detalhe, resolucoes")
+    .eq("organization_id", orgId)
+    .eq("importacao_id", importacaoId)
+    .eq("id", linhaId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!lida) throw new ErroDaImportacao("nao_encontrada", "Importação não encontrada.");
+  const linha = lida as { status: string; motivo: Motivo | null; detalhe: Record<string, unknown>; resolucoes: Record<string, unknown> };
+  if (linha.status !== "revisar" || !linha.motivo) throw new ErroDaImportacao("estado", "Esta linha já foi resolvida.");
+  const motivo = linha.motivo;
+  const permitida =
+    resolucao.acao !== "PENDING_REVIEW" &&
+    acaoValida(motivo, resolucao.acao) &&
+    (resolucao.acao !== "PICK_MANUALLY" || motivo === "ORIGIN_NAME_NOT_FOUND" || motivo === "STAGE_NAME_NOT_FOUND");
+  if (!permitida) throw new ErroDaImportacao("estado", "Não foi possível iniciar a importação.");
+  await conferirEscolha(sb, orgId, motivo, resolucao, linha.detalhe);
+
+  const imp = await deps.db
+    .from("crm_importacoes")
+    .select("id, organization_id, user_id, tipo, status, decisoes, configuracao")
+    .eq("organization_id", orgId)
+    .eq("id", importacaoId)
+    .maybeSingle();
+  if (imp.error) throw imp.error;
+  const importacao = imp.data as Importacao | null;
+  if (!importacao || (importacao.status !== "aguardando_revisao" && importacao.status !== "importando")) {
+    throw new ErroDaImportacao("estado", "Esta linha já foi resolvida.");
+  }
+
+  const tomada = await deps.db
+    .from("crm_importacoes_linhas")
+    .update({ status: "processando", motivo: null, resolucoes: { ...linha.resolucoes, [motivo]: resolucao } })
+    .eq("id", linhaId)
+    .eq("status", "revisar")
+    .select(COLUNAS_PARA_PROCESSAR);
+  if (tomada.error) throw tomada.error;
+  const linhas = (tomada.data ?? []) as LinhaParaProcessar[];
+  if (linhas.length === 0) throw new ErroDaImportacao("estado", "Esta linha já foi resolvida.");
+
+  const rodada = await lerContextoDaRodada(deps.db, importacao, await deps.lerMembros(orgId));
+  await processarLinhas(deps, rodada, linhas);
+  const statusDaImportacao = await contarImportacao(deps, importacaoId);
+  const depois = await deps.db.from("crm_importacoes_linhas").select("status, motivo").eq("id", linhaId).maybeSingle();
+  const d = (depois.data ?? { status: "erro", motivo: null }) as { status: StatusDaLinha; motivo: Motivo | null };
+  return { status: d.status, motivo: d.motivo, importacao: statusDaImportacao };
+}
+
+
+export async function resolverEmLote(
+  admin: SupabaseClient,
+  ctx: { importacaoId: string; motivo: Motivo; acao: Acao },
+): Promise<number> {
+  if (ctx.acao === "PENDING_REVIEW" || ctx.acao === "PICK_MANUALLY" || !acaoValida(ctx.motivo, ctx.acao)) {
+    throw new ErroDaImportacao("estado", "Não foi possível iniciar a importação.");
+  }
+  const { data, error } = await admin.rpc("fn_escale_reabrir_importacao", {
+    p_importacao: ctx.importacaoId,
+    p_motivo: ctx.motivo,
+    p_resolucao: { acao: ctx.acao },
+  });
+  if (error) throw new ErroDaImportacao("estado", "Esta linha já foi resolvida.");
+  return Number(data);
 }
