@@ -11106,7 +11106,6 @@ export const DICIONARIO: Traducoes = {
   "Criar um negócio automaticamente": { es: "Crear un negocio automáticamente" },
   "Crie um negócio automaticamente em uma origem ao receber a primeira mensagem neste dispositivo.": { es: "Crea un negocio automáticamente en un origen al recibir el primer mensaje en este dispositivo." },
   "Se o contato já possui um negócio nessa origem, nenhum novo negócio é criado e o negócio existente não é alterado.": { es: "Si el contacto ya tiene un negocio en ese origen, no se crea ningún negocio nuevo y el existente no se modifica." },
-  "Condição": { es: "Condición" },
   "Quando receber uma mensagem que": { es: "Cuando reciba un mensaje que" },
   "igual": { es: "igual" },
   "Começa com": { es: "Empieza con" },
