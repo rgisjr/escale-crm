@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { fail, noContent, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
-import { setorEfetivo } from "@/lib/escale/conversas/setores-banco";
+import { setorEfetivo, transferirConversaParaSetor } from "@/lib/escale/conversas/setores-banco";
 import { lerJson } from "@/lib/escale/origens/respostas";
 
 import { comAConversa } from "../_comum";
@@ -34,36 +34,20 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
       .eq("id", destino)
       .maybeSingle();
     if (!existe) return fail("not_found", t("Setor não encontrado."), 404, { requestId });
-    const atual = await setorEfetivo(supabase, authz.org.orgId, conversa);
-    if (atual.setorId === destino)
-      return fail("validation_failed", t("A conversa já está nesse setor."), 422, { requestId });
-
-    const { error } = await supabase.from("crm_setor_da_conversa").upsert(
-      {
-        conversation_id: conversa.id,
-        organization_id: authz.org.orgId,
-        setor_id: destino,
-        em_transferencia: true,
-        setor_anterior_id: atual.setorId,
-        atendente_anterior_id: conversa.assigned_to_user_id,
-        transferido_por: authz.user.id,
-        transferido_em: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "conversation_id" },
-    );
-    if (error) return fail("internal_error", error.message, 500, { requestId });
-    if (conversa.assigned_to_user_id) {
-      const solta = await supabase.rpc("fn_conversation_assign", {
-        p_organization_id: authz.org.orgId,
-        p_conversation_id: conversa.id,
-        p_to_user_id: null as unknown as string,
-        p_reason: "release",
-        p_expected_assignee: conversa.assigned_to_user_id,
-        p_enforce_expected: true,
-      });
-      if (solta.error) return fail("internal_error", solta.error.message, 500, { requestId });
+    let resultado: "transferida" | "mesmo_setor";
+    try {
+      resultado = await transferirConversaParaSetor(
+        supabase,
+        authz.org.orgId,
+        conversa,
+        destino,
+        authz.user.id,
+      );
+    } catch (err) {
+      return fail("internal_error", (err as Error).message, 500, { requestId });
     }
+    if (resultado === "mesmo_setor")
+      return fail("validation_failed", t("A conversa já está nesse setor."), 422, { requestId });
     void audit({
       action: "conversation.sector_transfer",
       actorUserId: authz.user.id,
@@ -71,7 +55,7 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
       resourceType: "conversation",
       resourceId: conversa.id,
       requestId,
-      metadata: { de: atual.setorId, para: destino },
+      metadata: { para: destino },
     });
     return ok({ setor_id: destino, em_transferencia: true }, { requestId });
   });

@@ -182,3 +182,47 @@ export async function pode(
   if (error) throw error;
   return data === true;
 }
+
+/**
+ * "Alterar setor" (3C N7), extraída da rota para servir também à ação em massa
+ * (3D N14): o setor novo em transferência, com o setor e o atendente anteriores
+ * guardados, e o atendente solto pela RPC do release do original.
+ */
+export async function transferirConversaParaSetor(
+  db: SupabaseClient,
+  orgId: string,
+  conversa: { id: string; channel_session_id: string; assigned_to_user_id: string | null },
+  destino: string,
+  userId: string,
+): Promise<"transferida" | "mesmo_setor"> {
+  const atual = await setorEfetivo(db, orgId, conversa);
+  if (atual.setorId === destino) return "mesmo_setor";
+  const agora = new Date().toISOString();
+  const { error } = await db.from("crm_setor_da_conversa").upsert(
+    {
+      conversation_id: conversa.id,
+      organization_id: orgId,
+      setor_id: destino,
+      em_transferencia: true,
+      setor_anterior_id: atual.setorId,
+      atendente_anterior_id: conversa.assigned_to_user_id,
+      transferido_por: userId,
+      transferido_em: agora,
+      updated_at: agora,
+    },
+    { onConflict: "conversation_id" },
+  );
+  if (error) throw new Error(error.message);
+  if (conversa.assigned_to_user_id) {
+    const solta = await db.rpc("fn_conversation_assign", {
+      p_organization_id: orgId,
+      p_conversation_id: conversa.id,
+      p_to_user_id: null as unknown as string,
+      p_reason: "release",
+      p_expected_assignee: conversa.assigned_to_user_id,
+      p_enforce_expected: true,
+    });
+    if (solta.error) throw new Error(solta.error.message);
+  }
+  return "transferida";
+}
