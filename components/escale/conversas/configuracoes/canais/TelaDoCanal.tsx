@@ -37,14 +37,14 @@ export function TelaDoCanal({ canal }: { canal: GrupoDeDispositivo }) {
           ]}
         />
         {canal === "whatsapp_oficial"
-          ? ["Modelos de mensagem", "WhatsApp Flows", "Análise de templates"].map((r) => (
+          ? [t("Modelos de mensagem"), t("WhatsApp Flows"), t("Análise de templates")].map((r) => (
               <span
                 key={r}
                 title={t("Em breve")}
                 aria-disabled="true"
                 className="pb-3 text-[13px] text-casca-meta"
               >
-                {t(r)}
+                {r}
               </span>
             ))
           : null}
