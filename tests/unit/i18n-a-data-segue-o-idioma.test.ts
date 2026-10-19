@@ -87,6 +87,7 @@ const FORA_DE_INTERFACE: Record<string, string> = {
   // arquivo como caso especial pelo mesmo motivo. Emitir a data dele no idioma
   // da interface faria um documento de conformidade mudar de forma conforme
   // quem apertou o botão.
+  "lib/escale/massa/csv-de-contatos.ts": "arquivo exportado (CSV) montado no servidor: data brasileira fixa, sem interface para perguntar",
   "lib/lgpd/pdf-renderer.tsx": "documento legal brasileiro: a data acompanha a lei, não a interface",
 };
 

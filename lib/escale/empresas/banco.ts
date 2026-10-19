@@ -335,7 +335,7 @@ export async function negociosDaEmpresa(sb: SB, orgId: string, id: string): Prom
   const nomePorContato = new Map(contatos.map((c) => [c.id, c.nome]));
   const { data, error } = await sb
     .from("crm_leads")
-    .select("id, title, status, value_cents, currency, contact_id, crm_pipelines!inner(name, is_archived), crm_stages(name)")
+    .select("id, title, status, value_cents, currency, contact_id, crm_pipelines!inner(name, is_archived), crm_stages!crm_leads_stage_id_fkey(name)")
     .eq("organization_id", orgId)
     .eq("crm_pipelines.is_archived", false)
     .in("contact_id", [...nomePorContato.keys()])

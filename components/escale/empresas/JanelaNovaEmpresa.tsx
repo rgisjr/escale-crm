@@ -126,7 +126,7 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
               )}
             </Campo>
             <Campo rotulo={t("Site")}>
-              <CampoDeTexto value={site} onChange={(e) => setSite(e.target.value)} placeholder="empresa.com.br" />
+              <CampoDeTexto value={site} onChange={(e) => setSite(e.target.value)} placeholder="https://…" />
             </Campo>
           </>
         ) : (

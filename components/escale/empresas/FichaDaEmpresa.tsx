@@ -17,6 +17,7 @@ import {
   useMudarEmpresa,
   useNegociosDaEmpresa,
 } from "@/hooks/escale/useEmpresa";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { ArrowLeft, MoreVertical } from "@/lib/ui/icons-da-casca";
@@ -54,6 +55,7 @@ export function FichaDaEmpresa({
   podeAdministrar: boolean;
 }) {
   const t = useT();
+  const tagDoIdioma = useTagDeIdioma();
   const router = useRouter();
   const params = useSearchParams();
   const pedida = params.get("aba");
@@ -182,7 +184,7 @@ export function FichaDaEmpresa({
         </Bloco>
         <Bloco rotulo={t("Criada em")}>
           <span className="text-[14px] text-casca-texto">
-            {new Intl.DateTimeFormat("pt-BR").format(new Date(e.criada_em))}
+            {new Intl.DateTimeFormat(tagDoIdioma).format(new Date(e.criada_em))}
           </span>
         </Bloco>
       </div>
