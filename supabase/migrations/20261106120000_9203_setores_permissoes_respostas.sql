@@ -134,13 +134,13 @@ drop policy if exists crm_setor_do_dispositivo_write on public.crm_setor_do_disp
 create policy crm_setores_select on public.crm_setores
   for select using (public.fn_is_platform_admin() or organization_id in (select public.fn_user_org_ids()));
 create policy crm_setores_write on public.crm_setores
-  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
-  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
+  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
+  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
 create policy crm_setores_membros_select on public.crm_setores_membros
   for select using (public.fn_is_platform_admin() or organization_id in (select public.fn_user_org_ids()));
 create policy crm_setores_membros_write on public.crm_setores_membros
-  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
-  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
+  for all using ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'))
+  with check ((organization_id in (select public.fn_user_org_ids())) and public.fn_role_at_least(organization_id, 'manager') and public.fn_crm_pode(organization_id, 'CHAT_EDIT_TEAMS'));
 create policy crm_setor_do_dispositivo_select on public.crm_setor_do_dispositivo
   for select using (public.fn_is_platform_admin() or organization_id in (select public.fn_user_org_ids()));
 create policy crm_setor_do_dispositivo_write on public.crm_setor_do_dispositivo
