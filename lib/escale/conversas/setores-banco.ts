@@ -128,3 +128,57 @@ export async function setoresDasConversas(
   }
   return saida;
 }
+
+/** O setor efetivo de UMA conversa, lido pela sessão (N2). */
+export async function setorEfetivo(
+  supabase: SupabaseClient,
+  orgId: string,
+  conversa: { id: string; channel_session_id: string },
+): Promise<{
+  explicito: {
+    setor_id: string | null;
+    em_transferencia: boolean;
+    setor_anterior_id: string | null;
+    atendente_anterior_id: string | null;
+  } | null;
+  setorId: string | null;
+}> {
+  const [exp, disp] = await Promise.all([
+    supabase
+      .from("crm_setor_da_conversa")
+      .select("setor_id, em_transferencia, setor_anterior_id, atendente_anterior_id")
+      .eq("organization_id", orgId)
+      .eq("conversation_id", conversa.id)
+      .maybeSingle(),
+    supabase
+      .from("crm_setor_do_dispositivo")
+      .select("setor_id")
+      .eq("organization_id", orgId)
+      .eq("channel_session_id", conversa.channel_session_id)
+      .maybeSingle(),
+  ]);
+  if (exp.error) throw exp.error;
+  if (disp.error) throw disp.error;
+  const explicito =
+    (exp.data as {
+      setor_id: string | null;
+      em_transferencia: boolean;
+      setor_anterior_id: string | null;
+      atendente_anterior_id: string | null;
+    } | null) ?? null;
+  return {
+    explicito,
+    setorId: explicito?.setor_id ?? (disp.data as { setor_id: string } | null)?.setor_id ?? null,
+  };
+}
+
+/** `fn_crm_pode` pela sessão. */
+export async function pode(
+  supabase: SupabaseClient,
+  orgId: string,
+  chave: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("fn_crm_pode", { p_org: orgId, p_chave: chave });
+  if (error) throw error;
+  return data === true;
+}

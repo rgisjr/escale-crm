@@ -19,10 +19,11 @@ export interface ConversaVisivel {
   bot_silenced_until: string | null;
   contact_id: string | null;
   last_inbound_at: string | null;
+  channel_session_id: string;
 }
 
 export const COLUNAS_DA_CONVERSA =
-  "id, organization_id, status, service_revision, assigned_to_user_id, snooze_until, metadata, bot_silenced_until, contact_id, last_inbound_at";
+  "id, organization_id, status, service_revision, assigned_to_user_id, snooze_until, metadata, bot_silenced_until, contact_id, last_inbound_at, channel_session_id";
 
 /** Pela SESSÃO: a policy `conversations_select` (visibility_mode) decide o que a pessoa vê. */
 export async function lerConversaVisivel(

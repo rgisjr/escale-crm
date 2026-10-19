@@ -17,8 +17,6 @@ type Ctx = { params: Promise<{ id: string }> };
 
 async function preparar(ctx: Ctx) {
   const requestId = randomUUID();
-  const supportDenied = await requireSupportWrite();
-  if (supportDenied) return { erro: supportDenied } as const;
   const authz = await requireRole("agent", { requestId, resource: "crm_setores" });
   if (!authz.ok) return { erro: authz.response } as const;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
@@ -30,6 +28,8 @@ async function preparar(ctx: Ctx) {
 
 /** "Salvar alterações" de "Editar setor" (c88). */
 export async function PATCH(req: NextRequest, ctx: Ctx): Promise<Response> {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
   const p = await preparar(ctx);
   if ("erro" in p) return p.erro as Response;
   const { requestId, authz, t, id, supabase } = p;
@@ -70,6 +70,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx): Promise<Response> {
 
 /** "Remover setor" (c87). Os vínculos saem em cascata; as conversas voltam ao setor do dispositivo. */
 export async function DELETE(_req: NextRequest, ctx: Ctx): Promise<Response> {
+  const supportDenied = await requireSupportWrite();
+  if (supportDenied) return supportDenied;
   const p = await preparar(ctx);
   if ("erro" in p) return p.erro as Response;
   const { requestId, authz, t, id, supabase } = p;
