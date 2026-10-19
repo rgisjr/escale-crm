@@ -8,7 +8,12 @@ import type { ConversationWithContact } from "@/hooks/inbox/useConversationsReal
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import { useRefetchDeSeguranca } from "@/hooks/realtime/useRefetchDeSeguranca";
 import { apiClient } from "@/lib/api/client";
-import type { FiltrosDaFila } from "@/lib/escale/conversas/presets";
+import {
+  enxugarFiltrosDoPainel,
+  temCriterios,
+  type FiltrosDoPainel,
+} from "@/lib/escale/conversas/filtros-da-fila";
+import type { Ordem } from "@/lib/escale/conversas/ordem";
 
 export interface PaginaDaFila {
   data: ConversationWithContact[];
@@ -18,37 +23,49 @@ export interface PaginaDaFila {
 export const LIMITE_DA_FILA = 50;
 
 /**
- * A FILA DA CASCA (fork Escale, Fase 3A; A4, A5). Lê a rota do original com
- * os presets da Clint por cima. A chave começa por "conversations" de
- * propósito: `agendarRecargaDasConversas` (tempo real do original) invalida
- * `["conversations"]` e alcança esta lista sem nenhuma linha nova lá.
+ * A FILA DA CASCA (fork Escale, Fase 3A; A4, A5). A chave começa por
+ * "conversations" de propósito: `agendarRecargaDasConversas` (tempo real do
+ * original) invalida `["conversations"]` e alcança esta lista sem nenhuma linha
+ * nova lá.
+ *
+ * FORK ESCALE · Fase 3D: lê /api/v1/fila-da-casca (o painel de filtros no banco); a chave continua "conversations".
  */
-export const chaveDaFila = (filtros: FiltrosDaFila) =>
-  ["conversations", { casca: true, ...filtros }] as const;
-
-export function urlDaFila(filtros: FiltrosDaFila, cursor?: string): string {
-  const qs = new URLSearchParams();
-  if (filtros.status?.length) qs.set("status", filtros.status.join(","));
-  if (filtros.assigned_to) qs.set("assigned_to", filtros.assigned_to);
-  if (filtros.unread) qs.set("unread", "true");
-  if (filtros.snoozed !== undefined) qs.set("snoozed", filtros.snoozed ? "true" : "false");
-  if (filtros.ordem === "espera") qs.set("ordem", "espera");
-  if (filtros.search) qs.set("search", filtros.search);
-  if (cursor) qs.set("cursor", cursor);
-  qs.set("limit", String(LIMITE_DA_FILA));
-  return `/api/v1/conversations?${qs.toString()}`;
+/** FORK ESCALE · Fase 3D: o painel, a ordem e a busca (a rota da casca avalia no banco, N9). */
+export interface ConsultaDaFila {
+  painel: FiltrosDoPainel;
+  ordem: Ordem;
+  busca?: string;
 }
 
-export function useFilaDeConversas(filtros: FiltrosDaFila, orgId: string | null) {
+export const chaveDaFila = (consulta: ConsultaDaFila) =>
+  ["conversations", { casca: true, ...consulta }] as const;
+
+export function parametrosDaConsulta(consulta: ConsultaDaFila): URLSearchParams {
+  const qs = new URLSearchParams();
+  const painel = enxugarFiltrosDoPainel(consulta.painel);
+  if (temCriterios(painel)) qs.set("f", JSON.stringify(painel));
+  if (consulta.busca) qs.set("q", consulta.busca);
+  if (consulta.ordem === "espera") qs.set("o", "espera");
+  return qs;
+}
+
+export function urlDaFila(consulta: ConsultaDaFila, cursor?: string): string {
+  const qs = parametrosDaConsulta(consulta);
+  if (cursor) qs.set("cursor", cursor);
+  qs.set("limit", String(LIMITE_DA_FILA));
+  return `/api/v1/fila-da-casca?${qs.toString()}`;
+}
+
+export function useFilaDeConversas(consulta: ConsultaDaFila, orgId: string | null) {
   const qc = useQueryClient();
-  const queryKey = useMemo(() => chaveDaFila(filtros), [filtros]);
+  const queryKey = useMemo(() => chaveDaFila(consulta), [consulta]);
 
   const query = useInfiniteQuery({
     queryKey,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
       try {
-        return await apiClient.get<PaginaDaFila>(urlDaFila(filtros, pageParam));
+        return await apiClient.get<PaginaDaFila>(urlDaFila(consulta, pageParam));
       } catch (err) {
         showApiError(err);
         throw err;

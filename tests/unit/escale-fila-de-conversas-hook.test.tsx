@@ -3,8 +3,6 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { STATUS_ABERTOS } from "@/lib/escale/conversas/presets";
-
 vi.mock("@/hooks/realtime/useRealtimeChannel", () => ({
   useRealtimeChannel: () => ({ status: "SUBSCRIBED", ultimaEntrega: { current: null } }),
 }));
@@ -28,32 +26,31 @@ const envolver = (qc = new QueryClient({ defaultOptions: { queries: { retry: fal
   };
 
 describe("useFilaDeConversas", () => {
-  it("monta a URL do original com status, assigned_to, unread, snoozed, ordem, busca, cursor e limit 50", () => {
+  it("monta a URL da fila da casca com o painel, a busca, a ordem, o cursor e limit 50", () => {
     expect(
       urlDaFila(
-        {
-          status: STATUS_ABERTOS,
-          assigned_to: "me",
-          unread: true,
-          snoozed: false,
-          ordem: "espera",
-          search: "neto",
-        },
+        { painel: { conversas: { status: ["em_espera"] } }, ordem: "espera", busca: "neto" },
         "abc",
       ),
     ).toBe(
-      "/api/v1/conversations?status=open%2Cpending%2Cclaimed%2Cai_handling&assigned_to=me&unread=true&snoozed=false&ordem=espera&search=neto&cursor=abc&limit=50",
+      `/api/v1/fila-da-casca?f=${encodeURIComponent('{"conversas":{"status":["em_espera"]}}')}&q=neto&o=espera&cursor=abc&limit=50`,
     );
-    expect(urlDaFila({})).toBe("/api/v1/conversations?limit=50");
-    expect(chaveDaFila({ unread: true })).toEqual(["conversations", { casca: true, unread: true }]);
+    expect(urlDaFila({ painel: {}, ordem: "interacao" })).toBe("/api/v1/fila-da-casca?limit=50");
+    expect(chaveDaFila({ painel: {}, ordem: "interacao" })).toEqual([
+      "conversations",
+      { casca: true, painel: {}, ordem: "interacao" },
+    ]);
   });
 
   it("lê a lista e pagina pelo cursor", async () => {
     api.get.mockResolvedValueOnce({ data: [{ id: "c1" }], meta: { cursor: "x", has_more: true } });
-    const { result } = renderHook(() => useFilaDeConversas({}, "org1"), { wrapper: envolver() });
+    const { result } = renderHook(
+      () => useFilaDeConversas({ painel: {}, ordem: "interacao" }, "org1"),
+      { wrapper: envolver() },
+    );
     await waitFor(() => expect(result.current.data?.pages[0]?.data).toEqual([{ id: "c1" }]));
     expect(result.current.hasNextPage).toBe(true);
-    expect(api.get).toHaveBeenCalledWith("/api/v1/conversations?limit=50");
+    expect(api.get).toHaveBeenCalledWith("/api/v1/fila-da-casca?limit=50");
   });
 });
 
