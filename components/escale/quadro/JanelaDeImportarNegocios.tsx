@@ -12,7 +12,7 @@ import {
   type EtapaDaImportacao,
   type ResumoDaImportacao,
 } from "@/components/escale/quadro/ConteudoDaImportacao";
-import { PassosDaImportacao } from "@/components/escale/quadro/PassosDaImportacao";
+import { PassosDaImportacao } from "@/components/escale/importacao/PassosDaImportacao";
 import { DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useT } from "@/hooks/i18n/useT";

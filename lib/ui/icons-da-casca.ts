@@ -162,3 +162,6 @@ export {
   Unplug,
   PlusCircle,
 } from "lucide-react";
+
+// Fase 2F (importação): o escudo do aviso de proteção.
+export { Shield } from "lucide-react";
