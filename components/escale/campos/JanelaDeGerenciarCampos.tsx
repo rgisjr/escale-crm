@@ -10,6 +10,7 @@ import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { useT } from "@/hooks/i18n/useT";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useCatalogoDeCampos, useMudarCatalogo } from "@/hooks/escale/useCatalogoDeCampos";
 import { type CampoDoCatalogo, type GrupoDeCampos, OBJETOS_DE_CAMPO, type ObjetoDeCampo, ROTULO_DO_OBJETO, variavelDoCampo } from "@/lib/escale/campos/regras";
 import { Search } from "@/lib/ui/icons-da-casca";
@@ -47,12 +48,8 @@ export function JanelaDeGerenciarCampos({ aberta, aoFechar, objetoInicial }: Jan
   const grupoAtivo: GrupoDeCampos | null = useMemo(() => catalogo.grupos.find((g) => g.id === grupoAtivoId) ?? catalogo.grupos[0] ?? null, [catalogo.grupos, grupoAtivoId]);
 
   const copiar = async (texto: string, aviso: string) => {
-    try {
-      await navigator.clipboard.writeText(texto);
-      toast.success(aviso);
-    } catch {
-      toast.error(t("Ocorreu um erro ao salvar"));
-    }
+    if (await copyToClipboard(texto)) toast.success(aviso);
+    else toast.error(t("Ocorreu um erro ao salvar"));
   };
 
   const abas = OBJETOS_DE_CAMPO.map((o) => ({ valor: o, rotulo: t(ROTULO_DO_OBJETO[o]) }));

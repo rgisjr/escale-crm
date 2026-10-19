@@ -2,9 +2,17 @@
 -- 9105: empresas da casca (fork Escale, Frente B).
 
 -- ── 1. O módulo B2B ligado para todos (E1) ───────────────────────────────────
-insert into public.platform_config (chave, valor, eh_segredo, semeado_do_env)
-values ('MODULO_CRM_B2B', 'ligado', false, false)
-on conflict (chave) do update set valor = 'ligado';
+-- `platform_config` só existe no baseline depois deste bloco (que vem antes da varredura de anon):
+-- numa instalação nova o insert abaixo é pulado e o bloco "módulo B2B ligado" no fim do baseline o faz.
+do $m$
+begin
+  if to_regclass('public.platform_config') is not null then
+    insert into public.platform_config (chave, valor, eh_segredo, semeado_do_env)
+    values ('MODULO_CRM_B2B', 'ligado', false, false)
+    on conflict (chave) do update set valor = 'ligado';
+  end if;
+end
+$m$;
 
 -- ── 1b. A empresa guarda os valores dos campos personalizados (2C) ───────────
 -- Mora aqui, e não na 9104, porque `public.companies` só existe no baseline

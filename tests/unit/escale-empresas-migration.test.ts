@@ -52,14 +52,16 @@ describe("migration 9105 (empresas)", () => {
     expect(MIGRATION).toMatch(/create or replace function public\.fn_escale_contatos_do_filtro[\s\S]*?co\.trade_name ~\* p_padrao/);
   });
 
-  it("o baseline traz o mesmo bloco no FIM do arquivo (companies e people só existem depois do bloco B2B do original)", () => {
+  it("o baseline traz o mesmo bloco depois do B2B do original (companies e people) e ANTES da varredura de anon", () => {
     const i9104 = BASELINE.indexOf("FORK ESCALE · campos por objeto (migration 9104)");
     const i9105 = BASELINE.indexOf("FORK ESCALE · empresas da casca (migration 9105)");
     const iCompanies = BASELINE.indexOf("create table if not exists public.companies (");
     expect(i9104).toBeGreaterThan(-1);
     expect(i9105).toBeGreaterThan(i9104);
     expect(i9105).toBeGreaterThan(iCompanies);
-    expect(BASELINE.trimEnd().endsWith(MIGRATION.trimEnd())).toBe(true);
+    const iVarredura = BASELINE.indexOf("-- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----");
+    expect(iVarredura).toBeGreaterThan(i9105);
+    expect(BASELINE).toContain(MIGRATION.trimEnd());
   });
 
   it("companies.custom_fields nasce aqui, com a trava de objeto", () => {

@@ -41,6 +41,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx): Promise<Response> {
   if (!authz.ok) return authz.response;
   const t = (s: string) => traduzir(s, authz.user.idioma);
   const { id } = await ctx.params;
+  if (!UUID.test(id)) return fail("not_found", t("Empresa não encontrada"), 404, { requestId });
   const corpo = await lerJson(req);
   if (!corpo.ok) return fail("invalid_request", t("Corpo não é JSON válido."), 400, { requestId });
   const lido = patchDaEmpresaSchema.safeParse(corpo.json);
@@ -62,6 +63,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx): Promise<Response> {
   if (!authz.ok) return authz.response;
   const t = (s: string) => traduzir(s, authz.user.idioma);
   const { id } = await ctx.params;
+  if (!UUID.test(id)) return fail("not_found", t("Empresa não encontrada"), 404, { requestId });
   try {
     await excluirEmpresa(createAdminClient(), authz.org.orgId, id);
     void audit({ action: "companies.deleted_by_escale", actorUserId: authz.user.id, organizationId: authz.org.orgId, resourceType: "companies", resourceId: id, requestId, metadata: {} });

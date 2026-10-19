@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useAcoesEmMassa, useDecidirExportacao } from "@/hooks/escale/useAcoesEmMassa";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import type { PedidoParaAprovar, ResumoDaAcao } from "@/lib/escale/massa/tipos";
@@ -44,9 +45,14 @@ const ROTULO_DO_GRUPO =
 const BOTAO =
   "h-7 rounded-[5px] px-2.5 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-60";
 
+/** A data e a hora no idioma de quem lê (24 h, no fuso do navegador). */
+function Quando({ iso }: { iso: string }) {
+  return <>{quando(iso, useTagDeIdioma())}</>;
+}
+
 /** "17/10/2026 12:00" (formato brasileiro, 24 h, no fuso do navegador). */
-function quando(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+function quando(iso: string, tag: string): string {
+  return new Intl.DateTimeFormat(tag, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -138,7 +144,7 @@ export function PainelDeExportacoes({ ehAdmin }: { ehAdmin: boolean }) {
                             .replace("{nome}", nome(p.solicitante_id))
                             .replace("{n}", p.total.toLocaleString("pt-BR"))}
                         </p>
-                        <p className="text-casca-suave">{quando(p.created_at)}</p>
+                        <p className="text-casca-suave"><Quando iso={p.created_at} /></p>
                       </div>
                       <button
                         type="button"
@@ -187,7 +193,7 @@ export function PainelDeExportacoes({ ehAdmin }: { ehAdmin: boolean }) {
                     >
                       <div className="min-w-0 flex-1 text-[12px]">
                         <p className="font-medium text-casca-texto">{contatos(a.total)}</p>
-                        <p className="text-casca-suave">{quando(a.created_at)}</p>
+                        <p className="text-casca-suave"><Quando iso={a.created_at} /></p>
                       </div>
                       <span
                         className={cn(

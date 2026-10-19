@@ -73,6 +73,7 @@ describe("campos do CRM: migration 9006 e bloco do baseline", () => {
       "if tg_op <> 'DELETE' and not public.fn_escale_campo_valido(new.definicao || jsonb_build_object('key', new.chave)) then raise exception 'definição inválida para o campo do CRM (%)', new.chave using errcode = '23514'; end if;",
     );
     // a validação vem antes do retorno antecipado de "nada mudou"
+    // sonda-do-baseline: primeira-de-proposito — `sql` é o ARQUIVO da 9006, não o baseline
     expect(sql.indexOf("definição inválida para o campo do CRM")).toBeLessThan(
       sql.indexOf("if tg_op = 'UPDATE' and new.definicao = old.definicao"),
     );

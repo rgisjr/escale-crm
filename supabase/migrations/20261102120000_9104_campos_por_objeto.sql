@@ -225,6 +225,8 @@ select distinct on (n.organization_id, n.chave)
   join public.crm_grupos_de_campos g
     on g.organization_id = n.organization_id and g.objeto = 'contato' and g.chave = 'informacoes_gerais'
  where n.chave not like 'link\_%'
+   -- a chave do original aceita maiúscula; a do contato não (crm_campos_do_crm_chave)
+   and n.chave ~ '^[a-z][a-z0-9_]{0,39}$'
    and exists (
      select 1 from public.contacts c
       where c.organization_id = n.organization_id
@@ -232,7 +234,7 @@ select distinct on (n.organization_id, n.chave)
         and c.custom_fields ? n.chave
         and nullif(btrim(c.custom_fields->>n.chave), '') is not null
    )
-on conflict (organization_id, objeto, chave) do nothing;
+on conflict do nothing;
 
 -- ── 7. Ações do lote (2B N12): alterar e limpar campo ────────────────────────
 alter table public.crm_acoes_em_massa drop constraint if exists crm_acoes_em_massa_acao_valida;
