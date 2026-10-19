@@ -86,27 +86,21 @@ export function CamposDaFicha({
     () => grupos ?? [{ chave: GRUPO_PADRAO, nome: t("Informações Gerais") }],
     [grupos, t],
   );
-  const grupoDe = (c: CampoEditavel) => c.grupo ?? GRUPO_PADRAO;
   // Um grupo cuja lista fica vazia com "Ocultar vazios" é "oculto" (Clint).
   const gruposOcultos = useMemo(
     () =>
       ocultarVazios
-        ? listaDeGrupos.filter((g) => filtrarCampos(campos.filter((c) => grupoDe(c) === g.chave), "", true).length === 0)
+        ? listaDeGrupos.filter((g) => filtrarCampos(campos.filter((c) => (c.grupo ?? GRUPO_PADRAO) === g.chave), "", true).length === 0)
         : [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- grupoDe é uma função pura do módulo
     [campos, listaDeGrupos, ocultarVazios],
   );
   const gruposDaColuna = listaDeGrupos.filter((g) => mostrarOcultos || !gruposOcultos.some((o) => o.chave === g.chave));
   const grupoAtivo =
     gruposDaColuna.find((g) => g.chave === grupoEscolhido)?.chave ?? gruposDaColuna[0]?.chave ?? GRUPO_PADRAO;
-  const visiveis = useMemo(
-    () =>
-      filtrarCampos(
-        busca.trim() ? campos : campos.filter((c) => (c.grupo ?? GRUPO_PADRAO) === grupoAtivo),
-        busca,
-        ocultarVazios,
-      ),
-    [campos, busca, ocultarVazios, grupoAtivo],
+  const visiveis = filtrarCampos(
+    busca.trim() ? campos : campos.filter((c) => (c.grupo ?? GRUPO_PADRAO) === grupoAtivo),
+    busca,
+    ocultarVazios,
   );
 
   function alternarVazios() {
