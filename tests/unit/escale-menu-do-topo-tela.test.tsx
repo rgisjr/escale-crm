@@ -86,7 +86,7 @@ describe("<MenuDoTopo> (igual ao da Clint, variante superior)", () => {
       expect(ordem[i - 1]!.compareDocumentPosition(ordem[i]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
     expect(screen.getByTestId("ia-do-topo")).toHaveAttribute("data-destino", "/app/ai");
-    expect(screen.getByTestId("novo-do-topo")).toHaveAttribute("data-acoes", "contato,campanha");
+    expect(screen.getByTestId("novo-do-topo")).toHaveAttribute("data-acoes", "contato,empresa,campanha");
     expect(screen.getByTestId("menu-da-conta")).toHaveAttribute("data-avisos", "true");
     expect(screen.queryByRole("button", { name: /Buscar/ })).toBeNull();
     for (const id of ["tenant-switcher", "alerts-bell", "seletor-de-idioma"]) {

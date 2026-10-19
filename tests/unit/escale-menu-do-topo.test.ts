@@ -100,7 +100,7 @@ describe("menu do topo (igual ao da Clint, variante superior)", () => {
 
 describe("o que o Novo + cria", () => {
   it("só entra o que a pessoa enxerga e o papel deixa criar", () => {
-    expect(acoesDeCriar(ADMIN, "admin").map((a) => a.id)).toEqual(["contato", "campanha"]);
+    expect(acoesDeCriar(ADMIN, "admin").map((a) => a.id)).toEqual(["contato", "empresa", "campanha"]);
     expect(acoesDeCriar(AGENT, "agent").map((a) => a.id)).toEqual(["contato"]);
     expect(acoesDeCriar(AGENT_COM_PROPOSTAS, "agent").map((a) => a.id)).toEqual(["contato", "proposta"]);
     expect(acoesDeCriar(VIEWER, "viewer")).toEqual([]);
@@ -110,6 +110,7 @@ describe("o que o Novo + cria", () => {
   it("contato abre a janela na própria tela; campanha e proposta vão para a tela de criar", () => {
     expect(ACOES_DE_CRIAR.map((a) => [a.id, a.destino])).toEqual([
       ["contato", null],
+      ["empresa", "/app/companies?nova=1"],
       ["campanha", "/app/campaigns/new"],
       ["proposta", "/app/proposals/novo"],
     ]);

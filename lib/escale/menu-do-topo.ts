@@ -93,7 +93,7 @@ export function montarMenuDoTopo(visiveis: readonly NavDestination[]): MenuDoTop
  * negócio pede origem e etapa, e o "Negócio +" da página do quadro é da V4.
  */
 export interface AcaoDeCriar {
-  id: "contato" | "campanha" | "proposta";
+  id: "contato" | "empresa" | "campanha" | "proposta";
   /** Chave em português do dicionário (`t(rotulo)`). */
   rotulo: string;
   /** Para onde vai. `null` abre a janela de novo contato sem sair da tela. */
@@ -107,6 +107,8 @@ export interface AcaoDeCriar {
 export const ACOES_DE_CRIAR: readonly AcaoDeCriar[] = [
   // POST /api/v1/contacts: requireRole("agent").
   { id: "contato", rotulo: "Contato", destino: null, exige: "/app/contacts", papel: "agent" },
+  // POST /api/v1/empresas (Fase 2D): requireRole("agent"); a lista abre a janela com ?nova=1.
+  { id: "empresa", rotulo: "Empresa", destino: "/app/companies?nova=1", exige: "/app/companies", papel: "agent" },
   // POST /api/v1/campaigns: requireRole("manager").
   { id: "campanha", rotulo: "Campanha", destino: "/app/campaigns/new", exige: "/app/campaigns", papel: "manager" },
   // app/app/proposals/novo/page.tsx: agent ou acima (e a capacidade "propostas" ligada).
