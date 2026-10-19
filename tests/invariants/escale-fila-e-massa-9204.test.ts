@@ -63,8 +63,8 @@ beforeAll(() => {
       ('${CV_OFF}', '${GOV_ORG}', '${CT3}', '${SESSAO_OFF}', 'open', now() - interval '3 hours', 0, null);
     insert into public.crm_pipelines (id, organization_id, name, slug)
       values ('${ORIGEM}', '${GOV_ORG}', 'Fila 9204', 'fila-9204') on conflict (id) do nothing;
-    insert into public.crm_stages (id, organization_id, pipeline_id, name, position)
-      values ('${ETAPA}', '${GOV_ORG}', '${ORIGEM}', 'Entrada', 1) on conflict (id) do nothing;
+    insert into public.crm_stages (id, organization_id, pipeline_id, name, slug, position)
+      values ('${ETAPA}', '${GOV_ORG}', '${ORIGEM}', 'Entrada', 'entrada', 1000) on conflict (id) do nothing;
     insert into public.crm_leads (id, organization_id, pipeline_id, stage_id, contact_id, title)
       values ('${LEAD}', '${GOV_ORG}', '${ORIGEM}', '${ETAPA}', '${CT1}', 'Negócio do Um');
   `);
