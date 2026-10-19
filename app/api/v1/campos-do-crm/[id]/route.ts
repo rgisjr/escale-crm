@@ -20,8 +20,6 @@ const objetoSchema = z.object({ objeto: z.enum(OBJETOS_DE_CAMPO) });
 type Ctx = { params: Promise<{ id: string }> };
 
 async function porta(req: NextRequest) {
-  const denied = await requireSupportWrite();
-  if (denied) return { erro: denied } as const;
   const authz = await requireRole("manager", { resource: "crm_campos_do_crm" });
   if (!authz.ok) return { erro: authz.response } as const;
   if (!podeAdministrarEmpresa(authz.user, authz.org)) {
@@ -33,7 +31,9 @@ async function porta(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const p = await porta(req);
+  const denied = await requireSupportWrite();
+  if (denied) return denied;
+    const p = await porta(req);
   if ("erro" in p) return p.erro;
   const { id } = await ctx.params;
   const parse = patchDoCampoSchema.safeParse(await req.json().catch(() => null));
@@ -51,7 +51,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 }
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const p = await porta(req);
+  const denied = await requireSupportWrite();
+  if (denied) return denied;
+    const p = await porta(req);
   if ("erro" in p) return p.erro;
   const { id } = await ctx.params;
   try {

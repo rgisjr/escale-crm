@@ -1,3 +1,4 @@
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { formatarTelefone, instagramDoLink } from "@/lib/escale/contatos/regras";
 import { celula } from "@/lib/escale/exportar/csv-do-quadro";
 import { lerLinks } from "@/lib/leads/links-de-contato";
@@ -60,7 +61,7 @@ export function diaBr(dia: string | null): string {
 export function linhaDoCsv(c: ContatoExportado, fuso: string): string[] {
   const links = lerLinks(c.custom_fields ?? {}) as Record<string, string>;
   return [
-    c.name ?? c.display_name ?? "",
+    nomeDoContato(c) ?? "",
     formatarTelefone(c.phone_number),
     c.email ?? "",
     instagramDoLink(links.instagram ?? null) ?? "",

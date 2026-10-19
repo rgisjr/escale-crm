@@ -16,8 +16,6 @@ export const dynamic = "force-dynamic";
 
 
 async function porta() {
-  const denied = await requireSupportWrite();
-  if (denied) return { erro: denied } as const;
   const authz = await requireRole("manager", { resource: "crm_campos_do_crm" });
   if (!authz.ok) return { erro: authz.response } as const;
   if (!podeAdministrarEmpresa(authz.user, authz.org)) {
@@ -27,13 +25,15 @@ async function porta() {
 }
 
 export async function PUT(req: NextRequest) {
-  const p = await porta();
+  const denied = await requireSupportWrite();
+  if (denied) return denied;
+    const p = await porta();
   if ("erro" in p) return p.erro;
   const parse = ordemSchema.safeParse(await req.json().catch(() => null));
   if (!parse.success) return fail("validation_failed", traduzir("Pedido inválido.", p.authz.user.idioma), 422);
   try {
     await reordenar(await createClient(), p.authz.org.orgId, parse.data);
-    await audit({ organizationId: p.authz.org.orgId, actorUserId: p.authz.user.id, action: "crm_field.reordered", resourceType: "crm_field", resourceId: parse.data.objeto, metadata: { objeto: parse.data.objeto } });
+    await audit({ organizationId: p.authz.org.orgId, actorUserId: p.authz.user.id, action: "crm_field.reordered", resourceType: "crm_field", resourceId: null, metadata: { objeto: parse.data.objeto } });
     return ok({ objeto: parse.data.objeto });
   } catch (err) {
     const tipado = respostaDoErroDoCatalogo(err, p.authz.user.idioma);

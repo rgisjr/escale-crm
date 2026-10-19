@@ -124,7 +124,7 @@ async function agir(
   if (acao.acao === "criar_negocios") {
     const nome = nomeDoContato({
       name: c.name ?? null,
-      display_name: c.display_name ?? null,
+      display_name: c.display_name,
       phone_number: c.phone_number ?? null,
     });
     await deps.criarNegocio(ctx, {

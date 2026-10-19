@@ -16,8 +16,6 @@ export const dynamic = "force-dynamic";
 
 
 async function porta() {
-  const denied = await requireSupportWrite();
-  if (denied) return { erro: denied } as const;
   const authz = await requireRole("manager", { resource: "crm_campos_do_crm" });
   if (!authz.ok) return { erro: authz.response } as const;
   if (!podeAdministrarEmpresa(authz.user, authz.org)) {
@@ -27,7 +25,9 @@ async function porta() {
 }
 
 export async function POST(req: NextRequest) {
-  const p = await porta();
+  const denied = await requireSupportWrite();
+  if (denied) return denied;
+    const p = await porta();
   if ("erro" in p) return p.erro;
   const parse = novoGrupoSchema.safeParse(await req.json().catch(() => null));
   if (!parse.success) return fail("validation_failed", traduzir("O nome do grupo é obrigatório!", p.authz.user.idioma), 422);
