@@ -67,7 +67,7 @@ export function JanelaDoDispositivo({
   useEffect(() => {
     if (!aberta || !dispositivo) return;
     setAba("dispositivos");
-    setNome(dispositivo.display_name ?? "");
+    setNome(dispositivo.display_name ? dispositivo.display_name : "");
     setSetorId(setorAtual);
     setBusca("");
   }, [aberta, dispositivo, setorAtual]);
@@ -108,7 +108,11 @@ export function JanelaDoDispositivo({
     });
   };
   const salvar = async () => {
-    if (ehAdmin && nome.trim() && nome.trim() !== (dispositivo.display_name ?? ""))
+    if (
+      ehAdmin &&
+      nome.trim() &&
+      nome.trim() !== (dispositivo.display_name ? dispositivo.display_name : "")
+    )
       await renomear.mutateAsync({ id: dispositivo.id, nome: nome.trim() });
     if (ehAdmin && setorId !== setorAtual)
       await setorDoDispositivo.mutateAsync({
@@ -187,7 +191,7 @@ export function JanelaDoDispositivo({
                   type="button"
                   aria-label={t("Remover setor")}
                   onClick={() => setSetorId("")}
-                  className="grid size-7 place-items-center rounded text-casca-suave hover:bg-casca-raia"
+                  className="grid size-7 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
                 >
                   <X size={14} aria-hidden />
                 </button>

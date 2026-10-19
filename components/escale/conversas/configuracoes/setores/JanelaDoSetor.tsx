@@ -153,7 +153,7 @@ export function JanelaDoSetor({
                     type="button"
                     aria-label={`${t("Remover")} ${p.nome}`}
                     onClick={() => setMembros((m) => m.filter((x) => x !== p.id))}
-                    className="grid size-7 place-items-center rounded text-casca-alerta hover:bg-casca-atraso"
+                    className="grid size-7 place-items-center rounded-casca-gatilho text-casca-alerta hover:bg-casca-atraso"
                   >
                     <Trash2 size={18} aria-hidden />
                   </button>

@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 
 const TODOS = "todos";
 const VARIAVEIS = ["{{nome}}", "{{primeiro_nome}}"] as const;
-const ICONE_EM_BREVE = "grid size-7 place-items-center rounded text-casca-meta";
+const ICONE_EM_BREVE = "grid size-7 place-items-center rounded-casca-gatilho text-casca-meta";
 
 /**
  * "CRIAR / EDITAR RESPOSTA RÁPIDA" (c96; E6; N14). Uma mensagem por resposta;
@@ -135,7 +135,7 @@ export function JanelaRespostaRapida({
           type="button"
           aria-label={t("Fechar")}
           onClick={aoFechar}
-          className="grid size-7 place-items-center rounded text-casca-suave hover:bg-casca-raia"
+          className="grid size-7 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
         >
           <X size={16} aria-hidden />
         </button>
@@ -174,7 +174,7 @@ export function JanelaRespostaRapida({
                   type="button"
                   aria-label={t("Variáveis")}
                   title={t("Variáveis")}
-                  className="grid size-7 place-items-center rounded text-casca-suave hover:bg-casca-raia"
+                  className="grid size-7 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
                 >
                   <Braces size={16} aria-hidden />
                 </button>

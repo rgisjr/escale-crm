@@ -48,7 +48,7 @@ export function JanelaDoUsuario({
           href="/app/team"
           aria-label={t("Remover usuário")}
           title={t("Remover usuário")}
-          className="grid size-7 place-items-center rounded text-casca-suave hover:bg-casca-raia"
+          className="grid size-7 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
         >
           <Trash2 size={16} aria-hidden />
         </Link>

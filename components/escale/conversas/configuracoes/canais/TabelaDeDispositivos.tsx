@@ -10,6 +10,7 @@ import {
 } from "@/hooks/escale/useDispositivosDaCasca";
 import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
 import { useSetores } from "@/hooks/escale/useSetores";
+import { nomeDoCanal } from "@/lib/channels/estado";
 import { useT } from "@/hooks/i18n/useT";
 import { useTeamMembers } from "@/hooks/team/useTeamMembers";
 import { quemEstaNoDispositivo, statusDoDispositivo } from "@/lib/escale/conversas/canais";
@@ -56,7 +57,7 @@ export function TabelaDeDispositivos({ canal }: { canal: GrupoDeDispositivo }) {
     .filter(
       (s) =>
         !termo ||
-        (s.display_name ?? "").toLowerCase().includes(termo) ||
+        nomeDoCanal(s).toLowerCase().includes(termo) ||
         (s.phone_number ?? "").includes(termo),
     );
 
@@ -117,7 +118,7 @@ export function TabelaDeDispositivos({ canal }: { canal: GrupoDeDispositivo }) {
               const quem = canalDoRoteamento
                 ? quemEstaNoDispositivo(canalDoRoteamento, elegiveis)
                 : [];
-              const nome = s.display_name?.trim() || s.phone_number || "";
+              const nome = nomeDoCanal(s);
               return (
                 <tr
                   key={s.id}

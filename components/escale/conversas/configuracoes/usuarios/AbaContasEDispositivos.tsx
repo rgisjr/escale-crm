@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { InterruptorDaCasca } from "@/components/escale/ui/InterruptorDaCasca";
 import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useGravarRoteamento, useRoteamentoDosCanais } from "@/hooks/escale/useDispositivosDaCasca";
+import { nomeDoCanal } from "@/lib/channels/estado";
 import { useT } from "@/hooks/i18n/useT";
 import { useTeamMembers, type TeamMember } from "@/hooks/team/useTeamMembers";
 import { ligarNoDispositivo, quemEstaNoDispositivo } from "@/lib/escale/conversas/canais";
@@ -46,7 +47,7 @@ export function AbaContasEDispositivos({
   const termo = busca.trim().toLowerCase();
   const doCanal = sessoes
     .filter((s) => grupoDoDispositivo(s.provider) === atual)
-    .filter((s) => !termo || (s.display_name ?? "").toLowerCase().includes(termo));
+    .filter((s) => !termo || nomeDoCanal(s).toLowerCase().includes(termo));
   const ligado = (id: string) => {
     if (ehAdmin) return true;
     const c = roteamento.data?.channels.find((x) => x.id === id);
@@ -128,7 +129,7 @@ export function AbaContasEDispositivos({
           </span>
           <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 content-start overflow-y-auto lg:grid-cols-3">
             {doCanal.map((s) => {
-              const nome = s.display_name?.trim() || s.phone_number || "";
+              const nome = nomeDoCanal(s);
               return (
                 <span
                   key={s.id}

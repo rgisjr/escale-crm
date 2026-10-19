@@ -129,14 +129,14 @@ export function TelaRespostasRapidas() {
                   <td className="px-4 py-3">
                     <span className="flex flex-wrap gap-1">
                       {r.todos_os_setores ? (
-                        <span className="rounded bg-casca-raia px-1.5 py-0.5 text-[11px] text-casca-texto">
+                        <span className="rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 text-[11px] text-casca-texto">
                           {t("Todos")}
                         </span>
                       ) : (
                         r.setores.map((s) => (
                           <span
                             key={s}
-                            className="rounded bg-casca-raia px-1.5 py-0.5 text-[11px] text-casca-texto"
+                            className="rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 text-[11px] text-casca-texto"
                           >
                             {nomeDoSetor(s)}
                           </span>
