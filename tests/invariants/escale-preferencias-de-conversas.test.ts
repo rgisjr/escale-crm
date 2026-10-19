@@ -56,12 +56,10 @@ describe("crm_preferencias_de_conversas", () => {
   });
 
   it("ninguém grava em nome de outra pessoa", () => {
-    expect(() =>
-      writeCountAs(
+    expect(writeCountAs(
         GOV_AGENT_B,
         `insert into ${T} (organization_id, user_id, chave, valor) values ('${GOV_ORG}', '${GOV_AGENT_A}', 'visualizacao', '{}')`,
-      ),
-    ).toThrow();
+      )).toBe(0);
     expect(
       writeCountAs(GOV_AGENT_B, `update ${T} set valor = '{}' where user_id = '${GOV_AGENT_A}'`),
     ).toBe(0);

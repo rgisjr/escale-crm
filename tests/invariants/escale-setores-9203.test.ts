@@ -27,6 +27,8 @@ const VIZINHO = "e5ca1e00-9203-4000-8000-0000000000b2";
 const OUTRA_ORG = "e5ca1e00-9203-4000-8000-0000000000b1";
 const TPL_A = "e5ca1e00-9203-4000-8000-0000000000c1";
 const TPL_B = "e5ca1e00-9203-4000-8000-0000000000c2";
+const SETOR_2 = "e5ca1e00-9203-4000-8000-000000000002";
+const SETOR_VIZINHO = "e5ca1e00-9203-4000-8000-0000000000b3";
 const verConvB = (quem: string) =>
   countAs(quem, `select count(*) from public.conversations where id = '${GOV_CONV_AGENT_B}'`);
 
@@ -62,8 +64,8 @@ describe("crm_setores e membros", () => {
       expect(tableExists(t)).toBe(true);
     }
     const criar = `insert into public.crm_setores (id, organization_id, nome, cor) values ('${SETOR}', '${GOV_ORG}', 'Atendimento', '#0EA5C6')`;
-    expect(() => writeCountAs(GOV_AGENT_A, criar)).toThrow();
-    expect(() => writeCountAs(GOV_MANAGER, criar)).toThrow();
+    expect(writeCountAs(GOV_AGENT_A, criar)).toBe(0);
+    expect(writeCountAs(GOV_MANAGER, criar)).toBe(0);
     sql(
       `insert into public.crm_permissoes_de_atendimento (organization_id, user_id, chave, ligado) values ('${GOV_ORG}', '${GOV_MANAGER}', 'CHAT_EDIT_TEAMS', true);`,
     );
@@ -88,12 +90,16 @@ describe("crm_setores e membros", () => {
 describe("leitura pelo setor (policy permissiva)", () => {
   it("o agente A só vê a conversa do B depois que o dispositivo entra no setor dele; a exceção desliga; o B continua vendo a sua", () => {
     expect(verConvB(GOV_AGENT_A)).toBe(0);
-    expect(() =>
-      writeCountAs(
+    // Revisão da Frente C: o atendente não se dá leitura gravando o setor de uma conversa que não vê.
+    expect(writeCountAs(
+        GOV_AGENT_A,
+        `insert into public.crm_setor_da_conversa (conversation_id, organization_id, setor_id) values ('${GOV_CONV_AGENT_B}', '${GOV_ORG}', '${SETOR}')`,
+      )).toBe(0);
+    expect(verConvB(GOV_AGENT_A)).toBe(0);
+    expect(writeCountAs(
         GOV_AGENT_A,
         `insert into public.crm_setor_do_dispositivo (channel_session_id, organization_id, setor_id) values ('${GOV_SESSION}', '${GOV_ORG}', '${SETOR}')`,
-      ),
-    ).toThrow();
+      )).toBe(0);
     expect(
       writeCountAs(
         GOV_ADMIN,
@@ -139,22 +145,52 @@ describe("Em transferência e o gatilho", () => {
     sql(
       `update public.conversations set assigned_to_user_id = null, assigned_at = null where id = '${GOV_CONV_UNASSIGNED}';`,
     );
+    // Sem setor não há transferência: o gatilho solta em vez de o check derrubar.
+    sql(
+      `update public.crm_setor_da_conversa set setor_id = null, em_transferencia = true where conversation_id = '${GOV_CONV_UNASSIGNED}';`,
+    );
+    expect(
+      sql(
+        `select em_transferencia from public.crm_setor_da_conversa where conversation_id = '${GOV_CONV_UNASSIGNED}';`,
+      ).trim(),
+    ).toBe("f");
+  });
+
+  it("remover o setor de uma transferência em aberto funciona e solta a conversa", () => {
+    sql(`insert into public.crm_setores (id, organization_id, nome) values ('${SETOR_2}', '${GOV_ORG}', 'Some');
+         update public.crm_setor_da_conversa set setor_id = '${SETOR_2}', em_transferencia = true, setor_anterior_id = '${SETOR}'
+          where conversation_id = '${GOV_CONV_UNASSIGNED}';`);
+    sql(`delete from public.crm_setores where id = '${SETOR_2}';`);
+    expect(
+      sql(
+        `select coalesce(setor_id::text, 'nulo') || ' ' || em_transferencia from public.crm_setor_da_conversa where conversation_id = '${GOV_CONV_UNASSIGNED}';`,
+      ).trim(),
+    ).toBe("nulo false");
+  });
+
+  it("o setor da conversa e o da resposta rápida são da mesma organização (FK composta)", () => {
+    sql(
+      `insert into public.crm_setores (id, organization_id, nome) values ('${SETOR_VIZINHO}', '${OUTRA_ORG}', 'Vizinho') on conflict do nothing;`,
+    );
     expect(() =>
       sql(
-        `update public.crm_setor_da_conversa set setor_id = null, em_transferencia = true where conversation_id = '${GOV_CONV_UNASSIGNED}';`,
+        `update public.crm_setor_da_conversa set setor_id = '${SETOR_VIZINHO}' where conversation_id = '${GOV_CONV_UNASSIGNED}';`,
       ),
-    ).toThrow(/transferencia_tem_setor/);
+    ).toThrow(/crm_setor_da_conversa_setor_fk/);
+    expect(() =>
+      sql(
+        `insert into public.crm_respostas_rapidas_setores (template_id, setor_id, organization_id) values ('${TPL_A}', '${SETOR_VIZINHO}', '${GOV_ORG}');`,
+      ),
+    ).toThrow(/crm_respostas_rapidas_setores_setor_fk/);
   });
 });
 
 describe("permissões por pessoa e fn_crm_pode", () => {
   it("a pessoa lê as suas; admin grava; agente não; o padrão vem do papel", () => {
-    expect(() =>
-      writeCountAs(
+    expect(writeCountAs(
         GOV_AGENT_A,
         `insert into public.crm_permissoes_de_atendimento (organization_id, user_id, chave, ligado) values ('${GOV_ORG}', '${GOV_AGENT_A}', 'CHAT_BULK_ACTIONS', true)`,
-      ),
-    ).toThrow();
+      )).toBe(0);
     expect(
       writeCountAs(
         GOV_ADMIN,
@@ -213,12 +249,10 @@ describe("respostas rápidas: extras e setores", () => {
         `insert into public.crm_respostas_rapidas_setores (template_id, setor_id, organization_id) values ('${TPL_A}', '${SETOR}', '${GOV_ORG}')`,
       ),
     ).toBe(1);
-    expect(() =>
-      writeCountAs(
+    expect(writeCountAs(
         GOV_AGENT_A,
         `insert into public.crm_respostas_rapidas_extras (template_id, organization_id) values ('${TPL_B}', '${GOV_ORG}')`,
-      ),
-    ).toThrow();
+      )).toBe(0);
     expect(() =>
       sql(
         `update public.crm_respostas_rapidas_extras set canais = array['email'] where template_id = '${TPL_A}';`,

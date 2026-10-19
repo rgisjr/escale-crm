@@ -247,6 +247,11 @@ const DECISOES: Record<string, Decisao> = {
     caminho: "gatilho",
     razao: "0184: title, description, notes, location_details e cancellation_reason são texto livre que nomeia a pessoa (queixa clínica numa clínica); gatilho da virada, com google/meet no mesmo acorde.",
   },
+  crm_mensagens_agendadas: {
+    decidida: "redigir",
+    caminho: "gatilho",
+    razao: "9202 (fork Escale, Conversas): fn_crm_apaga_agendadas_de_contato_anonimizado apaga as mensagens agendadas na virada — o corpo é texto para a pessoa, e o envio pendente não tem mais destinatário.",
+  },
   contact_field_proposals: {
     decidida: "redigir",
     caminho: "gatilho",

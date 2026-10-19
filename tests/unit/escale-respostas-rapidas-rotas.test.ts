@@ -169,6 +169,36 @@ describe("editar e excluir", () => {
     ).toBe(204);
     expect(admin.escritas[0]).toMatchObject({ tabela: "message_templates", op: "delete" });
   });
+
+  it("o atendente com 'Compartilhar' compartilha a própria resposta pelo service role", async () => {
+    const { sessao, admin } = usar(
+      { message_templates: [tpl()] },
+      { CHAT_SHARE_QUICK_RESPONSE: true },
+    );
+    const r = await EDITAR(req("PATCH", "http://x", { ...nova, compartilhar: true }), {
+      params: Promise.resolve({ id: T1 }),
+    });
+    expect(r.status).toBe(200);
+    expect(sessao.escritas.filter((e) => e.tabela === "message_templates")).toHaveLength(0);
+    expect(admin.escritas[0]).toMatchObject({
+      tabela: "message_templates",
+      op: "update",
+      valores: { owner_user_id: null },
+    });
+  });
+
+  it("editar a resposta pessoal de outra pessoa não troca o dono", async () => {
+    const { admin } = usar(
+      { message_templates: [tpl({ owner_user_id: OUTRO })] },
+      { CHAT_EDIT_QUICK_RESPONSE: true },
+    );
+    const r = await EDITAR(req("PATCH", "http://x", nova), { params: Promise.resolve({ id: T1 }) });
+    expect(r.status).toBe(200);
+    expect(admin.escritas[0]).toMatchObject({
+      tabela: "message_templates",
+      valores: { owner_user_id: OUTRO },
+    });
+  });
 });
 
 describe("as da conversa", () => {

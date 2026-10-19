@@ -40,3 +40,21 @@ export const pausaVigente = (p: PausaLeve, agora: Date): boolean =>
 
 export const seloDaPausa = (p: PausaLeve, agora: Date, t: T): string =>
   p.ate === null ? t("Até retomar") : `${t("até")} ${textoDoFim(p.ate, agora, t)}`;
+
+export const SILENCIO_DURAVEL = "infinity";
+
+/**
+ * O `bot_silenced_until` depois de "Pausar": nunca encurta o silêncio que já
+ * existe. O handoff da IA deixa "infinity"; pausar por 1 hora não pode fazer a
+ * IA voltar a falar com quem espera um humano.
+ */
+export function silencioDaPausa(atual: string | null, ate: string | null): string {
+  if (ate === null || atual === SILENCIO_DURAVEL) return SILENCIO_DURAVEL;
+  if (atual !== null && Date.parse(atual) > Date.parse(ate)) return atual;
+  return ate;
+}
+
+/** Os follow-ups da pausa nova somam os da anterior (ainda não retomados pelo cron). */
+export const juntarEnrollments = (anteriores: readonly string[], novos: readonly string[]): string[] => [
+  ...new Set([...anteriores, ...novos]),
+];

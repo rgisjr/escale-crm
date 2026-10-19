@@ -788,6 +788,16 @@ export interface ExportPayload {
     decided_at: string | null;
     motivo_recusa: string | null;
   }>;
+  /** Mensagens agendadas para o titular (fork Escale, 9202), APAGADAS na anonimização. */
+  mensagens_agendadas?: Array<{
+    id: string;
+    conversation_id: string;
+    tipo: string;
+    corpo: string | null;
+    enviar_em: string;
+    status: string;
+    created_at: string;
+  }>;
   /**
    * Memória da IA sobre o titular (#1957): `lead_notes` guarda `headline` +
    * `body` — o nome e trechos do que a pessoa escreveu. A cascata redige os
@@ -1794,6 +1804,25 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
     }
   }
 
+  // Mensagens agendadas (fork Escale, 9202): o gatilho da virada de
+  // is_anonymized as APAGA — o que se apaga a pedido dele se entrega a pedido
+  // dele. Por página, como as propostas logo acima.
+  const mensagens_agendadas: NonNullable<ExportPayload["mensagens_agendadas"]> = [];
+  if (contactId) {
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await admin
+        .from("crm_mensagens_agendadas")
+        .select("id, conversation_id, tipo, corpo, enviar_em, status, created_at")
+        .eq("organization_id", organizationId)
+        .eq("contact_id", contactId)
+        .order("id")
+        .range(offset, offset + 499);
+      if (error) throw error;
+      mensagens_agendadas.push(...(data ?? []));
+      if (!data || data.length < 500) break;
+    }
+  }
+
   // Audit log extract (best-effort: rows where metadata.contact_id matches).
   let audit_log_extract: AuditRow[] = [];
   if (contactId) {
@@ -2290,6 +2319,7 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
     conversation_drafts,
     conversation_notes,
     contact_field_proposals,
+    mensagens_agendadas,
     lead_notes,
     ai_agent_runs,
     lead_state,

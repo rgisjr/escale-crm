@@ -37050,6 +37050,8 @@ create policy crm_pausas_de_automacao_write on public.crm_pausas_de_automacao
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
     and user_id = auth.uid()
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_pausas_de_automacao.organization_id)
   );
 revoke all on public.crm_pausas_de_automacao from anon;
 grant select, insert, update, delete on public.crm_pausas_de_automacao to authenticated;
@@ -37085,12 +37087,35 @@ create policy crm_eventos_da_conversa_insert on public.crm_eventos_da_conversa
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
     and user_id = auth.uid()
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_eventos_da_conversa.organization_id)
   );
 revoke all on public.crm_eventos_da_conversa from anon;
 grant select, insert on public.crm_eventos_da_conversa to authenticated;
 grant all on public.crm_eventos_da_conversa to service_role;
 comment on table public.crm_eventos_da_conversa is
   'Os eventos que a thread da Clint mostra (fork Escale, migration 9202; C2): espera, espera removida, encerrado, reaberto. Quem vê a conversa (RLS de conversations) vê os eventos; o sistema (service role) grava a espera removida pela mensagem do cliente.';
+
+-- 4. LGPD: anonimizar o contato apaga as agendadas dele -----------------------
+-- O texto agendado fala com a pessoa e o envio pendente não tem mais destinatário:
+-- apaga na virada de is_anonymized, a porta dos dois caminhos (o desenho da 0391).
+create or replace function public.fn_crm_apaga_agendadas_de_contato_anonimizado()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path to 'public', 'pg_temp'
+as $$
+begin
+  delete from public.crm_mensagens_agendadas where contact_id = new.id;
+  return new;
+end$$;
+revoke all on function public.fn_crm_apaga_agendadas_de_contato_anonimizado() from public, anon, authenticated;
+drop trigger if exists trg_contacts_anonimizado_limpa_agendadas on public.contacts;
+create trigger trg_contacts_anonimizado_limpa_agendadas
+  after update of is_anonymized on public.contacts
+  for each row
+  when (new.is_anonymized = true and coalesce(old.is_anonymized, false) = false)
+  execute function public.fn_crm_apaga_agendadas_de_contato_anonimizado();
 
 do $f$ begin perform public.fn_aplicar_travas_de_suporte(); end $f$;
 notify pgrst, 'reload schema';
@@ -37255,14 +37280,19 @@ comment on table public.crm_setores is
 create table if not exists public.crm_setor_da_conversa (
   conversation_id uuid primary key references public.conversations(id) on delete cascade,
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  setor_id uuid references public.crm_setores(id) on delete set null,
+  setor_id uuid,
   em_transferencia boolean not null default false,
-  setor_anterior_id uuid references public.crm_setores(id) on delete set null,
+  setor_anterior_id uuid,
   atendente_anterior_id uuid,
   transferido_por uuid,
   transferido_em timestamptz,
   updated_at timestamptz not null default now(),
-  constraint crm_setor_da_conversa_transferencia_tem_setor check (not em_transferencia or setor_id is not null)
+  constraint crm_setor_da_conversa_transferencia_tem_setor check (not em_transferencia or setor_id is not null),
+  -- FK composta: o setor é da organização da conversa; apagar o setor solta só a coluna (pg15+).
+  constraint crm_setor_da_conversa_setor_fk foreign key (organization_id, setor_id)
+    references public.crm_setores (organization_id, id) on delete set null (setor_id),
+  constraint crm_setor_da_conversa_setor_anterior_fk foreign key (organization_id, setor_anterior_id)
+    references public.crm_setores (organization_id, id) on delete set null (setor_anterior_id)
 );
 create index if not exists idx_crm_setor_da_conversa_setor on public.crm_setor_da_conversa (organization_id, setor_id);
 alter table public.crm_setor_da_conversa enable row level security;
@@ -37284,10 +37314,31 @@ create policy crm_setor_da_conversa_write on public.crm_setor_da_conversa
   ) with check (
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
+    -- só a conversa que a pessoa já vê: sem isso o atendente se daria leitura pelo setor
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_setor_da_conversa.organization_id)
   );
 revoke all on public.crm_setor_da_conversa from anon;
 grant select, insert, update, delete on public.crm_setor_da_conversa to authenticated;
 grant all on public.crm_setor_da_conversa to service_role;
+-- Apagar o setor de uma transferência em aberto: a FK põe setor_id nulo e a
+-- conversa sai da transferência (o check exige setor enquanto em transferência).
+create or replace function public.fn_crm_setor_da_conversa_sem_setor()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.setor_id is null and new.em_transferencia then
+    new.em_transferencia := false;
+    new.setor_anterior_id := null;
+    new.atendente_anterior_id := null;
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.fn_crm_setor_da_conversa_sem_setor() from public, anon, authenticated;
+drop trigger if exists trg_crm_setor_da_conversa_sem_setor on public.crm_setor_da_conversa;
+create trigger trg_crm_setor_da_conversa_sem_setor
+  before insert or update on public.crm_setor_da_conversa
+  for each row execute function public.fn_crm_setor_da_conversa_sem_setor();
 comment on table public.crm_setor_da_conversa is
   'O setor explícito da conversa e o estado "Em transferência" (fork Escale, migration 9203; C3, E3). Sem linha, vale o setor do dispositivo (fn_crm_setor_efetivo). A transferência termina quando alguém assume (trg_crm_conclui_transferencia).';
 
@@ -37354,9 +37405,11 @@ create table if not exists public.crm_respostas_rapidas_extras (
 );
 create table if not exists public.crm_respostas_rapidas_setores (
   template_id uuid not null references public.message_templates(id) on delete cascade,
-  setor_id uuid not null references public.crm_setores(id) on delete cascade,
+  setor_id uuid not null,
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  primary key (template_id, setor_id)
+  primary key (template_id, setor_id),
+  constraint crm_respostas_rapidas_setores_setor_fk foreign key (organization_id, setor_id)
+    references public.crm_setores (organization_id, id) on delete cascade
 );
 create index if not exists idx_crm_respostas_rapidas_setores_setor on public.crm_respostas_rapidas_setores (setor_id);
 alter table public.crm_respostas_rapidas_extras enable row level security;

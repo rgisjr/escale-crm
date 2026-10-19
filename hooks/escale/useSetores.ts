@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { apiClient } from "@/lib/api/client";
+import { lerEmLotes } from "@/lib/escale/conversas/lotes";
 import type { SetorDaConversa } from "@/lib/escale/conversas/setores-banco";
 import type { NovoSetor, SetorLido } from "@/lib/escale/conversas/setores";
 
@@ -72,11 +73,15 @@ export function useSetoresDasConversas(
   const q = useQuery({
     queryKey: [...CHAVE_DOS_SETORES_DAS_CONVERSAS, ids.join(",")],
     enabled: ids.length > 0,
+    // Em lotes: depois do "Carregar mais" a fila passa do limite de ids das rotas.
     queryFn: async () =>
-      apiClient.get<{ data: Record<string, SetorDaConversa> }>(
-        `/api/v1/setores/das-conversas?ids=${encodeURIComponent(ids.join(","))}`,
+      lerEmLotes(ids, async (lote) =>
+        (
+          await apiClient.get<{ data: Record<string, SetorDaConversa> }>(
+            `/api/v1/setores/das-conversas?ids=${encodeURIComponent(lote.join(","))}`,
+          )
+        ).data,
       ),
-    select: (r) => r.data,
     staleTime: 30_000,
   });
   return q.data ?? {};

@@ -8,6 +8,7 @@ import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { copyToClipboard } from "@/lib/clipboard";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { rotuloDoCanal } from "@/lib/escale/conversas/linha";
 import { Copy, Ellipsis, MailOpen, MessageSquare, Search } from "@/lib/ui/icons-da-casca";
@@ -55,12 +56,9 @@ export function CabecalhoDaConversa({
 
   const copiarLink = async () => {
     setMenu(false);
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/app/inbox?id=${conversa.id}`);
-      toast.success(t("O link foi copiado para a área de transferência!"));
-    } catch {
-      toast.error(t("Não foi possível copiar o link."));
-    }
+    const copiou = await copyToClipboard(`${window.location.origin}/app/inbox?id=${conversa.id}`);
+    if (copiou) toast.success(t("O link foi copiado para a área de transferência!"));
+    else toast.error(t("Não foi possível copiar o link."));
   };
 
   return (

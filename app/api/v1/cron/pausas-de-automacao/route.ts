@@ -21,11 +21,12 @@ async function handle(req: NextRequest): Promise<Response> {
   if (!autorizaCron(req))
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   const admin = createAdminClient();
+  const agora = new Date().toISOString();
   const { data, error } = await admin
     .from("crm_pausas_de_automacao")
     .select("conversation_id, organization_id, user_id, enrollments")
     .not("ate", "is", null)
-    .lte("ate", new Date().toISOString())
+    .lte("ate", agora)
     .limit(LOTE);
   if (error) return fail("internal_error", error.message, 500, { requestId });
   let retomadas = 0;
@@ -44,7 +45,12 @@ async function handle(req: NextRequest): Promise<Response> {
           conversation_id: p.conversation_id,
         });
     }
-    await admin.from("crm_pausas_de_automacao").delete().eq("conversation_id", p.conversation_id);
+    // Só a pausa vencida sai: uma pausa nova gravada no meio da rodada fica.
+    await admin
+      .from("crm_pausas_de_automacao")
+      .delete()
+      .eq("conversation_id", p.conversation_id)
+      .lte("ate", agora);
     retomadas++;
   }
   return ok({ retomadas }, { requestId });
