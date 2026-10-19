@@ -38,6 +38,17 @@ vi.mock("@/hooks/escale/useFilaDeConversas", () => ({
     realtimeStatus: "SUBSCRIBED",
   }),
 }));
+// FORK ESCALE · Fase 3D: os hooks de dados da fila (o provedor de dicas continua de verdade).
+vi.mock("@/hooks/escale/useTotalDaFila", () => ({ useTotalDaFila: () => ({ data: 0 }) }));
+vi.mock("@/hooks/escale/usePermissoesDeAtendimento", () => ({
+  useMinhasPermissoes: () => ({ CHAT_BULK_ACTIONS: true }),
+}));
+vi.mock("@/hooks/escale/useFiltrosDaLista", () => ({
+  useFiltrosDaLista: () => ({ data: [] }),
+  useCriarFiltroDaLista: () => ({ mutate: vi.fn(), isPending: false }),
+  useExcluirFiltroDaLista: () => ({ mutate: vi.fn() }),
+  useMudarFiltroDaLista: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock("@/hooks/inbox/useConversation", () => ({
   useConversation: () => ({ data: undefined, isPending: false, error: null }),
   isNotFound: () => false,

@@ -1,19 +1,24 @@
 "use client";
 import { useT } from "@/hooks/i18n/useT";
 import type { Ordem } from "@/lib/escale/conversas/ordem";
-import type { Preset } from "@/lib/escale/conversas/presets";
-import { Funnel, Search } from "@/lib/ui/icons-da-casca";
+import { totalDeCriterios, type FiltrosDoPainel } from "@/lib/escale/conversas/filtros-da-fila";
+import { Search } from "@/lib/ui/icons-da-casca";
 
-import { MenuDeOrdem, BOTAO_DA_BARRA } from "./MenuDeOrdem";
+import { FunilDaFila } from "../filtros/FunilDaFila";
+import { MenuDeOrdem } from "./MenuDeOrdem";
 import { MenuDePresets } from "./MenuDePresets";
 import { MenuMaisDaFila } from "./MenuMaisDaFila";
 
-/** A busca e a barra da fila (c01): preset à esquerda; funil (3D), ordem e ⋮ à direita. */
+/** A busca e a barra da fila (c01): preset à esquerda; funil, ordem e ⋮ à direita (FORK ESCALE · Fase 3D). */
 export function BarraDaFila({
   busca,
   aoBuscar,
-  preset,
-  aoMudarPreset,
+  painel,
+  aoMudarPainel,
+  filtrosAbertos,
+  aoAlternarFiltros,
+  aoCriarFiltro,
+  temGrupos,
   ordem,
   aoMudarOrdem,
   espiao,
@@ -21,11 +26,17 @@ export function BarraDaFila({
   personalizando,
   aoPersonalizar,
   visualizacaoForaDoPadrao,
+  podeSelecionar,
+  aoSelecionar,
 }: {
   busca: string;
   aoBuscar: (v: string) => void;
-  preset: Preset;
-  aoMudarPreset: (p: Preset) => void;
+  painel: FiltrosDoPainel;
+  aoMudarPainel: (f: FiltrosDoPainel) => void;
+  filtrosAbertos: boolean;
+  aoAlternarFiltros: () => void;
+  aoCriarFiltro: () => void;
+  temGrupos: boolean;
   ordem: Ordem;
   aoMudarOrdem: (o: Ordem) => void;
   espiao: boolean;
@@ -33,6 +44,8 @@ export function BarraDaFila({
   personalizando: boolean;
   aoPersonalizar: () => void;
   visualizacaoForaDoPadrao: boolean;
+  podeSelecionar: boolean;
+  aoSelecionar: () => void;
 }) {
   const t = useT();
   return (
@@ -53,23 +66,26 @@ export function BarraDaFila({
         />
       </label>
       <div className="mt-5 flex h-8 items-center justify-between">
-        <MenuDePresets preset={preset} aoMudar={aoMudarPreset} />
+        <MenuDePresets
+          painel={painel}
+          aoMudarPainel={aoMudarPainel}
+          aoCriarFiltro={aoCriarFiltro}
+          temGrupos={temGrupos}
+        />
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled
-            title={t("Em breve")}
-            aria-label={t("Filtros")}
-            className={BOTAO_DA_BARRA}
-          >
-            <Funnel size={16} aria-hidden />
-          </button>
+          <FunilDaFila
+            total={totalDeCriterios(painel)}
+            ativo={filtrosAbertos}
+            aoAlternar={aoAlternarFiltros}
+          />
           <MenuDeOrdem ordem={ordem} aoMudar={aoMudarOrdem} />
           <MenuMaisDaFila
             espiao={espiao}
             aoMudarEspiao={aoMudarEspiao}
             aoPersonalizar={aoPersonalizar}
             foraDoPadrao={visualizacaoForaDoPadrao}
+            podeSelecionar={podeSelecionar}
+            aoSelecionar={aoSelecionar}
           />
         </div>
       </div>

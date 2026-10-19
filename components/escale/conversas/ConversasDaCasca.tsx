@@ -9,21 +9,24 @@ import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useFilaDeConversas } from "@/hooks/escale/useFilaDeConversas";
 import { useModoEspiao } from "@/hooks/escale/useModoEspiao";
+import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
 import { usePreferenciasDeConversas } from "@/hooks/escale/usePreferenciasDeConversas";
+import { useTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { useT } from "@/hooks/i18n/useT";
 import { isNotFound, useConversation } from "@/hooks/inbox/useConversation";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import { useMarkAsRead } from "@/hooks/inbox/useMarkAsRead";
 import { OpenConversationProvider } from "@/hooks/notifications/OpenConversationContext";
 import { ORDEM_PADRAO, PARAM_ORDEM, ordemDaUrl, type Ordem } from "@/lib/escale/conversas/ordem";
+import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
 import {
-  PARAM_PRESET,
-  PRESET_PADRAO,
-  filtrosDoPreset,
-  presetDaUrl,
-  type FiltrosDaFila,
-  type Preset,
-} from "@/lib/escale/conversas/presets";
+  PARAM_DO_PAINEL,
+  painelDaUrl,
+  paramsDoPainel,
+  temCriterios,
+  type FiltrosDoPainel,
+} from "@/lib/escale/conversas/filtros-da-fila";
+import { PARAM_PRESET } from "@/lib/escale/conversas/presets";
 import type { AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
 import type { OrigemParaCriar } from "@/components/escale/contatos/CamposDaOportunidade";
 import { ehVisualizacaoPadrao } from "@/lib/escale/conversas/visualizacao";
@@ -37,6 +40,8 @@ import { NovaConversa } from "./centro/NovaConversa";
 import { BarraDaFila } from "./fila/BarraDaFila";
 import { ListaDaFila } from "./fila/ListaDaFila";
 import { PainelPersonalizarVisualizacao } from "./fila/PainelPersonalizarVisualizacao";
+import { BalaoSalvarFiltro } from "./filtros/BalaoSalvarFiltro";
+import { PainelDeFiltrosDaFila } from "./filtros/PainelDeFiltrosDaFila";
 import { PainelDoContato } from "./painel/PainelDoContato";
 import { TopoDasConversas } from "./TopoDasConversas";
 
@@ -55,11 +60,14 @@ export function ConversasDaCasca({
   initialSelectedId = null,
   rascunho = null,
   origens = [],
+  opcoesDoFiltro = OPCOES_VAZIAS,
   configuracao,
 }: {
   initialSelectedId?: string | null;
   rascunho?: AvisoDeRascunho | null;
   origens?: OrigemParaCriar[];
+  /** FORK ESCALE · Fase 3D: as origens, etapas e motivos do painel de filtros. */
+  opcoesDoFiltro?: OpcoesDoFiltro;
   /** FORK ESCALE · Fase 3C: uma tela de configuração no lugar do centro e do painel (a fila fica). */
   configuracao?: ReactNode;
 }) {
@@ -70,7 +78,8 @@ export function ConversasDaCasca({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const preset = presetDaUrl(searchParams.get(PARAM_PRESET));
+  const painel = useMemo(() => painelDaUrl(searchParams), [searchParams]);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const ordem = ordemDaUrl(searchParams.get(PARAM_ORDEM));
   const idNaUrl = searchParams.get("id");
   const [busca, setBusca] = useState("");
@@ -98,25 +107,34 @@ export function ConversasDaCasca({
     },
     [pathname, router, searchParams],
   );
-  const mudarPreset = useCallback(
-    (p: Preset) => mudarNaUrl(PARAM_PRESET, p, PRESET_PADRAO),
-    [mudarNaUrl],
+  const mudarPainel = useCallback(
+    (f: FiltrosDoPainel) => {
+      const { v, f: texto } = paramsDoPainel(f);
+      const params = new URLSearchParams(searchParams.toString());
+      if (v) params.set(PARAM_PRESET, v);
+      else params.delete(PARAM_PRESET);
+      if (texto) params.set(PARAM_DO_PAINEL, texto);
+      else params.delete(PARAM_DO_PAINEL);
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
   );
   const mudarOrdem = useCallback(
     (o: Ordem) => mudarNaUrl(PARAM_ORDEM, o, ORDEM_PADRAO),
     [mudarNaUrl],
   );
 
-  const filtros: FiltrosDaFila = useMemo(
-    () => ({
-      ...filtrosDoPreset(preset),
-      ...(ordem === "espera" ? { ordem } : {}),
-      ...(buscaValeConsulta(busca) ? { search: busca } : {}),
-    }),
-    [preset, ordem, busca],
+  const consulta = useMemo(
+    () => ({ painel, ordem, ...(buscaValeConsulta(busca) ? { busca } : {}) }),
+    [painel, ordem, busca],
   );
-
-  const fila = useFilaDeConversas(filtros, orgId);
+  const fila = useFilaDeConversas(consulta, orgId);
+  const temGrupos =
+    (useTotalDaFila({ painel: { grupos: "grupos" }, ordem: "interacao" }, !!orgId).data ?? 0) > 0;
+  const permissoes = useMinhasPermissoes();
+  // A Task 9 liga o modo Selecionar; até lá o item do ⋮ fica desligado.
+  const podeSelecionar = false && permissoes.CHAT_BULK_ACTIONS === true;
   const itens = useMemo(
     () => (fila.data?.pages.flatMap((p) => p.data) ?? []) as ConversationWithContact[],
     [fila.data],
@@ -196,18 +214,33 @@ export function ConversasDaCasca({
               <BarraDaFila
                 busca={busca}
                 aoBuscar={setBusca}
-                preset={preset}
-                aoMudarPreset={mudarPreset}
+                painel={painel}
+                aoMudarPainel={mudarPainel}
+                filtrosAbertos={filtrosAbertos}
+                aoAlternarFiltros={() => {
+                  setPersonalizando(false);
+                  setFiltrosAbertos((v) => !v);
+                }}
+                aoCriarFiltro={() => {
+                  setPersonalizando(false);
+                  setFiltrosAbertos(true);
+                }}
+                temGrupos={temGrupos}
                 ordem={ordem}
                 aoMudarOrdem={mudarOrdem}
                 espiao={espiao}
                 aoMudarEspiao={mudarEspiao}
                 personalizando={personalizando}
-                aoPersonalizar={() => setPersonalizando((v) => !v)}
+                aoPersonalizar={() => {
+                  setFiltrosAbertos(false);
+                  setPersonalizando((v) => !v);
+                }}
                 visualizacaoForaDoPadrao={
                   preferencias.data.visualizacao !== undefined &&
                   !ehVisualizacaoPadrao(preferencias.data.visualizacao)
                 }
+                podeSelecionar={podeSelecionar}
+                aoSelecionar={() => undefined}
               />
               <div className="min-h-0 flex-1 overflow-hidden">
                 <ListaDaFila
@@ -217,7 +250,7 @@ export function ConversasDaCasca({
                   selectedId={selectedId}
                   aoSelecionar={selecionar}
                   aoSoltarFixada={() => selecionar(null)}
-                  temFiltro={preset !== PRESET_PADRAO || buscaValeConsulta(busca)}
+                  temFiltro={temCriterios(painel) || buscaValeConsulta(busca)}
                   aoIniciar={abrirNova}
                   visualizacao={preferencias.data.visualizacao}
                 />
@@ -241,6 +274,16 @@ export function ConversasDaCasca({
                     <PainelPersonalizarVisualizacao
                       visualizacao={preferencias.data.visualizacao}
                       aoFechar={() => setPersonalizando(false)}
+                    />
+                  ) : null}
+                  {filtrosAbertos ? (
+                    <PainelDeFiltrosDaFila
+                      painel={painel}
+                      aoMudar={mudarPainel}
+                      aoFechar={() => setFiltrosAbertos(false)}
+                      opcoes={opcoesDoFiltro}
+                      temGrupos={temGrupos}
+                      cabecalho={<BalaoSalvarFiltro painel={painel} />}
                     />
                   ) : null}
                   <div className="min-h-0 flex-1">
