@@ -245,6 +245,12 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "o consumidor (service role) é quem os marca.",
   },
   {
+    tabela: "crm_criacao_de_negocio",
+    razao:
+      "tests/invariants/escale-criacao-de-negocio-9205.test.ts — fork Escale (migration 9205): todo membro lê, só administrador " +
+      "escreve; a RPC de nascimento só o service role executa.",
+  },
+  {
     tabela: "crm_campos_do_negocio",
     razao:
       "tests/invariants/escale-campos-do-crm.test.ts — fork Escale (migration 9006): todo membro lê, só administrador escreve " +

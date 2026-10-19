@@ -1,17 +1,13 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { NumeroForaDoAr } from "@/components/inbox/NumeroForaDoAr";
 import { RetentionNotice } from "@/components/inbox/RetentionNotice";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
-import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useConversaDaCasca } from "@/hooks/escale/useConversaDaCasca";
+import { useEstadoDoCompositor } from "@/hooks/escale/useEstadoDoCompositor";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
-import { useMessagesRealtime } from "@/hooks/inbox/useMessagesRealtime";
-import { estadoDaJanela } from "@/lib/channels/janela";
-import { modoDoCompositor } from "@/lib/escale/conversas/janela";
-import { motivoDoContato } from "@/lib/inbox/motivo-do-envio-bloqueado";
 import type { AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
 import type { Message } from "@/lib/types/messaging";
 import { Search, X } from "@/lib/ui/icons-da-casca";
@@ -21,7 +17,7 @@ import { BarraDeStatus } from "./BarraDeStatus";
 import { CabecalhoDaConversa } from "./CabecalhoDaConversa";
 import { CompositorDaCasca } from "./compositor/CompositorDaCasca";
 import { FaixaEmTransferencia } from "./FaixaEmTransferencia";
-import { ThreadDaCasca, ultimaMensagem } from "./thread/ThreadDaCasca";
+import { ThreadDaCasca } from "./thread/ThreadDaCasca";
 
 /**
  * A CONVERSA ABERTA NA CASCA (fork Escale, Fase 3A → 3B): o cabeçalho, a
@@ -43,21 +39,14 @@ export function ConversaAberta({
   aoMudarNaoLida?: (id: string | null) => void;
 }) {
   const t = useT();
-  const { user } = useAuth();
-  const supportReadonly = user.support?.access_mode === "support_readonly";
   const [busca, setBusca] = useState<{ conversaId: string; termo: string } | null>(null);
   const [respondendo, setRespondendo] = useState<Message | null>(null);
   const [agendando, setAgendando] = useState<{ texto: string } | null>(null);
   const [naoLidaManual, setNaoLidaManual] = useState<string | null>(null);
   const buscaAberta = busca !== null && busca.conversaId === conversa.id;
   const acoes = useConversaDaCasca(conversa.id);
-  const mensagens = useMessagesRealtime(conversa.id);
-
-  const [agora, setAgora] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setAgora(new Date()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
+  // FORK ESCALE · Fase 3E: a regra do compositor mora no hook, que a conversa embutida também usa.
+  const { modo, bloqueio, ultimaFoiTemplate, agora } = useEstadoDoCompositor(conversa);
   useEffect(() => {
     setRespondendo(null);
     if (
@@ -69,22 +58,10 @@ export function ConversaAberta({
     }
   }, [conversa.id, rascunho]);
 
-  const provider = conversa.channel_sessions?.provider ?? null;
-  const ultima = useMemo(() => ultimaMensagem(mensagens.data?.pages), [mensagens.data]);
-  const ultimaFoiTemplate =
-    !!ultima && ultima.direction === "outbound" && ultima.type === "template";
-  const modo = modoDoCompositor({
-    estado: estadoDaJanela(provider, conversa.last_inbound_at ?? null, agora),
-    provider,
-    ultimaFoiTemplate,
-  });
   const textoSugerido =
     rascunho && rascunho.conversationId === conversa.id && rascunho.leitura.estado === "sugerido"
       ? rascunho.leitura.texto
       : "";
-  const bloqueio = supportReadonly
-    ? t("Acompanhamento somente leitura")
-    : motivoDoContato(conversa.contacts, t);
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="conversa-aberta">
