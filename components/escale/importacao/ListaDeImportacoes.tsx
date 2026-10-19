@@ -6,6 +6,7 @@ import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { useCancelarImportacao, useImportacoes } from "@/hooks/escale/useImportacoes";
 import { useT } from "@/hooks/i18n/useT";
+import { useIdioma } from "@/lib/i18n/IdiomaProvider";
 import { dataEHora, porcentagem, processadas } from "@/lib/escale/importacao/relatorio";
 import { ROTULO_DO_STATUS, ROTULO_DO_TIPO, STATUS_EM_ANDAMENTO, type StatusDaImportacao } from "@/lib/escale/importacao/textos";
 import { PAGINA_DA_LISTA, type ImportacaoLida } from "@/lib/escale/importacao/tipos";
@@ -91,6 +92,7 @@ function Resultado({ i }: { i: ImportacaoLida }) {
 
 export function ListaDeImportacoes() {
   const t = useT();
+  const idioma = useIdioma();
   const router = useRouter();
   const busca = useSearchParams();
   const [superficie, setSuperficie] = useState<"importacoes" | "exportacoes">(busca.get("superficie") === "exportacoes" ? "exportacoes" : "importacoes");
@@ -210,7 +212,7 @@ export function ListaDeImportacoes() {
                         {i.tipo === "negocio" && i.origem_nome ? ` · ${t("Origem: {origin}").replace("{origin}", i.origem_nome)}` : ""}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-[#5A5964]">{dataEHora(i.created_at)}</td>
+                    <td className="px-4 py-3 text-[13px] text-[#5A5964]">{dataEHora(i.created_at, idioma)}</td>
                     <td className="px-4 py-3">
                       <span className={cn("inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-medium", COR_DO_STATUS[i.status])}>
                         {t(ROTULO_DO_STATUS[i.status])}

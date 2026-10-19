@@ -20,6 +20,7 @@ import { ChevronRight, Upload } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 import { BOTAO_DA_MARCA, BOTAO_DE_CONTORNO, BotaoDoRodape } from "./pecas";
+import { acompanharImportacao } from "./AcompanharImportacoes";
 import { PassoArquivo } from "./PassoArquivo";
 import { PassoConfiguracoes, podeContinuarConfiguracoes } from "./PassoConfiguracoes";
 import { PassoDecisoes } from "./PassoDecisoes";
@@ -123,6 +124,7 @@ function JanelaAberta({ aoFechar, tipoInicial, travarTipo = false, origemInicial
         arquivo,
         pedido: { tipo, nivel: nivelDasDecisoes(decisoes, tipo, mapa), decisoes, mapeamento: mapa, configuracao: config },
       });
+      acompanharImportacao(criada.id);
       toast.success(t("Importação iniciada"), {
         action: { label: t("Ver importações"), onClick: () => router.push("/app/imports") },
       });

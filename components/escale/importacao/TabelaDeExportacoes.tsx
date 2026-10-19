@@ -1,6 +1,7 @@
 "use client";
 import { useAcoesEmMassa } from "@/hooks/escale/useAcoesEmMassa";
 import { useT } from "@/hooks/i18n/useT";
+import { useIdioma } from "@/lib/i18n/IdiomaProvider";
 import { dataEHora } from "@/lib/escale/importacao/relatorio";
 import type { StatusVisivel } from "@/lib/escale/massa/tipos";
 import { Download, FileText } from "@/lib/ui/icons-da-casca";
@@ -19,6 +20,7 @@ const ROTULO: Record<StatusVisivel, string> = {
 /** A superfície "Exportações" da página Importações (N15): as minhas exportações da 2B, com o download. */
 export function TabelaDeExportacoes() {
   const t = useT();
+  const idioma = useIdioma();
   const acoes = useAcoesEmMassa(true, 5000);
   const exportacoes = (acoes.data?.minhas ?? []).filter((a) => a.acao === "exportar");
   const COLUNA = "px-4 py-2 text-left text-[11px] font-semibold tracking-[0.08em] text-[#86858F] uppercase";
@@ -52,7 +54,7 @@ export function TabelaDeExportacoes() {
             exportacoes.map((e) => (
               <tr key={e.id} className="border-b border-casca-borda">
                 <td className="px-4 py-3 text-[14px] font-medium text-casca-texto">{t("Contatos")}</td>
-                <td className="px-4 py-3 text-[13px] text-[#5A5964]">{dataEHora(e.created_at)}</td>
+                <td className="px-4 py-3 text-[13px] text-[#5A5964]">{dataEHora(e.created_at, idioma)}</td>
                 <td className="px-4 py-3 text-[13px] text-casca-texto">{t(ROTULO[e.status])}</td>
                 <td className="px-4 py-3 text-right">
                   {e.status === "concluida" && e.tem_arquivo ? (

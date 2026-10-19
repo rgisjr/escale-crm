@@ -54,6 +54,7 @@ import { moedaDaOrigem } from "@/lib/escale/configuracoes/tipos";
 import { CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
 // FORK ESCALE · Fase 1E, 2F: o menu "Negócio +" e a janela "Importar negócios" (casca nova).
 import { MenuNegocioMais } from "@/components/escale/quadro/MenuNegocioMais";
+import { AcompanharImportacoes } from "@/components/escale/importacao/AcompanharImportacoes";
 import { JanelaDeImportacao } from "@/components/escale/importacao/JanelaDeImportacao";
 // FORK ESCALE · Fase 1F: a engrenagem abre as configurações da origem (F20).
 import { useEngrenagemDaOrigem } from "@/lib/escale/configuracoes/abrir";
@@ -347,6 +348,7 @@ export function PipelinePageClient({
         />
       )}
       {/* FORK ESCALE · Fase 1E, 2F: "Importar negócios" do menu "Negócio +" abre o importador na aba Negócios, nesta origem. */}
+      {cascaNova ? <AcompanharImportacoes /> : null}
       {cascaNova ? (
         <JanelaDeImportacao
           aberta={importando}

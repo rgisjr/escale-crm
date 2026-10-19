@@ -1,10 +1,14 @@
 /** As contas e os textos do relatório e da lista de importações (fork Escale, Fase 2F; Clint `index-DXIjyGaW`). */
+import { IDIOMA_PADRAO, type Idioma } from "@/lib/i18n/idiomas";
+import { tagDeIdioma } from "@/lib/i18n/datas";
+
 import type { Motivo } from "./regras";
 import { ROTULO_DO_MOTIVO } from "./textos";
 import type { ImportacaoLida, LinhaLida } from "./tipos";
 
-export function dataEHora(iso: string): string {
-  return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", "");
+/** "dd/mm/aaaa hh:mm", pelo idioma de quem lê (pt-BR e es formatam igual). */
+export function dataEHora(iso: string, idioma: Idioma = IDIOMA_PADRAO): string {
+  return new Date(iso).toLocaleString(tagDeIdioma(idioma), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", "");
 }
 
 /** O relatório mostra até 500 linhas; a leitura traz 501 para a tela saber que cortou. */
