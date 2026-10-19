@@ -5,13 +5,15 @@ import { useState } from "react";
 import { JanelaDeNota } from "@/components/escale/negocio/JanelaDeNota";
 import { TagsDaFicha } from "@/components/escale/negocio/TagsDaFicha";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { JanelaMensagensAgendadasDoContato } from "@/components/escale/conversas/agendadas/JanelaMensagensAgendadasDoContato";
+import { useContagemDeAgendadas } from "@/hooks/escale/useMensagensAgendadas";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { Lead } from "@/lib/types/leads";
 import {
   Bell,
-  Calendar,
+  AlarmClock,
   CalendarClock,
   Mail,
   Phone,
@@ -36,6 +38,8 @@ export function CabecalhoDoContato({
 }) {
   const t = useT();
   const [nota, setNota] = useState(false);
+  const [agendadas, setAgendadas] = useState(false);
+  const quantasAgendadas = useContagemDeAgendadas([conversa.id])[conversa.id] ?? 0;
   const contato = conversa.contacts ?? null;
   const nome = rotuloDoContato(contato, t);
   const telefone = contato?.phone_number ?? null;
@@ -74,16 +78,23 @@ export function CabecalhoDoContato({
             <Phone size={16} aria-hidden />
           </BotaoDaCasca>
         )}
-        <BotaoDaCasca
-          variante="icone"
-          tamanho="sm"
-          disabled
-          title={t("Em breve")}
-          aria-label={t("Agendar")}
-          className={ICONE}
-        >
-          <Calendar size={16} aria-hidden />
-        </BotaoDaCasca>
+        <span className="relative">
+          <BotaoDaCasca
+            variante="icone"
+            tamanho="sm"
+            title={t("Mensagens agendadas")}
+            aria-label={t("Mensagens agendadas")}
+            className={ICONE}
+            onClick={() => setAgendadas(true)}
+          >
+            <AlarmClock size={16} aria-hidden />
+          </BotaoDaCasca>
+          {quantasAgendadas > 0 ? (
+            <span className="pointer-events-none absolute -top-0.5 -right-0.5 grid size-3.5 place-items-center rounded-full bg-casca-marca text-[9px] font-semibold text-white">
+              {quantasAgendadas}
+            </span>
+          ) : null}
+        </span>
         <BotaoDaCasca
           variante="icone"
           tamanho="sm"
@@ -137,6 +148,12 @@ export function CabecalhoDoContato({
           </Link>
         ) : null}
       </div>
+      <JanelaMensagensAgendadasDoContato
+        aberta={agendadas}
+        aoFechar={() => setAgendadas(false)}
+        conversationId={conversa.id}
+        contatoNome={nome}
+      />
       {lead ? (
         <JanelaDeNota leadId={lead.id} aberta={nota} onFechar={() => setNota(false)} />
       ) : null}

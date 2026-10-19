@@ -37,7 +37,7 @@ function Realce({ texto, termo }: { texto: string; termo: string }) {
     <>
       {partes.map((p, i) =>
         p.toLowerCase() === termo.toLowerCase() ? (
-          <mark key={i} className="rounded bg-casca-atencao/40">
+          <mark key={i} className="rounded-casca-gatilho bg-casca-atencao/40">
             {p}
           </mark>
         ) : (
@@ -143,7 +143,7 @@ export function BalaoDaCasca({
                   <textarea
                     value={texto}
                     onChange={(e) => setTexto(e.target.value)}
-                    className="min-h-[60px] rounded border border-casca-borda p-1 text-[13px]"
+                    className="min-h-[60px] rounded-casca-gatilho border border-casca-borda p-1 text-[13px]"
                     aria-label={t("Editar mensagem")}
                   />
                   <div className="flex justify-end gap-2 text-[12px]">
@@ -189,7 +189,7 @@ export function BalaoDaCasca({
                 <button
                   type="button"
                   aria-label={t("Opções da mensagem")}
-                  className="absolute top-1 right-1 grid size-6 place-items-center rounded text-casca-chevron opacity-0 group-hover:opacity-100 hover:bg-casca-raia focus:opacity-100 data-[state=open]:opacity-100"
+                  className="absolute top-1 right-1 grid size-6 place-items-center rounded-casca-gatilho text-casca-chevron opacity-0 group-hover:opacity-100 hover:bg-casca-raia focus:opacity-100 data-[state=open]:opacity-100"
                 >
                   <ChevronDown size={14} aria-hidden />
                 </button>

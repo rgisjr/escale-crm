@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { useContagemDeAgendadas } from "@/hooks/escale/useMensagensAgendadas";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import type { Visualizacao } from "@/lib/escale/conversas/visualizacao";
@@ -42,6 +43,10 @@ export function ListaDaFila({
   visualizacao: Visualizacao;
 }) {
   const t = useT();
+  // FORK ESCALE · Fase 3B: o "⏱ n" de cada linha, uma leitura por página da lista.
+  const contagem = useContagemDeAgendadas(
+    visualizacao.campos.mensagensAgendadas ? itens.map((c) => c.id) : [],
+  );
   // O relógio das linhas: o tempo sem resposta anda sozinho com a aba aberta.
   const [agora, setAgora] = useState(() => new Date());
   useEffect(() => {
@@ -118,6 +123,7 @@ export function ListaDaFila({
           aoSoltar={aoSoltarFixada}
           visualizacao={visualizacao}
           agora={agora}
+          agendadas={contagem[fixada.id] ?? 0}
         />
       ) : null}
       {itens.map((c) => (
@@ -128,6 +134,7 @@ export function ListaDaFila({
           aoSelecionar={aoSelecionar}
           visualizacao={visualizacao}
           agora={agora}
+          agendadas={contagem[c.id] ?? 0}
         />
       ))}
       {fila.hasNextPage ? (

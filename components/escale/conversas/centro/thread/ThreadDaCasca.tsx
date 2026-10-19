@@ -25,7 +25,7 @@ import { SeparadorDeDia } from "./SeparadorDeDia";
 
 interface PaginaDeMensagens {
   data: Message[];
-  meta?: { has_more: boolean; cursor: string | null };
+  meta?: { has_more?: boolean; cursor?: string | null };
 }
 
 /** A última mensagem (por `sent_at`) das páginas carregadas — `ConversaAberta` usa para `ultimaFoiTemplate`. */
