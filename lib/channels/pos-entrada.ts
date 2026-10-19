@@ -58,6 +58,7 @@ import { acelerarFollowupDoInbound, drenarEventosDoInbound } from "@/lib/dev/kic
 import { origemDoNegocioPeloCanal } from "@/lib/channels/origem-do-negocio";
 import { autorizarContatoParaIA } from "@/lib/ai/elegibilidade/autorizacao";
 import { casarCampanha, lerCampanhas } from "@/lib/ai/elegibilidade/campanha";
+import { tirarDaEsperaDaCasca } from "@/lib/escale/conversas/espera";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -170,6 +171,9 @@ export async function aplicarEfeitosPosEntrada(
   }
   await guardarOrigemDaPagina(admin, entrada);
   await abrirDemanda(admin, entrada);
+  // FORK ESCALE · Fase 3B (C2, decisão 2): a mensagem nova do cliente tira a
+  // conversa da espera da casca. Nunca derruba a entrada (a função engole o erro).
+  await tirarDaEsperaDaCasca(admin, entrada.organizationId, entrada.conversationId);
   await avaliarCampanha(admin, entrada);
   const sinal = {
     organizationId: entrada.organizationId,

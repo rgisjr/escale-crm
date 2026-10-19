@@ -57,6 +57,9 @@ CRONS="
 * * * * *|45|api/v1/cron/webhook-replay
 */5 * * * *|25|api/v1/cron/storage-redaction?limit=50
 */5 * * * *|25|api/v1/cron/snooze-watcher
+# FORK ESCALE · Fase 3B: as mensagens agendadas da casca (minuto a minuto) e a retomada das pausas de automação.
+* * * * *|30|api/v1/cron/mensagens-agendadas
+*/5 * * * *|25|api/v1/cron/pausas-de-automacao
 */5 * * * *|60|api/v1/cron/handoff-devolucao
 # A CAMPANHA. Minuto a minuto, e a rodada manda no máximo uma mensagem por
 # número: é o cron que dá a cadência base, e o ritmo da campanha e do canal

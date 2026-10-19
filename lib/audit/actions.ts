@@ -955,6 +955,7 @@ export const AUDIT_ACTIONS = [
   // FORK ESCALE · Fase 3B: a conversa aberta da casca (migration 9202).
   "conversation.waiting_set",
   "conversation.waiting_cleared",
+  "conversation.reopened",
   "conversation.marked_unread",
   "conversation.automation_paused",
   "conversation.automation_resumed",
