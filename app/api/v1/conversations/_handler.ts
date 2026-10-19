@@ -96,6 +96,9 @@ const SELECT_COLS = `
   channel_sessions:channel_session_id (phone_number, display_name, provider, social_platform:metadata->>social_platform)
 `;
 
+// FORK ESCALE · Fase 3D: a fila da casca lê as mesmas colunas (a forma ConversationWithContact).
+export const COLUNAS_DA_LISTA_DE_CONVERSAS = SELECT_COLS;
+
 /**
  * Os ids dos contatos marcados como pessoais na organização (spec 21, etapa 7).
  *
