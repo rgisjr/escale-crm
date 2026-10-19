@@ -52,6 +52,8 @@ export type CalendarioDePeriodoProps = {
   tiposDisponiveis?: TipoDeData[];
   /** FORK ESCALE · Fase 1H: Arquivos e Conversas usam só os calendários e os atalhos (sem as abas de tipo de data). */
   semAbas?: boolean;
+  /** FORK ESCALE · Fase 3D: só as abas de `tiposDisponiveis` (c76 tem três ícones, não quatro). */
+  soDisponiveis?: boolean;
 };
 
 const TIPOS_DE_DATA: readonly TipoDeData[] = ["criacao", "ganho", "perda", "agendado"];
@@ -183,8 +185,10 @@ function GradeDoMes({
   );
 }
 
-export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIPOS_DE_DATA], semAbas = false }: CalendarioDePeriodoProps) {
+export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIPOS_DE_DATA], semAbas = false, soDisponiveis = false }: CalendarioDePeriodoProps) {
   const t = useT();
+  // FORK ESCALE · Fase 3D: com `soDisponiveis`, só as abas que valem aparecem.
+  const abas = soDisponiveis ? TIPOS_DE_DATA.filter((x) => tiposDisponiveis.includes(x)) : TIPOS_DE_DATA;
   const locale = useLocaleDeData();
   const idBase = useId();
   const [hoje] = useState(() => new Date());
@@ -276,7 +280,7 @@ export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIP
             onKeyDown={teclaNasAbas}
             className="flex gap-2 border-b border-casca-divisoria p-3"
           >
-            {TIPOS_DE_DATA.map((tipo, i) => {
+            {abas.map((tipo, i) => {
               const Icone = ICONE_DO_TIPO[tipo];
               const ativo = tipo === valor.tipo;
               // As 4 abas ficam sempre no lugar (print); a que não vale ainda fica desligada.
@@ -297,7 +301,7 @@ export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIP
                     "grid h-[23px] w-[34px] place-items-center transition-colors duration-fast ease-out disabled:cursor-not-allowed disabled:opacity-40",
                     FOCO,
                     i === 0 && "rounded-l-[5px]",
-                    i === TIPOS_DE_DATA.length - 1 && "rounded-r-[5px]",
+                    i === abas.length - 1 && "rounded-r-[5px]",
                     ativo ? "bg-casca-texto-2 text-surface" : "bg-casca-raia text-casca-texto-2",
                   )}
                 >
