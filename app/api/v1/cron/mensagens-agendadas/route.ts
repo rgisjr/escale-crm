@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 import { autorizaCron } from "@/lib/auth/cron-auth";
 import { enviarAgendada } from "@/lib/escale/conversas/envio-agendado";
 import { logger } from "@/lib/logger";
-import { idsDeOrgsParadas } from "@/lib/organizacao/operante";
+import { ehOperante, STATUS_OPERANTE, statusDaOrgEmbutida } from "@/lib/organizacao/operante";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +22,7 @@ interface Vencida {
   template: { name: string; language: string; values: Record<string, string> } | null;
   conversations: { last_inbound_at: string | null } | null;
   channel_sessions: { status: string; provider: string | null } | null;
+  organizations: { status?: string | null } | Array<{ status?: string | null }> | null;
 }
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -99,20 +100,23 @@ async function handle(req: NextRequest): Promise<Response> {
     .from("crm_mensagens_agendadas")
     .select(
       "id, organization_id, conversation_id, criado_por, tipo, corpo, template, " +
-        "conversations:conversation_id ( last_inbound_at ), channel_sessions:channel_session_id ( status, provider )",
+        "conversations:conversation_id ( last_inbound_at ), channel_sessions:channel_session_id ( status, provider ), " +
+        "organizations:organization_id!inner ( status )",
     )
     .eq("status", "pendente")
+    // Organização parada não envia e a agendada espera a volta. O corte sai no
+    // banco, ANTES do limit: filtrar depois deixaria 50 agendadas de uma
+    // organização parada travarem o envio de todas as outras.
+    .eq("organizations.status", STATUS_OPERANTE)
     .lte("enviar_em", agora.toISOString())
     .order("enviar_em", { ascending: true })
     .limit(LOTE);
   if (error) return fail("internal_error", error.message, 500, { requestId });
 
-  // Organização parada não envia: a agendada fica pendente até ela voltar.
-  const paradas = new Set(await idsDeOrgsParadas(admin));
   let enviadas = 0;
   let falhas = 0;
   for (const v of (data ?? []) as unknown as Vencida[]) {
-    if (paradas.has(v.organization_id)) continue;
+    if (!ehOperante(statusDaOrgEmbutida(v.organizations))) continue; // cinto
     const resultado = await processarVencida(admin, v, agora, requestId);
     // null = outro tick levou: sem efeito, sem trilha.
     if (resultado) {

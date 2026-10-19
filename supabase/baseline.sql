@@ -37046,6 +37046,8 @@ create policy crm_pausas_de_automacao_write on public.crm_pausas_de_automacao
   for all using (
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
+    and exists (select 1 from public.conversations c
+                 where c.id = conversation_id and c.organization_id = crm_pausas_de_automacao.organization_id)
   ) with check (
     (organization_id in (select public.fn_user_org_ids()))
     and public.fn_role_at_least(organization_id, 'agent')
