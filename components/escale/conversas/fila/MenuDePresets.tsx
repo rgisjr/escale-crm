@@ -55,6 +55,8 @@ const ICONE_DE_GRUPO: Record<PresetDeGrupo, LucideIcon> = {
   somente_conversas: MessageSquare,
   somente_grupos: Users,
 };
+const PRESETS_DO_TOPO: readonly Preset[] = ["todos", "nao_lidas"];
+
 const CABECALHO =
   "px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
 
@@ -148,8 +150,7 @@ export function MenuDePresets({
             aria-label={t("Filtrar por")}
             className={cn(CAIXA_DO_MENU, "max-h-[70vh] w-[224px] overflow-y-auto")}
           >
-            {item("todos")}
-            {item("nao_lidas")}
+            {PRESETS_DO_TOPO.map((p) => item(p))}
             {temGrupos
               ? PRESETS_DE_GRUPO.map((p) => {
                   const Ic = ICONE_DE_GRUPO[p];

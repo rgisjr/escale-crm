@@ -53,7 +53,7 @@ export function CentroDeAcoesEmMassa({
   const cartao = (a: AcaoEscolhida, rotulo: string, icone: LucideIcon) => (
     <button type="button" onClick={() => escolher(a)} className={CARTAO}>
       <Icone icone={icone} />
-      {t(rotulo)}
+      {rotulo}
     </button>
   );
   return (
@@ -66,9 +66,9 @@ export function CentroDeAcoesEmMassa({
         <p className="mt-1 text-[12px] text-casca-suave">{textoDasSelecionadas(selecionadas, t)}</p>
       ) : null}
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {cartao("status", "Alterar status", RefreshCcw)}
-        {cartao("atendente", "Alterar atendente", ArrowLeftRight)}
-        {cartao("setor", "Alterar setor", UsersRound)}
+        {cartao("status", t("Alterar status"), RefreshCcw)}
+        {cartao("atendente", t("Alterar atendente"), ArrowLeftRight)}
+        {cartao("setor", t("Alterar setor"), UsersRound)}
         <Popover open={tagAberta} onOpenChange={setTagAberta}>
           <PopoverTrigger asChild>
             <button type="button" className={cn(CARTAO, tagAberta && "border-casca-marca")}>

@@ -17,18 +17,18 @@ export function SecaoGruposDaFila({
   const t = useT();
   const linha = (valor: "conversas" | "grupos", rotulo: string) => (
     <li className="flex h-7 items-center justify-between text-[13px] text-casca-texto">
-      <span>{t(rotulo)}</span>
+      <span>{rotulo}</span>
       <InterruptorDaCasca
         ligado={painel.grupos === valor}
-        aria-label={t(rotulo)}
+        aria-label={rotulo}
         aoMudar={(v) => aoMudar({ ...painel, grupos: v ? valor : undefined })}
       />
     </li>
   );
   return (
     <ul className="flex flex-col gap-1">
-      {linha("conversas", ROTULO_DO_PRESET_DE_GRUPO.somente_conversas)}
-      {linha("grupos", ROTULO_DO_PRESET_DE_GRUPO.somente_grupos)}
+      {linha("conversas", t(ROTULO_DO_PRESET_DE_GRUPO.somente_conversas))}
+      {linha("grupos", t(ROTULO_DO_PRESET_DE_GRUPO.somente_grupos))}
     </ul>
   );
 }
