@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover } from "@/components/ui/popover";
+import { useCatalogoDeCampos } from "@/hooks/escale/useCatalogoDeCampos";
 import { useColunasDaLista, useSalvarColunasDaLista } from "@/hooks/escale/useColunasDaLista";
 import { useAcompanharAcoes } from "@/hooks/escale/useAcompanharAcoes";
 import { useEstadoDaListaDeContatos } from "@/hooks/escale/useEstadoDaListaDeContatos";
@@ -28,7 +29,12 @@ import {
 } from "@/lib/escale/contatos/filtros";
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
-import { CHAVE_DO_POR_PAGINA, POR_PAGINA, POR_PAGINA_PADRAO } from "@/lib/escale/contatos/regras";
+import {
+  CHAVE_DO_POR_PAGINA,
+  POR_PAGINA,
+  POR_PAGINA_PADRAO,
+  camposDeColuna,
+} from "@/lib/escale/contatos/regras";
 import { alvoDaSelecao } from "@/lib/escale/contatos/selecao";
 import { Bookmark, RefreshCw, Search } from "@/lib/ui/icons-da-casca";
 
@@ -88,6 +94,8 @@ export function ListaDeContatos({
   opcoesDoFiltro?: OpcoesDoFiltro;
 }) {
   const t = useT();
+  const { catalogo: catalogoDoContato } = useCatalogoDeCampos("contato");
+  const camposDoContato = useMemo(() => camposDeColuna(catalogoDoContato), [catalogoDoContato]);
   const {
     visao,
     pagina,
@@ -310,7 +318,11 @@ export function ListaDeContatos({
           >
             <RefreshCw size={17} aria-hidden className={girando ? "animate-spin" : ""} />
           </button>
-          <PainelDeColunas itens={colunas.itens} aoMudar={(itens) => salvarColunas.mutate(itens)} />
+          <PainelDeColunas
+            itens={colunas.itens}
+            aoMudar={(itens) => salvarColunas.mutate(itens)}
+            camposDoContato={camposDoContato}
+          />
         </div>
       </div>
 
@@ -338,6 +350,7 @@ export function ListaDeContatos({
         <TabelaDeContatos
           linhas={linhas}
           colunas={colunas.itens}
+          camposDoContato={camposDoContato}
           carregando={consulta.isLoading}
           erro={consulta.isError}
           aoTentarDeNovo={() => void consulta.refetch()}

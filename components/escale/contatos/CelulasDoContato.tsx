@@ -7,8 +7,10 @@ import { ChipDaTag } from "@/components/escale/quadro/PecasDoCard";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
+import { valorParaLeitura } from "@/lib/escale/negocio/campos";
 import {
   CAMPOS_DO_CONTATO_2A,
+  type CampoDeColuna,
   type ItemDeColuna,
   formatarTelefone,
 } from "@/lib/escale/contatos/regras";
@@ -153,7 +155,15 @@ const ROTULO_DO_STATUS = {
 } as const;
 
 /** As colunas extras ("Colunas" e "Campos do contato" do 03-002). */
-export function CelulaExtra({ item, linha }: { item: ItemDeColuna; linha: LinhaDeContato }) {
+export function CelulaExtra({
+  item,
+  linha,
+  campo,
+}: {
+  item: ItemDeColuna;
+  linha: LinhaDeContato;
+  campo?: CampoDeColuna;
+}) {
   const t = useT();
   const tag = useTagDeIdioma();
   const dataBr = (iso: string | null) => dataNoIdioma(iso, tag);
@@ -167,6 +177,11 @@ export function CelulaExtra({ item, linha }: { item: ItemDeColuna; linha: LinhaD
   }
   if (item.chave === "nascimento")
     return texto(linha.nascimento ? dataBr(`${linha.nascimento}T12:00:00`) : "—");
+  if (!item.chave.startsWith("link_")) {
+    // Fase 2C: campo personalizado do catálogo, mostrado pelo tipo (moeda, seleção, data…).
+    const mostrado = valorParaLeitura(campo?.tipo ?? "text", campo?.opcoes, linha.campos?.[item.chave], t);
+    return texto(mostrado ? (campo?.tipo === "currency" ? `R$ ${mostrado}` : mostrado) : "—");
+  }
   const tipo = item.chave.replace(/^link_/, "");
   const href = linha.links[tipo];
   return href ? (
@@ -187,8 +202,11 @@ export function rotuloDoItem(
   item: ItemDeColuna,
   t: (s: string) => string,
   rotulos: Record<string, string>,
+  rotulosDosCampos: Record<string, string> = {},
 ): string {
   if (item.tipo === "nativa") return t(rotulos[item.chave] ?? item.chave);
+  const doCatalogo = rotulosDosCampos[item.chave];
+  if (doCatalogo) return t(doCatalogo);
   const campo = CAMPOS_DO_CONTATO_2A.find((c) => c.chave === item.chave);
   return campo ? t(campo.rotulo) : item.chave;
 }

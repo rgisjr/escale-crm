@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { TIPOS_DE_LINK, chaveDoLink } from "@/lib/leads/links-de-contato";
+import type { Catalogo, TipoDoMotor } from "@/lib/escale/campos/regras";
 
 /**
  * A LISTA DE CONTATOS DA CASCA (fork Escale, Fase 2A) — regras puras.
@@ -118,11 +119,34 @@ export const ROTULO_DA_COLUNA: Record<ColunaNativa, string> = {
   origem: "Origem",
 };
 
-/** "Campos do contato" nesta fase: o nascimento e os links. A 2C traz os personalizados. */
+/** "Campos do contato" fixos: o nascimento e os links. Os personalizados vêm do catálogo (2C). */
 export const CAMPOS_DO_CONTATO_2A: ReadonlyArray<{ chave: string; rotulo: string }> = [
   { chave: "nascimento", rotulo: "Data de nascimento" },
   ...TIPOS_DE_LINK.map((l) => ({ chave: chaveDoLink(l.id), rotulo: l.rotulo })),
 ];
+
+export interface CampoDeColuna {
+  chave: string;
+  rotulo: string;
+  tipo: TipoDoMotor;
+  opcoes?: Array<{ value: string; label: string }>;
+}
+
+/** Os campos que podem virar coluna: nascimento, links (2A) e o catálogo do contato, em ordem alfabética (Clint 2b-22). */
+export function camposDeColuna(catalogo: Catalogo): CampoDeColuna[] {
+  const fixos: CampoDeColuna[] = CAMPOS_DO_CONTATO_2A.map((c) => ({
+    chave: c.chave,
+    rotulo: c.rotulo,
+    tipo: c.chave === "nascimento" ? "date" : "url",
+  }));
+  const doCatalogo: CampoDeColuna[] = catalogo.campos.map((c) => ({
+    chave: c.chave,
+    rotulo: String(c.definicao.label),
+    tipo: c.definicao.type,
+    opcoes: c.definicao.options,
+  }));
+  return [...fixos, ...doCatalogo].sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));
+}
 
 export type ItemDeColuna =
   { tipo: "nativa"; chave: ColunaNativa } | { tipo: "campo"; chave: string };

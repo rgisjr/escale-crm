@@ -6,7 +6,7 @@ import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
-import { type ItemDeColuna, ROTULO_DA_COLUNA, chaveDoItem } from "@/lib/escale/contatos/regras";
+import { type CampoDeColuna, type ItemDeColuna, ROTULO_DA_COLUNA, chaveDoItem } from "@/lib/escale/contatos/regras";
 import { ChevronDown } from "@/lib/ui/icons-da-casca";
 
 import {
@@ -47,6 +47,7 @@ export function TabelaDeContatos({
   aoAdicionarNegocio,
   cabecalhoDaSelecao,
   selecao = SELECAO_DESLIGADA,
+  camposDoContato = [],
 }: {
   linhas: LinhaDeContato[];
   colunas: ItemDeColuna[];
@@ -58,6 +59,8 @@ export function TabelaDeContatos({
   aoAdicionarNegocio: (linha: LinhaDeContato) => void;
   cabecalhoDaSelecao?: ReactNode;
   selecao?: SelecaoDaTabela;
+  /** Fase 2C: os campos do contato que podem virar coluna (rótulo e tipo). */
+  camposDoContato?: CampoDeColuna[];
 }) {
   const t = useT();
   const semPermissao = t("Disponível para gerente ou acima.");
@@ -155,7 +158,7 @@ export function TabelaDeContatos({
               ) : item.tipo === "nativa" && item.chave === "negocios" ? (
                 <CelulaNegocios linha={linha} aoAdicionar={aoAdicionarNegocio} />
               ) : (
-                <CelulaExtra item={item} linha={linha} />
+                <CelulaExtra item={item} linha={linha} campo={camposDoContato.find((c) => c.chave === item.chave)} />
               )}
             </td>
           ))}
@@ -182,7 +185,7 @@ export function TabelaDeContatos({
           <th className={TH}>{t("Nome")}</th>
           {visiveis.map((item) => (
             <th key={chaveDoItem(item)} className={TH}>
-              {rotuloDoItem(item, t, ROTULO_DA_COLUNA)}
+              {rotuloDoItem(item, t, ROTULO_DA_COLUNA, Object.fromEntries(camposDoContato.map((c) => [c.chave, c.rotulo])))}
             </th>
           ))}
           <th className={`${TH} w-10`}>
