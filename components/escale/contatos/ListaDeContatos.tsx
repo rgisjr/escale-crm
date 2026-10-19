@@ -230,7 +230,7 @@ export function ListaDeContatos({
           {podeMesclar && <SeloDeMescla />}
           {/* FORK ESCALE · Fase 2B (Q4): minhas exportações e, para o admin, os pedidos para aprovar. */}
           {podeSelecionar && <PainelDeExportacoes ehAdmin={papel === "admin"} />}
-          <MenuNovoContato origens={origens} podeCriar={podeCriar} />
+          <MenuNovoContato origens={origens} podeCriar={podeCriar} podeImportar={ROLE_RANK[papel] >= ROLE_RANK.manager} />
         </div>
       </header>
 

@@ -20,11 +20,13 @@ export function MenuNegocioMais({
   dica,
   aoNovo,
   aoImportar,
+  podeImportar,
 }: {
   desabilitado: boolean;
   dica?: string;
   aoNovo: () => void;
   aoImportar: () => void;
+  podeImportar: boolean;
 }) {
   const t = useT();
   const [aberto, setAberto] = useState(false);
@@ -44,7 +46,12 @@ export function MenuNegocioMais({
             <Briefcase size={14} aria-hidden />
             {t("Novo negócio")}
           </MenuPrimitive.Item>
-          <MenuPrimitive.Item className={ITEM_DO_MENU} onSelect={aoImportar}>
+          <MenuPrimitive.Item
+            className={ITEM_DO_MENU}
+            disabled={!podeImportar}
+            title={podeImportar ? undefined : t("Disponível para gerente ou acima.")}
+            onSelect={aoImportar}
+          >
             <Plus size={14} aria-hidden />
             {t("Importar negócios")}
           </MenuPrimitive.Item>
