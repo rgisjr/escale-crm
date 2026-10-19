@@ -76,7 +76,7 @@ export function lerCriacao(bruto: unknown): CriacaoDeNegocio {
 }
 
 const FALTA = (campo: string, condicao: string, t: (s: string) => string) =>
-  `${t("O campo")} ${t(campo)} ${t("é obrigatório em")} ${condicao}`;
+  `${t("O campo")} ${campo} ${t("é obrigatório em")} ${condicao}`;
 
 export function validarCriacao(
   rascunho: CriacaoEmEdicao,
@@ -91,10 +91,10 @@ export function validarCriacao(
         indice: i,
       };
     if (r.tipo !== "qualquer" && r.mensagens.length === 0)
-      return { ok: false, erro: FALTA("Quando receber uma mensagem que", r.nome, t), indice: i };
+      return { ok: false, erro: FALTA(t("Quando receber uma mensagem que"), r.nome, t), indice: i };
     if (!r.origem_id)
-      return { ok: false, erro: FALTA("Criar negócio na origem", r.nome, t), indice: i };
-    if (!r.etapa_id) return { ok: false, erro: FALTA("Na etapa", r.nome, t), indice: i };
+      return { ok: false, erro: FALTA(t("Criar negócio na origem"), r.nome, t), indice: i };
+    if (!r.etapa_id) return { ok: false, erro: FALTA(t("Na etapa"), r.nome, t), indice: i };
   }
   const lido = criacaoDeNegocioSchema.safeParse({
     ligado: true,
