@@ -52,9 +52,9 @@ import { comparadorDaOrdem } from "@/lib/escale/filtros/ordenar";
 import { moedaDaOrigem } from "@/lib/escale/configuracoes/tipos";
 // FORK ESCALE · Casca V4: o cabeçalho da Clint na casca nova (o quadro troca coluna e card pela prop `aparencia`).
 import { CabecalhoDaCasca } from "@/components/escale/quadro/CabecalhoDaCasca";
-// FORK ESCALE · Fase 1E: o menu "Negócio +" e a janela "Importar negócios" (casca nova).
+// FORK ESCALE · Fase 1E, 2F: o menu "Negócio +" e a janela "Importar negócios" (casca nova).
 import { MenuNegocioMais } from "@/components/escale/quadro/MenuNegocioMais";
-import { JanelaDeImportarNegocios } from "@/components/escale/quadro/JanelaDeImportarNegocios";
+import { JanelaDeImportacao } from "@/components/escale/importacao/JanelaDeImportacao";
 // FORK ESCALE · Fase 1F: a engrenagem abre as configurações da origem (F20).
 import { useEngrenagemDaOrigem } from "@/lib/escale/configuracoes/abrir";
 // FORK ESCALE · Fase 1G: o card da casca abre a ficha do negócio.
@@ -113,6 +113,7 @@ export function PipelinePageClient({
   }, [searchParams, router, pathname, t]);
   // FORK ESCALE · Fase 1E: quem pode criar também importa e seleciona por etapa (casca nova).
   const podeCriar = ROLE_RANK[role] >= ROLE_RANK.agent;
+  const podeImportar = ROLE_RANK[role] >= ROLE_RANK.manager; // FORK ESCALE · Fase 2F (N1)
   /**
    * A visão do funil (#2770). Quadro é o padrão — é o que todo mundo já
    * conhece, e a aba nova não pode sequestrar a tela de quem só quer mover
@@ -232,6 +233,7 @@ export function PipelinePageClient({
                 setNewOpen(true);
               }}
               aoImportar={() => setImportando(true)}
+              podeImportar={podeImportar}
             />
           }
         />
@@ -344,15 +346,14 @@ export function PipelinePageClient({
           leads={data.leads}
         />
       )}
-      {/* FORK ESCALE · Fase 1E: "Importar negócios" do menu "Negócio +" (casca nova). */}
-      {cascaNova && data ? (
-        <JanelaDeImportarNegocios
+      {/* FORK ESCALE · Fase 1E, 2F: "Importar negócios" do menu "Negócio +" abre o importador na aba Negócios, nesta origem. */}
+      {cascaNova ? (
+        <JanelaDeImportacao
           aberta={importando}
-          onFechar={() => setImportando(false)}
-          pipelineId={pipelineId}
-          nomeDaOrigem={nomeAtual}
-          etapas={data.stages.filter((s) => !s.is_won && !s.is_lost && !s.is_archived)}
-          tagsDoQuadro={tagsDoQuadro}
+          aoFechar={() => setImportando(false)}
+          tipoInicial="negocio"
+          travarTipo
+          origemInicial={pipelineId}
           aoImportar={() => void refetch()}
         />
       ) : null}

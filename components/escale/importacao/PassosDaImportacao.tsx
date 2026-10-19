@@ -4,7 +4,7 @@ import { Check } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 /**
- * O INDICADOR DE PASSOS DA IMPORTAÇÃO (fork Escale, Fase 1E; Clint v2, v2-06 a
+ * O INDICADOR DE PASSOS DA IMPORTAÇÃO (fork Escale, Fase 1E; generalizado na 2F; Clint v2, v2-06 a
  * v2-11): faixa de 64px com um círculo de 32px por passo e um traço entre eles.
  * `atual` é o passo em andamento, de 1 em diante; o que vem antes está concluído
  * (círculo cheio da marca com ✓) e o traço depois de um passo concluído também

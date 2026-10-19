@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
+import { JanelaDeImportacao } from "@/components/escale/importacao/JanelaDeImportacao";
 import { CONTEUDO_DO_MENU, ITEM_DO_MENU } from "@/components/escale/menu/estilos";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import {
@@ -20,9 +20,11 @@ import { JanelaNovoContato } from "./JanelaNovoContato";
 export function MenuNovoContato({
   origens,
   podeCriar,
+  podeImportar,
 }: {
   origens: OrigemParaCriar[];
   podeCriar: boolean;
+  podeImportar: boolean;
 }) {
   const t = useT();
   const [novo, setNovo] = useState(false);
@@ -42,14 +44,20 @@ export function MenuNovoContato({
             <Plus size={14} aria-hidden />
             {t("Novo contato")}
           </DropdownMenuItem>
-          <DropdownMenuItem className={ITEM_DO_MENU} onSelect={() => setImportar(true)}>
+          <DropdownMenuItem
+            className={ITEM_DO_MENU}
+            disabled={!podeImportar}
+            title={podeImportar ? undefined : t("Disponível para gerente ou acima.")}
+            onSelect={() => setImportar(true)}
+          >
             <Upload size={14} aria-hidden />
             {t("Importar contatos")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <JanelaNovoContato aberta={novo} aoFechar={() => setNovo(false)} origens={origens} />
-      {importar && <ImportContactsDialog open onOpenChange={(v) => !v && setImportar(false)} />}
+      {/* FORK ESCALE · Fase 2F: o assistente de importação de 5 passos da Clint. */}
+      <JanelaDeImportacao aberta={importar} aoFechar={() => setImportar(false)} tipoInicial="contato" />
     </>
   );
 }

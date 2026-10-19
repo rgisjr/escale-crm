@@ -108,9 +108,9 @@ vi.mock("@/components/kanban/NewLeadDialog", () => ({
     open ? <p>{`novo negócio aberto na etapa ${etapaInicial ?? "padrão"}`}</p> : null,
 }));
 vi.mock("@/components/kanban/CalendarioDoFunil", () => ({ CalendarioDoFunil: () => null }));
-vi.mock("@/components/escale/quadro/JanelaDeImportarNegocios", () => ({
-  JanelaDeImportarNegocios: ({ aberta, etapas }: { aberta: boolean; etapas: Array<{ name: string }> }) =>
-    aberta ? <p>{`importar aberto: ${etapas.map((e) => e.name).join(", ")}`}</p> : null,
+vi.mock("@/components/escale/importacao/JanelaDeImportacao", () => ({
+  JanelaDeImportacao: ({ aberta, tipoInicial, origemInicial }: { aberta: boolean; tipoInicial: string; origemInicial?: string }) =>
+    aberta ? <p>{`importar aberto: ${tipoInicial} em ${origemInicial}`}</p> : null,
 }));
 
 import type { Role } from "@/lib/auth/types";
@@ -208,13 +208,20 @@ describe("a página do funil com a casca nova (Fase 1D)", () => {
     expect(screen.getByText("novo negócio aberto na etapa padrão")).toBeInTheDocument();
   });
 
-  it("com a casca, 'Importar negócios' abre a janela de importar só com as etapas abertas", async () => {
-    abrir(true);
+  it("com a casca, 'Importar negócios' abre o importador na aba Negócios, nesta origem (gerente)", async () => {
+    abrir(true, undefined, "manager");
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     expect(screen.queryByText(/importar aberto/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^Negócio/ }));
     await user.click(screen.getByRole("menuitem", { name: "Importar negócios" }));
-    expect(screen.getByText("importar aberto: Entrada, Proposta")).toBeInTheDocument();
+    expect(screen.getByText("importar aberto: negocio em p-1")).toBeInTheDocument();
+  });
+
+  it("atendente: 'Importar negócios' fica desligado (gerente ou acima)", async () => {
+    abrir(true);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("button", { name: /^Negócio/ }));
+    expect(screen.getByRole("menuitem", { name: "Importar negócios" })).toHaveAttribute("aria-disabled", "true");
   });
 
   it("viewer: 'Negócio +' fica desligado", () => {
