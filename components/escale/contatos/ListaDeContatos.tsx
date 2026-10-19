@@ -31,8 +31,11 @@ import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
 import {
   CHAVE_DO_POR_PAGINA,
+  COLUNAS_NATIVAS,
+  COLUNAS_PADRAO,
   POR_PAGINA,
   POR_PAGINA_PADRAO,
+  ROTULO_DA_COLUNA,
   camposDeColuna,
 } from "@/lib/escale/contatos/regras";
 import { alvoDaSelecao } from "@/lib/escale/contatos/selecao";
@@ -321,7 +324,10 @@ export function ListaDeContatos({
           <PainelDeColunas
             itens={colunas.itens}
             aoMudar={(itens) => salvarColunas.mutate(itens)}
-            camposDoContato={camposDoContato}
+            nativas={COLUNAS_NATIVAS.map((c) => ({ chave: c, rotulo: ROTULO_DA_COLUNA[c] }))}
+            campos={camposDoContato}
+            tituloDosCampos={t("Campos do contato")}
+            padrao={COLUNAS_PADRAO}
           />
         </div>
       </div>

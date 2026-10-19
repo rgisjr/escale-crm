@@ -2,8 +2,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api/client";
-import type { ListaComColunas } from "@/lib/escale/colunas/banco";
-import { COLUNAS_PADRAO, type ItemDeColuna } from "@/lib/escale/contatos/regras";
+import { type ListaComColunas, PADRAO_POR_LISTA } from "@/lib/escale/colunas/banco";
+import type { ItemDeColuna } from "@/lib/escale/contatos/regras";
 
 const chave = (lista: ListaComColunas) => ["colunas-da-lista", lista] as const;
 
@@ -19,7 +19,7 @@ export function useColunasDaLista(lista: ListaComColunas) {
       ).data.itens,
     staleTime: 5 * 60_000,
   });
-  return { itens: q.data ?? COLUNAS_PADRAO, carregando: q.isLoading };
+  return { itens: q.data ?? [...PADRAO_POR_LISTA[lista]], carregando: q.isLoading };
 }
 
 export function useSalvarColunasDaLista(lista: ListaComColunas) {

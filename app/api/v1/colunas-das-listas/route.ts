@@ -14,9 +14,10 @@ import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
 import {
   LISTAS_COM_COLUNAS,
   gravarColunasDaPessoa,
+  lerColunasDaLista,
   lerColunasDaPessoa,
 } from "@/lib/escale/colunas/banco";
-import { colunasSchema, lerColunas } from "@/lib/escale/contatos/regras";
+import { colunasSchema } from "@/lib/escale/contatos/regras";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -83,7 +84,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
       },
     );
   }
-  const itens = lerColunas({ itens: parsed.data.itens });
+  const itens = lerColunasDaLista(parsed.data.lista, { itens: parsed.data.itens });
   const { error } = await gravarColunasDaPessoa(
     await createClient(),
     authz.org.orgId,
