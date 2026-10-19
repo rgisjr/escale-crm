@@ -195,9 +195,11 @@ export async function listConversationsHandler(
   // cada lugar tinha a sua cópia, trocar uma só fazia a lista ordenar por uma
   // pergunta e a posição responder outra — sem sintoma nenhum, porque as duas
   // telas continuam populadas e plausíveis.
-  const sortCol = isQueue ? ORDEM_DA_ESPERA.coluna : "last_message_at";
-  const ordem = isQueue ? ORDEM_DA_ESPERA.opcoes : ({ ascending: false, nullsFirst: false } as const);
-  const asc = isQueue;
+  // FORK ESCALE · Fase 3A: "Esperando mais tempo" fora da Fila é a mesma régua.
+  const porEspera = isQueue || q.ordem === "espera";
+  const sortCol = porEspera ? ORDEM_DA_ESPERA.coluna : "last_message_at";
+  const ordem = porEspera ? ORDEM_DA_ESPERA.opcoes : ({ ascending: false, nullsFirst: false } as const);
+  const asc = porEspera;
 
   let query = supabase
     .from("conversations")
@@ -293,6 +295,13 @@ export async function listConversationsHandler(
   // Este handler usa o admin client, que passa por cima da RLS: esse filtro é a Única
   // barreira. Consulta nova só para os não lidos nasceria sem barreira nenhuma.
   if (q.unread) query = query.gt("unread_count_for_assignee", 0);
+  // FORK ESCALE · Fase 3A: "Em espera" é o snooze do original vigente (seção 6
+  // do PRD de Conversas); "Em aberto" é o resto. Compõe sobre `query`, que já
+  // tem o filtro de organização — a única barreira com o admin client.
+  if (q.snoozed === "true") query = query.gt("snooze_until", new Date().toISOString());
+  if (q.snoozed === "false") {
+    query = query.or(`snooze_until.is.null,snooze_until.lte.${new Date().toISOString()}`);
+  }
 
   if (q.assigned_to === "me") {
     if (ctx.actor.type !== "user") {

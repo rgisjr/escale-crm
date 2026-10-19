@@ -420,6 +420,13 @@ export const listConversationsQuerySchema = z.object({
    * para o conjunto do contato.
    */
   contact_id: z.string().uuid().optional(),
+  /**
+   * FORK ESCALE · Fase 3A: os presets da fila da casca. `snoozed` separa
+   * "Em espera" (o snooze vigente) de "Em aberto"; `ordem=espera` pede a
+   * régua da Fila (`ORDEM_DA_ESPERA`) fora da aba Fila. Ausentes, nada muda.
+   */
+  snoozed: z.enum(["true", "false"]).optional(),
+  ordem: z.enum(["espera"]).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
