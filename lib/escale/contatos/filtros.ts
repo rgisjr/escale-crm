@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Catalogo, TipoDoMotor } from "@/lib/escale/campos/regras";
+import { CAMPOS_FIXOS_DA_EMPRESA, type Catalogo, type TipoDoMotor } from "@/lib/escale/campos/regras";
 import { camposFiltraveis } from "@/lib/escale/filtros/campos";
 import { dataBrDoIso } from "@/lib/escale/filtros/periodo";
 
@@ -115,7 +115,7 @@ const DONO = /^(sem_dono|com_dono|agent:[0-9a-f-]{36}|[0-9a-f-]{36})$/i;
 
 const condicaoSchema = z
   .object({
-    alvo: z.enum(["contato", "negocio"]),
+    alvo: z.enum(["contato", "negocio", "empresa"]),
     chave: z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,39}$/),
     tipo: z.enum(TIPOS_DE_CAMPO),
     op: z.enum(OPERADORES),
@@ -208,7 +208,7 @@ export type GrupoDeTags = z.infer<typeof grupoDeTagsSchema>;
 
 // ─── Campos que a seção Campos oferece ─────────────────────────────────────────
 export type CampoDoFiltro = {
-  alvo: "contato" | "negocio";
+  alvo: "contato" | "negocio" | "empresa";
   chave: string;
   rotulo: string;
   tipo: TipoDeCampo;
@@ -258,6 +258,24 @@ export function camposDoContatoDoFiltro(catalogo: Catalogo): CampoDoFiltro[] {
     ...(c.definicao.options ? { opcoes: c.definicao.options } : {}),
   }));
   return [...CAMPOS_DO_CONTATO_DO_FILTRO, ...doCatalogo].sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));
+}
+
+/** Os campos da empresa no seletor do filtro: fixos + catálogo, em ordem alfabética (Fase 2D). */
+export function camposDaEmpresaDoFiltro(catalogo: Catalogo): CampoDoFiltro[] {
+  const fixos: CampoDoFiltro[] = CAMPOS_FIXOS_DA_EMPRESA.map((f) => ({
+    alvo: "empresa",
+    chave: f.chave,
+    rotulo: f.rotulo,
+    tipo: "texto",
+  }));
+  const doCatalogo: CampoDoFiltro[] = catalogo.campos.map((c) => ({
+    alvo: "empresa",
+    chave: c.chave,
+    rotulo: String(c.definicao.label),
+    tipo: tipoDoFiltro(c.definicao.type),
+    ...(c.definicao.options ? { opcoes: c.definicao.options } : {}),
+  }));
+  return [...fixos, ...doCatalogo].sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));
 }
 
 export const CAMPO_VALOR_DO_NEGOCIO: CampoDoFiltro = {

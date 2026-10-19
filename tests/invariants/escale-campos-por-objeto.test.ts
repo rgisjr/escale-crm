@@ -29,8 +29,8 @@ beforeAll(() => {
   seedGov();
   sql(`
     insert into auth.users (id, email) values ('${USER_B}', 'vizinho-9104@x.test') on conflict (id) do nothing;
-    insert into public.organizations (id, name, slug) values ('${ORG_B}', 'Org B 9104', 'org-b-9104') on conflict (id) do nothing;
-    insert into public.user_organizations (user_id, organization_id, role) values ('${USER_B}', '${ORG_B}', 'admin') on conflict do nothing;
+    insert into public.organizations (id, slug, legal_name, display_name) values ('${ORG_B}', 'org-b-9104', 'Org B 9104', 'Org B 9104') on conflict (id) do nothing;
+    insert into public.user_organizations (user_id, organization_id, role, accepted_at) values ('${USER_B}', '${ORG_B}', 'admin', now()) on conflict do nothing;
     delete from public.crm_campos_do_crm where organization_id = '${GOV_ORG}' and padrao = false;
     delete from public.crm_grupos_de_campos where organization_id = '${GOV_ORG}' and padrao = false;
     select public.fn_escale_semear_campos_padrao('${GOV_ORG}');
@@ -100,7 +100,7 @@ describe("travas", () => {
     sql(`insert into public.crm_campos_do_crm (organization_id, objeto, chave, definicao) values ('${GOV_ORG}', 'contato', 'quando', '{"label":"Quando","type":"datetime"}'::jsonb)`);
     expect(() =>
       sql(`insert into public.crm_campos_do_crm (organization_id, objeto, chave, definicao) values ('${GOV_ORG}', 'contato', 'ruim', '{"label":"Ruim","type":"rich"}'::jsonb)`),
-    ).toThrow(/crm_campos_do_crm_definicao/);
+    ).toThrow(/definição inválida/);
   });
 
   it("campo padrão não se apaga nem se renomeia; grupo padrão não se apaga", () => {

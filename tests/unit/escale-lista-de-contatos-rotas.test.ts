@@ -102,6 +102,7 @@ describe("GET /api/v1/lista-de-contatos", () => {
               created_at: "2026-10-01T10:00:00Z",
               source: "manual",
               birthdate: null,
+              person_id: "p1",
             },
             {
               id: "c2",
@@ -124,6 +125,8 @@ describe("GET /api/v1/lista-de-contatos", () => {
           error: null,
         },
         conversations: { data: [{ id: "cv1", contact_id: "c2" }], error: null },
+        company_people: { data: [{ person_id: "p1", company_id: "e1", is_primary: true }], error: null },
+        companies: { data: [{ id: "e1", trade_name: "Atlas", legal_name: null }], error: null },
       },
     });
     const res = await GET_LISTA(pedido("/api/v1/lista-de-contatos?v=com_negocio&p=2&n=10"));
@@ -153,6 +156,7 @@ describe("GET /api/v1/lista-de-contatos", () => {
       instagram: "ana",
       tem_foto: true,
       status: "ativo",
+      empresa: { id: "e1", nome: "Atlas" },
     });
     expect(JSON.stringify(corpo)).not.toContain("avatar_storage_path");
     expect(vi.mocked(requireRole).mock.calls.at(-1)?.[0]).toBe("viewer");

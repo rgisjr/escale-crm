@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { compilarFiltros } from "@/lib/escale/contatos/compilar-filtros";
 import {
   CONTEM_MAX,
+  camposDaEmpresaDoFiltro,
   camposDoContatoDoFiltro,
   chipsDosFiltros,
   contarNaSecao,
@@ -326,5 +327,25 @@ describe("camposDoContatoDoFiltro (Fase 2C)", () => {
     expect(campos.map((c) => c.rotulo).slice(0, 3)).toEqual(["Canal", "Data de nascimento", "Email"]);
     expect(campos.find((c) => c.chave === "renda")).toMatchObject({ alvo: "contato", tipo: "numero" });
     expect(campos.find((c) => c.chave === "origem")).toMatchObject({ tipo: "opcao", opcoes: [{ value: "a", label: "A" }] });
+  });
+});
+
+describe("o alvo empresa no filtro (Fase 2D)", () => {
+  it("a condição aceita alvo empresa", () => {
+    expect(
+      filtrosDeContatosSchema.safeParse(
+        comCondicao({ alvo: "empresa", chave: "segmento", tipo: "texto", op: "contem", valor: "Var" }),
+      ).success,
+    ).toBe(true);
+  });
+  it("campos da empresa: fixos + catálogo, em ordem alfabética", () => {
+    const campos = camposDaEmpresaDoFiltro({
+      grupos: [],
+      campos: [
+        { id: "e1", objeto: "empresa", chave: "segmento", definicao: { label: "Segmento", type: "text" }, grupo_id: null, papel_minimo: null, posicao: 0, padrao: true },
+      ],
+    });
+    expect(campos.map((c) => c.rotulo)).toEqual(["Cidade", "CNPJ", "Estado", "Nome da empresa", "Segmento"]);
+    expect(campos.every((c) => c.alvo === "empresa")).toBe(true);
   });
 });

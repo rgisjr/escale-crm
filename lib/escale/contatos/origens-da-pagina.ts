@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 
-import { camposDoContatoDoFiltro } from "./filtros";
+import { camposDaEmpresaDoFiltro, camposDoContatoDoFiltro } from "./filtros";
 import { opcoesDoFiltroDasOrigens, type OpcoesDoFiltro } from "./opcoes-do-filtro";
 
 type EtapaLida = {
@@ -61,9 +61,11 @@ export async function origensDaPagina(): Promise<{
   }));
   // FORK ESCALE · Fase 2C: os campos do catálogo do contato que o papel de quem olha enxerga.
   let catalogo = CATALOGO_VAZIO;
+  let catalogoDaEmpresa = CATALOGO_VAZIO;
   try {
     await semearSeVazio(createAdminClient(), activeOrg.orgId);
     catalogo = catalogoVisivel(await lerCatalogo(supabase, activeOrg.orgId, "contato"), activeOrg.role as Role);
+    catalogoDaEmpresa = catalogoVisivel(await lerCatalogo(supabase, activeOrg.orgId, "empresa"), activeOrg.role as Role);
   } catch (err) {
     logger.error("contatos.origens-da-pagina.catalogo", { err });
   }
@@ -74,6 +76,7 @@ export async function origensDaPagina(): Promise<{
     opcoesDoFiltro: {
       ...opcoesDoFiltroDasOrigens(lidas),
       camposDoContato: camposDoContatoDoFiltro(catalogo),
+      camposDaEmpresa: camposDaEmpresaDoFiltro(catalogoDaEmpresa),
     },
   };
 }

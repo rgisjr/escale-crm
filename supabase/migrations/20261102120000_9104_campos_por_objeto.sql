@@ -1,4 +1,4 @@
--- manifest: **Campos por objeto (fork Escale, Fase 2C).** Grupos de campos por objeto (`crm_grupos_de_campos`), catálogo do contato e da empresa (`crm_campos_do_crm`, mesma forma de `definicao` da 9006, todo membro lê e só administrador escreve), `grupo_id` e `papel_minimo` no catálogo do negócio, `custom_fields` em `companies`, o tipo `datetime` em `fn_escale_campo_valido`, a semente idempotente `fn_escale_semear_campos_padrao` (definer fechada ao `service_role`: "Informações Gerais" nos três objetos e os quatro campos padrão da empresa), a cópia das chaves já usadas pelos contatos para o catálogo do contato e as ações `alterar_campo` e `limpar_campo` em `crm_acoes_em_massa`.
+-- manifest: **Campos por objeto (fork Escale, Fase 2C).** Grupos de campos por objeto (`crm_grupos_de_campos`), catálogo do contato e da empresa (`crm_campos_do_crm`, mesma forma de `definicao` da 9006, todo membro lê e só administrador escreve), `grupo_id` e `papel_minimo` no catálogo do negócio, o tipo `datetime` em `fn_escale_campo_valido`, a semente idempotente `fn_escale_semear_campos_padrao` (definer fechada ao `service_role`: "Informações Gerais" nos três objetos e os quatro campos padrão da empresa), a cópia das chaves já usadas pelos contatos para o catálogo do contato e as ações `alterar_campo` e `limpar_campo` em `crm_acoes_em_massa`.
 -- 9104: campos por objeto (fork Escale, Frente B).
 
 -- ── 1. Grupos de campos ──────────────────────────────────────────────────────
@@ -75,7 +75,6 @@ create table if not exists public.crm_campos_do_crm (
   constraint crm_campos_do_crm_chave check (chave ~ '^[a-z][a-z0-9_]{0,39}$' and chave not like 'link\_%'),
   constraint crm_campos_do_crm_definicao check (
     jsonb_typeof(definicao) = 'object' and not (definicao ?| array['key', 'obrigatorio_em'])
-    and public.fn_escale_campo_valido(definicao || jsonb_build_object('key', chave))
   ),
   constraint crm_campos_do_crm_tamanho check (octet_length(definicao::text) <= 262144),
   constraint crm_campos_do_crm_papel check (papel_minimo is null or papel_minimo in ('agent', 'manager', 'admin'))
@@ -105,13 +104,23 @@ create trigger trg_crm_campos_do_crm_updated_at
   before update on public.crm_campos_do_crm for each row execute function public.fn_set_updated_at();
 comment on table public.crm_campos_do_crm is 'Fork Escale (2C): campos personalizados do contato e da empresa, da organização, em grupos (o negócio continua em crm_campos_do_negocio).';
 
+-- A definição é validada aqui, e não num CHECK: o CHECK rodaria com os privilégios de
+-- quem escreve e `fn_escale_campo_valido` não é executável pela sessão (como na 9006).
 -- Um campo padrão não muda de chave, de objeto nem é apagado.
 create or replace function public.fn_escale_campos_do_crm_protege_padrao()
 returns trigger
 language plpgsql
+security definer
 set search_path = public, pg_temp
 as $$
 begin
+  if tg_op <> 'DELETE'
+     and not public.fn_escale_campo_valido(new.definicao || jsonb_build_object('key', new.chave)) then
+    raise exception 'definição inválida para o campo do CRM (%)', new.chave using errcode = '23514';
+  end if;
+  if tg_op = 'INSERT' then
+    return new;
+  end if;
   if tg_op = 'DELETE' then
     if old.padrao then
       raise exception 'campo_padrao_nao_se_exclui' using errcode = '22023';
@@ -129,7 +138,8 @@ end;
 $$;
 drop trigger if exists trg_crm_campos_do_crm_protege_padrao on public.crm_campos_do_crm;
 create trigger trg_crm_campos_do_crm_protege_padrao
-  before update or delete on public.crm_campos_do_crm for each row execute function public.fn_escale_campos_do_crm_protege_padrao();
+  before insert or update or delete on public.crm_campos_do_crm for each row execute function public.fn_escale_campos_do_crm_protege_padrao();
+revoke all on function public.fn_escale_campos_do_crm_protege_padrao() from public, anon, authenticated;
 
 -- O grupo padrão não é apagado nem muda de chave.
 create or replace function public.fn_escale_grupos_de_campos_protege_padrao()
@@ -160,13 +170,7 @@ alter table public.crm_campos_do_negocio add constraint crm_campos_do_negocio_pa
   check (papel_minimo is null or papel_minimo in ('agent', 'manager', 'admin'));
 create index if not exists idx_crm_campos_do_negocio_grupo on public.crm_campos_do_negocio (grupo_id);
 
--- ── 5. A empresa guarda valores ──────────────────────────────────────────────
-alter table public.companies add column if not exists custom_fields jsonb not null default '{}'::jsonb;
-alter table public.companies drop constraint if exists companies_custom_fields_object;
-alter table public.companies add constraint companies_custom_fields_object
-  check (jsonb_typeof(custom_fields) = 'object' and octet_length(custom_fields::text) <= 32768);
-
--- ── 6. Semente idempotente ───────────────────────────────────────────────────
+-- ── 5. Semente idempotente ───────────────────────────────────────────────────
 create or replace function public.fn_escale_semear_campos_padrao(p_org uuid)
 returns void
 language plpgsql
@@ -213,7 +217,7 @@ begin
 end
 $m$;
 
--- ── 7. Cópia das chaves do contato (Q3): mesma chave e definição do negócio ──
+-- ── 6. Cópia das chaves do contato (Q3): mesma chave e definição do negócio ──
 insert into public.crm_campos_do_crm (organization_id, objeto, chave, definicao, grupo_id, posicao, padrao)
 select distinct on (n.organization_id, n.chave)
        n.organization_id, 'contato', n.chave, n.definicao, g.id, n.posicao, false
@@ -230,7 +234,7 @@ select distinct on (n.organization_id, n.chave)
    )
 on conflict (organization_id, objeto, chave) do nothing;
 
--- ── 8. Ações do lote (2B N12): alterar e limpar campo ────────────────────────
+-- ── 7. Ações do lote (2B N12): alterar e limpar campo ────────────────────────
 alter table public.crm_acoes_em_massa drop constraint if exists crm_acoes_em_massa_acao_valida;
 alter table public.crm_acoes_em_massa add constraint crm_acoes_em_massa_acao_valida
   check (acao in ('criar_negocios', 'incluir_tag', 'remover_tag', 'exportar', 'excluir', 'alterar_campo', 'limpar_campo'));

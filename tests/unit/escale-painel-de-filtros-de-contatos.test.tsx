@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { PainelDeFiltros } from "@/components/escale/contatos/filtros/PainelDeFiltros";
 import {
+  camposDaEmpresaDoFiltro,
   camposDoContatoDoFiltro,
   type FiltrosDeContatos,
   type SecaoDoFiltro,
@@ -38,6 +39,12 @@ const OPCOES: OpcoesDoFiltro = {
     grupos: [],
     campos: [
       { id: "c1", objeto: "contato", chave: "renda", definicao: { label: "Renda", type: "currency" }, grupo_id: null, papel_minimo: null, posicao: 0, padrao: false },
+    ],
+  }),
+  camposDaEmpresa: camposDaEmpresaDoFiltro({
+    grupos: [],
+    campos: [
+      { id: "e1", objeto: "empresa", chave: "segmento", definicao: { label: "Segmento", type: "text" }, grupo_id: null, papel_minimo: null, posicao: 0, padrao: true },
     ],
   }),
 };
@@ -169,13 +176,13 @@ describe("PainelDeFiltros (prints 2b-05 a 2b-23)", () => {
     });
   });
 
-  it("Campos › Contato, Negócio e Empresa (em breve); o grupo abre; 'Contém' já vem marcado; valor e Aplicar", () => {
+  it("Campos › Contato, Negócio e Empresa; o grupo abre; 'Contém' já vem marcado; valor e Aplicar", () => {
     const espia = vi.fn();
     render(<Painel espia={espia} />);
     abrir("Campos");
     fireEvent.click(screen.getByRole("button", { name: "Adicionar condição" }));
     const campos = seletor("Escolher campo");
-    expect(within(campos).getByRole("button", { name: "Empresa" })).toBeDisabled();
+    expect(within(campos).getByRole("button", { name: "Empresa" })).not.toBeDisabled();
     expect(within(campos).queryByRole("button", { name: "Nome" })).not.toBeInTheDocument();
     fireEvent.click(within(campos).getByRole("button", { name: "Contato" }));
     fireEvent.click(within(campos).getByRole("button", { name: "Nome" }));
@@ -199,6 +206,16 @@ describe("PainelDeFiltros (prints 2b-05 a 2b-23)", () => {
     });
     expect(screen.getByText("Grupo 1")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Adicionar grupo" })).toBeInTheDocument();
+  });
+
+  it("Campos › o grupo Empresa lista os campos da empresa (2D)", () => {
+    render(<Painel espia={vi.fn()} />);
+    abrir("Campos");
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar condição" }));
+    const campos = seletor("Escolher campo");
+    fireEvent.click(within(campos).getByRole("button", { name: "Empresa" }));
+    expect(within(campos).getByRole("button", { name: "Nome da empresa" })).toBeInTheDocument();
+    expect(within(campos).getByRole("button", { name: "Segmento" })).toBeInTheDocument();
   });
 
   it("Campos › o grupo Contato lista o campo do catálogo (Renda) com os operadores de número (2C)", () => {

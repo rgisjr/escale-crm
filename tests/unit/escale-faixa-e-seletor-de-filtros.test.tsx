@@ -29,6 +29,7 @@ const OPCOES: OpcoesDoFiltro = {
   motivos: [],
   camposDoNegocio: [],
   camposDoContato: [],
+  camposDaEmpresa: [],
 };
 const envolver = (ui: ReactNode) =>
   render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);

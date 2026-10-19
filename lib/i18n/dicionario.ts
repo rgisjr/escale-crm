@@ -10025,6 +10025,15 @@ export const DICIONARIO: Traducoes = {
   "O campo foi alterado nos contatos.": { es: "El campo fue cambiado en los contactos." },
   "O campo foi limpo nos contatos.": { es: "El campo fue limpiado en los contactos." },
   "Contatos com o campo alterado estão na fila de atualização. O processo pode levar alguns segundos.": { es: "Los contactos con el campo cambiado están en la cola de actualización. El proceso puede tardar unos segundos." },
+  // ─── FORK ESCALE · Fase 2D (PR A): empresas (rotas e lista de contatos) ───
+  "Informe o nome da empresa e o contato.": { es: "Informa el nombre de la empresa y el contacto." },
+  "CNPJ inválido.": { es: "CNPJ inválido." },
+  "CNPJ já cadastrado em outra empresa.": { es: "CNPJ ya registrado en otra empresa." },
+  "Empresa não encontrada": { es: "Empresa no encontrada" },
+  "Este contato não está nesta empresa.": { es: "Este contacto no está en esta empresa." },
+  "Selecione o novo contato principal.": { es: "Selecciona el nuevo contacto principal." },
+  "Selecione um contato.": { es: "Selecciona un contacto." },
+  "Escolha a empresa ou digite um nome novo": { es: "Elige la empresa o escribe un nombre nuevo" },
   // ─── FORK ESCALE · Fase 1G (PR A): a ficha do negócio ───
   "Arquivos": { es: "Archivos" },
   "Caminho do negócio": { es: "Ruta del negocio" },

@@ -22,7 +22,7 @@ import {
  * separam em pessoas, agentes de IA, "sem dono" e "com dono".
  */
 export type CondicaoCompilada = {
-  alvo: "contato" | "negocio";
+  alvo: "contato" | "negocio" | "empresa";
   chave: string;
   tipo: TipoDeCampo;
   op: Operador;
