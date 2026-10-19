@@ -18,7 +18,7 @@ const CABECA =
   "h-10 px-4 text-[11px] font-semibold uppercase tracking-[.08em] text-casca-sobrelinha";
 
 /** "CONFIGURAÇÕES › SETORES" (c38, c87; E1). */
-export function TelaSetores() {
+export function TelaSetores({ embutida = false }: { embutida?: boolean }) {
   const t = useT();
   const { data = [], isLoading } = useSetores();
   const remover = useRemoverSetor();
@@ -30,12 +30,14 @@ export function TelaSetores() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white" data-testid="tela-setores">
-      <CabecaDaConfiguracao
-        migalhas={[
-          { rotulo: t("Configurações"), href: "/app/inbox/configuracoes" },
-          { rotulo: t("Setores") },
-        ]}
-      />
+      {!embutida ? (
+        <CabecaDaConfiguracao
+          migalhas={[
+            { rotulo: t("Configurações"), href: "/app/inbox/configuracoes" },
+            { rotulo: t("Setores") },
+          ]}
+        />
+      ) : null}
       <div className="flex h-14 shrink-0 items-center gap-3 px-6">
         <span className="flex h-8 w-[280px] items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3">
           <input
