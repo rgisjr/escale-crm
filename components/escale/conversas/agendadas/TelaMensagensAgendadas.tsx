@@ -9,6 +9,7 @@ import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useMensagensAgendadas, useRemoverAgendada } from "@/hooks/escale/useMensagensAgendadas";
+import { CabecaDaConfiguracao } from "@/components/escale/conversas/configuracoes/CabecaDaConfiguracao";
 import { useT } from "@/hooks/i18n/useT";
 import { AGENDADAS_POR_PAGINA } from "@/lib/escale/conversas/agendadas";
 import { CalendarDays, ChevronDown, Search, X } from "@/lib/ui/icons-da-casca";
@@ -93,24 +94,12 @@ export function TelaMensagensAgendadas() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white" data-testid="tela-mensagens-agendadas">
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-casca-borda px-6">
-        <nav
-          className="flex items-center gap-2 text-[13px] text-casca-suave"
-          aria-label={t("Você está em")}
-        >
-          <span>{t("Configurações")}</span>
-          <span>›</span>
-          <span className="font-semibold text-casca-texto">{t("Mensagens agendadas")}</span>
-        </nav>
-        <span className="flex-1" />
-        <Link
-          href="/app/inbox"
-          aria-label={t("Fechar")}
-          className="grid size-8 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
-        >
-          <X size={18} aria-hidden />
-        </Link>
-      </header>
+      <CabecaDaConfiguracao
+        migalhas={[
+          { rotulo: t("Configurações"), href: "/app/inbox/configuracoes" },
+          { rotulo: t("Mensagens agendadas") },
+        ]}
+      />
       <div className="flex h-10 shrink-0 items-center gap-2 px-6 py-6">
         <div className="flex h-8 w-[260px] items-center gap-2 rounded-casca-gatilho border border-casca-borda bg-casca-busca px-2">
           <Search size={14} aria-hidden className="text-casca-suave" />

@@ -41,13 +41,47 @@ export {
 export type { LucideIcon } from "lucide-react";
 
 // V2 — topo da casca: ✦, menu da conta, Novo +, botão de conversas
-export { Bell, FileText, LogOut, Megaphone, MessageCircleMore, ShieldCheck, Sparkle, UserPlus, X } from "lucide-react";
+export {
+  Bell,
+  FileText,
+  LogOut,
+  Megaphone,
+  MessageCircleMore,
+  ShieldCheck,
+  Sparkle,
+  UserPlus,
+  X,
+} from "lucide-react";
 
 // FORK ESCALE · casca V3 — painel esquerdo de Negócios (menus, cabeçalhos, ícones de grupo, janelas)
-export { ChevronUp, ListChecks, Pencil, Eye, EyeOff, Archive, Trash2, LayoutPanelLeft, SquareDashedKanban, Funnel, Users, Building2, Store, Bookmark, Save, FolderPlus } from "lucide-react";
+export {
+  ChevronUp,
+  ListChecks,
+  Pencil,
+  Eye,
+  EyeOff,
+  Archive,
+  Trash2,
+  LayoutPanelLeft,
+  SquareDashedKanban,
+  Funnel,
+  Users,
+  Building2,
+  Store,
+  Bookmark,
+  Save,
+  FolderPlus,
+} from "lucide-react";
 
 // Casca V4 (quadro de Negócios): ícones que a V1 ainda não reexportava.
-export { MessageSquare, CheckCheck, User, UserX, ArrowDownUp, SlidersHorizontal } from "lucide-react";
+export {
+  MessageSquare,
+  CheckCheck,
+  User,
+  UserX,
+  ArrowDownUp,
+  SlidersHorizontal,
+} from "lucide-react";
 
 // Fase 1E: Personalizar cards, chips dos campos, Negócio +, Ordenar e Recentes.
 export { ArrowUpDown, Briefcase, Calendar, Copy, DollarSign, Pin, PinOff, Tag } from "lucide-react";
@@ -56,7 +90,15 @@ export { ArrowUpDown, Briefcase, Calendar, Copy, DollarSign, Pin, PinOff, Tag } 
 export { CircleMinus, CircleX, CloudUpload, Columns2, Flag, Upload } from "lucide-react";
 
 // Fase 1F (configurações da origem): ícones do menu interno, do alerta e das regras.
-export { Shuffle, CircleSlash, ReceiptText, CirclePlus, TriangleAlert, ArrowRight, ClipboardList } from "lucide-react";
+export {
+  Shuffle,
+  CircleSlash,
+  ReceiptText,
+  CirclePlus,
+  TriangleAlert,
+  ArrowRight,
+  ClipboardList,
+} from "lucide-react";
 
 // Fase 2A (lista de contatos)
 export { AtSign, ChevronsUpDown, GripVertical } from "lucide-react";
@@ -106,3 +148,17 @@ export { AlarmClock, Camera, CirclePause, Hourglass, Lightbulb, MailOpen, Mic, P
 
 // Fase 2D (empresas): a estrela do contato principal.
 export { Star } from "lucide-react";
+
+// Fase 3C (setores, permissões e configurações): hub, canais, usuários e respostas rápidas.
+export {
+  AlertTriangle,
+  BadgeCheck,
+  BarChart3,
+  Braces,
+  Gift,
+  MessageSquareHeart,
+  QrCode,
+  SmartphoneNfc,
+  Unplug,
+  PlusCircle,
+} from "lucide-react";
