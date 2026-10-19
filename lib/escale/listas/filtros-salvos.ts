@@ -7,6 +7,11 @@ import {
   filtrosDeContatosSchema,
   type FiltrosDeContatos,
 } from "@/lib/escale/contatos/filtros";
+import {
+  enxugarFiltrosDoPainel,
+  filtrosDaFilaSchema,
+  type FiltrosDoPainel,
+} from "@/lib/escale/conversas/filtros-da-fila";
 
 /**
  * OS FILTROS SALVOS DAS LISTAS (fork Escale, Fase 2B; migration 9102; Clint
@@ -15,28 +20,40 @@ import {
  * pessoa (sem caixa), o compartilhado visível a toda a organização, só quem
  * criou escreve (a RLS garante; a rota só dá a mensagem certa antes).
  */
-export const LISTAS_COM_FILTROS = ["contatos"] as const;
+export const LISTAS_COM_FILTROS = ["contatos", "conversas"] as const;
 export type ListaComFiltros = (typeof LISTAS_COM_FILTROS)[number];
 export const listaSchema = z.enum(LISTAS_COM_FILTROS);
 export const FILTROS_DA_LISTA_MAX = 20;
 export const NOME_DO_FILTRO_MAX = 60;
 
-export type FiltroDaLista = {
+/** FORK ESCALE · Fase 3D: cada lista tem a forma dos seus critérios (N11). */
+type CriteriosPorLista = { contatos: FiltrosDeContatos; conversas: FiltrosDoPainel };
+export type CriteriosDaLista<L extends ListaComFiltros> = CriteriosPorLista[L];
+
+export type FiltroDaLista<L extends ListaComFiltros = "contatos"> = {
   id: string;
   nome: string;
   compartilhado: boolean;
   meu: boolean;
-  criterios: FiltrosDeContatos;
+  criterios: CriteriosDaLista<L>;
 };
 
-export const novoFiltroSchema = z
-  .object({
-    lista: listaSchema,
-    nome: z.string().max(200),
-    compartilhado: z.boolean(),
-    criterios: filtrosDeContatosSchema,
-  })
-  .strict();
+const baseDoNovo = { nome: z.string().max(200), compartilhado: z.boolean() };
+export const novoFiltroSchema = z.discriminatedUnion("lista", [
+  z
+    .object({ lista: z.literal("contatos"), ...baseDoNovo, criterios: filtrosDeContatosSchema })
+    .strict(),
+  z
+    .object({ lista: z.literal("conversas"), ...baseDoNovo, criterios: filtrosDaFilaSchema })
+    .strict(),
+]);
+export type NovoFiltroDaLista = z.infer<typeof novoFiltroSchema>;
+
+export function enxugarCriterios(novo: NovoFiltroDaLista): CriteriosDaLista<ListaComFiltros> {
+  return novo.lista === "conversas"
+    ? enxugarFiltrosDoPainel(novo.criterios)
+    : enxugarFiltros(novo.criterios);
+}
 
 export const mudarFiltroSchema = z
   .object({ nome: z.string().max(200).optional(), compartilhado: z.boolean().optional() })
@@ -66,26 +83,39 @@ type Linha = {
 };
 
 /** Critério que não vale mais (o modelo mudou) vira filtro vazio, em vez de quebrar a lista. */
-export function filtrosDasLinhas(linhas: readonly Linha[], userId: string): FiltroDaLista[] {
-  return linhas.map((l) => {
-    const lido = filtrosDeContatosSchema.safeParse(l.criterios);
-    return {
-      id: l.id,
-      nome: l.nome,
-      compartilhado: l.compartilhado,
-      meu: l.user_id === userId,
-      criterios: lido.success ? enxugarFiltros(lido.data) : {},
-    };
-  });
+export function filtrosDasLinhas<L extends ListaComFiltros = "contatos">(
+  linhas: readonly Linha[],
+  userId: string,
+  lista: L = "contatos" as L,
+): FiltroDaLista<L>[] {
+  return linhas.map((l) => ({
+    id: l.id,
+    nome: l.nome,
+    compartilhado: l.compartilhado,
+    meu: l.user_id === userId,
+    criterios: criteriosDaLinha(lista, l.criterios) as CriteriosDaLista<L>,
+  }));
+}
+
+function criteriosDaLinha(
+  lista: ListaComFiltros,
+  bruto: unknown,
+): CriteriosDaLista<ListaComFiltros> {
+  if (lista === "conversas") {
+    const lido = filtrosDaFilaSchema.safeParse(bruto);
+    return lido.success ? enxugarFiltrosDoPainel(lido.data) : {};
+  }
+  const lido = filtrosDeContatosSchema.safeParse(bruto);
+  return lido.success ? enxugarFiltros(lido.data) : {};
 }
 
 /** Lança o erro do banco para a rota tratar. */
-export async function lerFiltrosDaLista(
+export async function lerFiltrosDaLista<L extends ListaComFiltros>(
   supabase: SupabaseClient,
   orgId: string,
   userId: string,
-  lista: ListaComFiltros,
-): Promise<FiltroDaLista[]> {
+  lista: L,
+): Promise<FiltroDaLista<L>[]> {
   const { data, error } = await supabase
     .from("crm_filtros_das_listas")
     .select("id, user_id, nome, compartilhado, criterios")
@@ -93,7 +123,7 @@ export async function lerFiltrosDaLista(
     .eq("lista", lista)
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return filtrosDasLinhas((data ?? []) as Linha[], userId);
+  return filtrosDasLinhas((data ?? []) as Linha[], userId, lista);
 }
 
 /** 23505 = nome repetido; o gatilho do limite = o 21º. Outro erro: `null` (a rota trata como inesperado). */

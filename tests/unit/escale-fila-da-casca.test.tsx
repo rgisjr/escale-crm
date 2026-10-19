@@ -19,6 +19,12 @@ vi.mock("@/hooks/escale/usePreferenciasDeConversas", () => ({
   useGravarPreferencia: () => ({ mutate: gravar, isPending: false }),
 }));
 vi.mock("@/components/tags/CoresDasEtiquetas", () => ({ useCorDaEtiqueta: () => null }));
+vi.mock("@/hooks/escale/useFiltrosDaLista", () => ({
+  useFiltrosDaLista: () => ({ data: [] }),
+  useCriarFiltroDaLista: () => ({ mutate: vi.fn(), isPending: false }),
+  useExcluirFiltroDaLista: () => ({ mutate: vi.fn() }),
+  useMudarFiltroDaLista: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 
 import { BarraDaFila } from "@/components/escale/conversas/fila/BarraDaFila";
 import { LinhaDaFila } from "@/components/escale/conversas/fila/LinhaDaFila";
@@ -61,8 +67,12 @@ const barra = (extra: Partial<Parameters<typeof BarraDaFila>[0]> = {}) => (
   <BarraDaFila
     busca=""
     aoBuscar={vi.fn()}
-    preset="todos"
-    aoMudarPreset={vi.fn()}
+    painel={{}}
+    aoMudarPainel={vi.fn()}
+    filtrosAbertos={false}
+    aoAlternarFiltros={vi.fn()}
+    aoCriarFiltro={vi.fn()}
+    temGrupos={false}
     ordem="interacao"
     aoMudarOrdem={vi.fn()}
     espiao={false}
@@ -70,43 +80,47 @@ const barra = (extra: Partial<Parameters<typeof BarraDaFila>[0]> = {}) => (
     personalizando={false}
     aoPersonalizar={vi.fn()}
     visualizacaoForaDoPadrao={false}
+    podeSelecionar
+    aoSelecionar={vi.fn()}
     {...extra}
   />
 );
 
 describe("BarraDaFila (c01, c31, c43, c22)", () => {
-  it("busca, o botão do preset, o funil (Em breve), a ordem e o ⋮", async () => {
+  it("busca, o botão do preset, o funil, a ordem e o ⋮", async () => {
     const u = userEvent.setup({ pointerEventsCheck: 0 });
-    const aoMudarPreset = vi.fn();
-    envolver(barra({ aoMudarPreset }));
+    const aoMudarPainel = vi.fn();
+    const aoCriarFiltro = vi.fn();
+    const aoAlternarFiltros = vi.fn();
+    envolver(barra({ aoMudarPainel, aoCriarFiltro, aoAlternarFiltros }));
     expect(screen.getByPlaceholderText("Pesquisar")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Filtros" })).toHaveAttribute("title", "Em breve");
+    await u.click(screen.getByRole("button", { name: "Filtros" }));
+    expect(aoAlternarFiltros).toHaveBeenCalled();
     await u.click(screen.getByRole("button", { name: "Todos" }));
     const menu = screen.getByRole("menu");
     expect(within(menu).getByText("Status")).toBeInTheDocument();
     expect(within(menu).getByText("Salvos")).toBeInTheDocument();
     expect(within(menu).getByText("99+")).toBeInTheDocument();
-    expect(within(menu).getByRole("menuitem", { name: /Criar filtro/ })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-    await u.click(within(menu).getByRole("menuitem", { name: /Em espera/ }));
-    expect(aoMudarPreset).toHaveBeenCalledWith("em_espera");
+    await u.click(within(menu).getByRole("menuitem", { name: /Criar filtro/ }));
+    expect(aoCriarFiltro).toHaveBeenCalled();
+    await u.click(screen.getByRole("button", { name: "Todos" }));
+    await u.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: /Em espera/ }));
+    expect(aoMudarPainel).toHaveBeenCalledWith({ conversas: { status: ["em_espera"] } });
   });
 
   it("a ordem e o ⋮ com modo espião e Personalizar visualização (ponto roxo fora do padrão)", async () => {
     const u = userEvent.setup({ pointerEventsCheck: 0 });
     const aoMudarOrdem = vi.fn();
     const aoMudarEspiao = vi.fn();
-    envolver(barra({ aoMudarOrdem, aoMudarEspiao, visualizacaoForaDoPadrao: true }));
+    const aoSelecionar = vi.fn();
+    envolver(barra({ aoMudarOrdem, aoMudarEspiao, aoSelecionar, visualizacaoForaDoPadrao: true }));
     await u.click(screen.getByRole("button", { name: "Ordenar por" }));
     await u.click(screen.getByRole("menuitem", { name: "Esperando mais tempo" }));
     expect(aoMudarOrdem).toHaveBeenCalledWith("espera");
     await u.click(screen.getByRole("button", { name: "Mais" }));
-    expect(screen.getByRole("menuitem", { name: "Selecionar" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    await u.click(screen.getByRole("menuitem", { name: "Selecionar" }));
+    expect(aoSelecionar).toHaveBeenCalled();
+    await u.click(screen.getByRole("button", { name: "Mais" }));
     await u.click(screen.getByRole("menuitem", { name: "Ativar modo espião" }));
     expect(aoMudarEspiao).toHaveBeenCalledWith(true);
     await u.click(screen.getByRole("button", { name: "Mais" }));

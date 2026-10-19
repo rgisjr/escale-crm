@@ -15,6 +15,7 @@ export async function paginaDaConfiguracao(tela: ReactNode) {
   if (lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) !== "topo") {
     redirect("/app/inbox");
   }
-  const { origens } = await origensDaPagina();
-  return <ConversasDaCasca configuracao={tela} origens={origens} />;
+  // FORK ESCALE · Fase 3D: o painel de filtros da fila também vale aqui.
+  const { origens, opcoesDoFiltro } = await origensDaPagina();
+  return <ConversasDaCasca configuracao={tela} origens={origens} opcoesDoFiltro={opcoesDoFiltro} />;
 }

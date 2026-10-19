@@ -109,6 +109,9 @@ export { StickyNote, ArrowRightLeft, Target, Glasses, MessagesSquare } from "luc
 // Fase 2B (filtros e ações em massa): a seta do "← Voltar" (seletores de Tags, Campos e Tag em massa).
 export { ArrowLeft } from "lucide-react";
 
+// FORK ESCALE · Fase 3D: salvos, ações em massa e o submenu de tag da fila de Conversas.
+export { RefreshCcw, ArrowLeftRight, UsersRound, Tags } from "lucide-react";
+
 // Fase 1H (ficha do negócio, abas): spinner e check do salvar, nota, arquivos, conversas e histórico.
 export {
   Loader2,

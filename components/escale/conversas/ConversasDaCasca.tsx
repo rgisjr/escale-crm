@@ -1,29 +1,41 @@
 "use client";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { colunasDoCelular } from "@/components/inbox/InboxLayout";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
+import { useAcaoDaFila, useExecutarAcaoDaFila } from "@/hooks/escale/useAcoesEmMassaDaFila";
 import { useFilaDeConversas } from "@/hooks/escale/useFilaDeConversas";
 import { useModoEspiao } from "@/hooks/escale/useModoEspiao";
+import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
 import { usePreferenciasDeConversas } from "@/hooks/escale/usePreferenciasDeConversas";
+import { useTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { useT } from "@/hooks/i18n/useT";
 import { isNotFound, useConversation } from "@/hooks/inbox/useConversation";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import { useMarkAsRead } from "@/hooks/inbox/useMarkAsRead";
 import { OpenConversationProvider } from "@/hooks/notifications/OpenConversationContext";
 import { ORDEM_PADRAO, PARAM_ORDEM, ordemDaUrl, type Ordem } from "@/lib/escale/conversas/ordem";
+import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
+import { SEM_SELECAO, totalSelecionado, type Selecao } from "@/lib/escale/contatos/selecao";
 import {
-  PARAM_PRESET,
-  PRESET_PADRAO,
-  filtrosDoPreset,
-  presetDaUrl,
-  type FiltrosDaFila,
-  type Preset,
-} from "@/lib/escale/conversas/presets";
+  acaoRodando,
+  alvoDaSelecaoDaFila,
+  type PedidoDaFila,
+} from "@/lib/escale/conversas/acoes-em-massa-da-fila";
+import {
+  PARAM_DO_PAINEL,
+  painelDaUrl,
+  paramsDoPainel,
+  temCriterios,
+  type FiltrosDoPainel,
+} from "@/lib/escale/conversas/filtros-da-fila";
+import { PARAM_PRESET } from "@/lib/escale/conversas/presets";
 import type { AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
 import type { OrigemParaCriar } from "@/components/escale/contatos/CamposDaOportunidade";
 import { ehVisualizacaoPadrao } from "@/lib/escale/conversas/visualizacao";
@@ -37,6 +49,10 @@ import { NovaConversa } from "./centro/NovaConversa";
 import { BarraDaFila } from "./fila/BarraDaFila";
 import { ListaDaFila } from "./fila/ListaDaFila";
 import { PainelPersonalizarVisualizacao } from "./fila/PainelPersonalizarVisualizacao";
+import { BalaoSalvarFiltro } from "./filtros/BalaoSalvarFiltro";
+import { PainelDeFiltrosDaFila } from "./filtros/PainelDeFiltrosDaFila";
+import { CentroDeAcoesEmMassa, type AcaoEscolhida } from "./massa/CentroDeAcoesEmMassa";
+import { JanelaDaAcaoEmMassa } from "./massa/JanelaDaAcaoEmMassa";
 import { PainelDoContato } from "./painel/PainelDoContato";
 import { TopoDasConversas } from "./TopoDasConversas";
 
@@ -55,11 +71,14 @@ export function ConversasDaCasca({
   initialSelectedId = null,
   rascunho = null,
   origens = [],
+  opcoesDoFiltro = OPCOES_VAZIAS,
   configuracao,
 }: {
   initialSelectedId?: string | null;
   rascunho?: AvisoDeRascunho | null;
   origens?: OrigemParaCriar[];
+  /** FORK ESCALE · Fase 3D: as origens, etapas e motivos do painel de filtros. */
+  opcoesDoFiltro?: OpcoesDoFiltro;
   /** FORK ESCALE · Fase 3C: uma tela de configuração no lugar do centro e do painel (a fila fica). */
   configuracao?: ReactNode;
 }) {
@@ -70,7 +89,8 @@ export function ConversasDaCasca({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const preset = presetDaUrl(searchParams.get(PARAM_PRESET));
+  const painel = useMemo(() => painelDaUrl(searchParams), [searchParams]);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const ordem = ordemDaUrl(searchParams.get(PARAM_ORDEM));
   const idNaUrl = searchParams.get("id");
   const [busca, setBusca] = useState("");
@@ -98,25 +118,84 @@ export function ConversasDaCasca({
     },
     [pathname, router, searchParams],
   );
-  const mudarPreset = useCallback(
-    (p: Preset) => mudarNaUrl(PARAM_PRESET, p, PRESET_PADRAO),
-    [mudarNaUrl],
+  const mudarPainel = useCallback(
+    (f: FiltrosDoPainel) => {
+      const { v, f: texto } = paramsDoPainel(f);
+      const params = new URLSearchParams(searchParams.toString());
+      if (v) params.set(PARAM_PRESET, v);
+      else params.delete(PARAM_PRESET);
+      if (texto) params.set(PARAM_DO_PAINEL, texto);
+      else params.delete(PARAM_DO_PAINEL);
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
   );
   const mudarOrdem = useCallback(
     (o: Ordem) => mudarNaUrl(PARAM_ORDEM, o, ORDEM_PADRAO),
     [mudarNaUrl],
   );
 
-  const filtros: FiltrosDaFila = useMemo(
-    () => ({
-      ...filtrosDoPreset(preset),
-      ...(ordem === "espera" ? { ordem } : {}),
-      ...(buscaValeConsulta(busca) ? { search: busca } : {}),
-    }),
-    [preset, ordem, busca],
+  const consulta = useMemo(
+    () => ({ painel, ordem, ...(buscaValeConsulta(busca) ? { busca } : {}) }),
+    [painel, ordem, busca],
   );
+  const fila = useFilaDeConversas(consulta, orgId);
+  const temGrupos =
+    (useTotalDaFila({ painel: { grupos: "grupos" }, ordem: "interacao" }, !!orgId).data ?? 0) > 0;
+  const permissoes = useMinhasPermissoes();
+  const podeSelecionar = permissoes.CHAT_BULK_ACTIONS === true;
+  const qc = useQueryClient();
+  const [selecao, setSelecao] = useState<Selecao | null>(null);
+  const [acaoEscolhida, setAcaoEscolhida] = useState<AcaoEscolhida | null>(null);
+  const [acaoAcompanhada, setAcaoAcompanhada] = useState<string | null>(null);
+  const total = useTotalDaFila(consulta, selecao !== null).data ?? null;
+  const executar = useExecutarAcaoDaFila();
+  const acompanhada = useAcaoDaFila(acaoAcompanhada);
 
-  const fila = useFilaDeConversas(filtros, orgId);
+  // N15: o fim da ação em segundo plano avisa e atualiza a fila.
+  useEffect(() => {
+    const a = acompanhada.data;
+    if (!a || acaoRodando(a.status)) return;
+    setAcaoAcompanhada(null);
+    void qc.invalidateQueries({ queryKey: ["conversations"] });
+    if (a.status === "concluida") toast.success(t("A ação em massa foi realizada com sucesso!"));
+    else toast.error(t("Ocorreu um erro ao executar a ação em massa!"));
+  }, [acompanhada.data, qc, t]);
+
+  const sairDaSelecao = useCallback(() => {
+    setSelecao(null);
+    setAcaoEscolhida(null);
+  }, []);
+
+  function rodarAcao(parametros: Record<string, unknown>) {
+    if (!selecao || !acaoEscolhida) return;
+    const pedido = {
+      acao: acaoEscolhida,
+      alvo: alvoDaSelecaoDaFila(selecao, { painel, busca: consulta.busca }),
+      parametros,
+    } as PedidoDaFila;
+    executar.mutate(pedido, {
+      onSuccess: (r) => {
+        void qc.invalidateQueries({ queryKey: ["conversations"] });
+        if (r.status === "concluida") {
+          toast.success(t("A ação em massa foi realizada com sucesso!"));
+        } else {
+          toast.info(
+            t(
+              "Essa ação em massa pode demorar alguns segundos para ser completada e refletir os resultados da pesquisa.",
+            ),
+          );
+          setAcaoAcompanhada(r.id);
+        }
+        sairDaSelecao();
+      },
+      onError: (e) =>
+        toast.error(
+          e instanceof Error ? e.message : t("Ocorreu um erro ao executar a ação em massa!"),
+        ),
+    });
+  }
   const itens = useMemo(
     () => (fila.data?.pages.flatMap((p) => p.data) ?? []) as ConversationWithContact[],
     [fila.data],
@@ -196,18 +275,37 @@ export function ConversasDaCasca({
               <BarraDaFila
                 busca={busca}
                 aoBuscar={setBusca}
-                preset={preset}
-                aoMudarPreset={mudarPreset}
+                painel={painel}
+                aoMudarPainel={mudarPainel}
+                filtrosAbertos={filtrosAbertos}
+                aoAlternarFiltros={() => {
+                  setPersonalizando(false);
+                  setFiltrosAbertos((v) => !v);
+                }}
+                aoCriarFiltro={() => {
+                  setPersonalizando(false);
+                  setFiltrosAbertos(true);
+                }}
+                temGrupos={temGrupos}
                 ordem={ordem}
                 aoMudarOrdem={mudarOrdem}
                 espiao={espiao}
                 aoMudarEspiao={mudarEspiao}
                 personalizando={personalizando}
-                aoPersonalizar={() => setPersonalizando((v) => !v)}
+                aoPersonalizar={() => {
+                  setFiltrosAbertos(false);
+                  setPersonalizando((v) => !v);
+                }}
                 visualizacaoForaDoPadrao={
                   preferencias.data.visualizacao !== undefined &&
                   !ehVisualizacaoPadrao(preferencias.data.visualizacao)
                 }
+                podeSelecionar={podeSelecionar}
+                aoSelecionar={() => {
+                  setFiltrosAbertos(false);
+                  setPersonalizando(false);
+                  setSelecao(SEM_SELECAO);
+                }}
               />
               <div className="min-h-0 flex-1 overflow-hidden">
                 <ListaDaFila
@@ -217,9 +315,13 @@ export function ConversasDaCasca({
                   selectedId={selectedId}
                   aoSelecionar={selecionar}
                   aoSoltarFixada={() => selecionar(null)}
-                  temFiltro={preset !== PRESET_PADRAO || buscaValeConsulta(busca)}
+                  temFiltro={temCriterios(painel) || buscaValeConsulta(busca)}
                   aoIniciar={abrirNova}
                   visualizacao={preferencias.data.visualizacao}
+                  selecao={selecao}
+                  aoMudarSelecao={setSelecao}
+                  total={total}
+                  aoSairDaSelecao={sairDaSelecao}
                 />
               </div>
             </div>
@@ -243,8 +345,24 @@ export function ConversasDaCasca({
                       aoFechar={() => setPersonalizando(false)}
                     />
                   ) : null}
+                  {filtrosAbertos ? (
+                    <PainelDeFiltrosDaFila
+                      painel={painel}
+                      aoMudar={mudarPainel}
+                      aoFechar={() => setFiltrosAbertos(false)}
+                      opcoes={opcoesDoFiltro}
+                      temGrupos={temGrupos}
+                      cabecalho={<BalaoSalvarFiltro painel={painel} />}
+                    />
+                  ) : null}
                   <div className="min-h-0 flex-1">
-                    {modoDoCentro === "conversa" && conversa ? (
+                    {selecao ? (
+                      <CentroDeAcoesEmMassa
+                        selecionadas={totalSelecionado(selecao, total ?? itens.length)}
+                        aoEscolher={setAcaoEscolhida}
+                        aoSair={sairDaSelecao}
+                      />
+                    ) : modoDoCentro === "conversa" && conversa ? (
                       <ConversaAberta
                         conversa={conversa}
                         rascunho={rascunho}
@@ -267,6 +385,13 @@ export function ConversasDaCasca({
                     )}
                   </div>
                 </div>
+
+                <JanelaDaAcaoEmMassa
+                  acao={acaoEscolhida}
+                  aoFechar={() => setAcaoEscolhida(null)}
+                  aoExecutar={rodarAcao}
+                  executando={executar.isPending}
+                />
 
                 <div className="hidden h-full min-h-0 border-l border-casca-borda xl:block">
                   <PainelDoContato

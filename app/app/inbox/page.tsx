@@ -66,12 +66,14 @@ export default async function InboxPage({
   // FORK ESCALE · Fase 3A: com a casca ligada, a tela de Conversas da Clint;
   // sem ela, o Inbox original, intacto (o mesmo encaixe de /app/contacts).
   if (lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo") {
-    const { origens } = await origensDaPagina();
+    // FORK ESCALE · Fase 3D: as origens, etapas e motivos do painel de filtros.
+    const { origens, opcoesDoFiltro } = await origensDaPagina();
     return (
       <ConversasDaCasca
         initialSelectedId={id ?? null}
         rascunho={avisoDeRascunho}
         origens={origens}
+        opcoesDoFiltro={opcoesDoFiltro}
       />
     );
   }

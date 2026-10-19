@@ -171,7 +171,8 @@ const grupoDeTagsSchema = z
   })
   .strict();
 
-const tagsSchema = z
+/** FORK ESCALE · Fase 3D: exportado para a seção Contatos do painel de Conversas reaproveitar a mesma forma. */
+export const tagsSchema = z
   .object({ combinar: z.enum(["e", "ou"]), grupos: z.array(grupoDeTagsSchema).max(GRUPOS_MAX) })
   .strict();
 

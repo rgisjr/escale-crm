@@ -10,9 +10,9 @@ import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
-import { enxugarFiltros } from "@/lib/escale/contatos/filtros";
 import {
   FILTROS_DA_LISTA_MAX,
+  enxugarCriterios,
   falhaDaGravacao,
   lerFiltrosDaLista,
   listaSchema,
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         lista: lido.data.lista,
         nome,
         compartilhado: lido.data.compartilhado,
-        criterios: enxugarFiltros(lido.data.criterios),
+        criterios: enxugarCriterios(lido.data),
       })
       .select("id")
       .single();

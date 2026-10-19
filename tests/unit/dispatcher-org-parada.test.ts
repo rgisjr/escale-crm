@@ -52,6 +52,7 @@ import { lgpdExportHandler } from "@/workers/lgpd-export-worker.handler";
 import { lgpdRedactHandler } from "@/workers/lgpd-redact-worker.handler";
 import { acaoEmMassaHandler } from "@/lib/escale/massa/handler";
 import { importacaoHandler } from "@/lib/escale/importacao/handler";
+import { acaoEmMassaDaFilaHandler } from "@/lib/escale/conversas/massa/handler";
 import { mediaDeriveHandler } from "@/workers/media-derive-worker.handler";
 import { mediaPersistHandler } from "@/workers/media-persist-worker.handler";
 import { ragIndexerHandler } from "@/workers/rag-indexer.handler";
@@ -69,6 +70,7 @@ const RODA: EventHandler[] = [
   acaoEmMassaHandler,
   // FORK ESCALE · Fase 2F: importação, escrita interna da própria organização.
   importacaoHandler,
+  acaoEmMassaDaFilaHandler,
   cobrancaSinalHandler,
   // #2591 — tarefa interna para o dono da carteira: escrita no próprio banco,
   // sem rede, roda com a organização parada (mesma régua do aviso de etapa).

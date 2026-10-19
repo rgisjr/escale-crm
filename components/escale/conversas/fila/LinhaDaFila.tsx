@@ -1,4 +1,5 @@
 "use client";
+import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { ChipDeEtiqueta } from "@/components/tags/ChipDeEtiqueta";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
@@ -41,6 +42,9 @@ export function LinhaDaFila({
   agora,
   agendadas = 0,
   setor,
+  selecionando = false,
+  marcada = false,
+  aoMarcar,
 }: {
   conversa: ConversationWithContact;
   selecionada: boolean;
@@ -53,6 +57,10 @@ export function LinhaDaFila({
   agendadas?: number;
   /** FORK ESCALE · Fase 3C: o setor da conversa (selo da segunda linha). */
   setor?: SetorDaConversa;
+  /** FORK ESCALE · Fase 3D: o modo Selecionar — a caixinha à esquerda e o clique marca a linha. */
+  selecionando?: boolean;
+  marcada?: boolean;
+  aoMarcar?: (marcar: boolean) => void;
 }) {
   const t = useT();
   const nome = rotuloDoContato(conversa.contacts ?? null, t);
@@ -66,14 +74,21 @@ export function LinhaDaFila({
 
   return (
     <div className="relative">
+      {selecionando ? (
+        <span className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2">
+          <CaixaDaCasca marcada={marcada} aoMudar={() => undefined} aria-label={nome} />
+        </span>
+      ) : null}
       <button
         type="button"
-        onClick={() => aoSelecionar(conversa.id)}
+        onClick={() => (selecionando ? aoMarcar?.(!marcada) : aoSelecionar(conversa.id))}
+        aria-pressed={selecionando ? marcada : undefined}
         aria-current={selecionada ? "true" : undefined}
         data-fixada={fixada ? "" : undefined}
         className={cn(
           "group flex w-full items-start gap-3 border-b border-casca-borda px-3 text-left",
           segundaLinha ? "min-h-24 py-3" : "h-[72px] py-3.5",
+          selecionando && "pl-10",
           fixada ? "bg-casca-fixada" : selecionada ? "bg-casca-raia" : "hover:bg-casca-raia",
           selecionada && !fixada && "shadow-[inset_3px_0_0_var(--color-casca-marca)]",
         )}

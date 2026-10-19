@@ -975,6 +975,8 @@ export const AUDIT_ACTIONS = [
   "quick_reply.created",
   "quick_reply.updated",
   "quick_reply.deleted",
+  // FORK ESCALE · Fase 3D: ações em massa da fila de Conversas (migration 9204).
+  "conversations.bulk_requested",
   // FORK ESCALE · Fase 1H: as notas do negócio (migration 9008). O texto da nota nunca vai ao metadata.
   "lead.note_added",
   "lead.note_edited",

@@ -9,17 +9,21 @@ import { cn } from "@/lib/utils";
 
 import { BOTAO_DA_BARRA } from "./MenuDeOrdem";
 
-/** O ⋮ "Mais" (c22, c24, c81): Selecionar (3D), modo espião, Personalizar visualização. */
+/** O ⋮ "Mais" (c22, c24, c81): Selecionar (FORK ESCALE · Fase 3D), modo espião, Personalizar visualização. */
 export function MenuMaisDaFila({
   espiao,
   aoMudarEspiao,
   aoPersonalizar,
   foraDoPadrao,
+  podeSelecionar,
+  aoSelecionar,
 }: {
   espiao: boolean;
   aoMudarEspiao: (v: boolean) => void;
   aoPersonalizar: () => void;
   foraDoPadrao: boolean;
+  podeSelecionar: boolean;
+  aoSelecionar: () => void;
 }) {
   const t = useT();
   return (
@@ -36,9 +40,10 @@ export function MenuMaisDaFila({
           className={cn(CAIXA_DO_MENU, "w-[190px]")}
         >
           <MenuPrimitive.Item
-            disabled
-            title={t("Em breve")}
+            disabled={!podeSelecionar}
+            title={podeSelecionar ? undefined : t("Sem permissão para ações em massa.")}
             className={cn(ITEM_DO_MENU, "h-9 text-[12px]")}
+            onSelect={aoSelecionar}
           >
             <ListChecks size={16} aria-hidden />
             {t("Selecionar")}
