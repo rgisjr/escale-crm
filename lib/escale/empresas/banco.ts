@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { padraoRegexDeBusca } from "@/lib/contacts/busca-regex";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { compilarFiltros } from "@/lib/escale/contatos/compilar-filtros";
 import { filtrosDaConsulta, fusoDaOrganizacao } from "@/lib/escale/contatos/lista";
 
@@ -165,7 +166,7 @@ export async function listarEmpresas(sb: SB, orgId: string, consulta: ConsultaDa
       principal: p
         ? {
             id: String(p.id),
-            nome: String(p.name ?? p.display_name ?? p.phone_number ?? ""),
+            nome: nomeDoContato({ name: p.name as string | null, display_name: p.display_name as string | null }) ?? String(p.phone_number ?? ""),
             telefone: (p.phone_number as string | null) ?? null,
             tem_foto: Boolean(p.avatar_path),
             conversa_id: conversaPorContato.get(String(p.id)) ?? null,
@@ -314,7 +315,7 @@ export async function contatosDaEmpresa(sb: SB, orgId: string, id: string): Prom
       const negocios = negociosPorContato.get(String(c.id)) ?? [];
       return {
         id: String(c.id),
-        nome: String(c.name ?? c.display_name ?? c.phone_number ?? ""),
+        nome: nomeDoContato({ name: c.name as string | null, display_name: c.display_name as string | null }) ?? String(c.phone_number ?? ""),
         telefone: (c.phone_number as string | null) ?? null,
         email: (c.email as string | null) ?? null,
         tags: (c.tags as string[] | null) ?? [],
