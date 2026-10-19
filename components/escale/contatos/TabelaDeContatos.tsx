@@ -138,12 +138,19 @@ export function TabelaDeContatos({
           <td className={`${TD} min-w-[240px]`}>
             <div className="flex items-center gap-3">
               <FotoDaLinha id={linha.id} nome={nome} temFoto={linha.tem_foto} />
-              <Link
-                href={`/app/contacts/${linha.id}`}
-                className="truncate text-[14px] font-medium text-casca-texto hover:underline"
-              >
-                {nome}
-              </Link>
+              <div className="min-w-0">
+                {linha.empresa?.nome ? (
+                  <span className="block truncate text-[11px] leading-tight text-casca-meta">
+                    {linha.empresa.nome}
+                  </span>
+                ) : null}
+                <Link
+                  href={`/app/contacts/${linha.id}`}
+                  className="block truncate text-[14px] font-medium text-casca-texto hover:underline"
+                >
+                  {nome}
+                </Link>
+              </div>
             </div>
           </td>
           {visiveis.map((item) => (

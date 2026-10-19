@@ -10,6 +10,7 @@ import { padraoRegexDeBusca } from "@/lib/contacts/busca-regex";
 import { compilarFiltros } from "@/lib/escale/contatos/compilar-filtros";
 import { filtrosDaConsulta, fusoDaOrganizacao } from "@/lib/escale/contatos/lista";
 
+import { nomeDaEmpresa } from "./nome";
 import { COLUNA_DO_CAMPO_FIXO, type ConsultaDaListaDeEmpresas, type NovaEmpresa, lerCnpj } from "./regras";
 
 type SB = SupabaseClient;
@@ -83,8 +84,7 @@ export interface PaginaDeEmpresas {
   moeda: string;
 }
 
-export const nomeDaEmpresa = (e: { trade_name: string | null; legal_name: string | null }) =>
-  (e.trade_name?.trim() || e.legal_name?.trim() || "").trim();
+export { nomeDaEmpresa };
 
 export async function moedaDaOrganizacaoDe(sb: SB, orgId: string): Promise<string> {
   const { data } = await sb.from("organizations").select("currency").eq("id", orgId).maybeSingle();

@@ -3,7 +3,12 @@ import { CANONICAL_LOST_REASONS, rotuloDoMotivoDePerda } from "@/lib/schemas/lea
 
 import { CATALOGO_VAZIO } from "@/lib/escale/campos/regras";
 
-import { camposDoContatoDoFiltro, camposDoNegocioDoFiltro, type CampoDoFiltro } from "./filtros";
+import {
+  camposDaEmpresaDoFiltro,
+  camposDoContatoDoFiltro,
+  camposDoNegocioDoFiltro,
+  type CampoDoFiltro,
+} from "./filtros";
 
 /**
  * AS OPÇÕES DO PAINEL DE FILTROS (fork Escale, Fase 2B), lidas no servidor com a
@@ -23,12 +28,15 @@ export type OpcoesDoFiltro = {
   camposDoNegocio: CampoDoFiltro[];
   /** Fase 2C: os fixos do contato mais o catálogo (já filtrado pelo papel de quem olha). */
   camposDoContato: CampoDoFiltro[];
+  /** Fase 2D: os campos da empresa (fixos + catálogo) para o grupo "Empresa" do seletor. */
+  camposDaEmpresa: CampoDoFiltro[];
 };
 export const OPCOES_VAZIAS: OpcoesDoFiltro = {
   origens: [],
   motivos: [],
   camposDoNegocio: [],
   camposDoContato: camposDoContatoDoFiltro(CATALOGO_VAZIO),
+  camposDaEmpresa: camposDaEmpresaDoFiltro(CATALOGO_VAZIO),
 };
 
 export type OrigemLidaParaFiltro = {
@@ -78,5 +86,6 @@ export function opcoesDoFiltroDasOrigens(lidas: readonly OrigemLidaParaFiltro[])
     motivos,
     camposDoNegocio: camposDoNegocioDoFiltro(lidas.map((p) => p.settings)),
     camposDoContato: camposDoContatoDoFiltro(CATALOGO_VAZIO),
+    camposDaEmpresa: camposDaEmpresaDoFiltro(CATALOGO_VAZIO),
   };
 }

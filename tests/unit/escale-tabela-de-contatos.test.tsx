@@ -37,6 +37,7 @@ const linha = (extra: Partial<LinhaDeContato>): LinhaDeContato => ({
   nascimento: null,
   links: {},
   campos: {},
+  empresa: null,
   ...extra,
 });
 
@@ -54,6 +55,12 @@ const props = {
 };
 
 describe("TabelaDeContatos (03-001)", () => {
+  it("o nome da empresa aparece acima do nome do contato (contact-row-v2)", () => {
+    envolver(<TabelaDeContatos {...props} linhas={[linha({ empresa: { id: "e1", nome: "Atlas Distribuidora" } })]} />);
+    const celula = screen.getByText("Karoll").closest("td")!;
+    expect(within(celula).getByText("Atlas Distribuidora")).toBeInTheDocument();
+  });
+
   it("uma coluna de campo personalizado mostra o valor pelo tipo (moeda em R$, seleção pelo rótulo, data em dd/mm/aaaa)", () => {
     const camposDoContato = [
       { chave: "renda", rotulo: "Renda", tipo: "currency" as const },

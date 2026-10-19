@@ -100,7 +100,8 @@ function ValorDaCondicao({
   );
 }
 
-type GrupoDoSeletor = "contato" | "negocio" | "empresa";
+export type GrupoDoSeletor = "contato" | "negocio" | "empresa";
+const GRUPOS_PADRAO: readonly GrupoDoSeletor[] = ["contato", "negocio", "empresa"];
 const GRUPOS_DO_SELETOR: ReadonlyArray<{ chave: GrupoDoSeletor; rotulo: string }> = [
   { chave: "contato", rotulo: "Contato" },
   { chave: "negocio", rotulo: "Negócio" },
@@ -110,17 +111,19 @@ const GRUPOS_DO_SELETOR: ReadonlyArray<{ chave: GrupoDoSeletor; rotulo: string }
 /**
  * O SELETOR DE CAMPO (Clint `FieldFilterBuilder`; prints 2b-21 a 2b-23): a busca e
  * os grupos "Contato", "Negócio" e "Empresa", que abrem e fecham pelo chevron (a
- * busca abre os que acharam algo). "Empresa" fica desligado com "Em breve" até a 2D
+ * busca abre os que acharam algo). "Empresa" liga com a 2D
  * (N19). Escolhido o campo: "← Voltar", o grupo e o campo, os operadores em rádio
  * com o valor logo abaixo do marcado (o primeiro do tipo já vem marcado: "Contém"
  * no texto) e "Aplicar" embaixo à esquerda.
  */
 function SeletorDeCampo({
   campos,
+  grupos,
   contemBloqueado,
   aoEscolher,
 }: {
   campos: readonly CampoDoFiltro[];
+  grupos: readonly GrupoDoSeletor[];
   contemBloqueado: boolean;
   aoEscolher: (c: CondicaoDoFiltro) => void;
 }) {
@@ -174,19 +177,15 @@ function SeletorDeCampo({
           <p className="px-1 pt-2 text-[12px] text-casca-suave">{t("Nenhum campo encontrado")}</p>
         ) : (
           <div className="mt-1 max-h-64 overflow-y-auto">
-            {GRUPOS_DO_SELETOR.map((g) => {
+            {GRUPOS_DO_SELETOR.filter((g) => grupos.includes(g.chave)).map((g) => {
               const doGrupo = achados.filter((c) => c.alvo === g.chave);
               if (termo && doGrupo.length === 0) return null;
-              const emBreve = g.chave === "empresa";
-              const aberto =
-                !emBreve && (abertos.has(g.chave) || (termo !== "" && doGrupo.length > 0));
+              const aberto = abertos.has(g.chave) || (termo !== "" && doGrupo.length > 0);
               return (
                 <div key={g.chave} className="border-b border-casca-borda last:border-b-0">
                   <button
                     type="button"
                     aria-expanded={aberto}
-                    disabled={emBreve}
-                    title={emBreve ? t("Em breve") : undefined}
                     onClick={() => alternar(g.chave)}
                     className="flex h-9 w-full items-center gap-2 px-2 text-left text-[13px] font-semibold text-casca-texto hover:bg-casca-raia disabled:cursor-not-allowed disabled:text-casca-meta"
                   >
@@ -227,7 +226,7 @@ function SeletorDeCampo({
       <BotaoVoltar onClick={() => setCampo(null)} />
       <div>
         <p className="text-[10px] font-semibold tracking-[0.06em] text-casca-meta uppercase">
-          {campo.alvo === "contato" ? t("Contato") : t("Negócio")}
+          {campo.alvo === "contato" ? t("Contato") : campo.alvo === "empresa" ? t("Empresa") : t("Negócio")}
         </p>
         <p className="text-[13px] font-semibold text-casca-texto">{t(campo.rotulo)}</p>
       </div>
@@ -282,15 +281,20 @@ export function SecaoCamposDoFiltro({
   aoMudar,
   camposDoNegocio,
   camposDoContato,
+  camposDaEmpresa,
+  gruposDoSeletor = GRUPOS_PADRAO,
 }: {
   filtros: FiltrosDeContatos;
   aoMudar: (f: FiltrosDeContatos) => void;
   camposDoNegocio: readonly CampoDoFiltro[];
   camposDoContato: readonly CampoDoFiltro[];
+  camposDaEmpresa: readonly CampoDoFiltro[];
+  /** Fase 2D: a lista de empresas só mostra o grupo "Empresa". */
+  gruposDoSeletor?: readonly GrupoDoSeletor[];
 }) {
   const t = useT();
   const grupos: GrupoDoFiltro[] = filtros.campos?.grupos ?? [];
-  const todos = [...camposDoContato, ...camposDoNegocio];
+  const todos = [...camposDoContato, ...camposDoNegocio, ...camposDaEmpresa];
   const noLimite = contarContem(filtros) >= CONTEM_MAX;
 
   return (
@@ -321,7 +325,7 @@ export function SecaoCamposDoFiltro({
           );
         }}
         seletor={(aoEscolher) => (
-          <SeletorDeCampo campos={todos} contemBloqueado={noLimite} aoEscolher={aoEscolher} />
+          <SeletorDeCampo campos={todos} grupos={gruposDoSeletor} contemBloqueado={noLimite} aoEscolher={aoEscolher} />
         )}
       />
       {noLimite ? (

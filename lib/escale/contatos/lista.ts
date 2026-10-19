@@ -11,6 +11,7 @@ import { fusoUtilizavel } from "@/lib/tempo/fusos";
 import type { FiltroCompilado } from "./compilar-filtros";
 import { filtrosDeContatosSchema, type FiltrosDeContatos } from "./filtros";
 import { POR_PAGINA, POR_PAGINA_PADRAO, VISOES_DE_CONTATOS, instagramDoLink } from "./regras";
+import { nomeDaEmpresa } from "@/lib/escale/empresas/nome";
 
 /**
  * A PÁGINA DA LISTA DE CONTATOS (fork Escale, Fase 2A) — servidor.
@@ -102,6 +103,8 @@ export type LinhaDeContato = {
   origem: string;
   nascimento: string | null;
   links: Record<string, string>;
+  /** Fase 2D: a empresa do contato (o vínculo principal, senão o mais antigo). */
+  empresa: { id: string; nome: string } | null;
   /** Fase 2C: os campos personalizados (sem os links). */
   campos: Record<string, unknown>;
 };
@@ -135,10 +138,11 @@ type ContatoLido = {
   created_at: string;
   source: string;
   birthdate: string | null;
+  person_id: string | null;
 };
 
 const COLUNAS =
-  "id, name, display_name, email, phone_number, tags, custom_fields, avatar_storage_path, is_blocked, is_anonymized, is_personal, last_activity_at, created_at, source, birthdate";
+  "id, name, display_name, email, phone_number, tags, custom_fields, avatar_storage_path, is_blocked, is_anonymized, is_personal, last_activity_at, created_at, source, birthdate, person_id";
 
 function statusDe(c: ContatoLido): StatusDaLinha {
   if (c.is_anonymized) return "anonimizado";
@@ -197,6 +201,43 @@ export async function listarContatos(
     if (!conversaDe.has(cv.contact_id)) conversaDe.set(cv.contact_id, cv.id);
   }
 
+  // FORK ESCALE · Fase 2D: a empresa do contato (o vínculo principal, senão o mais antigo).
+  const pessoas = [
+    ...new Set(
+      ((contatos.data ?? []) as ContatoLido[]).map((c) => c.person_id).filter((x): x is string => Boolean(x)),
+    ),
+  ];
+  const empresaPorPessoa = new Map<string, { id: string; nome: string }>();
+  if (pessoas.length) {
+    const vinculos = await supabase
+      .from("company_people")
+      .select("person_id, company_id, is_primary, created_at")
+      .eq("organization_id", orgId)
+      .in("person_id", pessoas)
+      .order("is_primary", { ascending: false })
+      .order("created_at");
+    const escolhido = new Map<string, string>();
+    for (const v of (vinculos.data ?? []) as Array<{ person_id: string; company_id: string }>) {
+      if (!escolhido.has(v.person_id)) escolhido.set(v.person_id, v.company_id);
+    }
+    if (escolhido.size) {
+      const empresas = await supabase
+        .from("companies")
+        .select("id, trade_name, legal_name")
+        .eq("organization_id", orgId)
+        .in("id", [...new Set(escolhido.values())]);
+      const nomePorEmpresa = new Map(
+        ((empresas.data ?? []) as Array<{ id: string; trade_name: string | null; legal_name: string | null }>).map(
+          (e) => [e.id, nomeDaEmpresa(e)],
+        ),
+      );
+      for (const [pessoa, empresa] of escolhido) {
+        const nome = nomePorEmpresa.get(empresa);
+        if (nome) empresaPorPessoa.set(pessoa, { id: empresa, nome });
+      }
+    }
+  }
+
   const linhas: LinhaDeContato[] = [];
   for (const l of ordem) {
     const c = porId.get(l.contact_id);
@@ -220,6 +261,7 @@ export async function listarContatos(
       origem: c.source,
       nascimento: c.birthdate,
       links,
+      empresa: c.person_id ? (empresaPorPessoa.get(c.person_id) ?? null) : null,
       campos: Object.fromEntries(Object.entries(c.custom_fields ?? {}).filter(([k]) => !k.startsWith("link_"))),
     });
   }
