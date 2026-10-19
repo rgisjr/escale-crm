@@ -2,10 +2,16 @@
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import Link from "next/link";
+
 import { JanelaDeGerenciarCampos } from "@/components/escale/campos/JanelaDeGerenciarCampos";
+import { type EscolhaDeEmpresa, SeletorDeEmpresa } from "@/components/escale/empresas/SeletorDeEmpresa";
+import { JanelaTrocarEmpresa } from "@/components/escale/empresas/JanelaTrocarEmpresa";
 import { usePermission } from "@/hooks/auth/AuthProvider";
 import { useContact } from "@/hooks/contacts/useContact";
 import { useCatalogoDeCampos } from "@/hooks/escale/useCatalogoDeCampos";
+import { useMudarEmpresa } from "@/hooks/escale/useEmpresa";
+import { useEmpresaDoContato, useTrocarEmpresa } from "@/hooks/escale/useEmpresaDoContato";
 import { useGravarContato } from "@/hooks/escale/useGravarContato";
 import { useOcultosDaOrigem } from "@/hooks/escale/useOcultosDaOrigem";
 import { useT } from "@/hooks/i18n/useT";
@@ -29,7 +35,7 @@ import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import { MOEDA_PADRAO } from "@/lib/money";
 import { camposVisiveis } from "@/lib/schemas/mostrar-quando";
 import type { Lead } from "@/lib/types/leads";
-import { Building2, Target, User } from "@/lib/ui/icons-da-casca";
+import { Building2, ExternalLink, Target, User } from "@/lib/ui/icons-da-casca";
 
 import { CamposDaFicha, ROTA_DE_GERENCIAR_CAMPOS } from "./CamposDaFicha";
 
@@ -132,28 +138,111 @@ function ContatoEditavel({
   );
 }
 
-export function AbaEmpresa() {
+export function AbaEmpresa({ lead }: { lead: Lead }) {
   const t = useT();
+  const podeEditar = usePermission("contact.update"); // atendente ou acima (PRD §5)
   const administra = usePermission("settings.write");
-  const [janela, setJanela] = useState(false);
+  const [janela, setJanela] = useState<"gerenciar" | { nova: string } | null>(null);
   const { catalogo } = useCatalogoDeCampos("empresa");
-  // Os oito campos da empresa na Clint (print 03). A empresa do contato chega na Fase 2D: até lá, só leitura.
-  const campos = useMemo(
-    () => camposDaEmpresaComGrupos(null, catalogo).map((c) => ({ ...c, rotulo: t(c.rotulo) })),
-    [catalogo, t],
-  );
+  const contatoId = lead.contact_id ?? null;
+  const { data: empresa, isLoading } = useEmpresaDoContato(contatoId);
+  const trocar = useTrocarEmpresa(contatoId);
+  const mudar = useMudarEmpresa(empresa?.id ?? null);
+
+  // Os oito campos da empresa na Clint (print 03), com os valores da empresa do contato.
+  const campos = useMemo(() => {
+    const valores = empresa
+      ? { nome: empresa.nome, cidade: empresa.cidade, estado: empresa.estado, cnpj: empresa.cnpj, ...empresa.campos }
+      : null;
+    return camposDaEmpresaComGrupos(valores, catalogo).map((c) => ({
+      ...c,
+      rotulo: t(c.rotulo),
+      origem: c.chave === "nome" ? ("empresa" as const) : c.origem,
+      // Sem empresa só o nome (o seletor) se mexe; com ela, quem edita contato edita a empresa.
+      travado: c.chave === "nome" ? !podeEditar : !empresa || !podeEditar,
+    }));
+  }, [empresa, catalogo, t, podeEditar]);
+
+  const escolher = (e: EscolhaDeEmpresa) => {
+    if ("id" in e) {
+      trocar.mutate({ empresa_id: e.id });
+      return;
+    }
+    // Já tem empresa e o nome é novo: a Clint pergunta o que fazer com os campos.
+    if (empresa) setJanela({ nova: e.nova });
+    else trocar.mutate({ nova: { nome: e.nova, campos: "limpar" } });
+  };
+
+  if (!contatoId) {
+    return (
+      <CamposDaFicha
+        icone={<Building2 size={16} />}
+        titulo={t("Campos de empresa")}
+        tipo="empresa"
+        campos={[]}
+        dicaDoVazio={t("Este negócio não tem contato.")}
+      />
+    );
+  }
+
   return (
     <>
       <CamposDaFicha
         icone={<Building2 size={16} />}
         titulo={t("Campos de empresa")}
         tipo="empresa"
-        campos={campos}
+        campos={isLoading ? [] : campos}
         grupos={gruposDaFicha(catalogo)}
-        dicaDoVazio={t("A empresa do contato chega na Fase 2D.")}
-        aoGerenciar={administra ? () => setJanela(true) : undefined}
+        aoSalvar={
+          empresa && podeEditar
+            ? async (campo, valor) => {
+                try {
+                  await mudar.mudarCampo.mutateAsync({ chave: campo.chave, valor });
+                } catch {
+                  throw new Error(t("Ocorreu um erro ao salvar o campo"));
+                }
+              }
+            : undefined
+        }
+        dicaDoVazio={null}
+        aoGerenciar={administra ? () => setJanela("gerenciar") : undefined}
+        linhaEspecial={(campo) =>
+          campo.origem === "empresa" ? (
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <SeletorDeEmpresa
+                  atual={empresa ? { id: empresa.id, nome: empresa.nome } : null}
+                  aoEscolher={escolher}
+                  desabilitado={!podeEditar}
+                />
+              </div>
+              {empresa ? (
+                <Link
+                  href={`/app/companies/${empresa.id}?aba=dados`}
+                  aria-label={t("Ver dados da empresa {companyName}").replace("{companyName}", empresa.nome)}
+                  title={t("Ver dados da empresa {companyName}").replace("{companyName}", empresa.nome)}
+                  className="shrink-0 text-casca-marca"
+                >
+                  <ExternalLink size={14} aria-hidden />
+                </Link>
+              ) : null}
+            </div>
+          ) : null
+        }
       />
-      {janela ? <JanelaDeGerenciarCampos aberta aoFechar={() => setJanela(false)} objetoInicial="empresa" /> : null}
+      {janela === "gerenciar" ? (
+        <JanelaDeGerenciarCampos aberta aoFechar={() => setJanela(null)} objetoInicial="empresa" />
+      ) : null}
+      {janela && janela !== "gerenciar" ? (
+        <JanelaTrocarEmpresa
+          aberta
+          nome={janela.nova}
+          aoFechar={() => setJanela(null)}
+          aoConfirmar={(modo) =>
+            trocar.mutate({ nova: { nome: janela.nova, campos: modo } }, { onSuccess: () => setJanela(null) })
+          }
+        />
+      ) : null}
     </>
   );
 }

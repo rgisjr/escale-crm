@@ -54,8 +54,10 @@ export function useNegociosDaEmpresa(id: string, ativo = true) {
 }
 
 /** As escritas da ficha da empresa; cada uma invalida as empresas e os contatos. */
-export function useMudarEmpresa(id: string) {
+export function useMudarEmpresa(idOuNulo: string | null) {
   const qc = useQueryClient();
+  // Sem empresa (a aba Empresa do negócio, antes do vínculo) as escritas ficam sem alvo e falham.
+  const id = idOuNulo ?? "";
   const depois = () => {
     void qc.invalidateQueries({ queryKey: ["companies"] });
     void qc.invalidateQueries({ queryKey: ["contacts"] });

@@ -29,7 +29,7 @@ export type TipoDeCampoDaFicha = CustomFieldType;
  * `^[a-z][a-z0-9_]*$`, então um campo chamado `valor`, `nome` ou `link_x` é
  * possível e tem que ir para `custom_fields` como qualquer outro.
  */
-export type OrigemDoCampo = "coluna" | "link" | "crm";
+export type OrigemDoCampo = "coluna" | "link" | "crm" | "empresa";
 
 export interface CampoEditavel {
   chave: string;

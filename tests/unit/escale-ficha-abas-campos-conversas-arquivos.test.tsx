@@ -80,6 +80,14 @@ const ocultosDaOrigem = vi.hoisted(() => ({
 vi.mock("@/hooks/escale/useCatalogoDeCampos", () => ({
   useCatalogoDeCampos: (objeto: string) => ({ catalogo: catalogos.atual[objeto], carregando: false, erro: false }),
 }));
+// FORK ESCALE · Fase 2D: a empresa do contato (aqui, sem empresa) e as escritas dela.
+vi.mock("@/hooks/escale/useEmpresaDoContato", () => ({
+  useEmpresaDoContato: () => ({ data: null, isLoading: false }),
+  useTrocarEmpresa: () => ({ mutate: vi.fn() }),
+}));
+vi.mock("@/hooks/escale/useEmpresa", () => ({
+  useMudarEmpresa: () => ({ mudarCampo: { mutateAsync: vi.fn() } }),
+}));
 vi.mock("@/hooks/escale/useOcultosDaOrigem", () => ({ useOcultosDaOrigem: () => ocultosDaOrigem.valor }));
 vi.mock("@/components/escale/campos/JanelaDeGerenciarCampos", () => ({
   JanelaDeGerenciarCampos: ({ objetoInicial }: { objetoInicial: string }) => (
@@ -359,8 +367,9 @@ describe("aba Empresa (print 03)", () => {
     catalogos.atual = CATALOGOS_PADRAO();
   });
 
-  it("Empresa: os oito campos da Clint, vazios até a 1H vincular a empresa (Q6)", () => {
-    render(<AbaEmpresa />);
+  it("Empresa: os oito campos da Clint; sem empresa só o nome é um seletor e o resto fica travado (2D)", () => {
+    render(<AbaEmpresa lead={LEAD} />);
+    expect(screen.getByRole("combobox", { name: "Nome da empresa" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Campos de empresa" })).toBeInTheDocument();
     expect(screen.getAllByRole("term").map((d) => d.textContent)).toEqual([
       "Nome da empresa",
