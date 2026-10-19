@@ -53,6 +53,8 @@ import { marcaDaOrigem, origemDeCampanhaDaConversa } from "@/lib/campanhas/orige
 
 import { logger } from "@/lib/logger";
 import { ORIGEM_DO_WHATSAPP } from "@/lib/channels/origem-do-negocio";
+// FORK ESCALE · Fase 3E: a criação de negócio por dispositivo (F1).
+import { nascimentoPeloDispositivo } from "@/lib/escale/conversas/criacao-de-negocio-banco";
 
 import { lerClientePelaAgenda } from "@/lib/contacts/cliente-pela-agenda";
 import { ehIdentificadorTecnico, rotuloDoContato, SEM_NOME } from "@/lib/contacts/rotulo-do-contato";
@@ -107,7 +109,9 @@ export type MotivoSemLead =
   | "contato_pessoal" // marcado como pessoal (spec 21): não é oportunidade, nunca nasce
   | "sem_funil_de_entrada" // a organização não tem funil padrão — falha de configuração, visível
   | "sem_etapa" // o funil existe e não tem etapa utilizável
-  | "erro"; // qualquer falha de escrita
+  | "erro" // qualquer falha de escrita
+  // FORK ESCALE · Fase 3E: o dispositivo tem "Criação de negócio" configurada e decidiu não criar.
+  | "pelo_dispositivo";
 
 export type NascimentoDoLead =
   | { criado: true; leadId: string; pipelineId: string; stageId: string }
@@ -122,6 +126,9 @@ export interface DadosDoNascimento {
   nomeDoContato: string | null;
   /** Rotulo/source/motivo do canal de origem -- default preserva o WhatsApp. */
   origem?: OrigemDoNascimento;
+  /** FORK ESCALE · Fase 3E: o texto e o id da mensagem que chegou (as condições do dispositivo). */
+  texto?: string | null;
+  messageId?: string | null;
 }
 
 /**
@@ -281,6 +288,11 @@ export async function garantirLeadDaConversa(
   if (contato?.is_blocked === true) return { criado: false, motivo: "contato_bloqueado" };
   if ((contato as { is_personal?: boolean } | null)?.is_personal === true)
     return { criado: false, motivo: "contato_pessoal" };
+
+  // FORK ESCALE · Fase 3E: dispositivo com "Criação de negócio" configurada decide (F1;
+  // decisões 5 e 7 do roteiro). `null` = nunca configurado: segue o de sempre.
+  const peloDispositivo = await nascimentoPeloDispositivo(db, dados, contato);
+  if (peloDispositivo) return peloDispositivo;
 
   // 2 · já existe demanda aberta?
   const { data: existente } = await db

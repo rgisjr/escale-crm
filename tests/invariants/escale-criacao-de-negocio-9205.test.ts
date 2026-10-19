@@ -1,6 +1,14 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { GOV_ADMIN, GOV_AGENT_A, GOV_ORG, countAs, seedGov, sql, writeCountAs } from "./gov-helpers";
+import {
+  GOV_ADMIN,
+  GOV_AGENT_A,
+  GOV_ORG,
+  countAs,
+  seedGov,
+  sql,
+  writeCountAs,
+} from "./gov-helpers";
 
 /**
  * CRIAÇÃO DE NEGÓCIO POR DISPOSITIVO (fork Escale, migration 9205) — prova contra
@@ -31,9 +39,24 @@ beforeAll(() => {
 
 describe("crm_criacao_de_negocio", () => {
   it("admin grava; atendente lê e não grava", () => {
-    expect(writeCountAs(GOV_ADMIN, `insert into public.crm_criacao_de_negocio (channel_session_id, organization_id, ligado) values ('${SESSAO}', '${GOV_ORG}', true)`)).toBe(1);
-    expect(countAs(GOV_AGENT_A, `select count(*) from public.crm_criacao_de_negocio where channel_session_id = '${SESSAO}'`)).toBe(1);
-    expect(writeCountAs(GOV_AGENT_A, `update public.crm_criacao_de_negocio set ligado = false where channel_session_id = '${SESSAO}'`)).toBe(0);
+    expect(
+      writeCountAs(
+        GOV_ADMIN,
+        `insert into public.crm_criacao_de_negocio (channel_session_id, organization_id, ligado) values ('${SESSAO}', '${GOV_ORG}', true)`,
+      ),
+    ).toBe(1);
+    expect(
+      countAs(
+        GOV_AGENT_A,
+        `select count(*) from public.crm_criacao_de_negocio where channel_session_id = '${SESSAO}'`,
+      ),
+    ).toBe(1);
+    expect(
+      writeCountAs(
+        GOV_AGENT_A,
+        `update public.crm_criacao_de_negocio set ligado = false where channel_session_id = '${SESSAO}'`,
+      ),
+    ).toBe(0);
   });
 });
 
@@ -42,7 +65,9 @@ describe("fn_escale_nascer_negocio_do_dispositivo", () => {
     const id = sql(`${nascer()};`).trim();
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     expect(sql(`select stage_id from public.crm_leads where id = '${id}';`).trim()).toBe(ETAPA);
-    expect(sql(`select array_to_string(tags, ',') from public.contacts where id = '${CT}';`).trim()).toBe("lead,vip");
+    expect(
+      sql(`select array_to_string(tags, ',') from public.contacts where id = '${CT}';`).trim(),
+    ).toBe("lead,vip");
     expect(sql(`${nascer()};`).trim()).toBe("");
   });
 

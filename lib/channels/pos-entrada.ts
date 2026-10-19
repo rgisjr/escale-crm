@@ -432,6 +432,9 @@ async function abrirDemanda(admin: Admin, entrada: EntradaDeMensagem): Promise<v
       conversationId: entrada.conversationId,
       nomeDoContato: entrada.nomeDoContato,
       origem: origemDoNegocioPeloCanal(entrada.canal),
+      // FORK ESCALE · Fase 3E: as condições do dispositivo leem a mensagem.
+      texto: entrada.texto,
+      messageId: entrada.messageId,
     });
 
     // Os DOIS desfechos viram log. Sem a linha do "não criou", o silêncio de
