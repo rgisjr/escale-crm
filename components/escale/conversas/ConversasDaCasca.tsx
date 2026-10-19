@@ -1,12 +1,15 @@
 "use client";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { colunasDoCelular } from "@/components/inbox/InboxLayout";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
+import { useAcaoDaFila, useExecutarAcaoDaFila } from "@/hooks/escale/useAcoesEmMassaDaFila";
 import { useFilaDeConversas } from "@/hooks/escale/useFilaDeConversas";
 import { useModoEspiao } from "@/hooks/escale/useModoEspiao";
 import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
@@ -19,6 +22,12 @@ import { useMarkAsRead } from "@/hooks/inbox/useMarkAsRead";
 import { OpenConversationProvider } from "@/hooks/notifications/OpenConversationContext";
 import { ORDEM_PADRAO, PARAM_ORDEM, ordemDaUrl, type Ordem } from "@/lib/escale/conversas/ordem";
 import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
+import { SEM_SELECAO, totalSelecionado, type Selecao } from "@/lib/escale/contatos/selecao";
+import {
+  acaoRodando,
+  alvoDaSelecaoDaFila,
+  type PedidoDaFila,
+} from "@/lib/escale/conversas/acoes-em-massa-da-fila";
 import {
   PARAM_DO_PAINEL,
   painelDaUrl,
@@ -42,6 +51,8 @@ import { ListaDaFila } from "./fila/ListaDaFila";
 import { PainelPersonalizarVisualizacao } from "./fila/PainelPersonalizarVisualizacao";
 import { BalaoSalvarFiltro } from "./filtros/BalaoSalvarFiltro";
 import { PainelDeFiltrosDaFila } from "./filtros/PainelDeFiltrosDaFila";
+import { CentroDeAcoesEmMassa, type AcaoEscolhida } from "./massa/CentroDeAcoesEmMassa";
+import { JanelaDaAcaoEmMassa } from "./massa/JanelaDaAcaoEmMassa";
 import { PainelDoContato } from "./painel/PainelDoContato";
 import { TopoDasConversas } from "./TopoDasConversas";
 
@@ -133,8 +144,58 @@ export function ConversasDaCasca({
   const temGrupos =
     (useTotalDaFila({ painel: { grupos: "grupos" }, ordem: "interacao" }, !!orgId).data ?? 0) > 0;
   const permissoes = useMinhasPermissoes();
-  // A Task 9 liga o modo Selecionar; até lá o item do ⋮ fica desligado.
-  const podeSelecionar = false && permissoes.CHAT_BULK_ACTIONS === true;
+  const podeSelecionar = permissoes.CHAT_BULK_ACTIONS === true;
+  const qc = useQueryClient();
+  const [selecao, setSelecao] = useState<Selecao | null>(null);
+  const [acaoEscolhida, setAcaoEscolhida] = useState<AcaoEscolhida | null>(null);
+  const [acaoAcompanhada, setAcaoAcompanhada] = useState<string | null>(null);
+  const total = useTotalDaFila(consulta, selecao !== null).data ?? null;
+  const executar = useExecutarAcaoDaFila();
+  const acompanhada = useAcaoDaFila(acaoAcompanhada);
+
+  // N15: o fim da ação em segundo plano avisa e atualiza a fila.
+  useEffect(() => {
+    const a = acompanhada.data;
+    if (!a || acaoRodando(a.status)) return;
+    setAcaoAcompanhada(null);
+    void qc.invalidateQueries({ queryKey: ["conversations"] });
+    if (a.status === "concluida") toast.success(t("A ação em massa foi realizada com sucesso!"));
+    else toast.error(t("Ocorreu um erro ao executar a ação em massa!"));
+  }, [acompanhada.data, qc, t]);
+
+  const sairDaSelecao = useCallback(() => {
+    setSelecao(null);
+    setAcaoEscolhida(null);
+  }, []);
+
+  function rodarAcao(parametros: Record<string, unknown>) {
+    if (!selecao || !acaoEscolhida) return;
+    const pedido = {
+      acao: acaoEscolhida,
+      alvo: alvoDaSelecaoDaFila(selecao, { painel, busca: consulta.busca }),
+      parametros,
+    } as PedidoDaFila;
+    executar.mutate(pedido, {
+      onSuccess: (r) => {
+        void qc.invalidateQueries({ queryKey: ["conversations"] });
+        if (r.status === "concluida") {
+          toast.success(t("A ação em massa foi realizada com sucesso!"));
+        } else {
+          toast.info(
+            t(
+              "Essa ação em massa pode demorar alguns segundos para ser completada e refletir os resultados da pesquisa.",
+            ),
+          );
+          setAcaoAcompanhada(r.id);
+        }
+        sairDaSelecao();
+      },
+      onError: (e) =>
+        toast.error(
+          e instanceof Error ? e.message : t("Ocorreu um erro ao executar a ação em massa!"),
+        ),
+    });
+  }
   const itens = useMemo(
     () => (fila.data?.pages.flatMap((p) => p.data) ?? []) as ConversationWithContact[],
     [fila.data],
@@ -240,7 +301,11 @@ export function ConversasDaCasca({
                   !ehVisualizacaoPadrao(preferencias.data.visualizacao)
                 }
                 podeSelecionar={podeSelecionar}
-                aoSelecionar={() => undefined}
+                aoSelecionar={() => {
+                  setFiltrosAbertos(false);
+                  setPersonalizando(false);
+                  setSelecao(SEM_SELECAO);
+                }}
               />
               <div className="min-h-0 flex-1 overflow-hidden">
                 <ListaDaFila
@@ -253,6 +318,10 @@ export function ConversasDaCasca({
                   temFiltro={temCriterios(painel) || buscaValeConsulta(busca)}
                   aoIniciar={abrirNova}
                   visualizacao={preferencias.data.visualizacao}
+                  selecao={selecao}
+                  aoMudarSelecao={setSelecao}
+                  total={total}
+                  aoSairDaSelecao={sairDaSelecao}
                 />
               </div>
             </div>
@@ -287,7 +356,13 @@ export function ConversasDaCasca({
                     />
                   ) : null}
                   <div className="min-h-0 flex-1">
-                    {modoDoCentro === "conversa" && conversa ? (
+                    {selecao ? (
+                      <CentroDeAcoesEmMassa
+                        selecionadas={totalSelecionado(selecao, total ?? itens.length)}
+                        aoEscolher={setAcaoEscolhida}
+                        aoSair={sairDaSelecao}
+                      />
+                    ) : modoDoCentro === "conversa" && conversa ? (
                       <ConversaAberta
                         conversa={conversa}
                         rascunho={rascunho}
@@ -310,6 +385,13 @@ export function ConversasDaCasca({
                     )}
                   </div>
                 </div>
+
+                <JanelaDaAcaoEmMassa
+                  acao={acaoEscolhida}
+                  aoFechar={() => setAcaoEscolhida(null)}
+                  aoExecutar={rodarAcao}
+                  executando={executar.isPending}
+                />
 
                 <div className="hidden h-full min-h-0 border-l border-casca-borda xl:block">
                   <PainelDoContato
