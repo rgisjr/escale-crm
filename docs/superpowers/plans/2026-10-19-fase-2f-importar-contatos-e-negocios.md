@@ -1637,7 +1637,7 @@ describe("classificar (Fase 2F)", () => {
   });
 
   it("B: campo preenchido diferente; 'Manter e atualizar marcados'; preencher vazios", () => {
-    const l = linha(["email", "name", "plano"], ["maria@x.com", "Maria Silva", "ouro"]);
+    const l = linha(["email", "name", "custom:plano"], ["maria@x.com", "Maria Silva", "ouro"]);
     const c = ctx({ porEmail: contato({ campos: { plano: "prata" } }) });
     const revisar = classificar(l, null, c, decisoesDoNivel("padrao"));
     expect(revisar).toMatchObject({
@@ -1650,7 +1650,7 @@ describe("classificar (Fase 2F)", () => {
     });
     expect(marcados).toMatchObject({ plano: { contato: { mudancas: { campos: { plano: "ouro" } } } } });
     expect(marcados.tipo === "importar" && marcados.plano.contato.tipo === "atualizar" && marcados.plano.contato.mudancas.nome).toBeFalsy();
-    const vazio = classificar(linha(["email", "plano"], ["maria@x.com", "ouro"]), null, ctx({ porEmail: contato() }), conservador);
+    const vazio = classificar(linha(["email", "custom:plano"], ["maria@x.com", "ouro"]), null, ctx({ porEmail: contato() }), conservador);
     expect(vazio).toMatchObject({
       tipo: "importar",
       detalhe: { preenchimentos: [{ campo: "campo:plano", valor: "ouro" }] },
