@@ -8,6 +8,7 @@
 import type { VisibilityMode } from "@/lib/auth/types";
 import { normalizarTag } from "@/lib/contacts/tag-normalizada";
 import { pessoasDaOrigem, visualizacaoDaOrigem } from "@/lib/escale/acesso/regras";
+import { type CamposOcultos, lerOcultos } from "@/lib/escale/campos/ocultos";
 import { lerAtribuicao, soAdminGanha, type AtribuicaoDeGanho } from "@/lib/escale/ganho/regras";
 import { lerNotificacoes, type NotificacoesDaOrigem } from "@/lib/escale/notificacoes/regras";
 import { MOEDAS_SERVIDAS, type MoedaServida } from "@/lib/money";
@@ -46,6 +47,8 @@ export interface ConfiguracoesDoFork {
   atribuicao: AtribuicaoDeGanho;
   /** Fase 1K (D15). */
   notificacoes: NotificacoesDaOrigem;
+  /** Fase 2C (D4): os campos desligados na "Visualização de campos". */
+  camposOcultos: CamposOcultos;
 }
 
 export function comoRecord(valor: unknown): Record<string, unknown> {
@@ -100,5 +103,6 @@ export function lerConfiguracoesDoFork(settings: unknown): ConfiguracoesDoFork {
     soAdminGanha: soAdminGanha(s),
     atribuicao: lerAtribuicao(s),
     notificacoes: lerNotificacoes(s),
+    camposOcultos: lerOcultos(s),
   };
 }

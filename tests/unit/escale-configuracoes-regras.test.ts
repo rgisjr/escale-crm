@@ -54,6 +54,7 @@ describe("tipos", () => {
       soAdminGanha: false,
       atribuicao: { operador: "e", condicoes: [] },
       notificacoes: { novoNegocio: [], mudancaDeStatus: { status: [], pessoas: [] } },
+      camposOcultos: { usar_do_grupo: false, contato: [], negocio: [], empresa: [] },
     });
   });
   it("moeda só se for servida; tags na régua do contato, sem cliente, até 10", () => {

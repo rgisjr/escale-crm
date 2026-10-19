@@ -71,6 +71,7 @@ import { SecaoAlerta } from "./SecaoAlerta";
 import { SecaoAtribuicao } from "./SecaoAtribuicao";
 import { SecaoNotificacoes } from "./SecaoNotificacoes";
 import { SecaoCampos } from "./SecaoCampos";
+import { SecaoCamposVisiveis } from "./SecaoCamposVisiveis";
 import { SecaoDistribuicao } from "./SecaoDistribuicao";
 import { SecaoGerais } from "./SecaoGerais";
 import { SecaoMotivos } from "./SecaoMotivos";
@@ -169,7 +170,6 @@ export function JanelaDaOrigem({
       id: "campos_visiveis",
       rotulo: t("Visualização de campos"),
       icone: EyeOff,
-      emBreve: t("Chega com o módulo Contatos (Fase 2)."),
     },
     { id: "campos", rotulo: t("Campos obrigatórios"), icone: CheckCircle2 },
     { id: "alerta", rotulo: t("Alerta de tempo na etapa"), icone: Clock },
@@ -264,6 +264,8 @@ export function JanelaDaOrigem({
         return <SecaoMotivos {...props} />;
       case "campos":
         return <SecaoCampos {...props} />;
+      case "campos_visiveis":
+        return <SecaoCamposVisiveis {...props} />;
       case "alerta":
         return <SecaoAlerta {...props} />;
       case "permissoes":
