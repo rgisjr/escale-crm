@@ -5,6 +5,7 @@ import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { criacaoDeNegocioSchema, lerCriacao } from "@/lib/escale/conversas/criacao-de-negocio";
+import { destinosDasCondicoesValem } from "@/lib/escale/conversas/criacao-de-negocio-banco";
 import { lerUuid } from "@/lib/escale/origens/preferencias";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -55,19 +56,19 @@ export async function PUT(req: NextRequest, ctx: Ctx): Promise<Response> {
     .eq("id", canal)
     .maybeSingle();
   if (!dispositivo) return fail("not_found", t("Dispositivo não encontrado."), 404, { requestId });
-  const { error } = await supabase
-    .from("crm_criacao_de_negocio")
-    .upsert(
-      {
-        channel_session_id: canal,
-        organization_id: authz.org.orgId,
-        ligado: parsed.data.ligado,
-        regras: parsed.data.regras,
-        atualizado_por: authz.user.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "channel_session_id" },
-    );
+  if (!(await destinosDasCondicoesValem(supabase, authz.org.orgId, parsed.data.regras)))
+    return fail("validation_failed", t("Ocorreu um erro ao salvar."), 422, { requestId });
+  const { error } = await supabase.from("crm_criacao_de_negocio").upsert(
+    {
+      channel_session_id: canal,
+      organization_id: authz.org.orgId,
+      ligado: parsed.data.ligado,
+      regras: parsed.data.regras,
+      atualizado_por: authz.user.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "channel_session_id" },
+  );
   if (error) return fail("internal_error", error.message, 500, { requestId });
   void audit({
     action: "channel_session.deal_creation_updated",

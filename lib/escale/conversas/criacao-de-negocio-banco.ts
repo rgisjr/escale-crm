@@ -19,9 +19,12 @@ import { lerCriacao, primeiraRegraQueCasa, type RegraDeCriacao } from "./criacao
  */
 export type DecisaoDoDispositivo =
   | { tipo: "padrao" }
-  | { tipo: "nenhum"; motivo: "desligado" | "sem_texto" | "nao_e_a_primeira" | "sem_regra" }
+  | { tipo: "nenhum"; motivo: "desligado" | "nao_e_a_primeira" | "sem_regra" }
   | { tipo: "regra"; regra: RegraDeCriacao };
 
+/**
+ * Texto nulo = a primeira mensagem foi mídia sem legenda (áudio, foto, figurinha): só "Qualquer mensagem" casa.
+ */
 export async function decisaoDoDispositivo(
   db: SupabaseClient,
   q: {
@@ -48,7 +51,6 @@ export async function decisaoDoDispositivo(
   if (!linha) return { tipo: "padrao" };
   const criacao = lerCriacao(linha);
   if (!criacao.ligado) return { tipo: "nenhum", motivo: "desligado" };
-  if (q.texto === null) return { tipo: "nenhum", motivo: "sem_texto" };
   const { data: primeira } = await db
     .from("messages")
     .select("id")
@@ -61,7 +63,7 @@ export async function decisaoDoDispositivo(
     .maybeSingle();
   if (!primeira || (q.messageId && (primeira as { id: string }).id !== q.messageId))
     return { tipo: "nenhum", motivo: "nao_e_a_primeira" };
-  const regra = primeiraRegraQueCasa(criacao.regras, q.texto);
+  const regra = primeiraRegraQueCasa(criacao.regras, q.texto ?? "");
   return regra ? { tipo: "regra", regra } : { tipo: "nenhum", motivo: "sem_regra" };
 }
 
@@ -185,4 +187,46 @@ async function manterAtendente(
       detail: err instanceof Error ? err.message.slice(0, 120) : "erro",
     });
   }
+}
+
+/**
+ * O destino das condições vale hoje (fork Escale, Fase 3E): cada etapa é da organização, do funil escolhido,
+ * sem arquivo/ganho/perda, e o funil não está arquivado. Usado pelo PUT; a RPC repete a conferência no nascimento.
+ */
+export async function destinosDasCondicoesValem(
+  sb: SupabaseClient,
+  organizationId: string,
+  regras: ReadonlyArray<{ origem_id: string; etapa_id: string }>,
+): Promise<boolean> {
+  if (regras.length === 0) return true;
+  const etapas = [...new Set(regras.map((r) => r.etapa_id))];
+  const { data, error } = await sb
+    .from("crm_stages")
+    .select("id, pipeline_id, is_archived, is_won, is_lost, crm_pipelines!inner(is_archived)")
+    .eq("organization_id", organizationId)
+    .in("id", etapas);
+  if (error) return false;
+  const porId = new Map(
+    (
+      (data ?? []) as unknown as Array<{
+        id: string;
+        pipeline_id: string;
+        is_archived: boolean;
+        is_won: boolean;
+        is_lost: boolean;
+        crm_pipelines: { is_archived: boolean };
+      }>
+    ).map((e) => [e.id, e]),
+  );
+  return regras.every((r) => {
+    const e = porId.get(r.etapa_id);
+    return (
+      !!e &&
+      e.pipeline_id === r.origem_id &&
+      !e.is_archived &&
+      !e.is_won &&
+      !e.is_lost &&
+      !e.crm_pipelines.is_archived
+    );
+  });
 }

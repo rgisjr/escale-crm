@@ -37921,6 +37921,16 @@ begin
     return null;
   end if;
 
+  -- O destino da condição vale hoje: etapa da organização, do funil escolhido, sem arquivo/ganho/perda, e funil não arquivado
+  -- (a configuração salva pode ter envelhecido). Sem isso o negócio nasceria em funil arquivado, fechado ou de outra organização.
+  if not exists (
+    select 1 from public.crm_stages s join public.crm_pipelines p on p.id = s.pipeline_id
+     where s.id = p_stage and s.pipeline_id = p_pipeline and s.organization_id = p_org and p.organization_id = p_org
+       and not s.is_archived and not s.is_won and not s.is_lost and not p.is_archived
+  ) then
+    raise exception 'fn_escale_nascer_negocio_do_dispositivo: destino da condição inválido (origem ou etapa)';
+  end if;
+
   insert into public.crm_leads (organization_id, pipeline_id, stage_id, contact_id, title, source, source_metadata, tags, currency)
   values (p_org, p_pipeline, p_stage, p_contact, p_title, p_source, coalesce(p_source_metadata, '{}'::jsonb), '{}'::text[],
           coalesce((select o.currency from public.organizations o where o.id = p_org), 'BRL'))

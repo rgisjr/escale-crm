@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   decisaoDoDispositivo,
+  destinosDasCondicoesValem,
   nascimentoPeloDispositivo,
 } from "@/lib/escale/conversas/criacao-de-negocio-banco";
 import { bancoPorTabela } from "@/tests/helpers/supabase-por-tabela";
@@ -70,7 +71,7 @@ describe("decisaoDoDispositivo (N3)", () => {
         ...consulta,
         texto: null,
       }),
-    ).toEqual({ tipo: "nenhum", motivo: "sem_texto" });
+    ).toEqual({ tipo: "nenhum", motivo: "sem_regra" });
     expect(
       await decisaoDoDispositivo(
         base({ ligado: true, regras: [regra] }, "outra").db as never,
@@ -83,6 +84,15 @@ describe("decisaoDoDispositivo (N3)", () => {
         texto: "oi",
       }),
     ).toEqual({ tipo: "nenhum", motivo: "sem_regra" });
+  });
+  it("a primeira mensagem de mídia (sem texto) casa com 'Qualquer mensagem'", async () => {
+    const qualquer = { ...regra, id: "r2", tipo: "qualquer", mensagens: [] };
+    expect(
+      await decisaoDoDispositivo(base({ ligado: true, regras: [regra, qualquer] }).db as never, {
+        ...consulta,
+        texto: null,
+      }),
+    ).toMatchObject({ tipo: "regra", regra: { id: "r2" } });
   });
   it("a condição que casa", async () => {
     expect(
@@ -155,5 +165,32 @@ describe("nascimentoPeloDispositivo (N5–N7)", () => {
         p_reason: "routing",
       }),
     );
+  });
+});
+
+describe("destinosDasCondicoesValem (revisão da Frente C)", () => {
+  const etapa = (extra: Record<string, unknown> = {}) => ({
+    id: E,
+    pipeline_id: O,
+    is_archived: false,
+    is_won: false,
+    is_lost: false,
+    crm_pipelines: { is_archived: false },
+    ...extra,
+  });
+  const valem = (linhas: Record<string, unknown>[]) =>
+    destinosDasCondicoesValem(bancoPorTabela({ crm_stages: linhas }).db as never, ORG, [
+      { origem_id: O, etapa_id: E },
+    ]);
+  it("vale: etapa da organização, do funil, aberta", async () => {
+    expect(await valem([etapa()])).toBe(true);
+  });
+  it("não vale: etapa inexistente, de outro funil, arquivada, ganho/perda ou funil arquivado", async () => {
+    expect(await valem([])).toBe(false);
+    expect(await valem([etapa({ pipeline_id: "outro" })])).toBe(false);
+    expect(await valem([etapa({ is_archived: true })])).toBe(false);
+    expect(await valem([etapa({ is_won: true })])).toBe(false);
+    expect(await valem([etapa({ is_lost: true })])).toBe(false);
+    expect(await valem([etapa({ crm_pipelines: { is_archived: true } })])).toBe(false);
   });
 });
