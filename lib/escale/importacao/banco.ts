@@ -112,7 +112,7 @@ export async function criarImportacao(
       const { error } = await admin.from("crm_importacoes_linhas").insert(lote);
       if (error) throw error;
     }
-    await admin.rpc("fn_escale_apagar_linhas_antigas", { p_org: orgId });
+    await admin.rpc("fn_escale_limpar_linhas_antigas", { p_org: orgId });
     const fila = await admin.rpc("fn_escale_enfileirar_importacao", { p_importacao: id });
     if (fila.error) throw fila.error;
     return { id, total: Number(fila.data) };

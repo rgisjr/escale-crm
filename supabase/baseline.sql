@@ -37921,6 +37921,16 @@ begin
     return null;
   end if;
 
+  -- O destino da condição vale hoje: etapa da organização, do funil escolhido, sem arquivo/ganho/perda, e funil não arquivado
+  -- (a configuração salva pode ter envelhecido). Sem isso o negócio nasceria em funil arquivado, fechado ou de outra organização.
+  if not exists (
+    select 1 from public.crm_stages s join public.crm_pipelines p on p.id = s.pipeline_id
+     where s.id = p_stage and s.pipeline_id = p_pipeline and s.organization_id = p_org and p.organization_id = p_org
+       and not s.is_archived and not s.is_won and not s.is_lost and not p.is_archived
+  ) then
+    raise exception 'fn_escale_nascer_negocio_do_dispositivo: destino da condição inválido (origem ou etapa)';
+  end if;
+
   insert into public.crm_leads (organization_id, pipeline_id, stage_id, contact_id, title, source, source_metadata, tags, currency)
   values (p_org, p_pipeline, p_stage, p_contact, p_title, p_source, coalesce(p_source_metadata, '{}'::jsonb), '{}'::text[],
           coalesce((select o.currency from public.organizations o where o.id = p_org), 'BRL'))
@@ -59097,7 +59107,7 @@ end;
 $$;
 
 -- ── 7. LGPD: as linhas das importações terminadas há mais de 30 dias ─────────
-create or replace function public.fn_escale_apagar_linhas_antigas(p_org uuid)
+create or replace function public.fn_escale_limpar_linhas_antigas(p_org uuid)
 returns integer
 language plpgsql
 security invoker
@@ -59124,12 +59134,12 @@ revoke all on function public.fn_escale_contar_importacao(uuid) from public, ano
 revoke all on function public.fn_escale_enfileirar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_cancelar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) from public, anon, authenticated;
-revoke all on function public.fn_escale_apagar_linhas_antigas(uuid) from public, anon, authenticated;
+revoke all on function public.fn_escale_limpar_linhas_antigas(uuid) from public, anon, authenticated;
 grant execute on function public.fn_escale_contar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_enfileirar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_cancelar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) to service_role;
-grant execute on function public.fn_escale_apagar_linhas_antigas(uuid) to service_role;
+grant execute on function public.fn_escale_limpar_linhas_antigas(uuid) to service_role;
 
 -- ── 8. A empresa da linha (N9) ───────────────────────────────────────────────
 -- Pelo CNPJ, senão pelo nome (sem maiúsculas), senão — sem nome e sem CNPJ — a

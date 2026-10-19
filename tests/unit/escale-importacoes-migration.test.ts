@@ -22,7 +22,7 @@ describe("migration 9107 — importações (Fase 2F)", () => {
       "fn_escale_enfileirar_importacao(uuid)",
       "fn_escale_cancelar_importacao(uuid)",
       "fn_escale_reabrir_importacao(uuid, text, jsonb)",
-      "fn_escale_apagar_linhas_antigas(uuid)",
+      "fn_escale_limpar_linhas_antigas(uuid)",
       "fn_escale_empresa_da_importacao(uuid, uuid, uuid, text, text, text)",
     ]) {
       expect(migration).toContain(`revoke all on function public.${assinatura} from public, anon, authenticated;`);
@@ -33,6 +33,6 @@ describe("migration 9107 — importações (Fase 2F)", () => {
   it("o evento e o bloco no baseline", () => {
     expect(migration).toContain("'contatos.importacao_requested'");
     expect(baseline).toContain("-- ---- FORK ESCALE · importar contatos e negócios (migration 9107) ----");
-    expect(baseline.indexOf("migration 9107")).toBeGreaterThan(baseline.indexOf("migration 9105"));
+    expect(baseline.indexOf("importar contatos e negócios (migration 9107) ----")).toBeGreaterThan(baseline.indexOf("empresas da casca (migration 9105) ----"));
   });
 });

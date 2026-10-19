@@ -23,7 +23,7 @@
 **Goal:** Com a casca ligada, "Importar contatos" (lista de Contatos), "Importar negócios" (quadro) e "Nova importação" (página Importações) abrem o assistente da Clint em 5 passos (Arquivo, Mapeamento, Configurações, Decisões, Prévia e confirmação). O arquivo CSV (até 25 MB e 50.000 linhas) é importado em segundo plano: cria e atualiza contatos (com os campos personalizados e a empresa) e cria ou atualiza negócios; o que é seguro entra sozinho e o que tem risco vai para "Revisar pendências", conforme o nível de automação. A página "Importações" lista as importações e as exportações, com andamento, "Revisar", "Relatório" e "Cancelar".
 
 **Architecture:**
-- **Banco (9107):** `crm_importacoes` (a importação: tipo, arquivo, mapeamento, configuração, decisões, nível, status e contagens) e `crm_importacoes_linhas` (uma por linha do arquivo: o bruto, o normalizado, o status, o motivo, o detalhe, as resoluções e o que criou). **Só leitura pela sessão** (gerente ou acima da organização); toda escrita é do service role, nas rotas (depois do `requireRole("manager")`) e no consumidor. Funções invoker **fechadas ao `service_role`**: `fn_escale_enfileirar_importacao`, `fn_escale_contar_importacao`, `fn_escale_cancelar_importacao`, `fn_escale_reabrir_importacao`, `fn_escale_apagar_linhas_antigas`; e a definer `fn_escale_empresa_da_importacao` (acha ou cria a empresa e vincula o contato, usando as funções da 2D).
+- **Banco (9107):** `crm_importacoes` (a importação: tipo, arquivo, mapeamento, configuração, decisões, nível, status e contagens) e `crm_importacoes_linhas` (uma por linha do arquivo: o bruto, o normalizado, o status, o motivo, o detalhe, as resoluções e o que criou). **Só leitura pela sessão** (gerente ou acima da organização); toda escrita é do service role, nas rotas (depois do `requireRole("manager")`) e no consumidor. Funções invoker **fechadas ao `service_role`**: `fn_escale_enfileirar_importacao`, `fn_escale_contar_importacao`, `fn_escale_cancelar_importacao`, `fn_escale_reabrir_importacao`, `fn_escale_limpar_linhas_antigas`; e a definer `fn_escale_empresa_da_importacao` (acha ou cria a empresa e vincula o contato, usando as funções da 2D).
 - **Motor (puro, testável sem banco):** `lib/escale/importacao/{regras,mapeamento,linhas,classificar}.ts`. `classificar` passa cada linha por "portões" na ordem da Clint e devolve **pular**, **revisar** (com o motivo) ou **importar** (com o plano). A mesma função serve ao consumidor e à resolução de uma linha na revisão.
 - **Servidor:** `lib/escale/importacao/{contexto,aplicar,executar,banco}.ts`, o consumidor do `event_log` (molde da 2B: lotes de 100, 20 s por rodada, `retry`) e as rotas do fork em `/api/v1/importacoes/**`.
 - **Telas:** `components/escale/importacao/**`: o assistente (generaliza a janela da 1E), a lista, o relatório e a revisão. Encaixes em `app/app/imports/page.tsx` e `app/app/imports/[id]/page.tsx` (com a casca, as telas do fork; sem ela, o B2B do original).
@@ -2202,7 +2202,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Produces (tabelas): `crm_importacoes` (`id`, `organization_id`, `user_id`, `tipo`, `arquivo`, `mapeamento`, `configuracao`, `decisoes`, `nivel`, `status`, `total`, `importadas`, `revisar`, `puladas`, `erros`, `avisos`, `codigo_do_erro`, `linhas_apagadas_em`, `concluida_em`, `created_at`, `updated_at`) e `crm_importacoes_linhas` (`id`, `importacao_id`, `organization_id`, `numero`, `bruto`, `normalizado`, `repetida_de`, `status`, `motivo`, `detalhe`, `com_aviso`, `resolucoes`, `contato_id`, `negocio_id`, `mensagem`, `created_at`, `updated_at`).
-- Produces (funções invoker, fechadas a `public, anon, authenticated`, abertas ao `service_role`): `fn_escale_enfileirar_importacao(p_importacao uuid) returns integer`, `fn_escale_contar_importacao(p_importacao uuid) returns text` (refaz as contagens e fecha a importação quando não sobra linha na fila; devolve o status), `fn_escale_cancelar_importacao(p_importacao uuid) returns text`, `fn_escale_reabrir_importacao(p_importacao uuid, p_motivo text, p_resolucao jsonb) returns integer`, `fn_escale_apagar_linhas_antigas(p_org uuid) returns integer`.
+- Produces (funções invoker, fechadas a `public, anon, authenticated`, abertas ao `service_role`): `fn_escale_enfileirar_importacao(p_importacao uuid) returns integer`, `fn_escale_contar_importacao(p_importacao uuid) returns text` (refaz as contagens e fecha a importação quando não sobra linha na fila; devolve o status), `fn_escale_cancelar_importacao(p_importacao uuid) returns text`, `fn_escale_reabrir_importacao(p_importacao uuid, p_motivo text, p_resolucao jsonb) returns integer`, `fn_escale_limpar_linhas_antigas(p_org uuid) returns integer`.
 - Produces (definer, fechada ao `service_role`): `fn_escale_empresa_da_importacao(p_org uuid, p_autor uuid, p_contato uuid, p_nome text, p_cnpj text, p_cnpj_normalizado text) returns uuid`.
 - Evento: `contatos.importacao_requested`, `entity_kind` `crm_importacao`, payload `{ importacao_id }`.
 
@@ -2215,7 +2215,7 @@ bash scripts/checar-colisao-de-migration.sh escale-crm/main
 Create `supabase/migrations/20261107120000_9107_importacoes.sql`:
 
 ```sql
--- manifest: **Importar contatos e negócios (fork Escale, Fase 2F).** A importação (`crm_importacoes`: tipo, arquivo, mapeamento, configuração, decisões, nível, status e contagens) e as linhas do arquivo (`crm_importacoes_linhas`: bruto, normalizado, status, motivo, detalhe, resoluções e o que criou), só leitura para gerente ou acima da organização; toda escrita é do service role (as rotas, depois de conferir o papel, e o consumidor do `event_log`). Funções fechadas ao `service_role`: `fn_escale_enfileirar_importacao` (conta as linhas, põe na fila e emite `contatos.importacao_requested`), `fn_escale_contar_importacao` (refaz as contagens e fecha a importação), `fn_escale_cancelar_importacao`, `fn_escale_reabrir_importacao` (resolver em lote), `fn_escale_apagar_linhas_antigas` (LGPD: linhas de importações terminadas há mais de 30 dias) e a definer `fn_escale_empresa_da_importacao` (acha ou cria a empresa e vincula o contato pela `fn_escale_vincular_contato_a_empresa` da 2D).
+-- manifest: **Importar contatos e negócios (fork Escale, Fase 2F).** A importação (`crm_importacoes`: tipo, arquivo, mapeamento, configuração, decisões, nível, status e contagens) e as linhas do arquivo (`crm_importacoes_linhas`: bruto, normalizado, status, motivo, detalhe, resoluções e o que criou), só leitura para gerente ou acima da organização; toda escrita é do service role (as rotas, depois de conferir o papel, e o consumidor do `event_log`). Funções fechadas ao `service_role`: `fn_escale_enfileirar_importacao` (conta as linhas, põe na fila e emite `contatos.importacao_requested`), `fn_escale_contar_importacao` (refaz as contagens e fecha a importação), `fn_escale_cancelar_importacao`, `fn_escale_reabrir_importacao` (resolver em lote), `fn_escale_limpar_linhas_antigas` (LGPD: linhas de importações terminadas há mais de 30 dias) e a definer `fn_escale_empresa_da_importacao` (acha ou cria a empresa e vincula o contato pela `fn_escale_vincular_contato_a_empresa` da 2D).
 -- 9107: importar contatos e negócios (fork Escale, Frente B).
 
 -- ── 1. As tabelas ────────────────────────────────────────────────────────────
@@ -2486,7 +2486,7 @@ end;
 $$;
 
 -- ── 7. LGPD: as linhas das importações terminadas há mais de 30 dias ─────────
-create or replace function public.fn_escale_apagar_linhas_antigas(p_org uuid)
+create or replace function public.fn_escale_limpar_linhas_antigas(p_org uuid)
 returns integer
 language plpgsql
 security invoker
@@ -2513,12 +2513,12 @@ revoke all on function public.fn_escale_contar_importacao(uuid) from public, ano
 revoke all on function public.fn_escale_enfileirar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_cancelar_importacao(uuid) from public, anon, authenticated;
 revoke all on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) from public, anon, authenticated;
-revoke all on function public.fn_escale_apagar_linhas_antigas(uuid) from public, anon, authenticated;
+revoke all on function public.fn_escale_limpar_linhas_antigas(uuid) from public, anon, authenticated;
 grant execute on function public.fn_escale_contar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_enfileirar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_cancelar_importacao(uuid) to service_role;
 grant execute on function public.fn_escale_reabrir_importacao(uuid, text, jsonb) to service_role;
-grant execute on function public.fn_escale_apagar_linhas_antigas(uuid) to service_role;
+grant execute on function public.fn_escale_limpar_linhas_antigas(uuid) to service_role;
 
 -- ── 8. A empresa da linha (N9) ───────────────────────────────────────────────
 -- Pelo CNPJ, senão pelo nome (sem maiúsculas), senão — sem nome e sem CNPJ — a
@@ -2615,7 +2615,7 @@ describe("migration 9107 — importações (Fase 2F)", () => {
       "fn_escale_enfileirar_importacao(uuid)",
       "fn_escale_cancelar_importacao(uuid)",
       "fn_escale_reabrir_importacao(uuid, text, jsonb)",
-      "fn_escale_apagar_linhas_antigas(uuid)",
+      "fn_escale_limpar_linhas_antigas(uuid)",
       "fn_escale_empresa_da_importacao(uuid, uuid, uuid, text, text, text)",
     ]) {
       expect(migration).toContain(`revoke all on function public.${assinatura} from public, anon, authenticated;`);
@@ -3334,7 +3334,7 @@ export async function criarImportacao(
       const { error } = await admin.from("crm_importacoes_linhas").insert(lote);
       if (error) throw error;
     }
-    await admin.rpc("fn_escale_apagar_linhas_antigas", { p_org: orgId });
+    await admin.rpc("fn_escale_limpar_linhas_antigas", { p_org: orgId });
     const fila = await admin.rpc("fn_escale_enfileirar_importacao", { p_importacao: id });
     if (fila.error) throw fila.error;
     return { id, total: Number(fila.data) };

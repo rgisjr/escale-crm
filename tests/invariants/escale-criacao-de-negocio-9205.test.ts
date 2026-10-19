@@ -71,6 +71,15 @@ describe("fn_escale_nascer_negocio_do_dispositivo", () => {
     expect(sql(`${nascer()};`).trim()).toBe("");
   });
 
+  it("recusa destino que não vale (funil ou etapa que não existem na organização)", () => {
+    const fantasma = "e5ca1e00-9205-4000-8000-0000000000ff";
+    expect(() =>
+      sql(
+        `select public.fn_escale_nascer_negocio_do_dispositivo('${GOV_ORG}', '${CT}', '${fantasma}', '${fantasma}', 'Novo', 'whatsapp', '{}'::jsonb, '{}'::text[]);`,
+      ),
+    ).toThrow();
+  });
+
   it("só o service role executa", () => {
     expect(() => countAs(GOV_ADMIN, `select count(*) from (${nascer()}) x`)).toThrow();
   });

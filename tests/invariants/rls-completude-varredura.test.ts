@@ -245,6 +245,18 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "o consumidor (service role) é quem os marca.",
   },
   {
+    tabela: "crm_importacoes",
+    razao:
+      "tests/invariants/escale-importacoes.test.ts — fork Escale (migration 9107): gerente e admin leem, atendente e vizinho não; " +
+      "ninguém escreve pela sessão (a escrita é do service role).",
+  },
+  {
+    tabela: "crm_importacoes_linhas",
+    razao:
+      "tests/invariants/escale-importacoes.test.ts — fork Escale (migration 9107): as linhas seguem a importação (gerente+ lê, " +
+      "atendente não); ninguém escreve pela sessão.",
+  },
+  {
     tabela: "crm_criacao_de_negocio",
     razao:
       "tests/invariants/escale-criacao-de-negocio-9205.test.ts — fork Escale (migration 9205): todo membro lê, só administrador " +
