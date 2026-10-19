@@ -57479,9 +57479,17 @@ grant execute on function public.fn_meet_delivery_settle(uuid,uuid,text,timestam
 -- 9105: empresas da casca (fork Escale, Frente B).
 
 -- ── 1. O módulo B2B ligado para todos (E1) ───────────────────────────────────
-insert into public.platform_config (chave, valor, eh_segredo, semeado_do_env)
-values ('MODULO_CRM_B2B', 'ligado', false, false)
-on conflict (chave) do update set valor = 'ligado';
+-- `platform_config` só existe no baseline depois deste bloco (que vem antes da varredura de anon):
+-- numa instalação nova o insert abaixo é pulado e o bloco "módulo B2B ligado" no fim do baseline o faz.
+do $m$
+begin
+  if to_regclass('public.platform_config') is not null then
+    insert into public.platform_config (chave, valor, eh_segredo, semeado_do_env)
+    values ('MODULO_CRM_B2B', 'ligado', false, false)
+    on conflict (chave) do update set valor = 'ligado';
+  end if;
+end
+$m$;
 
 -- ── 1b. A empresa guarda os valores dos campos personalizados (2C) ───────────
 -- Mora aqui, e não na 9104, porque `public.companies` só existe no baseline
@@ -60529,3 +60537,8 @@ create index if not exists crm_tasks_demanda_idx
 
 comment on column public.crm_tasks.demanda_id is
   'A demanda de atendimento que originou o combinado (#2818). set null, não cascade: encerrar ou apagar a demanda não pode apagar o lembrete que a pessoa escreveu para si mesma — a tarefa continua na lista, com o vínculo zerado. NULL = tarefa avulsa ou presa só a negócio/contato.';
+
+-- ---- FORK ESCALE · módulo B2B ligado (migration 9105, parte da instalação) ----
+insert into public.platform_config (chave, valor, eh_segredo, semeado_do_env)
+values ('MODULO_CRM_B2B', 'ligado', false, false)
+on conflict (chave) do update set valor = 'ligado';
