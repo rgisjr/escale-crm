@@ -1,30 +1,58 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 let caminho = "/app/kanban";
-vi.mock("next/navigation", () => ({ usePathname: () => caminho }));
-vi.mock("@/lib/api/client", () => ({ apiClient: { get: vi.fn() } }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => caminho,
+  useRouter: () => ({ push: vi.fn() }),
+}));
+vi.mock("@/hooks/auth/AuthProvider", () => ({
+  useAuth: () => ({ activeOrg: { orgId: "o1", role: "agent" } }),
+}));
+const filaMock = vi.hoisted(() => ({
+  fila: vi.fn(),
+  resposta: { data: { pages: [{ data: [] as unknown[] }] }, isLoading: false, isError: false },
+}));
+vi.mock("@/hooks/escale/useFilaDeConversas", () => ({
+  useFilaDeConversas: (...args: unknown[]) => {
+    filaMock.fila(...args);
+    return filaMock.resposta;
+  },
+}));
+const preferencias = vi.hoisted(() => ({ data: { visualizacao: {} } }));
+vi.mock("@/hooks/escale/usePreferenciasDeConversas", () => ({
+  usePreferenciasDeConversas: () => preferencias,
+}));
+vi.mock("@/components/escale/conversas/fila/MenuDePresets", () => ({
+  MenuDePresets: () => <button type="button">Todos</button>,
+}));
+vi.mock("@/components/escale/conversas/fila/MenuDeOrdem", () => ({ MenuDeOrdem: () => null }));
+vi.mock("@/components/escale/conversas/fila/FotoDaConversa", () => ({
+  FotoDaConversa: () => null,
+}));
+vi.mock("@/components/escale/conversas/fila/LinhaDaFila", () => ({
+  LinhaDaFila: ({ conversa }: { conversa: { id: string; contacts?: { name?: string } } }) => (
+    <span>linha {conversa.contacts?.name}</span>
+  ),
+}));
+vi.mock("@/components/escale/conversas/ConversaEmbutida", () => ({ ConversaEmbutida: () => null }));
 vi.mock("@/components/escale/menu/ContadorDaFilaDaCasca", () => ({
-  ContadorDaFilaDaCasca: ({ limite }: { limite: number }) => <span data-testid="selo-do-fab" data-limite={limite} />,
+  ContadorDaFilaDaCasca: ({ limite }: { limite: number }) => (
+    <span data-testid="selo-do-fab" data-limite={limite} />
+  ),
 }));
 
-import { apiClient } from "@/lib/api/client";
 import { ConversasFlutuante } from "@/components/escale/ConversasFlutuante";
 
 function renderizar(reserva = 0) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <ConversasFlutuante reservaDoRodape={reserva} />
-    </QueryClientProvider>,
-  );
+  return render(<ConversasFlutuante reservaDoRodape={reserva} />);
 }
 
 beforeEach(() => {
   caminho = "/app/kanban";
-  vi.mocked(apiClient.get).mockReset();
+  filaMock.fila.mockClear();
+  filaMock.resposta = { data: { pages: [{ data: [] }] }, isLoading: false, isError: false };
 });
 
 describe("<ConversasFlutuante> (FAB da Clint)", () => {
@@ -36,39 +64,31 @@ describe("<ConversasFlutuante> (FAB da Clint)", () => {
     expect(botao).not.toHaveAttribute("data-aberto");
   });
 
-  it("só busca quando abre; aberto, vira X, o selo some e o painel tem o título Conversas", async () => {
-    vi.mocked(apiClient.get).mockResolvedValue({
-      data: [
-        {
-          id: "c-1",
-          last_message_preview: "Tem CNO aberto já",
-          unread_count_for_assignee: 2,
-          contacts: { display_name: "Marcos Teixeira", name: null },
-        },
-      ],
-    });
+  it("só busca quando abre; aberto, vira X, o selo some e o painel traz a mini-fila da Clint", async () => {
+    filaMock.resposta = {
+      data: { pages: [{ data: [{ id: "c-1", contacts: { name: "Marcos Teixeira" } }] }] },
+      isLoading: false,
+      isError: false,
+    };
     const user = userEvent.setup();
     renderizar();
-    expect(apiClient.get).not.toHaveBeenCalled();
+    expect(filaMock.fila).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Conversas recentes" }));
     const botao = screen.getByRole("button", { name: "Conversas recentes" });
     expect(botao).toHaveAttribute("data-aberto");
     expect(within(botao).queryByTestId("selo-do-fab")).toBeNull();
     const painel = screen.getByRole("dialog", { name: "Conversas recentes" });
     expect(within(painel).getByRole("heading", { name: "Conversas" })).toBeInTheDocument();
-    expect(await screen.findByText("Marcos Teixeira")).toBeInTheDocument();
-    expect(screen.getByText("Tem CNO aberto já")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Marcos Teixeira/ })).toHaveAttribute("href", "/app/inbox/c-1");
-    expect(apiClient.get).toHaveBeenCalledWith("/api/v1/conversations?limit=5&exclude_finished=true");
+    expect(within(painel).getByRole("searchbox", { name: "Pesquisar" })).toBeInTheDocument();
+    expect(within(painel).getByText("linha Marcos Teixeira")).toBeInTheDocument();
+    expect(filaMock.fila).toHaveBeenCalled();
   });
 
   it("sem conversa, diz que não há", async () => {
-    vi.mocked(apiClient.get).mockResolvedValue({ data: [] });
     const user = userEvent.setup();
     renderizar();
     await user.click(screen.getByRole("button", { name: "Conversas recentes" }));
-    expect(await screen.findByText("Nenhuma conversa ainda.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma conversa ainda.")).toBeInTheDocument();
   });
 
   it("não aparece dentro de Conversas, onde seria repetição", () => {

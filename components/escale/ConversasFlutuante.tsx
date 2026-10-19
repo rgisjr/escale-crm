@@ -1,21 +1,24 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { ConversaEmbutida } from "@/components/escale/conversas/ConversaEmbutida";
+import { FotoDaConversa } from "@/components/escale/conversas/fila/FotoDaConversa";
+import { LinhaDaFila } from "@/components/escale/conversas/fila/LinhaDaFila";
+import { MenuDeOrdem } from "@/components/escale/conversas/fila/MenuDeOrdem";
+import { MenuDePresets } from "@/components/escale/conversas/fila/MenuDePresets";
 import { ContadorDaFilaDaCasca } from "@/components/escale/menu/ContadorDaFilaDaCasca";
+import { useAuth } from "@/hooks/auth/AuthProvider";
+import { useFilaDeConversas } from "@/hooks/escale/useFilaDeConversas";
+import { usePreferenciasDeConversas } from "@/hooks/escale/usePreferenciasDeConversas";
 import { useT } from "@/hooks/i18n/useT";
-import { apiClient } from "@/lib/api/client";
+import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
-import { MessageCircleMore, X } from "@/lib/ui/icons-da-casca";
-
-interface ConversaResumo {
-  id: string;
-  last_message_preview: string | null;
-  unread_count_for_assignee: number | null;
-  contacts: { display_name: string | null; name: string | null } | null;
-}
+import type { FiltrosDoPainel } from "@/lib/escale/conversas/filtros-da-fila";
+import type { Ordem } from "@/lib/escale/conversas/ordem";
+import { buscaValeConsulta } from "@/lib/inbox/termo-de-busca";
+import { ChevronLeft, ExternalLink, MessageCircleMore, Search, X } from "@/lib/ui/icons-da-casca";
 
 /**
  * Medidas da Clint (01-001…01-011, ÷ 1,25; janela de 1536px): círculo de 50px,
@@ -86,7 +89,7 @@ export function ConversasFlutuante({ reservaDoRodape }: { reservaDoRodape: numbe
         {!aberto && (
           <ContadorDaFilaDaCasca
             limite={9}
-            className="absolute -right-1.5 -top-px h-[18px] min-w-[18px] px-1 text-[10px] font-semibold ring-2 ring-white"
+            className="absolute -top-px -right-1.5 h-[18px] min-w-[18px] px-1 text-[10px] font-semibold ring-2 ring-white"
           />
         )}
       </button>
@@ -110,69 +113,116 @@ function BalaoComPontos() {
 }
 
 /**
- * A moldura do painel da Clint (01-025, variante lateral): ~400px, cantos
- * arredondados, sombra e cabeçalho lilás com "Conversas" e um balão. A busca,
- * o "Todos" e a ordenação da Clint não entram: o painel da variante superior é
- * print que falta, e o conteúdo continua o de antes.
+ * O PAINEL FLUTUANTE DE CONVERSAS (fork Escale, Fases 0 e 3E; 01-025; F3, N12):
+ * a mini-fila da Clint (busca, presets, ordem e as linhas, com o tempo real da
+ * fila) e a conversa aberta DENTRO do painel (provisório: o print falta).
  */
-function PainelDeConversas() {
+export function PainelDeConversas() {
   const t = useT();
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["escale", "conversas-recentes"],
-    queryFn: async () =>
-      (await apiClient.get<{ data: ConversaResumo[] }>("/api/v1/conversations?limit=5&exclude_finished=true")).data,
-    staleTime: 15_000,
-  });
+  const router = useRouter();
+  const { activeOrg } = useAuth();
+  const [busca, setBusca] = useState("");
+  const [painel, setPainel] = useState<FiltrosDoPainel>({});
+  const [ordem, setOrdem] = useState<Ordem>("interacao");
+  const [aberta, setAberta] = useState<ConversationWithContact | null>(null);
+  const preferencias = usePreferenciasDeConversas();
+  const consulta = useMemo(
+    () => ({ painel, ordem, ...(buscaValeConsulta(busca) ? { busca } : {}) }),
+    [painel, ordem, busca],
+  );
+  const fila = useFilaDeConversas(consulta, activeOrg?.orgId ?? null);
+  const itens = (fila.data?.pages.flatMap((p) => p.data) ?? []) as ConversationWithContact[];
+  const [agora] = useState(() => new Date());
+
   return (
     <div
       role="dialog"
       aria-label={t("Conversas recentes")}
-      className="absolute bottom-[62px] right-0 w-[400px] overflow-hidden rounded-[13px] border border-casca-borda bg-surface"
+      className="absolute right-0 bottom-[62px] flex h-[min(570px,calc(100vh-140px))] w-[400px] flex-col overflow-hidden rounded-[13px] border border-casca-borda bg-surface"
       style={{ boxShadow: "var(--shadow-casca-painel)" }}
     >
-      <div className="flex items-center justify-between bg-casca-marca-suave px-4 py-3">
-        <h2 className="flex items-center gap-2 text-sm font-medium text-casca-texto">
-          {t("Conversas")}
-          <MessageCircleMore size={16} aria-hidden className="text-casca-marca" />
-        </h2>
-        <Link href="/app/inbox" className="text-xs text-casca-marca hover:underline">
-          {t("Abrir Conversas")}
-        </Link>
-      </div>
-      {isLoading ? (
-        <p className="px-4 py-6 text-xs text-casca-suave">{t("Carregando…")}</p>
-      ) : isError ? (
-        <p className="px-4 py-6 text-xs text-casca-suave">{t("Não consegui carregar as conversas.")}</p>
-      ) : !data || data.length === 0 ? (
-        <p className="px-4 py-6 text-xs text-casca-suave">{t("Nenhuma conversa ainda.")}</p>
+      {aberta ? (
+        <>
+          <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-casca-borda px-3">
+            <button
+              type="button"
+              aria-label={t("Voltar")}
+              onClick={() => setAberta(null)}
+              className="grid size-7 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
+            >
+              <ChevronLeft size={16} aria-hidden />
+            </button>
+            <FotoDaConversa conversa={aberta} tamanho="secao" />
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-casca-texto">
+              {rotuloDoContato(aberta.contacts ?? null, t)}
+            </span>
+            <Link
+              href={`/app/inbox?id=${aberta.id}`}
+              className="flex shrink-0 items-center gap-1 text-[12px] font-medium text-casca-marca hover:underline"
+            >
+              {t("Abrir em Conversas")}
+              <ExternalLink size={12} aria-hidden />
+            </Link>
+          </div>
+          <div className="min-h-0 flex-1">
+            <ConversaEmbutida conversationId={aberta.id} compacta />
+          </div>
+        </>
       ) : (
-        <ul>
-          {data.map((c) => {
-            const naoLidas = c.unread_count_for_assignee ?? 0;
-            return (
-              <li key={c.id}>
-                <Link
-                  href={`/app/inbox/${c.id}`}
-                  className="flex items-start gap-3 border-b border-casca-borda px-4 py-3 last:border-b-0 hover:bg-casca-raia"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-casca-texto">
-                      {rotuloDoContato(c.contacts, t)}
-                    </span>
-                    <span className="block truncate text-xs text-casca-suave">
-                      {c.last_message_preview || t("Sem mensagem")}
-                    </span>
-                  </span>
-                  {naoLidas > 0 && (
-                    <span className="rounded-sm bg-casca-novo px-1.5 text-[11px] font-semibold text-white tabular-nums">
-                      {naoLidas}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <div className="flex h-[52px] shrink-0 items-center gap-2 bg-casca-marca-suave px-4">
+            <h2 className="text-[15px] font-medium text-casca-texto">{t("Conversas")}</h2>
+            <MessageCircleMore size={16} aria-hidden className="text-casca-marca" />
+          </div>
+          <div className="shrink-0 px-3 pt-3">
+            <label className="relative block">
+              <input
+                type="search"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder={t("Pesquisar")}
+                aria-label={t("Pesquisar")}
+                className="h-9 w-full rounded-casca-gatilho bg-casca-busca pr-8 pl-3 text-[12px] text-casca-texto placeholder:text-casca-meta"
+              />
+              <Search
+                size={16}
+                aria-hidden
+                className="absolute top-1/2 right-2.5 -translate-y-1/2 text-casca-suave"
+              />
+            </label>
+            <div className="flex h-10 items-center justify-between">
+              <MenuDePresets
+                painel={painel}
+                aoMudarPainel={setPainel}
+                aoCriarFiltro={() => router.push("/app/inbox")}
+                temGrupos={false}
+              />
+              <MenuDeOrdem ordem={ordem} aoMudar={setOrdem} />
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {fila.isLoading ? (
+              <p className="px-4 py-6 text-xs text-casca-suave">{t("Carregando…")}</p>
+            ) : fila.isError ? (
+              <p className="px-4 py-6 text-xs text-casca-suave">
+                {t("Não consegui carregar as conversas.")}
+              </p>
+            ) : itens.length === 0 ? (
+              <p className="px-4 py-6 text-xs text-casca-suave">{t("Nenhuma conversa ainda.")}</p>
+            ) : (
+              itens.map((c) => (
+                <LinhaDaFila
+                  key={c.id}
+                  conversa={c}
+                  selecionada={false}
+                  aoSelecionar={() => setAberta(c)}
+                  visualizacao={preferencias.data.visualizacao}
+                  agora={agora}
+                />
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );
