@@ -375,7 +375,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/imports",
     label: "Importações",
-    description: "Lotes CSV/XLSX de empresas, pessoas e telefones.",
+    description: "Importe contatos e negócios por planilha e acompanhe as exportações.", // FORK ESCALE · Fase 2F (N14)
     icon: "FileText",
     group: "crm",
     section: "Preparar a venda",

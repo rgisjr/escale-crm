@@ -10,11 +10,14 @@ import { lerCatalogo } from "@/lib/escale/campos/banco";
 import type { CatalogosDaImportacao } from "./mapeamento";
 import { definicoesDosCatalogos, lerPlanilha, marcarRepetidas, normalizarLinha } from "./linhas";
 import { acaoValida, type Acao, type Motivo } from "./regras";
+import { LINHAS_DO_RELATORIO_MAX } from "./relatorio";
 import type { Resolucao } from "./classificar";
 import { lerContextoDaRodada, type Importacao, type LinhaParaProcessar } from "./contexto";
 import { contarImportacao, processarLinhas, type Dependencias } from "./executar";
 import type { StatusDaLinha } from "./textos";
 import { PAGINA_DA_LISTA, type ImportacaoLida, type LinhaLida, type PedidoDeImportacao } from "./tipos";
+
+export { LINHAS_DO_RELATORIO_MAX };
 
 export class ErroDaImportacao extends Error {
   constructor(
@@ -161,7 +164,6 @@ export async function lerImportacao(sb: SupabaseClient, orgId: string, id: strin
   return { ...i, origem_nome };
 }
 
-export const LINHAS_DO_RELATORIO_MAX = 500;
 const COLUNAS_DA_LINHA_LIDA = "id, numero, status, motivo, normalizado, detalhe, resolucoes, mensagem, com_aviso";
 
 export async function linhasDaImportacao(
