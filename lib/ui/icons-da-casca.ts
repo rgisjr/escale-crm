@@ -97,3 +97,6 @@ export { Award, History, Percent, SearchX, Undo2, UserMinus } from "lucide-react
 
 // Fase 2C (campos por objeto): ícones dos tipos de campo da Clint.
 export { AlignLeft, Coins, Hash, ToggleLeft, Type } from "lucide-react";
+
+// Fase 3A (Conversas): contato, abrir contato, nova conversa e o menu de reticências.
+export { ContactRound, UserRoundPlus, SquarePen, Ellipsis } from "lucide-react";

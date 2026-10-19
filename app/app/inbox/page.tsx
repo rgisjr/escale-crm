@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
@@ -6,6 +7,11 @@ import { InboxLayout } from "@/components/inbox/InboxLayout";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import { lerRascunho, type AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
+// ── FORK ESCALE · Fase 3A: com a casca, a tela de Conversas da Clint ──
+import { ConversasDaCasca } from "@/components/escale/conversas/ConversasDaCasca";
+import { origensDaPagina } from "@/lib/escale/contatos/origens-da-pagina";
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
+// ── fim FORK ESCALE ──
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inbox" };
@@ -56,6 +62,18 @@ export default async function InboxPage({
         draftId: rascunho,
       }),
     };
+  }
+  // FORK ESCALE · Fase 3A: com a casca ligada, a tela de Conversas da Clint;
+  // sem ela, o Inbox original, intacto (o mesmo encaixe de /app/contacts).
+  if (lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo") {
+    const { origens } = await origensDaPagina();
+    return (
+      <ConversasDaCasca
+        initialSelectedId={id ?? null}
+        rascunho={avisoDeRascunho}
+        origens={origens}
+      />
+    );
   }
   return <InboxLayout initialSelectedId={id ?? null} rascunho={avisoDeRascunho} />;
 }

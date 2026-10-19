@@ -950,6 +950,8 @@ export const AUDIT_ACTIONS = [
   "pipeline.cards_exported",
   // FORK ESCALE · Fase 2A: as colunas que a pessoa escolheu nas listas (migration 9101).
   "list_columns.updated",
+  // FORK ESCALE · Fase 3A: as preferências da tela de Conversas da casca (migration 9201).
+  "conversation_prefs.updated",
   // FORK ESCALE · Fase 1H: as notas do negócio (migration 9008). O texto da nota nunca vai ao metadata.
   "lead.note_added",
   "lead.note_edited",

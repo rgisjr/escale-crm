@@ -77,6 +77,10 @@ export async function GET(req: NextRequest): Promise<Response> {
     // A cerca `rota-le-todo-filtro-do-schema` cobra a chave: schema aceita,
     // rota lê, handler filtra. Esquecer aqui é invisível para todo gate de tipo.
     contact_id: url.searchParams.get("contact_id") ?? undefined,
+    // FORK ESCALE · Fase 3A: lidos aqui pela mesma razão das chaves acima
+    // (a cerca `rota-le-todo-filtro-do-schema` cobra a forma exata).
+    snoozed: url.searchParams.get("snoozed") ?? undefined,
+    ordem: url.searchParams.get("ordem") ?? undefined,
     cursor: url.searchParams.get("cursor") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
   });

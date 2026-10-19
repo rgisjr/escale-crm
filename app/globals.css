@@ -268,6 +268,11 @@
   --color-casca-seta: var(--color-border-strong);
   --color-casca-caixa: var(--color-surface-elevated);
   --color-casca-caixa-borda: var(--color-border-strong);
+  --color-casca-espiao: var(--color-success-bg);
+  --color-casca-espiao-texto: var(--color-success);
+  --color-casca-fixada: var(--color-success-bg);
+  --color-casca-atraso: var(--color-error-bg);
+  --color-casca-atencao: var(--color-warning);
   --radius-casca-gatilho: 6px;
   --radius-casca-card: 10px;
   --radius-casca-raia: 16px;
@@ -664,6 +669,11 @@
   --color-casca-seta: var(--color-casca-seta);
   --color-casca-caixa: var(--color-casca-caixa);
   --color-casca-caixa-borda: var(--color-casca-caixa-borda);
+  --color-casca-espiao: var(--color-casca-espiao);
+  --color-casca-espiao-texto: var(--color-casca-espiao-texto);
+  --color-casca-fixada: var(--color-casca-fixada);
+  --color-casca-atraso: var(--color-casca-atraso);
+  --color-casca-atencao: var(--color-casca-atencao);
   --radius-casca-gatilho: var(--radius-casca-gatilho);
   --radius-casca-card: var(--radius-casca-card);
   --radius-casca-raia: var(--radius-casca-raia);
