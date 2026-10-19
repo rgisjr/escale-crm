@@ -15,6 +15,7 @@ import { CabecalhoDoContato } from "./CabecalhoDoContato";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 import { CartaoDoNegocio } from "./CartaoDoNegocio";
+import { CartaoPausarAutomacao } from "./CartaoPausarAutomacao";
 import { ProximoNegocioDaConversa } from "./ProximoNegocioDaConversa";
 import { SecoesDoPainel } from "./SecoesDoPainel";
 
@@ -135,6 +136,7 @@ export function PainelDoContato({
           origens={origens}
         />
       )}
+      <CartaoPausarAutomacao conversationId={conversa.id} />
       <SecoesDoPainel
         conversa={conversa}
         quadro={quadro}

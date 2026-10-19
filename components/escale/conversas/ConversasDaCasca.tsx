@@ -133,11 +133,17 @@ export function ConversasDaCasca({
   const preferencias = usePreferenciasDeConversas();
 
   // A9: no modo espião, abrir a conversa não zera o contador.
-  useMarkAsRead(espiao ? null : (conversa?.id ?? null), conversa?.unread_count_for_assignee ?? 0);
+  // FORK ESCALE · Fase 3B (N6): "Marcar como não lida" vale até trocar de conversa.
+  const [naoLidaManual, setNaoLidaManual] = useState<string | null>(null);
+  useMarkAsRead(
+    espiao || naoLidaManual === conversa?.id ? null : (conversa?.id ?? null),
+    conversa?.unread_count_for_assignee ?? 0,
+  );
 
   const selecionar = useCallback(
     (id: string | null) => {
       setSelectedId(id);
+      setNaoLidaManual(null);
       if (id) setModo("vazio");
       const params = new URLSearchParams(searchParams.toString());
       if (id) params.set("id", id);
@@ -217,6 +223,7 @@ export function ConversasDaCasca({
                   rascunho={rascunho}
                   aoAbrirConversa={selecionar}
                   aoAbrirFicha={() => setFichaAberta(true)}
+                  aoMudarNaoLida={setNaoLidaManual}
                 />
               ) : modoDoCentro === "nova" ? (
                 <NovaConversa

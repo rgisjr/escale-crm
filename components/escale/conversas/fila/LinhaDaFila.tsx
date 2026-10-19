@@ -12,7 +12,7 @@ import {
 import { corDaEspera, textoDaEspera, type Visualizacao } from "@/lib/escale/conversas/visualizacao";
 import { corDoAvatar } from "@/lib/escale/quadro/aparencia";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
-import { CheckCheck, ChevronDown, Pin, UserX, X } from "@/lib/ui/icons-da-casca";
+import { AlarmClock, CheckCheck, ChevronDown, Pin, UserX, X } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 import { FotoDaConversa } from "./FotoDaConversa";
@@ -37,6 +37,7 @@ export function LinhaDaFila({
   aoSoltar,
   visualizacao,
   agora,
+  agendadas = 0,
 }: {
   conversa: ConversationWithContact;
   selecionada: boolean;
@@ -45,6 +46,8 @@ export function LinhaDaFila({
   aoSoltar?: () => void;
   visualizacao: Visualizacao;
   agora: Date;
+  /** FORK ESCALE · Fase 3B: quantas mensagens agendadas a conversa tem (o "⏱ n"). */
+  agendadas?: number;
 }) {
   const t = useT();
   const nome = rotuloDoContato(conversa.contacts ?? null, t);
@@ -52,7 +55,8 @@ export function LinhaDaFila({
   const atendente = conversa.assigned_to_user_name ?? null;
   const espera = visualizacao.campos.tempoSemResposta ? aguardandoHa(conversa, agora) : null;
   const tags = visualizacao.campos.tags ? (conversa.contacts?.tags ?? []).slice(0, 3) : [];
-  const segundaLinha = espera !== null || tags.length > 0;
+  const mostraAgendadas = visualizacao.campos.mensagensAgendadas && agendadas > 0;
+  const segundaLinha = espera !== null || tags.length > 0 || mostraAgendadas;
 
   return (
     <div className="relative">
@@ -129,6 +133,15 @@ export function LinhaDaFila({
                   className={cn("text-[11px]", COR_DA_ESPERA[corDaEspera(espera, visualizacao)])}
                 >
                   {textoDaEspera(espera, t)}
+                </span>
+              ) : null}
+              {mostraAgendadas ? (
+                <span
+                  title={`${agendadas} ${t("mensagens agendadas")}`}
+                  className="inline-flex items-center gap-0.5 text-[11px] text-casca-suave"
+                >
+                  <AlarmClock size={12} aria-hidden />
+                  {agendadas}
                 </span>
               ) : null}
               {tags.map((tag) => (

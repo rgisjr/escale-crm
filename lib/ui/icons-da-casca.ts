@@ -100,3 +100,6 @@ export { AlignLeft, Coins, Hash, ToggleLeft, Type } from "lucide-react";
 
 // Fase 3A (Conversas): contato, abrir contato, nova conversa e o menu de reticências.
 export { ContactRound, UserRoundPlus, SquarePen, Ellipsis } from "lucide-react";
+
+// Fase 3B (conversa aberta): relógio, câmera, pausa, ampulheta, microfone, enviar, atalhos e o assistente.
+export { AlarmClock, Camera, CirclePause, Hourglass, Lightbulb, MailOpen, Mic, PenLine, Play, RotateCcw, Smile, Workflow, Image as ImageIcon } from "lucide-react";

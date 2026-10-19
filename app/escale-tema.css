@@ -154,6 +154,12 @@ body:has([data-escale-casca]) {
   --color-casca-fixada: #d1fae5;
   --color-casca-atraso: #fee2e2;
   --color-casca-atencao: #faa200;
+  /* Fase 3B: a conversa aberta (thread, nota interna, pausa de automação) */
+  --color-casca-painel-chat: #f8f9fd;
+  --color-casca-nota: #fef9c3;
+  --color-casca-nota-borda: #fde68a;
+  --color-casca-pausa: #fff4e5;
+  --color-casca-pausa-texto: #d97706;
   /* onde a Clint usa o roxo dela entra a marca da organização, no mesmo lugar */
   --color-casca-marca: var(--color-accent);
   --color-casca-marca-forte: color-mix(in oklab, var(--color-accent) 85%, black);
@@ -229,6 +235,11 @@ body:has([data-escale-casca]) {
   --color-casca-fixada: #12332b;
   --color-casca-atraso: #4a2024;
   --color-casca-atencao: #faa200;
+  --color-casca-painel-chat: #171a26;
+  --color-casca-nota: #3b3516;
+  --color-casca-nota-borda: #5c5321;
+  --color-casca-pausa: #3a2a12;
+  --color-casca-pausa-texto: #f59e0b;
   --color-casca-marca: var(--color-accent);
   --color-casca-marca-forte: color-mix(in oklab, var(--color-accent) 85%, white);
   --color-casca-marca-suave: color-mix(in oklab, var(--color-accent) 16%, #181b26);

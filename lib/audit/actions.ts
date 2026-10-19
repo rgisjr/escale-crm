@@ -952,6 +952,16 @@ export const AUDIT_ACTIONS = [
   "list_columns.updated",
   // FORK ESCALE · Fase 3A: as preferências da tela de Conversas da casca (migration 9201).
   "conversation_prefs.updated",
+  // FORK ESCALE · Fase 3B: a conversa aberta da casca (migration 9202).
+  "conversation.waiting_set",
+  "conversation.waiting_cleared",
+  "conversation.reopened",
+  "conversation.marked_unread",
+  "conversation.automation_paused",
+  "conversation.automation_resumed",
+  "conversation_message.scheduled",
+  "conversation_message.unscheduled",
+  "conversation_message.schedule_sent",
   // FORK ESCALE · Fase 1H: as notas do negócio (migration 9008). O texto da nota nunca vai ao metadata.
   "lead.note_added",
   "lead.note_edited",

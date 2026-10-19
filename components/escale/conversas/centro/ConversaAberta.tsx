@@ -1,63 +1,89 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { ChatThread } from "@/components/inbox/ChatThread";
-import { Composer, type ComposerHandle } from "@/components/inbox/Composer";
-import { ConversationHeader } from "@/components/inbox/ConversationHeader";
-import { JanelaFechadaAviso } from "@/components/inbox/JanelaFechadaAviso";
 import { NumeroForaDoAr } from "@/components/inbox/NumeroForaDoAr";
 import { RetentionNotice } from "@/components/inbox/RetentionNotice";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useAuth } from "@/hooks/auth/AuthProvider";
+import { useConversaDaCasca } from "@/hooks/escale/useConversaDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { useMessagesRealtime } from "@/hooks/inbox/useMessagesRealtime";
 import { estadoDaJanela } from "@/lib/channels/janela";
-import { motivoDaJanelaFechada, motivoDoContato } from "@/lib/inbox/motivo-do-envio-bloqueado";
+import { modoDoCompositor } from "@/lib/escale/conversas/janela";
+import { motivoDoContato } from "@/lib/inbox/motivo-do-envio-bloqueado";
 import type { AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
 import type { Message } from "@/lib/types/messaging";
 import { Search, X } from "@/lib/ui/icons-da-casca";
 
+import { JanelaAgendarMensagem } from "@/components/escale/conversas/agendadas/JanelaAgendarMensagem";
+import { BarraDeStatus } from "./BarraDeStatus";
+import { CabecalhoDaConversa } from "./CabecalhoDaConversa";
+import { CompositorDaCasca } from "./compositor/CompositorDaCasca";
+import { ThreadDaCasca, ultimaMensagem } from "./thread/ThreadDaCasca";
+
 /**
- * A CONVERSA ABERTA NA CASCA (fork Escale, Fase 3A). Por enquanto é o
- * cabeçalho, a thread e o compositor do ORIGINAL, com as mesmas props que o
- * `InboxLayout` lhes dá (janela de 24h, bloqueios, rascunho sugerido). A 3B
- * troca os três pelos da Clint sem mexer na casca de fora.
+ * A CONVERSA ABERTA NA CASCA (fork Escale, Fase 3A → 3B): o cabeçalho, a
+ * barra de status, a thread e o compositor da Clint. Os avisos do original
+ * que não têm equivalente na Clint (retenção, número fora do ar) ficam.
  */
 export function ConversaAberta({
   conversa,
   rascunho,
   aoAbrirConversa,
   aoAbrirFicha,
+  aoMudarNaoLida,
 }: {
   conversa: ConversationWithContact;
   rascunho: AvisoDeRascunho | null;
   aoAbrirConversa: (id: string | null) => void;
-  /** Só abaixo de `xl`: o botão "Ficha" abre o painel direito numa gaveta. */
   aoAbrirFicha?: () => void;
+  /** FORK ESCALE · Fase 3B (N6): a casca para de chamar mark-read enquanto a conversa fica marcada como não lida. */
+  aoMudarNaoLida?: (id: string | null) => void;
 }) {
   const t = useT();
   const { user } = useAuth();
   const supportReadonly = user.support?.access_mode === "support_readonly";
-  const composerRef = useRef<ComposerHandle | null>(null);
-  const botaoBuscaRef = useRef<HTMLButtonElement | null>(null);
   const [busca, setBusca] = useState<{ conversaId: string; termo: string } | null>(null);
   const [respondendo, setRespondendo] = useState<Message | null>(null);
+  const [agendando, setAgendando] = useState<{ texto: string } | null>(null);
+  const [naoLidaManual, setNaoLidaManual] = useState<string | null>(null);
   const buscaAberta = busca !== null && busca.conversaId === conversa.id;
+  const acoes = useConversaDaCasca(conversa.id);
+  const mensagens = useMessagesRealtime(conversa.id);
 
-  // A janela vence sozinha com a aba aberta (mesma régua do original).
   const [agora, setAgora] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setAgora(new Date()), 30_000);
     return () => clearInterval(timer);
   }, []);
-  const janela = estadoDaJanela(
-    conversa.channel_sessions?.provider ?? null,
-    conversa.last_inbound_at ?? null,
-    agora,
-  );
-  const motivoDaJanela = motivoDaJanelaFechada(janela, conversa.channel_sessions?.provider, t);
-  const bloqueio = motivoDoContato(conversa.contacts, t);
-  const rascunhoVivo = rascunho && rascunho.conversationId === conversa.id ? rascunho : null;
+  useEffect(() => {
+    setRespondendo(null);
+    if (
+      rascunho &&
+      rascunho.conversationId === conversa.id &&
+      rascunho.leitura.estado === "sugerido"
+    ) {
+      setAgendando(null);
+    }
+  }, [conversa.id, rascunho]);
+
+  const provider = conversa.channel_sessions?.provider ?? null;
+  const ultima = useMemo(() => ultimaMensagem(mensagens.data?.pages), [mensagens.data]);
+  const ultimaFoiTemplate =
+    !!ultima && ultima.direction === "outbound" && ultima.type === "template";
+  const modo = modoDoCompositor({
+    estado: estadoDaJanela(provider, conversa.last_inbound_at ?? null, agora),
+    provider,
+    ultimaFoiTemplate,
+  });
+  const textoSugerido =
+    rascunho && rascunho.conversationId === conversa.id && rascunho.leitura.estado === "sugerido"
+      ? rascunho.leitura.texto
+      : "";
+  const bloqueio = supportReadonly
+    ? t("Acompanhamento somente leitura")
+    : motivoDoContato(conversa.contacts, t);
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="conversa-aberta">
@@ -68,15 +94,22 @@ export function ConversaAberta({
           </BotaoDaCasca>
         </div>
       ) : null}
-      <ConversationHeader
-        key={conversa.id}
-        conversation={conversa}
-        onAbrirConversa={aoAbrirConversa}
-        onBuscar={() =>
+      <CabecalhoDaConversa
+        conversa={conversa}
+        aoAbrirConversa={aoAbrirConversa}
+        aoBuscar={() =>
           buscaAberta ? setBusca(null) : setBusca({ conversaId: conversa.id, termo: "" })
         }
         buscaAberta={buscaAberta}
-        botaoBuscaRef={botaoBuscaRef}
+        naoLidaManual={naoLidaManual === conversa.id}
+        aoMarcarNaoLida={() =>
+          acoes.marcarNaoLida.mutate(undefined, {
+            onSuccess: () => {
+              setNaoLidaManual(conversa.id);
+              aoMudarNaoLida?.(conversa.id);
+            },
+          })
+        }
       />
       {buscaAberta ? (
         <div className="flex items-center gap-2 border-b border-casca-borda px-4 py-1.5">
@@ -85,8 +118,8 @@ export function ConversaAberta({
             type="search"
             autoFocus
             className="min-w-0 flex-1 bg-transparent py-1 text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta"
-            aria-label={t("Buscar nas mensagens carregadas")}
-            placeholder={t("Buscar nas mensagens carregadas")}
+            aria-label={t("Buscar nesta conversa")}
+            placeholder={t("Buscar nesta conversa")}
             value={busca.termo}
             onChange={(e) => setBusca({ conversaId: busca.conversaId, termo: e.target.value })}
             onKeyDown={(e) => {
@@ -103,17 +136,13 @@ export function ConversaAberta({
           </BotaoDaCasca>
         </div>
       ) : null}
+      <BarraDeStatus conversa={conversa} ultimaFoiTemplate={ultimaFoiTemplate} agora={agora} />
       <div className="min-h-0 flex-1 overflow-hidden">
-        <ChatThread
+        <ThreadDaCasca
           conversationId={conversa.id}
+          conversa={conversa}
           searchTerm={buscaAberta ? busca.termo : ""}
-          provider={conversa.channel_sessions?.provider ?? null}
-          onResponder={setRespondendo}
-          dono={{
-            userId: conversa.assigned_to_user_id ?? null,
-            nome: conversa.assigned_to_user_name ?? null,
-          }}
-          contatoId={conversa.contacts?.id ?? null}
+          aoResponder={setRespondendo}
         />
       </div>
       <RetentionNotice conversationId={conversa.id} />
@@ -127,27 +156,23 @@ export function ConversaAberta({
           onAbrirConversa={aoAbrirConversa}
         />
       ) : null}
-      {motivoDaJanela ? (
-        <JanelaFechadaAviso
-          conversationId={conversa.id}
-          provider={conversa.channel_sessions?.provider ?? null}
-          motivo={motivoDaJanela}
-        />
-      ) : null}
-      <Composer
-        key={rascunhoVivo ? `rascunho:${rascunhoVivo.conversationId}` : `composer:${conversa.id}`}
-        ref={composerRef}
+      <CompositorDaCasca
+        key={`compositor:${conversa.id}`}
         conversationId={conversa.id}
-        blockedReason={supportReadonly ? t("Acompanhamento somente leitura") : bloqueio}
-        janelaFechada={motivoDaJanela}
-        disabled={conversa.status === "closed"}
-        contactName={conversa.contacts?.name ?? null}
-        contactDisplayName={conversa.contacts?.display_name}
+        conversa={conversa}
+        modo={modo}
+        bloqueio={bloqueio}
         respondendo={respondendo}
-        onCancelarResposta={() => setRespondendo(null)}
-        currentContactId={conversa.contact_id}
-        rascunho={rascunhoVivo}
-        initialDraft={rascunhoVivo?.leitura.estado === "sugerido" ? rascunhoVivo.leitura.texto : ""}
+        aoCancelarResposta={() => setRespondendo(null)}
+        aoAgendar={(texto) => setAgendando({ texto })}
+        textoInicial={textoSugerido}
+      />
+      <JanelaAgendarMensagem
+        aberta={agendando !== null}
+        aoFechar={() => setAgendando(null)}
+        conversa={conversa}
+        textoInicial={agendando?.texto ?? ""}
+        modo={modo}
       />
     </div>
   );

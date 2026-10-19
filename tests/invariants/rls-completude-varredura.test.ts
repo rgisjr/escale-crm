@@ -173,6 +173,25 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "viewer escreve, FK da pessoa.",
   },
   {
+    tabela: "crm_mensagens_agendadas",
+    razao:
+      "tests/invariants/escale-conversa-aberta-9202.test.ts — fork Escale (migration 9202): agente+ da organização lê; " +
+      "agente cria a sua (criado_por = auth.uid(), pendente); remover é a sua (agente) ou qualquer (gerente+), só de pendente " +
+      "para removida; vizinho vê zero; CHECKs de tipo/status/conteúdo.",
+  },
+  {
+    tabela: "crm_pausas_de_automacao",
+    razao:
+      "tests/invariants/escale-conversa-aberta-9202.test.ts — fork Escale (migration 9202): agente+ lê e escreve as da organização " +
+      "(user_id = auth.uid() na escrita); vizinho zero; uma por conversa.",
+  },
+  {
+    tabela: "crm_eventos_da_conversa",
+    razao:
+      "tests/invariants/escale-conversa-aberta-9202.test.ts — fork Escale (migration 9202): lê quem vê a conversa (RLS de conversations); " +
+      "agente grava com o próprio user_id; vizinho zero; tipo fechado.",
+  },
+  {
     tabela: "crm_campos_do_negocio",
     razao:
       "tests/invariants/escale-campos-do-crm.test.ts — fork Escale (migration 9006): todo membro lê, só administrador escreve " +
