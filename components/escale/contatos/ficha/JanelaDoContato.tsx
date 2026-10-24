@@ -17,6 +17,7 @@ import { useFichaDeNegociosDoContato } from "@/hooks/escale/useFichaDeNegociosDo
 import { useSugestaoDoContato } from "@/hooks/escale/useSugestoesDeMescla";
 import { useT } from "@/hooks/i18n/useT";
 import { ApiError } from "@/lib/api/types";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import { ROTULO_DA_ABA_DO_CONTATO, abasVisiveis, type AbaDoContato } from "@/lib/escale/ficha-do-contato/regras";
 import { X } from "@/lib/ui/icons-da-casca";
@@ -82,7 +83,7 @@ export function JanelaDoContato({
     }
   }, [sumiu, aoFechar, t]);
 
-  const nome = contato?.name?.trim() || contato?.display_name?.trim() || contato?.phone_number || "";
+  const nome = (contato ? nomeDoContato(contato) : null) ?? contato?.phone_number ?? "";
 
   return (
     <DialogPrimitive.Root open onOpenChange={(aberto) => !aberto && aoFechar()}>

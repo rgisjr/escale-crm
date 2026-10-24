@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { instagramDoLink } from "@/lib/escale/contatos/regras";
 import { trocarEmpresaDoContato } from "@/lib/escale/empresas/banco";
 import {
@@ -153,7 +154,7 @@ export async function contatosDaMescla(sb: SB, orgId: string, ids: readonly stri
       const link = typeof l.custom_fields?.link_instagram === "string" ? l.custom_fields.link_instagram : null;
       const contato: ContatoDaMescla = {
         id: l.id,
-        nome: l.name?.trim() || l.display_name?.trim() || null,
+        nome: nomeDoContato(l),
         telefone: l.phone_number,
         email: l.email,
         instagram: instagramDoLink(link) ? link : null,

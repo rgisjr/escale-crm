@@ -26,7 +26,7 @@ beforeAll(() => {
     insert into public.contacts (id, organization_id, display_name, phone_number, email, custom_fields, created_at) values
       ('${C1}', '${GOV_ORG}', 'Mescla Um', '+5543998031566', null, '{}'::jsonb, now() - interval '3 days'),
       ('${C2}', '${GOV_ORG}', 'Mescla Dois', '+554398031566', 'mescla9106@x.com', '{"link_instagram":"https://instagram.com/mescla9106"}'::jsonb, now() - interval '2 days'),
-      ('${C3}', '${GOV_ORG}', 'Mescla Tres', null, 'mescla9106@x.com', '{"link_instagram":"https://www.instagram.com/Mescla9106/"}'::jsonb, now() - interval '1 day'),
+      ('${C3}', '${GOV_ORG}', 'Mescla Tres', null, 'mescla9106-tres@x.com', '{"link_instagram":"https://www.instagram.com/Mescla9106/"}'::jsonb, now() - interval '1 day'),
       ('${C4}', '${GOV_ORG}', 'Mescla Quatro', '+5521988887777', null, '{}'::jsonb, now()),
       ('${C5}', '${GOV_ORG}', 'Mescla Cinco', '+5521977776666', null, '{}'::jsonb, now());
   `);
@@ -43,9 +43,10 @@ describe("fn_escale_chave_do_telefone", () => {
 });
 
 describe("fn_escale_chaves_de_mescla", () => {
-  it("telefone com e sem o nono, e-mail e Instagram repetidos; o sozinho fica fora", () => {
+  it("telefone com e sem o nono e Instagram repetidos; e-mail não repete (índice único); o sozinho fica fora", () => {
     expect(chaves(GOV_VIEWER, `k.regra = 'telefone'`)).toBe(2);
-    expect(chaves(GOV_VIEWER, `k.regra = 'email'`)).toBe(2);
+    // O índice único de e-mail impede dois contatos vivos com o mesmo e-mail: a regra existe, mas não repete.
+    expect(chaves(GOV_VIEWER, `k.regra = 'email'`)).toBe(0);
     expect(chaves(GOV_VIEWER, `k.regra = 'instagram' and k.chave = 'mescla9106'`)).toBe(2);
     expect(chaves(GOV_VIEWER, `k.contato_id = '${C4}'`)).toBe(0);
   });
