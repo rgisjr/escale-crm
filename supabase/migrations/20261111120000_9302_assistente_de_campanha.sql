@@ -88,7 +88,7 @@ as $$
   )
   select v.contact_id, row_number() over (order by v.bloco, v.ordem, v.contact_id) as posicao
     from validos v
-   where coalesce(auth.role(), '') = 'service_role' or public.fn_role_at_least(p_org, 'manager');
+   where current_user in ('postgres', 'service_role') or public.fn_role_at_least(p_org, 'manager');
 $$;
 
 revoke all on function public.fn_escale_contatos_do_publico(uuid, jsonb) from public, anon;
@@ -130,7 +130,7 @@ as $$
    where r.organization_id = p_org
      and r.campaign_id = p_campanha
      and r.eligibility_status = 'excluded'
-     and (coalesce(auth.role(), '') = 'service_role' or public.fn_role_at_least(p_org, 'manager'))
+     and (current_user in ('postgres', 'service_role') or public.fn_role_at_least(p_org, 'manager'))
    group by 1
    order by 2 desc, 1;
 $$;
