@@ -56,17 +56,17 @@ export async function POST(req: NextRequest): Promise<Response> {
         falhas.push({ grupo, erro: t(TEXTO_DO_ERRO_DA_MESCLA.grupo_mudou) });
         continue;
       }
-      const principal = principalPorPrioridade(membros, pedido.data.prioridade);
-      const secundarios = membros.map((m) => m.id).filter((id) => id !== principal);
+      const principalId = principalPorPrioridade(membros, pedido.data.prioridade);
+      const secundarios = membros.map((m) => m.id).filter((id) => id !== principalId);
       try {
-        const feito = await mesclarGrupo(supabase, admin, orgId, authz.user.id, principal, secundarios, {});
+        const feito = await mesclarGrupo(supabase, admin, orgId, authz.user.id, principalId, secundarios, {});
         mesclados.push(feito);
         void audit({
           action: "contact.merged",
           actorUserId: authz.user.id,
           organizationId: orgId,
           resourceType: "contact",
-          resourceId: principal,
+          resourceId: principalId,
           requestId,
           metadata: { merged_contact_ids: secundarios, em_massa: true, prioridade: pedido.data.prioridade, origem: "casca" },
         });
