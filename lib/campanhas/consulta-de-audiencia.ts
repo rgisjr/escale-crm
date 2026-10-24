@@ -446,3 +446,46 @@ function ordinal(a: string, b: string): number {
 function citar(valor: string): string {
   return `"${valor.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
+
+// ─── FORK ESCALE · Fase 8B: os candidatos do público da casca ───
+/**
+ * Os candidatos de uma lista de ids, NA ORDEM dada (o público do assistente,
+ * já resolvido no banco pela 9302). As mesmas colunas, os mesmos campos
+ * personalizados e a mesma montagem de `buscarCandidatos`, sem recorte nenhum:
+ * os vetos continuam na classificação.
+ */
+export async function candidatosPorIds(
+  admin: SupabaseClient,
+  entrada: { organizationId: string; ids: readonly string[]; corpo: string },
+): Promise<CandidatoDaAudiencia[]> {
+  const camposDoTexto = camposUsadosNoTexto(entrada.corpo);
+  const colunas = COLUNAS_DO_CONTATO + (camposDoTexto.contato ? ", custom_fields" : "") + ", created_at";
+  const unicos = [...new Set(entrada.ids)];
+  const { data, error } = await buscaEmLotes<LinhaDeContato>(unicos, async (lote) => {
+    const { data: pagina, error: erro } = await admin
+      .from("contacts")
+      .select(colunas)
+      .eq("organization_id", entrada.organizationId)
+      .eq("kind", "person")
+      .is("is_merged_into", null)
+      .in("id", lote);
+    return { data: (pagina ?? null) as unknown as LinhaDeContato[] | null, error: erro };
+  });
+  if (error) throw new Error(`audiência: público — ${error.message}`);
+  const porId = new Map(data.map((l) => [l.id, l]));
+  const linhas = unicos.map((id) => porId.get(id)).filter((l): l is LinhaDeContato => l !== undefined);
+  const leads = camposDoTexto.lead
+    ? await leadsMaisRecentes(admin, entrada.organizationId, linhas.map((l) => l.id))
+    : null;
+  return linhas.map((l) => ({
+    contactId: l.id,
+    nome: nomeDoContato(l),
+    telefone: l.phone_number,
+    bloqueado: l.is_blocked,
+    pessoal: l.is_personal === true,
+    anonimizado: l.is_anonymized,
+    recusouMarketing: recusouMarketing(l.consent),
+    ...(camposDoTexto.contato ? { contato: mapaDeJson(l.custom_fields) } : {}),
+    ...(leads ? { lead: leads.get(l.id) ?? null } : {}),
+  }));
+}

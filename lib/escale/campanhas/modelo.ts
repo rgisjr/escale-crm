@@ -139,3 +139,9 @@ export function entradaDoEnvio(
     template_values: valores,
   };
 }
+
+/** O modelo da campanha, quando a mensagem é modelo (campanha do original e texto livre: `null`). */
+export function modeloDaCampanha(mensagem: unknown): MensagemDeModelo | null {
+  const m = mensagemSchema.safeParse(mensagem);
+  return m.success && m.data.tipo === "modelo" ? m.data : null;
+}

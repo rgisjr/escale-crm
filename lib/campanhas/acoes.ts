@@ -27,6 +27,9 @@ import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { camposDoDestinatario } from "./consulta-de-audiencia";
 import { renderizar } from "./renderizador";
 import type { StatusDaCampanha } from "./tipos";
+// FORK ESCALE · Fase 8B: o público da casca e o modelo da Meta.
+import { candidatosDaCasca } from "@/lib/escale/campanhas/candidatos";
+import { corpoComValores, entradaDoEnvio, modeloDaCampanha, tokensDoModelo, valoresDoModelo } from "@/lib/escale/campanhas/modelo";
 
 export interface CampanhaCarregada {
   id: string;
@@ -47,6 +50,10 @@ export interface CampanhaCarregada {
   teto_diario: number | null;
   teto_horario: number | null;
   description: string | null;
+  // FORK ESCALE · Fase 8B (migration 9302): opcionais para os testes do original seguirem.
+  escale_mensagem?: unknown;
+  escale_publico?: unknown;
+  escale_quando?: string | null;
 }
 
 export type Recusa = { ok: false; codigo: ApiErrorCode; mensagem: string; status: number };
@@ -55,7 +62,8 @@ export type Desfecho<T = unknown> = ({ ok: true } & T) | Recusa;
 const COLUNAS =
   "id, organization_id, name, status, channel_session_id, message_body, base_legal, lia_ref, " +
   "audience_filter, audience_version, content_version, scheduled_at, description, " +
-  "intervalo_segundos, janela_inicio_hora, janela_fim_hora, teto_diario, teto_horario";
+  "intervalo_segundos, janela_inicio_hora, janela_fim_hora, teto_diario, teto_horario, " +
+  "escale_mensagem, escale_publico, escale_quando";
 
 export async function carregarCampanha(
   admin: SupabaseClient,
@@ -159,6 +167,8 @@ export async function prepararAcao(
   }
 
   try {
+    // FORK ESCALE · Fase 8B: o público da casca (ids ou o filtro de Contatos) é resolvido aqui.
+    const daCasca = await candidatosDaCasca(admin, c);
     const resumo = await prepararCampanha(admin, {
       campanhaId: c.id,
       organizationId: c.organization_id,
@@ -166,6 +176,7 @@ export async function prepararAcao(
       corpo: c.message_body ?? "",
       contentVersion: c.content_version,
       agora,
+      ...(daCasca ? { candidatos: daCasca.candidatos, modelo: daCasca.modelo } : {}),
     });
     if (resumo.total === 0) {
       await voltarAoRascunho(admin, c.id, "audiencia_vazia");
@@ -454,6 +465,27 @@ export async function testarAcao(
     };
   }
 
+  // FORK ESCALE · Fase 8B: com modelo, o teste manda o modelo com os valores deste contato.
+  const modelo = modeloDaCampanha(c.escale_mensagem);
+  let envio = entradaDoEnvio(null, render.texto, null, { agora, fuso }, null);
+  if (modelo) {
+    const camposDoModelo = await camposDoDestinatario(admin, {
+      organizationId: c.organization_id,
+      contactId: linha.id,
+      corpo: tokensDoModelo(modelo),
+    });
+    const v = valoresDoModelo(modelo, { nome: nomeDoContato(linha), ...camposDoModelo }, { agora, fuso });
+    if (v.faltando.length > 0) {
+      return {
+        ok: false,
+        codigo: "campanha_conteudo_invalido",
+        mensagem: "Falta um dado que o modelo usa no cadastro deste contato — escolha outro para o teste.",
+        status: 422,
+      };
+    }
+    envio = entradaDoEnvio(modelo, corpoComValores(modelo.corpo, v.valores), { modelo: v.valores }, { agora, fuso }, nomeDoContato(linha));
+  }
+
   const boundary = await beginServiceAtOrigin(admin, c.organization_id, linha.id, c.channel_session_id);
   const mensagem = await sendMessageHandler(
     admin,
@@ -466,8 +498,7 @@ export async function testarAcao(
     } as Parameters<typeof sendMessageHandler>[1],
     {
       conversation_id: boundary.conversation_id,
-      type: "text",
-      body: render.texto,
+      ...envio,
       metadata: { source: "campaign_test", campaign_id: c.id },
     } as Parameters<typeof sendMessageHandler>[2],
   );

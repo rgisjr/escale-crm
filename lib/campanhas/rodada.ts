@@ -51,6 +51,9 @@ import { escolherNumero, poolDaCampanha, type NumeroDisponivel } from "./rodizio
 import { podeMandarAgora, proximaTentativa, type RitmoDaCampanha } from "./ritmo";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { TEXTO_DA_EXCLUSAO } from "./tipos";
+// FORK ESCALE · Fase 8B: o modelo da Meta e o custo preparado.
+import { custoPreparado } from "@/lib/escale/campanhas/custo";
+import { entradaDoEnvio } from "@/lib/escale/campanhas/modelo";
 
 export interface ResultadoDaRodada {
   /** Mensagens que saíram de fato. */
@@ -91,11 +94,13 @@ interface CampanhaRow {
   janela_fim_hora: number | null;
   teto_diario: number | null;
   teto_horario: number | null;
+  /** FORK ESCALE · Fase 8B (9302): texto livre ou modelo. */
+  escale_mensagem?: unknown;
 }
 
 const COLUNAS_DA_CAMPANHA =
   "id, organization_id, channel_session_id, name, message_body, content_version, " +
-  "intervalo_segundos, janela_inicio_hora, janela_fim_hora, teto_diario, teto_horario";
+  "intervalo_segundos, janela_inicio_hora, janela_fim_hora, teto_diario, teto_horario, escale_mensagem";
 
 /**
  * O status da organização embutido com `!inner` no `select`, e filtrado na
@@ -223,6 +228,8 @@ interface DestinatarioRow {
   contact_id: string;
   recipient_address: string | null;
   rendered_body: string | null;
+  /** FORK ESCALE · Fase 8B: os valores do modelo congelados na preparação. */
+  variables: unknown;
   contacts: {
     id: string;
     name: string | null;
@@ -243,7 +250,7 @@ async function rodarUmaCampanha(
   const { data: fila } = await admin
     .from("campaign_recipients")
     .select(
-      "id, contact_id, recipient_address, rendered_body, " +
+      "id, contact_id, recipient_address, rendered_body, variables, " +
         "contacts(id, name, display_name, phone_number, is_blocked, is_personal, is_anonymized, consent)",
     )
     .eq("campaign_id", campanha.id)
@@ -471,8 +478,8 @@ async function rodarUmaCampanha(
       } as Parameters<typeof sendMessageHandler>[1],
       {
         conversation_id: boundary.conversation_id,
-        type: "text",
-        body: corpo,
+        // FORK ESCALE · Fase 8B: com modelo, `type: "template"` com os valores do destinatário.
+        ...entradaDoEnvio(campanha.escale_mensagem, corpo, alvo.variables, { agora, fuso: knobs.timezone }, nomeDoContato(contato)),
         metadata: {
           source: "campaign",
           campaign_id: campanha.id,
@@ -483,6 +490,8 @@ async function rodarUmaCampanha(
       } as Parameters<typeof sendMessageHandler>[2],
     );
     await recordSend(pool, campanha.organization_id, sessionEscolhida, agora);
+    // FORK ESCALE · Fase 8B: o custo preparado (N15). Nunca lança.
+    const custo = await custoPreparado(admin, campanha, sessionEscolhida);
 
     // O desfecho vem do ESTADO da mensagem, nunca da ausência de exceção — o
     // handler marca `failed` e devolve normalmente.
@@ -502,6 +511,7 @@ async function rodarUmaCampanha(
         // antes — que era o desenho original, para o trigger de ack sempre achar
         // o destinatário — viola a FK e a reserva falha inteira.
         message_id: (mensagem as { id?: string }).id ?? messageId,
+        ...custo,
       })
       .eq("id", alvo.id)
       .eq("status", "sending");
