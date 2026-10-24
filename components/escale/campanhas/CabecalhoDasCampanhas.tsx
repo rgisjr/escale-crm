@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { useT } from "@/hooks/i18n/useT";
 import {
@@ -15,8 +16,9 @@ import { Settings } from "@/lib/ui/icons-da-casca";
  * O CABEÇALHO DE CAMPANHAS (002; PRD A1, A14): o nome do canal, a engrenagem
  * (a configuração do original, N11) e "Enviar WhatsApp". Sem o selo
  * "Otimizado" (Marketing Messages API, ignorado no PRD).
+ * Nas outras abas, mostra as `acoes` que a aba manda (Fase 8D: a engrenagem da chave e "Nova prospecção").
  */
-export function CabecalhoDasCampanhas({ aba }: { aba: AbaDasCampanhas }) {
+export function CabecalhoDasCampanhas({ aba, acoes }: { aba: AbaDasCampanhas; acoes?: ReactNode }) {
   const t = useT();
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-casca-divisoria px-6">
@@ -39,7 +41,9 @@ export function CabecalhoDasCampanhas({ aba }: { aba: AbaDasCampanhas }) {
             {t("Enviar WhatsApp")}
           </Link>
         </div>
-      ) : null}
+      ) : (
+        (acoes ?? null)
+      )}
     </header>
   );
 }

@@ -30,10 +30,11 @@ describe("CabecalhoDasCampanhas (002)", () => {
     );
   });
 
-  it("na aba Prospecção, só o título", () => {
-    render(<CabecalhoDasCampanhas aba="prospeccao" />);
+  it("na aba Prospecção, o título e as ações que a aba manda (8D)", () => {
+    render(<CabecalhoDasCampanhas aba="prospeccao" acoes={<a href="/x">Nova prospecção</a>} />);
     expect(screen.getByRole("heading", { name: "Prospecção" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Enviar WhatsApp" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Nova prospecção" })).toBeInTheDocument();
   });
 });
 
