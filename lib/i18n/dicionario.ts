@@ -16974,6 +16974,8 @@ export const DICIONARIO: Traducoes = {
   "Máximo por dia": { es: "Máximo por día" },
   "Na lista": { es: "En la lista" },
   "Não foi possível carregar a campanha.": { es: "No fue posible cargar la campaña." },
+  "Não foi possível carregar os padrões.": { es: "No fue posible cargar los valores predeterminados." },
+  "Não foi possível carregar o contato.": { es: "No fue posible cargar el contacto." },
   "Nenhuma campanha ainda.": { es: "Ninguna campaña todavía." },
   "Nenhum número conectado. Conecte um em Conexões antes de criar a campanha.": {
     es: "Ningún número conectado. Conecta uno en Conexiones antes de crear la campaña.",
