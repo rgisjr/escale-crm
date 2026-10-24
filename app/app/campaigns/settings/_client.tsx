@@ -90,6 +90,18 @@ function Padroes() {
     setCarregado(true);
   }, [q.data, carregado]);
 
+  // Q0b (B6-2): consulta com erro e sem dado não pode virar esqueleto para sempre.
+  if (q.isError && !q.data) {
+    return (
+      <Card className="space-y-3 p-4">
+        <p className="text-sm text-error-fg">{t("Não foi possível carregar os padrões.")}</p>
+        <Button variant="outline" onClick={() => void q.refetch()}>
+          {t("Tentar de novo")}
+        </Button>
+      </Card>
+    );
+  }
+
   if (q.isLoading || !carregado) return <Skeleton className="h-64 w-full" />;
 
   return (
