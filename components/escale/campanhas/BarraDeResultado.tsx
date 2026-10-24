@@ -44,12 +44,10 @@ export function BarraDeResultado({ linha, fuso }: { linha: LinhaDeCampanha; fuso
   }
   if (linha.adicionados <= 0) return <span className="text-[11px] text-casca-meta">—</span>;
 
-  let inicio = 0;
-  const segmentos = segmentosDaBarra(linha).map((s) => {
-    const comInicio = { ...s, inicio };
-    inicio += s.largura;
-    return comInicio;
-  });
+  const segmentos = segmentosDaBarra(linha).map((s, i, todos) => ({
+    ...s,
+    inicio: todos.slice(0, i).reduce((soma, anterior) => soma + anterior.largura, 0),
+  }));
   const ativo = segmentos.find((s) => s.chave === sobre);
   const resumo = segmentos.length
     ? segmentos.map((s) => textoDoSegmento(s, t)).join(", ")
