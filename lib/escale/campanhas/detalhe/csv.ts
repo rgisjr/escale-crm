@@ -1,10 +1,10 @@
 import { dataBr, dataEHoraBr, type Traduzir } from "@/lib/escale/campanhas/apresentacao";
 import { formatarTelefone } from "@/lib/escale/contatos/regras";
-import { celula } from "@/lib/escale/exportar/csv-do-quadro";
+import { celula, reaisDeCentavos } from "@/lib/escale/exportar/csv-do-quadro";
 
-import { ROTULO_DA_SITUACAO } from "./apresentacao";
+import { ROTULO_DA_SITUACAO, ROTULO_DO_STATUS_DO_NEGOCIO } from "./apresentacao";
 import { textoDoMotivoDaLinha } from "./motivos";
-import type { LinhaDeDestinatario } from "./tipos";
+import type { LinhaDeDestinatario, NegocioDaCampanha } from "./tipos";
 
 /**
  * O "BAIXAR .CSV" DO DETALHE (fork Escale, Fase 8C; N14). As colunas da aba
@@ -51,4 +51,31 @@ export function nomeDoCsvDaCampanha(nome: string, agora: Date, fuso?: string): s
       .slice(0, 60) || "campanha";
   const [dia, mes, ano] = dataBr(agora.toISOString(), fuso).split("/");
   return `campanha-${slug}-${ano}-${mes}-${dia}.csv`;
+}
+
+export const CABECALHO_DO_CSV_DOS_NEGOCIOS = [
+  "Contato",
+  "Telefone",
+  "Origem",
+  "Status",
+  "Valor",
+  "Criado em",
+] as const;
+
+/** O "Baixar CSV" da gaveta (material 2.3): o que a gaveta mostra, até 200 linhas. */
+export function csvDosNegocios(
+  linhas: readonly NegocioDaCampanha[],
+  t: Traduzir,
+  fuso?: string,
+): string {
+  const cabecalho = CABECALHO_DO_CSV_DOS_NEGOCIOS.map((c) => t(c));
+  const corpo = linhas.map((l) => [
+    l.contato,
+    formatarTelefone(l.telefone),
+    l.origem,
+    t(ROTULO_DO_STATUS_DO_NEGOCIO[l.status]),
+    l.valorCentavos === null ? "" : reaisDeCentavos(l.valorCentavos),
+    dataBr(l.criadoEm, fuso),
+  ]);
+  return [cabecalho, ...corpo].map((linha) => linha.map(celula).join(",")).join("\r\n");
 }
