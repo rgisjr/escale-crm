@@ -57,7 +57,8 @@ describe("migration 9302 (assistente de campanha da casca)", () => {
   it("o público reaproveita o filtro da 2B e só responde a gerente (ou ao service role)", () => {
     expect(MIGRATION).toContain("public.fn_escale_contatos_do_filtro(");
     expect(MIGRATION.match(/fn_role_at_least\(p_org, 'manager'\)/g)?.length).toBe(2);
-    expect(MIGRATION.match(/coalesce\(auth\.role\(\), ''\) = 'service_role'/g)?.length).toBe(2);
+    // current_user, não auth.role(): o Postgres efêmero do test:db não tem auth.role().
+    expect(MIGRATION.match(/current_user in \('postgres', 'service_role'\)/g)?.length).toBe(2);
   });
 
   it("o baseline traz o bloco (sem a linha do manifesto) depois das importações e ANTES da varredura de anon", () => {
