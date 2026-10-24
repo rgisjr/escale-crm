@@ -52,7 +52,7 @@ export interface DepsDeEtapa {
 
 /** As colunas que a tela e as regras usam. `position` entra: a reordenação calcula em cima dela. */
 const COLUNAS =
-  "id, name, slug, position, is_won, is_lost, is_archived, win_probability, agent_stage_hint, avisar_na_central, expected_duration_hours, last_change_actor_kind, last_change_at";
+  "id, name, slug, description, position, is_won, is_lost, is_archived, win_probability, agent_stage_hint, avisar_na_central, expected_duration_hours, last_change_actor_kind, last_change_at";
 
 /** A etapa como sai para quem lê — inclui a autoria da última mudança de configuração. */
 export interface EtapaVisivel {
@@ -85,7 +85,9 @@ export interface EtapaVisivel {
   last_change_at: string | null;
 }
 
-type EtapaLida = EtapaEditavel & {
+export type EtapaLida = EtapaEditavel & {
+  /** Só para quem compara antes de gravar (lib/escale/etapas/gravar.ts); corpo nao a devolve. */
+  description?: string | null;
   avisar_na_central?: boolean | null;
   last_change_actor_kind: string | null;
   last_change_at: string | null;
@@ -196,7 +198,7 @@ function erroDeBanco(
 }
 
 /** O funil, ou a recusa de 404 — o passo que TODA operação de etapa faz primeiro. */
-async function funilOuNadaFeito(deps: DepsDeEtapa, pipelineId: string): Promise<EtapaLida[]> {
+export async function funilOuNadaFeito(deps: DepsDeEtapa, pipelineId: string): Promise<EtapaLida[]> {
   let etapas: EtapaLida[] | null;
   try {
     etapas = await lerFunil(deps.supabase, deps.organizationId, pipelineId);
@@ -221,9 +223,30 @@ async function funilDepois(
 }
 
 /** `actorUserId` do audit — `null` quando quem agiu não é uma pessoa. */
-function autorDoAudit(actor: Actor): { actorUserId: string | null; metadata: Record<string, unknown> } {
+export function autorDoAudit(actor: Actor): { actorUserId: string | null; metadata: Record<string, unknown> } {
   if (actor.type === "user") return { actorUserId: actor.id, metadata: { actor_type: "user" } };
   return { actorUserId: null, metadata: { actor_type: actor.type, actor_id: actor.id } };
+}
+
+/** A descrição da etapa cabe em 200 caracteres (a caixa da Clint); o banco não limita. */
+export const MAX_DESCRICAO_DA_ETAPA = 200;
+
+/** Descrição vazia vira `null`: a coluna é opcional e "sem descrição" é uma coisa só. */
+function descricaoGravavel(d: string | null | undefined): string | null {
+  const texto = (d ?? "").trim();
+  return texto === "" ? null : texto;
+}
+
+function recusarDescricaoLonga(deps: DepsDeEtapa, d: string | null | undefined): void {
+  if ((d ?? "").trim().length > MAX_DESCRICAO_DA_ETAPA) {
+    throw new ApiError(
+      422,
+      "unprocessable_entity",
+      undefined,
+      deps.requestId,
+      `A descrição da etapa pode ter no máximo ${MAX_DESCRICAO_DA_ETAPA} caracteres.`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -245,7 +268,12 @@ export interface EtapaCriada {
  */
 export async function criarEtapa(
   deps: DepsDeEtapa,
-  input: { pipelineId: string; nome: string; expected_duration_hours?: number | null },
+  input: {
+    pipelineId: string;
+    nome: string;
+    expected_duration_hours?: number | null;
+    description?: string | null;
+  },
 ): Promise<EtapaCriada> {
   const name = input.nome.trim();
   const etapas = await funilOuNadaFeito(deps, input.pipelineId);
@@ -256,6 +284,8 @@ export async function criarEtapa(
   if (!veredito.ok) {
     throw new ApiError(422, "unprocessable_entity", undefined, deps.requestId, veredito.erro);
   }
+
+  recusarDescricaoLonga(deps, input.description);
 
   // A janela nasce com a etapa quando quem a criou já sabe a duração — mesma
   // régua do PATCH, porque a coluna é `numeric` sem CHECK.
@@ -276,6 +306,7 @@ export async function criarEtapa(
     slug: slugDeNome(name, etapas.map((e) => e.slug)),
     position: posicaoEntre(etapas[etapas.length - 1]?.position ?? null, null),
     ...autoria,
+    ...(input.description !== undefined ? { description: descricaoGravavel(input.description) } : {}),
     // Só quando veio pedido — a chave ausente não é a mesma que `null` num
     // insert que outros chamadores (MCP) compartilham.
     ...(input.expected_duration_hours !== undefined
@@ -329,6 +360,8 @@ export interface PedidoDeEdicao {
   depois_de?: string | null;
   /** Liga ou desliga o aviso na Central para quem entra nesta etapa (0440). */
   avisar_na_central?: boolean;
+  /** Descrição opcional da etapa (até 200 caracteres). `null` ou vazio limpa. */
+  description?: string | null;
   /**
    * Janela de "esfriando" da etapa, em HORAS (`crm_stages.expected_duration_hours`).
    * `null` limpa a configuração de propósito — a etapa volta ao padrão de
@@ -379,6 +412,8 @@ export async function atualizarEtapa(
     }
   }
 
+  recusarDescricaoLonga(deps, pedido.description);
+
   if (pedido.win_probability !== undefined && pedido.win_probability !== null) {
     const p = pedido.win_probability;
     if (!Number.isInteger(p) || p < 0 || p > 100) {
@@ -416,12 +451,14 @@ export async function atualizarEtapa(
     position?: number;
     win_probability?: number | null;
     avisar_na_central?: boolean;
+    description?: string | null;
     expected_duration_hours?: number | null;
   } = {};
   if (pedido.name !== undefined) patchDoAlvo.name = pedido.name.trim();
   // `undefined` não viaja; `null` limpa a calibração de propósito.
   if (pedido.win_probability !== undefined) patchDoAlvo.win_probability = pedido.win_probability;
   if (pedido.avisar_na_central !== undefined) patchDoAlvo.avisar_na_central = pedido.avisar_na_central;
+  if (pedido.description !== undefined) patchDoAlvo.description = descricaoGravavel(pedido.description);
   // Mesmo contrato: `undefined` = "não mexe", `null` = "volta ao padrão de 24 h".
   if (pedido.expected_duration_hours !== undefined) {
     patchDoAlvo.expected_duration_hours = pedido.expected_duration_hours;
