@@ -9,6 +9,7 @@ import { Popover } from "@/components/ui/popover";
 import { useCatalogoDeCampos } from "@/hooks/escale/useCatalogoDeCampos";
 import { useColunasDaLista, useSalvarColunasDaLista } from "@/hooks/escale/useColunasDaLista";
 import { useAcompanharAcoes } from "@/hooks/escale/useAcompanharAcoes";
+import { useContatoAberto } from "@/hooks/escale/useContatoAberto";
 import { useEstadoDaListaDeContatos } from "@/hooks/escale/useEstadoDaListaDeContatos";
 import {
   useCriarFiltroDaLista,
@@ -27,7 +28,6 @@ import {
   temFiltros,
   type SecaoDoFiltro,
 } from "@/lib/escale/contatos/filtros";
-import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
 import { OPCOES_VAZIAS, type OpcoesDoFiltro } from "@/lib/escale/contatos/opcoes-do-filtro";
 import {
   CHAVE_DO_POR_PAGINA,
@@ -47,6 +47,7 @@ import { ControleDosFiltros } from "./filtros/ControleDosFiltros";
 import { FaixaDeFiltros } from "./filtros/FaixaDeFiltros";
 import { PainelDeFiltros } from "./filtros/PainelDeFiltros";
 import { SeletorDeFiltros } from "./filtros/SeletorDeFiltros";
+import { JanelaDoContato, type ContatoParaNegocio } from "./ficha/JanelaDoContato";
 import { JanelaNovoNegocio } from "./JanelaNovoNegocio";
 import { MenuNovoContato } from "./MenuNovoContato";
 import { PainelDeColunas } from "./PainelDeColunas";
@@ -114,7 +115,10 @@ export function ListaDeContatos({
   const [faixaAberta, setFaixaAberta] = useState(false);
   const [painelAberto, setPainelAberto] = useState(false);
   const [foco, setFoco] = useState<SecaoDoFiltro | null>(null);
-  const [novoNegocio, setNovoNegocio] = useState<LinhaDeContato | null>(null);
+  const [novoNegocio, setNovoNegocio] = useState<ContatoParaNegocio | null>(null);
+  // FORK ESCALE · Fase 2E: o contato aberto por cima da lista e a mescla (Task 10).
+  const contatoAberto = useContatoAberto();
+  const [mescla, setMescla] = useState<{ aberta: boolean; contatoInicial?: string }>({ aberta: false });
   const [girando, setGirando] = useState(false);
 
   useEffect(() => {
@@ -363,6 +367,7 @@ export function ListaDeContatos({
           podeVerNegocios={podeCriar}
           podeExcluir={podeExcluir}
           aoAdicionarNegocio={setNovoNegocio}
+          aoAbrirContato={contatoAberto.abrir}
           cabecalhoDaSelecao={
             <MenuDaSelecao
               estado={sel.estado}
@@ -397,6 +402,22 @@ export function ListaDeContatos({
           camposDoContato={camposDoContato}
           aoLimpar={sel.limpar}
           aoPedir={acompanhamento.acompanhar}
+        />
+      ) : null}
+      {contatoAberto.contatoId ? (
+        <JanelaDoContato
+          contatoId={contatoAberto.contatoId}
+          aba={contatoAberto.aba}
+          aoMudarAba={contatoAberto.mudarAba}
+          aoTrocarContato={contatoAberto.trocar}
+          aoFechar={contatoAberto.fechar}
+          podeCriarNegocio={podeCriar}
+          podeMesclar={podeMesclar}
+          aoAdicionarNegocio={(c) => {
+            contatoAberto.fechar();
+            setNovoNegocio(c);
+          }}
+          aoRevisarDuplicado={(id) => setMescla({ aberta: true, contatoInicial: id })}
         />
       ) : null}
       <JanelaNovoNegocio

@@ -13,7 +13,7 @@ import {
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
-import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
+import type { ContatoParaNegocio } from "./ficha/JanelaDoContato";
 import { formatarTelefone } from "@/lib/escale/contatos/regras";
 
 import { CamposDaOportunidade, type OrigemParaCriar } from "./CamposDaOportunidade";
@@ -24,7 +24,7 @@ export function JanelaNovoNegocio({
   aoFechar,
   origens,
 }: {
-  contato: LinhaDeContato | null;
+  contato: ContatoParaNegocio | null;
   aoFechar: () => void;
   origens: OrigemParaCriar[];
 }) {

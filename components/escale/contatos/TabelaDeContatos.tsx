@@ -6,6 +6,7 @@ import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { LinhaDeContato } from "@/lib/escale/contatos/lista";
+import type { AbaDoContato } from "@/lib/escale/ficha-do-contato/regras";
 import { type CampoDeColuna, type ItemDeColuna, ROTULO_DA_COLUNA, chaveDoItem } from "@/lib/escale/contatos/regras";
 import { ChevronDown } from "@/lib/ui/icons-da-casca";
 
@@ -45,6 +46,7 @@ export function TabelaDeContatos({
   podeVerNegocios,
   podeExcluir,
   aoAdicionarNegocio,
+  aoAbrirContato,
   cabecalhoDaSelecao,
   selecao = SELECAO_DESLIGADA,
   camposDoContato = [],
@@ -57,6 +59,8 @@ export function TabelaDeContatos({
   podeVerNegocios: boolean;
   podeExcluir: boolean;
   aoAdicionarNegocio: (linha: LinhaDeContato) => void;
+  /** FORK ESCALE · Fase 2E (N4): abre a janela do contato por cima da lista. */
+  aoAbrirContato?: (id: string, aba?: AbaDoContato) => void;
   cabecalhoDaSelecao?: ReactNode;
   selecao?: SelecaoDaTabela;
   /** Fase 2C: os campos do contato que podem virar coluna (rótulo e tipo). */
@@ -146,6 +150,12 @@ export function TabelaDeContatos({
                 ) : null}
                 <Link
                   href={`/app/contacts/${linha.id}`}
+                  onClick={(e) => {
+                    // FORK ESCALE · Fase 2E (N4): abre a janela por cima da lista; o clique do meio e o Ctrl continuam abrindo outra aba.
+                    if (!aoAbrirContato || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+                    e.preventDefault();
+                    aoAbrirContato(linha.id, "contato");
+                  }}
                   className="block truncate text-[14px] font-medium text-casca-texto hover:underline"
                 >
                   {nome}
@@ -163,14 +173,22 @@ export function TabelaDeContatos({
               ) : item.tipo === "nativa" && item.chave === "tags" ? (
                 <CelulaTags tags={linha.tags} />
               ) : item.tipo === "nativa" && item.chave === "negocios" ? (
-                <CelulaNegocios linha={linha} aoAdicionar={aoAdicionarNegocio} />
+                <CelulaNegocios
+                  linha={linha}
+                  aoAdicionar={aoAdicionarNegocio}
+                  aoVerNegocios={aoAbrirContato ? () => aoAbrirContato(linha.id, "negocios") : undefined}
+                />
               ) : (
                 <CelulaExtra item={item} linha={linha} campo={camposDoContato.find((c) => c.chave === item.chave)} />
               )}
             </td>
           ))}
           <td className={`${TD} w-10 text-right`}>
-            <MenuDaLinha linha={linha} podeExcluir={podeExcluir} />
+            <MenuDaLinha
+              linha={linha}
+              podeExcluir={podeExcluir}
+              aoEditar={aoAbrirContato ? () => aoAbrirContato(linha.id, "contato") : undefined}
+            />
           </td>
         </tr>
       );
