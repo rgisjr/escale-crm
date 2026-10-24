@@ -71,7 +71,8 @@ interface LinhaCanal {
  * as que funcionam. `false` é a resposta conservadora e local: "não use ESTE
  * canal para mandar recado".
  */
-function aceitaMensagemLivre(provider: string | null): boolean {
+// FORK ESCALE · Fase 8B: a rodada da campanha grava se o número é oficial (custo preparado).
+export function aceitaMensagemLivre(provider: string | null): boolean {
   if (!transportaMensagem(provider)) return false;
   try {
     return capabilitiesOf(provider as ProviderDeMensagem).freeformOutsideWindow;
