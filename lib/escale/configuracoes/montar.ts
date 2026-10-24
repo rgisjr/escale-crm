@@ -16,7 +16,7 @@ export interface EtapaDaOrigem {
   id: string;
   name: string;
   /** Descrição opcional da etapa (até 200 caracteres), a que a Clint mostra na dica do título. */
-  description: string | null;
+  description?: string | null;
   position: number;
   is_won: boolean;
   is_lost: boolean;
