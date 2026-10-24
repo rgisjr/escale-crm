@@ -16,8 +16,6 @@ import { formatarTelefone } from "@/lib/escale/contatos/regras";
 import { baixarCsv } from "@/lib/escale/exportar/baixar";
 import { X } from "@/lib/ui/icons-da-casca";
 
-const COLUNAS = ["Contato", "Telefone", "Origem", "Status", "Valor", "Criado em"] as const;
-
 /**
  * A GAVETA "NEGÓCIOS CRIADOS" (material 2.3; N5; sem print, provisória): à
  * direita, 720px; o título da situação, "{n} negócios gerados por {campanha}",
@@ -42,6 +40,9 @@ export function GavetaDeNegocios({
   const total = consulta.data?.total ?? 0;
   const botao =
     "inline-flex h-8 items-center rounded-casca-gatilho px-3.5 text-[13px] font-medium transition-colors disabled:opacity-60";
+  const subtitulo = t("{n} negócios gerados por {campanha}")
+    .replace("{n}", numeroBr(total))
+    .replace("{campanha}", nomeDaCampanha);
   return (
     <DialogPrimitive.Root open={situacao !== null} onOpenChange={(a) => !a && aoFechar()}>
       <DialogPortal>
@@ -55,11 +56,7 @@ export function GavetaDeNegocios({
               <DialogTitle className="text-[16px] font-semibold">
                 {t(TITULO_DA_GAVETA[situacao ?? "todos"])}
               </DialogTitle>
-              <p className="mt-1 text-[12px] text-casca-suave">
-                {t("{n} negócios gerados por {campanha}")
-                  .replace("{n}", numeroBr(total))
-                  .replace("{campanha}", nomeDaCampanha)}
-              </p>
+              <p className="mt-1 text-[12px] text-casca-suave">{subtitulo}</p>
             </div>
             <DialogPrimitive.Close
               aria-label={t("Fechar")}
@@ -91,11 +88,24 @@ export function GavetaDeNegocios({
               <table className="w-full table-fixed text-[12px]">
                 <thead>
                   <tr className="h-10 border-b border-casca-divisoria text-left text-[10px] font-semibold tracking-[0.1em] uppercase">
-                    {COLUNAS.map((c) => (
-                      <th key={c} scope="col" className="pr-3">
-                        {t(c)}
-                      </th>
-                    ))}
+                    <th scope="col" className="pr-3">
+                      {t("Contato")}
+                    </th>
+                    <th scope="col" className="pr-3">
+                      {t("Telefone")}
+                    </th>
+                    <th scope="col" className="pr-3">
+                      {t("Origem")}
+                    </th>
+                    <th scope="col" className="pr-3">
+                      {t("Status")}
+                    </th>
+                    <th scope="col" className="pr-3">
+                      {t("Valor")}
+                    </th>
+                    <th scope="col" className="pr-3">
+                      {t("Criado em")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
