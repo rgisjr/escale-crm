@@ -118,6 +118,16 @@ export function origensVivasDaVisualizacao(v: Pick<Visualizacao, "origens">, ori
   });
 }
 
+/**
+ * As origens da visualização que esta sessão nem enxerga (a RLS as esconde de quem
+ * não tem acesso a elas). Arquivada não entra aqui: ela aparece na leitura, só não
+ * está viva. A rota as mantém ao regravar a lista, para uma edição não apagá-las.
+ */
+export function origensQueASessaoNaoVe(v: Pick<Visualizacao, "origens">, origens: Origens): string[] {
+  const conhecidas = new Set(origens.funis.map((f) => f.id));
+  return v.origens.filter((id) => !conhecidas.has(id));
+}
+
 /** A seleção do painel na ordem do próprio painel: é a ordem das colunas. */
 export function ordenarNaArvore(marcadas: ReadonlySet<string>, arvore: ArvoreDeOrigens): string[] {
   return [...arvore.grupos.flatMap((g) => g.funis), ...arvore.semGrupo]

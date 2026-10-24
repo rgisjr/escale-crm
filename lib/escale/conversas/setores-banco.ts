@@ -31,28 +31,34 @@ export async function listarSetores(supabase: SupabaseClient, orgId: string): Pr
   }));
 }
 
-/** Troca a lista inteira de membros (o modal da Clint grava o conjunto). */
+/**
+ * Troca a lista inteira de membros (o modal da Clint grava o conjunto). Sem
+ * transação no PostgREST, então a ordem protege o setor: entram os novos primeiro
+ * e só depois saem os que não estão mais na lista. Se a entrada falhar (ex.: id
+ * de quem saiu da organização), os membros antigos continuam intactos.
+ */
 export async function trocarMembros(
   supabase: SupabaseClient,
   orgId: string,
   setorId: string,
   membros: readonly string[],
 ): Promise<void> {
-  const apagar = await supabase
+  const unicos = [...new Set(membros)];
+  if (unicos.length > 0) {
+    const inserir = await supabase.from("crm_setores_membros").upsert(
+      unicos.map((user_id) => ({ organization_id: orgId, setor_id: setorId, user_id })),
+      { onConflict: "setor_id,user_id", ignoreDuplicates: true },
+    );
+    if (inserir.error) throw inserir.error;
+  }
+  let apagar = supabase
     .from("crm_setores_membros")
     .delete()
     .eq("organization_id", orgId)
     .eq("setor_id", setorId);
-  if (apagar.error) throw apagar.error;
-  if (membros.length === 0) return;
-  const inserir = await supabase.from("crm_setores_membros").insert(
-    [...new Set(membros)].map((user_id) => ({
-      organization_id: orgId,
-      setor_id: setorId,
-      user_id,
-    })),
-  );
-  if (inserir.error) throw inserir.error;
+  if (unicos.length > 0) apagar = apagar.not("user_id", "in", `(${unicos.join(",")})`);
+  const { error } = await apagar;
+  if (error) throw error;
 }
 
 export interface SetorCurto {
@@ -183,6 +189,14 @@ export async function pode(
   return data === true;
 }
 
+/** O atendente da conversa mudou entre a leitura e a troca de setor (conflito, 409). */
+export class AtendenteMudouError extends Error {
+  constructor() {
+    super("O atendente já foi alterado por outro usuário!");
+    this.name = "AtendenteMudouError";
+  }
+}
+
 /**
  * "Alterar setor" (3C N7), extraída da rota para servir também à ação em massa
  * (3D N14): o setor novo em transferência, com o setor e o atendente anteriores
@@ -197,6 +211,20 @@ export async function transferirConversaParaSetor(
 ): Promise<"transferida" | "mesmo_setor"> {
   const atual = await setorEfetivo(db, orgId, conversa);
   if (atual.setorId === destino) return "mesmo_setor";
+  // O atendente sai primeiro: se mudou no meio (a RPC não devolve linha), nada do
+  // setor foi tocado e a rota responde 409 em vez de "transferida" com o atendente ainda lá.
+  if (conversa.assigned_to_user_id) {
+    const solta = await db.rpc("fn_conversation_assign", {
+      p_organization_id: orgId,
+      p_conversation_id: conversa.id,
+      p_to_user_id: null as unknown as string,
+      p_reason: "release",
+      p_expected_assignee: conversa.assigned_to_user_id,
+      p_enforce_expected: true,
+    });
+    if (solta.error) throw new Error(solta.error.message);
+    if (!(solta.data as unknown[] | null)?.[0]) throw new AtendenteMudouError();
+  }
   const agora = new Date().toISOString();
   const { error } = await db.from("crm_setor_da_conversa").upsert(
     {
@@ -213,16 +241,5 @@ export async function transferirConversaParaSetor(
     { onConflict: "conversation_id" },
   );
   if (error) throw new Error(error.message);
-  if (conversa.assigned_to_user_id) {
-    const solta = await db.rpc("fn_conversation_assign", {
-      p_organization_id: orgId,
-      p_conversation_id: conversa.id,
-      p_to_user_id: null as unknown as string,
-      p_reason: "release",
-      p_expected_assignee: conversa.assigned_to_user_id,
-      p_enforce_expected: true,
-    });
-    if (solta.error) throw new Error(solta.error.message);
-  }
   return "transferida";
 }

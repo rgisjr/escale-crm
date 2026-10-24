@@ -198,7 +198,7 @@ export async function prepararAcao(
       };
     }
 
-    await admin
+    const { error: erroAoFicarPronta } = await admin
       .from("campaigns")
       .update({
         status: "ready",
@@ -210,6 +210,8 @@ export async function prepararAcao(
       })
       .eq("id", c.id)
       .eq("status", "preparing");
+    // Sem isto a campanha ficava em `preparing` para sempre e a rota dizia "ok".
+    if (erroAoFicarPronta) throw new Error(erroAoFicarPronta.message);
 
     return { ok: true, resumo };
   } catch (err) {
