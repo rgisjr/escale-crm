@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useT } from "@/hooks/i18n/useT";
 import {
   PARAM_ETAPA_DO_PROXIMO,
@@ -31,29 +31,32 @@ const SETA =
 /**
  * O "?" do PRÓXIMO NEGÓCIO (print 11): círculo cheio na cor da marca com o "?"
  * branco, diferente do "?" sem fundo do `AjudaDaCasca`. A dica é a mesma
- * (cartão claro à direita). Precisa de um `TooltipProvider` acima.
+ * (cartão claro à direita). O `TooltipProvider` mora aqui: não há um acima
+ * na ficha, e sem ele o Radix lança e derruba a tela (Q0b, B2-1).
  */
 function AjudaDoProximo({ texto }: { texto: string }) {
   const t = useT();
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-label={`${t("Ajuda")}: ${texto}`}
-          className="grid size-3.5 place-items-center rounded-full bg-casca-marca text-[9px] leading-none font-bold text-white"
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${t("Ajuda")}: ${texto}`}
+            className="grid size-3.5 place-items-center rounded-full bg-casca-marca text-[9px] leading-none font-bold text-white"
+          >
+            <span aria-hidden>?</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="right"
+          sideOffset={8}
+          className="max-w-[340px] rounded-[6px] bg-surface px-3 py-2.5 text-[10px] leading-[14px] font-normal text-casca-suave shadow-casca-painel"
         >
-          <span aria-hidden>?</span>
-        </button>
-      </TooltipTrigger>
-      <TooltipContent
-        side="right"
-        sideOffset={8}
-        className="max-w-[340px] rounded-[6px] bg-surface px-3 py-2.5 text-[10px] leading-[14px] font-normal text-casca-suave shadow-casca-painel"
-      >
-        {texto}
-      </TooltipContent>
-    </Tooltip>
+          {texto}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
