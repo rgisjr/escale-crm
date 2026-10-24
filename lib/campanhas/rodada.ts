@@ -53,6 +53,7 @@ import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { TEXTO_DA_EXCLUSAO } from "./tipos";
 // FORK ESCALE · Fase 8B: o modelo da Meta e o custo preparado.
 import { custoPreparado } from "@/lib/escale/campanhas/custo";
+import { pedirPosEnvio } from "@/lib/escale/campanhas/pos-envio";
 import { entradaDoEnvio } from "@/lib/escale/campanhas/modelo";
 
 export interface ResultadoDaRodada {
@@ -276,6 +277,8 @@ async function rodarUmaCampanha(
       .eq("id", campanha.id)
       .eq("status", "running")
       .select("id");
+    // FORK ESCALE · Fase 8B: só quem fechou a campanha (o compare-and-set) pede o pós-envio, uma vez.
+    if ((data ?? []).length > 0) await pedirPosEnvio(admin, campanha.id, campanha.organization_id);
     return {
       enviadas: 0,
       pulados: 0,
