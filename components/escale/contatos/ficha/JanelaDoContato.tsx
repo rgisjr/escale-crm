@@ -68,6 +68,8 @@ export function JanelaDoContato({
   const abas = abasVisiveis(temNegocios);
   const atual = abas.includes(aba) ? aba : "contato";
   const sumiu = consulta.isError && consulta.error instanceof ApiError && consulta.error.status === 404;
+  // Q0b (B3-2): só o 404 fecha a janela; 500, 403 e rede mostram o erro com nova tentativa.
+  const falhou = consulta.isError && !sumiu && !contato;
   const vencedor = contato?.is_merged_into ?? null;
 
   useEffect(() => {
@@ -102,7 +104,18 @@ export function JanelaDoContato({
             </DialogPrimitive.Close>
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-[60px] pt-[26px] pb-6">
-            {!contato ? (
+            {falhou ? (
+              <div role="alert" className="flex flex-col items-start gap-3 text-[13px] text-casca-texto">
+                <p>{t("Não foi possível carregar o contato.")}</p>
+                <button
+                  type="button"
+                  onClick={() => void consulta.refetch()}
+                  className="rounded-md border border-casca-borda px-3 py-1.5 hover:bg-casca-raia"
+                >
+                  {t("Tentar de novo")}
+                </button>
+              </div>
+            ) : !contato ? (
               <div aria-busy className="flex animate-pulse items-center gap-3">
                 <span className="size-10 rounded-full bg-casca-raia" />
                 <span className="h-5 w-48 rounded-md bg-casca-raia" />

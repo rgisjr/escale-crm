@@ -58,4 +58,15 @@ describe("JanelaDeImportacao (Fase 2F)", () => {
     fireEvent.change(screen.getByLabelText("Arquivo .CSV"), { target: { files: [new File(["x"], "planilha.xlsx")] } });
     expect(await screen.findByRole("alert")).toHaveTextContent("Selecione um arquivo .CSV válido.");
   });
+
+  it("falha ao ler o arquivo mostra o erro e destrava a janela (Q0b, B5-1)", async () => {
+    montar();
+    const arquivo = new File(["Nome\nAna\n"], "contatos.csv", { type: "text/csv" });
+    vi.spyOn(arquivo, "slice").mockReturnValue({
+      arrayBuffer: () => Promise.reject(new Error("leitura negada")),
+    } as unknown as Blob);
+    fireEvent.change(screen.getByLabelText("Arquivo .CSV"), { target: { files: [arquivo] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível ler o arquivo enviado.");
+    expect(screen.queryByText("Enviando arquivo…")).not.toBeInTheDocument();
+  });
 });

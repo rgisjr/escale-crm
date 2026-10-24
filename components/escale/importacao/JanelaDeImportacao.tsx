@@ -98,7 +98,13 @@ function JanelaAberta({ aoFechar, tipoInicial, travarTipo = false, origemInicial
     }
     setErroDoArquivo(null);
     setLendo(true);
-    const lido = lerCabecalho(await escolhido.slice(0, CABECALHO_MAX_BYTES).arrayBuffer());
+    // Q0b (B5-1): se a leitura falhar, destrava a janela e mostra o erro (antes ficava em "Enviando arquivo…").
+    let lido: string[] | null = null;
+    try {
+      lido = lerCabecalho(await escolhido.slice(0, CABECALHO_MAX_BYTES).arrayBuffer());
+    } catch {
+      lido = null;
+    }
     if (minha !== escolhaAtual.current) return;
     setLendo(false);
     if (!lido || lido.length === 0) {

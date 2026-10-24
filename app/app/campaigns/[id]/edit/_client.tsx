@@ -98,6 +98,20 @@ export function EditarCampanha({ id }: { id: string }) {
     filtro.sem_tags.length > 0 ||
     filtro.sem_interacao_ha_dias !== null;
 
+  // Q0b (B6-1): consulta com erro e sem dado não pode virar esqueleto para sempre.
+  if (campanha.isError && !campanha.data) {
+    return (
+      <div className="p-6">
+        <Card className="space-y-3 p-6 text-center">
+          <p className="text-sm text-error-fg">{t("Não foi possível carregar a campanha.")}</p>
+          <Button variant="outline" onClick={() => void campanha.refetch()}>
+            {t("Tentar de novo")}
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   if (campanha.isLoading || !carregado) {
     return (
       <div className="space-y-3 p-6">
