@@ -274,7 +274,10 @@ export function JanelaDaOrigem({
     setErroDoPlaybook(null);
     const gravaEtapas = !!config && !!etapas && etapasMudaram(etapas, config.etapas);
     if (gravaEtapas && etapas) {
-      const repetido = nomeRepetido(etapas);
+      const repetido = nomeRepetido(
+        etapas,
+        (config?.etapas ?? []).filter((e) => e.is_won || e.is_lost).map((e) => e.name),
+      );
       if (repetido) {
         setErroDoPlaybook(`${t("Já existe uma etapa com o nome")} «${repetido}».`);
         return;
@@ -301,6 +304,8 @@ export function JanelaDaOrigem({
         setPendentes(faltam as EtapaComNegocios[]);
         return;
       }
+      // Conflito (409): o servidor já gravou parte e o rascunho ficou velho; descarta para não travar.
+      if (e instanceof ApiError && e.status === 409) setEtapasEditadas(null);
       setErroDoPlaybook(`${t("Falha na edição da origem!")} ${textoDoErro(e, t)}`);
     }
   }

@@ -240,6 +240,38 @@ describe("gravarEtapasEAtividades", () => {
   });
 });
 
+describe("nomes", () => {
+  it("recusa antes de gravar nome final repetido ou igual ao de ganho/perda", async () => {
+    op.funil = [etapa(E1, "1. Entrada"), etapa(E2, "2. Atendimento"), etapa(U(5), "Ganho", { is_won: true })];
+    for (const nome of ["1. entrada", "GANHO"]) {
+      const erro = await gravarEtapasEAtividades(deps(), {
+        pipelineId: U(9),
+        pedido: pedido({
+          etapas: [
+            { id: E1, nome: "1. Entrada", descricao: null },
+            { id: E2, nome, descricao: null },
+          ],
+        }),
+      }).catch((e: unknown) => e);
+      expect((erro as ApiError).status).toBe(422);
+    }
+    expect(chamadas).toEqual([]);
+  });
+
+  it("excluir uma etapa e dar o nome dela a outra: a que sai ganha nome provisório antes", async () => {
+    await gravarEtapasEAtividades(deps(), {
+      pipelineId: U(9),
+      pedido: pedido({
+        etapas: [{ id: E2, nome: "1. Entrada", descricao: null }],
+        excluidas: [{ id: E1 }],
+      }),
+    });
+    expect(chamadas[0]).toMatch(new RegExp(`^atualizar:${E1}:\\{"name":"1\\. Entrada \\(`));
+    expect(chamadas[1]).toBe(`atualizar:${E2}:{"name":"1. Entrada"}`);
+    expect(chamadas.at(-1)).toBe(`arquivar:${E1}:null`);
+  });
+});
+
 describe("pedidoDeEtapasSchema", () => {
   it("aceita id provisório e recusa campo desconhecido, nome longo e lista de etapas vazia", () => {
     const base = {

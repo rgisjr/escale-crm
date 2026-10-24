@@ -23,6 +23,7 @@ import {
   MAX_NOME_DA_ETAPA,
 } from "@/lib/escale/etapas/rascunho";
 import { MAX_ATIVIDADES_DO_PLAYBOOK, modeloSchema } from "@/lib/escale/playbook/regras";
+import { chaveDeNome } from "@/lib/leads/stage-editing";
 import {
   arquivarEtapa,
   atualizarEtapa,
@@ -66,7 +67,10 @@ export const pedidoDeEtapasSchema = z
       .array(modeloSchema.extend({ stage_id: idDeEtapa }))
       .max(MAX_ATIVIDADES_DO_PLAYBOOK),
   })
-  .strict();
+  .strict()
+  .refine((v) => new Set(v.atividades.map((a) => a.id)).size === v.atividades.length, {
+    message: "Atividade repetida.",
+  });
 
 export type PedidoDeEtapas = z.infer<typeof pedidoDeEtapasSchema>;
 
@@ -151,6 +155,40 @@ export async function gravarEtapasEAtividades(
     );
   }
 
+  // 2b. Os nomes FINAIS não podem se repetir (nem repetir o de ganho ou perda). Recusa antes de gravar.
+  const fixas = funil.filter((e) => !e.is_archived && (e.is_won || e.is_lost)).map((e) => e.name);
+  const finais = [...pedido.etapas.map((e) => e.nome), ...fixas];
+  const vistos = new Set<string>();
+  for (const n of finais) {
+    const chave = chaveDeNome(n);
+    if (vistos.has(chave)) {
+      throw recusa(
+        deps,
+        422,
+        "unprocessable_entity",
+        `Já existe uma etapa chamada «${n}» neste funil. Escolha outro nome.`,
+      );
+    }
+    vistos.add(chave);
+  }
+
+  // 2c. Quem ainda ocupa um nome que outra etapa vai receber (a que sai, ou a que será renomeada)
+  // ganha um nome provisório ANTES: a regra de nome compara com as etapas ativas de agora.
+  const nomeAtual = new Map(abertas.map((e) => [e.id, e.name]));
+  const nomeFinal = new Map(
+    pedido.etapas.filter((e) => !ehProvisoria(e.id)).map((e) => [e.id, e.nome]),
+  );
+  const alvosDeNome = new Set(pedido.etapas.map((e) => chaveDeNome(e.nome)));
+  for (const a of abertas) {
+    const chave = chaveDeNome(a.name);
+    const vaiMudar =
+      nomeFinal.get(a.id) === undefined || chaveDeNome(nomeFinal.get(a.id)!) !== chave;
+    if (!vaiMudar || !alvosDeNome.has(chave)) continue;
+    const provisorio = `${a.name.slice(0, 60)} (${a.id.slice(0, 8)})`;
+    await atualizarEtapa(deps, { pipelineId, stageId: a.id, pedido: { name: provisorio } });
+    nomeAtual.set(a.id, provisorio);
+  }
+
   // 3. Criar as novas (nascem no fim do funil) e guardar o id real.
   const ids: Record<string, string> = {};
   for (const e of pedido.etapas.filter((x) => ehProvisoria(x.id))) {
@@ -166,7 +204,7 @@ export async function gravarEtapasEAtividades(
   // 4. Renomear e descrever só quem mudou.
   for (const e of pedido.etapas.filter((x) => !ehProvisoria(x.id))) {
     const atual = abertas.find((a) => a.id === e.id)!;
-    const novoNome = e.nome !== atual.name;
+    const novoNome = e.nome !== nomeAtual.get(e.id);
     const novaDescricao = (e.descricao ?? null) !== (atual.description ?? null);
     if (!novoNome && !novaDescricao) continue;
     await atualizarEtapa(deps, {

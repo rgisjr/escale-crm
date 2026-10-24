@@ -113,8 +113,11 @@ export function decidirNegocios(
 }
 
 /** O nome que aparece duas vezes (sem distinguir maiúscula), ou `null`: o servidor recusa repetido. */
-export function nomeRepetido(r: RascunhoDasEtapas): string | null {
-  const vistos = new Set<string>();
+export function nomeRepetido(
+  r: RascunhoDasEtapas,
+  reservados: readonly string[] = [],
+): string | null {
+  const vistos = new Set<string>(reservados.map((n) => n.trim().toLocaleLowerCase()));
   for (const e of r.etapas) {
     const chave = e.nome.trim().toLocaleLowerCase();
     if (vistos.has(chave)) return e.nome.trim();
