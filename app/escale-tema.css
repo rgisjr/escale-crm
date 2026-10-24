@@ -440,3 +440,30 @@ body:has([data-escale-casca]) {
     animation: none;
   }
 }
+
+/* ─── FORK ESCALE · Fase 8B (assistente de campanha) ───
+   A prévia do celular (amostra de pixel no 09-018 e 09-025: as cores são do
+   WhatsApp, não da Clint nem da marca), o balão da prévia do modal "Escolher
+   mensagem" (09-024) e o chip da categoria do modelo (09-023). Lidas por valor
+   arbitrário (`bg-(--escale-…)`), como as da 8A. */
+body:has([data-escale-casca]) {
+  --escale-celular-moldura: #1b1b20; /* medido, 09-018 */
+  --escale-celular-cabecalho: #0b5c4c; /* medido, 09-018 */
+  --escale-celular-fundo: #ece5dd; /* medido, 09-018 */
+  --escale-celular-balao: #ffffff;
+  --escale-celular-visto: #53bdeb; /* medido, 09-025 */
+  --escale-modelo-balao: #e7f1fd; /* medido, 09-024 */
+  --escale-categoria-fundo: #e5e9fb; /* medido, 09-023 */
+  --escale-categoria-texto: #4b5ac4; /* medido, 09-023 */
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --escale-celular-moldura: #000000;
+  --escale-celular-cabecalho: #0b5c4c;
+  --escale-celular-fundo: #1f2c33;
+  --escale-celular-balao: #202c33;
+  --escale-celular-visto: #53bdeb;
+  --escale-modelo-balao: #1d2a3a;
+  --escale-categoria-fundo: #252b4a;
+  --escale-categoria-texto: #a9b4f5;
+}

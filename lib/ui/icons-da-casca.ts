@@ -171,3 +171,6 @@ export { Shield } from "lucide-react";
 
 // FORK ESCALE · Fase 8A: o cartão "Entregues" do resumo de campanhas (003).
 export { MailCheck } from "lucide-react";
+
+// FORK ESCALE · Fase 8B: a barra e o cabeçalho do celular da prévia.
+export { BatteryMedium, Signal, Video, Wifi } from "lucide-react";
