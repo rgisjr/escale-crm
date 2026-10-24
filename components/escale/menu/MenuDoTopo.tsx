@@ -71,7 +71,8 @@ export function MenuDoTopo() {
       activeOrg?.capacidades_ligadas,
     ],
   );
-  const menu = useMemo(() => montarMenuDoTopo(visiveis), [visiveis]);
+  // FORK ESCALE · Fase 8A: o papel esconde Campanhas abaixo de gerente (N3).
+  const menu = useMemo(() => montarMenuDoTopo(visiveis, activeOrg?.role ?? null), [visiveis, activeOrg?.role]);
   const acoes = useMemo(() => acoesDeCriar(visiveis, activeOrg?.role ?? null), [visiveis, activeOrg?.role]);
 
   return (

@@ -117,6 +117,18 @@ describe("o que o Novo + cria", () => {
   });
 });
 
+// FORK ESCALE · Fase 8A: Campanhas só para gerente ou acima (N3).
+describe("Campanhas por papel (Fase 8A)", () => {
+  it("com o papel, Campanhas some do topo e do Mais abaixo de gerente", () => {
+    const comoAgente = montarMenuDoTopo(AGENT, "agent");
+    const noMais = comoAgente.mais.flatMap((g) => g.secoes.flatMap((s) => s.itens.map((d) => d.href)));
+    expect(comoAgente.topo.some((i) => i.href === "/app/campaigns")).toBe(false);
+    expect(noMais).not.toContain("/app/campaigns");
+    expect(montarMenuDoTopo(ADMIN, "manager").topo.some((i) => i.href === "/app/campaigns")).toBe(true);
+    expect(itemAtivo("/app/prospecting", ITENS_DO_TOPO.find((i) => i.href === "/app/campaigns")!)).toBe(true);
+  });
+});
+
 describe("a porta do ✦ e o selo vermelho", () => {
   it("✦ leva ao hub de IA quando a pessoa enxerga alguma tela do grupo IA", () => {
     expect(entradaDaIa(ADMIN)).toBe("/app/ai");
