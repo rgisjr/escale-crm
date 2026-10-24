@@ -132,7 +132,7 @@ describe("/app/negocios/[id]", () => {
   });
 
   it("sem a casca: o link estável do original (que leva ao quadro com ?lead=)", async () => {
-    estado.menu = undefined;
+    estado.menu = "lateral";
     await expect(NegocioPage(params(LEAD))).rejects.toThrow(`REDIRECT /app/leads/${LEAD}`);
   });
 
@@ -159,10 +159,15 @@ describe("/app/negocios/[id]", () => {
 describe("as portas antigas", () => {
   it("/app/leads/[id]: com a casca, a ficha; sem, o quadro com ?lead= (como sempre)", async () => {
     await expect(LeadPage(params(LEAD))).rejects.toThrow(`REDIRECT /app/negocios/${LEAD}`);
-    estado.menu = undefined;
+    estado.menu = "lateral";
     await expect(LeadPage(params(LEAD))).rejects.toThrow(
       `REDIRECT /app/pipelines/${ORIGEM}?lead=${LEAD}`,
     );
+  });
+
+  it("/app/leads/[id] sem a chave: vale o padrão, a ficha da casca", async () => {
+    estado.menu = undefined;
+    await expect(LeadPage(params(LEAD))).rejects.toThrow(`REDIRECT /app/negocios/${LEAD}`);
   });
 
   it("quadro com ?lead=: com a casca, a ficha, levando os filtros", async () => {
@@ -175,7 +180,7 @@ describe("as portas antigas", () => {
   });
 
   it("quadro com ?lead=: sem a casca, o quadro abre e o dossiê segue igual", async () => {
-    estado.menu = undefined;
+    estado.menu = "lateral";
     const el = (await PipelinePage({
       ...params(ORIGEM),
       searchParams: Promise.resolve({ lead: LEAD }),

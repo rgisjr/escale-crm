@@ -20,9 +20,15 @@ beforeEach(() => {
 });
 
 describe("/app/contacts", () => {
-  it("sem a casca, a lista do original, sem mudança", async () => {
+  it("com a lateral, a lista do original, sem mudança", async () => {
+    cookie.valor = "lateral";
     render(await ContactsPage());
     expect(screen.getByText("LISTA DO ORIGINAL")).toBeInTheDocument();
+  });
+
+  it("sem a chave, vale o padrão: a lista da casca", async () => {
+    render(await ContactsPage());
+    expect(screen.getByText("LISTA DA CASCA 1")).toBeInTheDocument();
   });
 
   it("com a casca, a lista da Clint com as origens", async () => {

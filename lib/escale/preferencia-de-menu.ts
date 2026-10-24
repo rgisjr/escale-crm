@@ -2,15 +2,15 @@
  * A CHAVE DA CASCA NOVA (fork Escale): menu no topo + tema Escale, por pessoa.
  *
  * Mora num cookie, como "recolher a barra lateral" (`app/actions/shell/toggleSidebar.ts`):
- * cada pessoa liga para si, sem banco e sem mexer nas preferências de interface da
- * organização. Quando a casca nova for aprovada, trocar `MENU_PADRAO` para `"topo"`
- * liga para todo mundo (quem gravou `lateral` continua na lateral).
+ * cada pessoa escolhe para si, sem banco e sem mexer nas preferências de interface da
+ * organização. Desde 24/10/2026 a casca é o PADRÃO: quem não escolheu nada (inclusive
+ * usuário novo) entra nela; quem gravou `lateral` ("Voltar ao menu lateral") continua na lateral.
  */
 export type PreferenciaDeMenu = "lateral" | "topo";
 
 export const COOKIE_DO_MENU = "escale_menu";
 
-export const MENU_PADRAO: PreferenciaDeMenu = "lateral";
+export const MENU_PADRAO: PreferenciaDeMenu = "topo";
 
 export function lerPreferenciaDeMenu(valor: string | null | undefined): PreferenciaDeMenu {
   return valor === "topo" || valor === "lateral" ? valor : MENU_PADRAO;

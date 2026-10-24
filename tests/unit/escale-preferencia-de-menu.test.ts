@@ -17,12 +17,12 @@ import { GET } from "@/app/app/escale/menu/route";
 const req = (qs: string) => new NextRequest(`http://0.0.0.0:3000/app/escale/menu?${qs}`);
 
 describe("preferência de menu", () => {
-  it("o padrão é a lateral, e só 'topo' e 'lateral' são valores válidos", () => {
-    expect(MENU_PADRAO).toBe("lateral");
+  it("o padrão é a casca (topo), e só 'topo' e 'lateral' são valores válidos", () => {
+    expect(MENU_PADRAO).toBe("topo");
     expect(lerPreferenciaDeMenu("topo")).toBe("topo");
     expect(lerPreferenciaDeMenu("lateral")).toBe("lateral");
-    expect(lerPreferenciaDeMenu("qualquer")).toBe("lateral");
-    expect(lerPreferenciaDeMenu(undefined)).toBe("lateral");
+    expect(lerPreferenciaDeMenu("qualquer")).toBe("topo");
+    expect(lerPreferenciaDeMenu(undefined)).toBe("topo");
   });
 
   it("o destino de volta fica dentro do app", () => {
