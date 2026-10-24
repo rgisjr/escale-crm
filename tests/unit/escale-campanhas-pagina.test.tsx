@@ -32,8 +32,11 @@ vi.mock("@/app/app/campaigns/_client", () => ({
 vi.mock("@/lib/escale/contatos/origens-da-pagina", () => ({
   origensDaPagina: vi.fn(async () => ({ origens: [], papel: "manager", opcoesDoFiltro: {} })),
 }));
-vi.mock("@/app/app/prospecting/_client", () => ({
-  ProspectingClient: () => <div>PROSPECÇÃO DO ORIGINAL</div>,
+vi.mock("@/components/escale/prospeccao/ListaDeProspeccoes", () => ({
+  ListaDeProspeccoes: () => <div>LISTA DE PROSPECÇÕES</div>,
+}));
+vi.mock("@/components/escale/prospeccao/AcoesDaProspeccao", () => ({
+  AcoesDaProspeccao: () => <div>Nova prospecção</div>,
 }));
 vi.mock("@/hooks/channels/useChannelSessions", async (orig) => ({
   ...(await orig<object>()),
@@ -103,7 +106,7 @@ describe("/app/campaigns", () => {
     cookie.valor = "topo";
     org.papel = "admin";
     render(await CampanhasPage({ searchParams: Promise.resolve({ aba: "prospeccao" }) }));
-    expect(screen.getByText("PROSPECÇÃO DO ORIGINAL")).toBeInTheDocument();
+    expect(screen.getByText("LISTA DE PROSPECÇÕES")).toBeInTheDocument();
   });
 });
 
