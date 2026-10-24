@@ -39,15 +39,15 @@ export function ListaDeCampanhas() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-        <Button variant="outline" asChild>
-          <Link href="/app/campaigns/settings">{t("Configuração")}</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/app/campaigns/new">
-            <Plus size={16} weight="bold" aria-hidden />
-            <span>{t("Nova campanha")}</span>
-          </Link>
-        </Button>
+          <Button variant="outline" asChild>
+            <Link href="/app/campaigns/settings">{t("Configuração")}</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/app/campaigns/new">
+              <Plus size={16} weight="bold" aria-hidden />
+              <span>{t("Nova campanha")}</span>
+            </Link>
+          </Button>
         </div>
       </header>
 
@@ -154,7 +154,13 @@ function rotulo(status: string): string {
 
 /** A data que importa depende do estado — mostrar "criada em" numa campanha que já terminou é ruído. */
 function quando(
-  c: { status: string; scheduled_at: string | null; started_at: string | null; completed_at: string | null; created_at: string },
+  c: {
+    status: string;
+    scheduled_at: string | null;
+    started_at: string | null;
+    completed_at: string | null;
+    created_at: string;
+  },
   t: (s: string) => string,
   idioma: string,
 ): string {
