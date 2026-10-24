@@ -16,6 +16,7 @@ import { useT } from "@/hooks/i18n/useT";
 import { rotaDaAba } from "@/lib/escale/campanhas/rotas";
 import {
   buscaDoRascunho,
+  configDoRascunho,
   errosDaBusca,
   errosDoPasso,
   impressaoDaBusca,
@@ -28,9 +29,12 @@ import {
 import { contarMarcadas } from "@/lib/escale/prospeccao/selecao";
 import type { OpcoesDaProspeccao } from "@/lib/escale/prospeccao/tipos";
 import { randomId } from "@/lib/random-id";
+import { Send } from "@/lib/ui/icons-da-casca";
 
 import { ErrosDoPasso } from "../campos";
 import { PassoConfigure } from "./PassoConfigure";
+import { PassoAbordagem } from "./PassoAbordagem";
+import { PassoConfirme } from "./PassoConfirme";
 import { PassoEncontre } from "./PassoEncontre";
 
 const mensagemDoErro = (e: unknown, padrao: string) =>
@@ -169,6 +173,19 @@ function AssistenteCarregado({
     router.push(rotaDaAba("prospeccao"));
   }
 
+  async function iniciar() {
+    const erros = errosDoPasso(3, r, ctx);
+    if (erros.length) return setMostrar(erros.map(t));
+    if (!campanhaId) return;
+    try {
+      await acao.mutateAsync({ action: "start", id: campanhaId, config: configDoRascunho(r) });
+      toast.success(t("Campanha iniciada. A primeira abordagem será preparada após um minuto."));
+      router.push(rotaDaAba("prospeccao"));
+    } catch (e) {
+      toast.error(mensagemDoErro(e, t("Não foi possível concluir a operação.")));
+    }
+  }
+
   const trilha = (
     <TrilhaDoAssistente
       itens={[
@@ -187,12 +204,21 @@ function AssistenteCarregado({
       {t("Salvar como rascunho")}
     </button>
   ) : undefined;
+  const principal =
+    passo === 3
+      ? {
+          rotulo: t("Iniciar prospecção"),
+          aoClicar: () => void iniciar(),
+          carregando: acao.isPending,
+          icone: <Send size={14} aria-hidden />,
+        }
+      : { rotulo: t("Próximo"), aoClicar: avancar };
   const rodape = (
     <RodapeDoAssistente
       aoVoltar={voltar}
       rotuloVoltar={t("Voltar")}
       extras={extras}
-      principal={{ rotulo: t("Próximo"), aoClicar: avancar }}
+      principal={principal}
     />
   );
 
@@ -221,8 +247,14 @@ function AssistenteCarregado({
           aoNovaBusca={novaBusca}
           aoMarcar={(ids, v) => void marcar(ids, v)}
         />
+      ) : !d ? (
+        <p role="status" className="text-[13px] text-casca-suave">
+          {t("Carregando prospecção")}
+        </p>
+      ) : passo === 2 ? (
+        <PassoAbordagem r={r} atualizar={atualizar} opcoes={opcoes} campanha={d} />
       ) : (
-        <p className="text-[13px] text-casca-suave">{t(PASSOS_DA_PROSPECCAO[passo])}</p>
+        <PassoConfirme r={r} atualizar={atualizar} opcoes={opcoes} detalhe={d} />
       )}
     </MoldeDoAssistente>
   );
