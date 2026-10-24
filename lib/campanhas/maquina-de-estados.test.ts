@@ -83,4 +83,9 @@ describe("máquina de estados da campanha", () => {
     expect(ehStatusDaCampanha("done")).toBe(false);
     expect(ehStatusDaCampanha("")).toBe(false);
   });
+
+  // FORK ESCALE · Fase 8A: "Cancelar campanha" da agendada volta a rascunho.
+  it("agendada pode voltar a rascunho (fork Escale)", () => {
+    expect(podeTransitar("scheduled", "draft")).toEqual({ pode: true });
+  });
 });

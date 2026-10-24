@@ -33,7 +33,9 @@ const PERMITIDO: Record<StatusDaCampanha, readonly StatusDaCampanha[]> = {
   // enquanto NADA saiu — quem já enviou não pode reescrever a mensagem que a
   // pessoa recebeu (o guarda de "já enviou" é do chamador, que vê os envios).
   ready: ["draft", "scheduled", "running", "cancelled"],
-  scheduled: ["running", "paused", "cancelled"],
+  // FORK ESCALE · Fase 8A: a agendada volta a rascunho ("Cancelar campanha" da
+  // Clint antes do envio). Quem já enviou é recusado pela ação, que vê os envios.
+  scheduled: ["running", "paused", "cancelled", "draft"],
   running: ["paused", "completed", "cancelled", "failed"],
   paused: ["running", "scheduled", "cancelled"],
   // Terminais de verdade: nada sai daqui. Para mandar de novo, duplica-se.

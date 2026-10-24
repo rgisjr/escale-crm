@@ -1014,6 +1014,10 @@ export const AUDIT_ACTIONS = [
   "contacts.import_canceled",
   "contacts.import_row_resolved",
   "contacts.import_rows_resolved",
+  // FORK ESCALE · Fase 8A: a lista de campanhas da casca (migration 9301).
+  "campaign.rescheduled",
+  "campaign.back_to_draft",
+  "campaign.draft_deleted",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o
