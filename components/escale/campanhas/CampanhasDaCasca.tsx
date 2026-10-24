@@ -2,11 +2,19 @@
 import { useRouter } from "next/navigation";
 
 import { ProspectingClient } from "@/app/app/prospecting/_client";
+// FORK ESCALE · Fase 8C: a janela do detalhe sobre a lista.
+import type { OrigemParaCriar } from "@/components/escale/contatos/CamposDaOportunidade";
 import type { Role } from "@/lib/auth/types";
-import { abasVisiveis, rotaDaAba, type AbaDasCampanhas } from "@/lib/escale/campanhas/rotas";
+import {
+  ROTA_DAS_CAMPANHAS,
+  abasVisiveis,
+  rotaDaAba,
+  type AbaDasCampanhas,
+} from "@/lib/escale/campanhas/rotas";
 
 import { AbasDasCampanhas } from "./AbasDasCampanhas";
 import { CabecalhoDasCampanhas } from "./CabecalhoDasCampanhas";
+import { DetalheDaCampanhaDaCasca } from "./detalhe/DetalheDaCampanhaDaCasca";
 import { ListaDeCampanhasDaCasca } from "./ListaDeCampanhasDaCasca";
 
 /**
@@ -19,11 +27,15 @@ export function CampanhasDaCasca({
   organizacaoId,
   aba,
   fuso,
+  campanhaAberta = null,
+  origens = [],
 }: {
   papel: Role;
   organizacaoId: string;
   aba: AbaDasCampanhas;
   fuso?: string;
+  campanhaAberta?: string | null;
+  origens?: OrigemParaCriar[];
 }) {
   const router = useRouter();
   const abas = abasVisiveis(papel);
@@ -38,6 +50,14 @@ export function CampanhasDaCasca({
       ) : (
         <ListaDeCampanhasDaCasca organizacaoId={organizacaoId} fuso={fuso} />
       )}
+      {aba === "whatsapp" && campanhaAberta ? (
+        <DetalheDaCampanhaDaCasca
+          id={campanhaAberta}
+          origens={origens}
+          fuso={fuso}
+          aoFechar={() => router.replace(ROTA_DAS_CAMPANHAS, { scroll: false })}
+        />
+      ) : null}
     </div>
   );
 }

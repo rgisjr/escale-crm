@@ -1,4 +1,6 @@
 "use client";
+import type { ReactNode } from "react";
+
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { paginasVisiveis, totalDePaginas } from "@/lib/escale/contatos/regras";
@@ -16,6 +18,7 @@ export function PaginacaoDaCasca({
   opcoesPorPagina,
   aoMudarPagina,
   aoMudarPorPagina,
+  legenda,
 }: {
   pagina: number;
   total: number;
@@ -23,6 +26,8 @@ export function PaginacaoDaCasca({
   opcoesPorPagina: readonly number[];
   aoMudarPagina: (pagina: number) => void;
   aoMudarPorPagina: (porPagina: number) => void;
+  /** FORK ESCALE · Fase 8C: "1 a 20 de 30 contatos" à esquerda do "por página" (012). */
+  legenda?: ReactNode;
 }) {
   const t = useT();
   const ultima = totalDePaginas(total, porPagina);
@@ -35,13 +40,16 @@ export function PaginacaoDaCasca({
 
   return (
     <div className="flex h-[50px] items-center justify-between gap-4">
-      <SeletorDaCasca
-        valor={String(porPagina)}
-        opcoes={opcoes}
-        aoMudar={(v) => v && aoMudarPorPagina(Number(v))}
-        aria-label={t("Por página")}
-        className="h-8 w-[180px]"
-      />
+      <div className="flex items-center gap-4">
+        {legenda ? <span className="text-[13px] text-casca-texto">{legenda}</span> : null}
+        <SeletorDaCasca
+          valor={String(porPagina)}
+          opcoes={opcoes}
+          aoMudar={(v) => v && aoMudarPorPagina(Number(v))}
+          aria-label={t("Por página")}
+          className="h-8 w-[180px]"
+        />
+      </div>
       <nav aria-label={t("Paginação")} className="flex items-center gap-2">
         <button
           type="button"

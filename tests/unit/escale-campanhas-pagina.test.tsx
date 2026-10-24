@@ -29,6 +29,9 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/app/app/campaigns/_client", () => ({
   ListaDeCampanhas: () => <div>LISTA DO ORIGINAL</div>,
 }));
+vi.mock("@/lib/escale/contatos/origens-da-pagina", () => ({
+  origensDaPagina: vi.fn(async () => ({ origens: [], papel: "manager", opcoesDoFiltro: {} })),
+}));
 vi.mock("@/app/app/prospecting/_client", () => ({
   ProspectingClient: () => <div>PROSPECÇÃO DO ORIGINAL</div>,
 }));
@@ -79,6 +82,7 @@ beforeEach(() => {
 
 describe("/app/campaigns", () => {
   it("sem a casca, a lista do original", async () => {
+    cookie.valor = "lateral";
     render(await CampanhasPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText("LISTA DO ORIGINAL")).toBeInTheDocument();
   });

@@ -239,7 +239,7 @@ describe("o ⋮ e o botão da linha (N9)", () => {
 describe("rotas e abas (N2, N11)", () => {
   it("destinos até a 8B/8C e as abas por papel", () => {
     expect(rotaDoRascunho("c1")).toBe("/app/campaigns/c1/edit");
-    expect(rotaDoDetalhe("c1")).toBe("/app/campaigns/c1");
+    expect(rotaDoDetalhe("c1")).toBe("/app/campaigns?campanha=c1");
     expect(abasVisiveis("manager")).toEqual(["whatsapp"]);
     expect(abasVisiveis("admin")).toEqual(["whatsapp", "prospeccao"]);
     expect(abaDaUrl("prospeccao", "admin")).toBe("prospeccao");

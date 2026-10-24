@@ -14,12 +14,15 @@ export function FaixaDaSelecao({
   total,
   aoSelecionarTodos,
   aoLimpar,
+  rotuloDeTodos,
 }: {
   modo: "pagina" | "todos" | null;
   naPagina: number;
   total: number;
   aoSelecionarTodos: () => void;
   aoLimpar: () => void;
+  /** FORK ESCALE · Fase 8C: o texto do link de todos ("…contatos filtrados", nos Detalhes da campanha). */
+  rotuloDeTodos?: string;
 }) {
   const t = useT();
   if (!modo) return null;
@@ -36,7 +39,7 @@ export function FaixaDaSelecao({
             {t("Os {n} contatos desta página estão selecionados.").replace("{n}", String(naPagina))}
           </span>
           <button type="button" onClick={aoSelecionarTodos} className={link}>
-            {t("Selecionar todos os {total} contatos").replace("{total}", totalBr)}
+            {rotuloDeTodos ?? t("Selecionar todos os {total} contatos").replace("{total}", totalBr)}
           </button>
         </>
       ) : (

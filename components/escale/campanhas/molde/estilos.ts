@@ -11,3 +11,12 @@ export const CAMPO =
 export const ROTULO = "mb-2 block text-[13px] font-medium text-casca-texto";
 export const TITULO_DO_PASSO = "text-[20px] font-semibold text-casca-texto";
 export const SUBTITULO_DO_PASSO = "mt-1 text-[13px] text-casca-suave";
+
+/**
+ * O MOLDE DO DETALHE (fork Escale, Fase 8C; N19; 009–011): as classes do bloco
+ * e do cartão, num lugar só. A 8D (Prospecção) usa as mesmas.
+ */
+export const CLASSE_DO_BLOCO =
+  "rounded-[8px] border border-casca-borda bg-surface p-4 text-casca-texto shadow-[0_1px_2px_rgb(17_24_39/0.06)]";
+
+export const CLASSE_DO_CARTAO = `flex min-h-[86px] w-full flex-col text-left ${CLASSE_DO_BLOCO}`;

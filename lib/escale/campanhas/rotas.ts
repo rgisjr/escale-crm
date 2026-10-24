@@ -9,7 +9,10 @@ export const ROTA_DAS_CAMPANHAS = "/app/campaigns";
 export const ROTA_DA_NOVA = "/app/campaigns/new";
 export const ROTA_DA_CONFIGURACAO = "/app/campaigns/settings";
 export const rotaDoRascunho = (id: string): string => `/app/campaigns/${id}/edit`;
-export const rotaDoDetalhe = (id: string): string => `/app/campaigns/${id}`;
+/** FORK ESCALE · Fase 8C (N2): o detalhe é a janela sobre a lista, um estado da URL. */
+export const PARAM_DA_CAMPANHA = "campanha";
+export const rotaDoDetalhe = (id: string): string =>
+  `${ROTA_DAS_CAMPANHAS}?${PARAM_DA_CAMPANHA}=${encodeURIComponent(id)}`;
 
 export type AbaDasCampanhas = "whatsapp" | "prospeccao";
 

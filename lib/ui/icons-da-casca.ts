@@ -174,3 +174,6 @@ export { MailCheck } from "lucide-react";
 
 // FORK ESCALE · Fase 8B: a barra e o cabeçalho do celular da prévia.
 export { BatteryMedium, Signal, Video, Wifi } from "lucide-react";
+
+// FORK ESCALE · Fase 8C: a prévia do celular (009); Signal, Video e Wifi já vieram com a 8B.
+export { BatteryFull } from "lucide-react";
