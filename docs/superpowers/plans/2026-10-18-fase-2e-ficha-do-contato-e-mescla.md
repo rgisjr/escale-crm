@@ -109,7 +109,7 @@ Do catálogo `C:\Documentos\projetos claude\reverse engenering - Copia\clint-mod
 - Repositório: `C:\Documentos\projetos claude\Deskcom CRM\repo` (**da Frente A**: não troque de branch nele, não faça stash, não mexa nos arquivos). **Worktree da Frente B:** `C:\Documentos\projetos claude\Deskcom CRM\wt-frente-b`. Todo comando roda dentro dela.
 - **Branches:** PR A `feat/fase-2e-ficha-e-mescla-banco`; PR B `feat/fase-2e-ficha-e-mescla-telas`. Cada uma de `escale-crm/main` (Tasks 1 e 6 provam).
 - **Base:** `escale-crm/main` com a 2C e a 2D inteiras mergeadas (a última migration da Frente B é a 9105).
-- **Migration:** **9106**, `supabase/migrations/20261106120000_9106_ficha_do_contato_e_mescla.sql`. Antes de criar: `bash scripts/checar-colisao-de-migration.sh escale-crm/main`; se 9106 já existir em outra branch, PARE e pergunte.
+- **Migration:** **9106**, `supabase/migrations/20261104120000_9106_ficha_do_contato_e_mescla.sql`. Antes de criar: `bash scripts/checar-colisao-de-migration.sh escale-crm/main`; se 9106 já existir em outra branch, PARE e pergunte.
 - **PR:** para `rgisjr/escale-crm`, base `main`. **Merge direto na `main` ao terminar cada PR** (regra de 18/10).
 - **Proibido:** push em `origin` (Rafael), tag, release, VPS e gravar no banco de produção no meio da frente.
 
@@ -181,7 +181,7 @@ Os do fork que mudam: `lib/escale/negocio/notas.ts`, `hooks/escale/{useNotasDoNe
 | Arquivo | Novo/alterado | PR | Responsabilidade |
 |---|---|---|---|
 | `lib/escale/mescla/regras.ts` | novo | A | critérios, pesos, confiança, faixas, agrupar, filtrar, ordenar, escolhas, prioridade, schemas |
-| `supabase/migrations/20261106120000_9106_ficha_do_contato_e_mescla.sql`, `supabase/baseline.sql` | novo / bloco | A | chave do telefone, chaves de mescla, mesclar com escolhas, nota do contato |
+| `supabase/migrations/20261104120000_9106_ficha_do_contato_e_mescla.sql`, `supabase/baseline.sql` | novo / bloco | A | chave do telefone, chaves de mescla, mesclar com escolhas, nota do contato |
 | `lib/escale/mescla/banco.ts` | novo | A | ler as sugestões, reler os contatos, montar os valores, mesclar um grupo, os erros |
 | `app/api/v1/mesclas/sugestoes/route.ts`, `app/api/v1/mesclas/route.ts`, `app/api/v1/mesclas/em-massa/route.ts` | novos | A | rotas da mescla |
 | `lib/escale/ficha-do-contato/regras.ts`, `lib/escale/ficha-do-contato/banco.ts` | novos | A | abas, URL, negócios do contato, notas no histórico |
@@ -848,7 +848,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 2: Migration 9106 — chaves de mescla, mesclar com escolhas e a nota do contato
 
 **Files:**
-- Create: `supabase/migrations/20261106120000_9106_ficha_do_contato_e_mescla.sql`, `tests/unit/escale-ficha-e-mescla-migration.test.ts`, `tests/invariants/escale-ficha-e-mescla.test.ts`
+- Create: `supabase/migrations/20261104120000_9106_ficha_do_contato_e_mescla.sql`, `tests/unit/escale-ficha-e-mescla-migration.test.ts`, `tests/invariants/escale-ficha-e-mescla.test.ts`
 - Modify: `supabase/baseline.sql` (bloco logo depois do da 9105)
 
 **Interfaces:**
@@ -866,7 +866,7 @@ Create `tests/unit/escale-ficha-e-mescla-migration.test.ts`:
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const ARQUIVO = "supabase/migrations/20261106120000_9106_ficha_do_contato_e_mescla.sql";
+const ARQUIVO = "supabase/migrations/20261104120000_9106_ficha_do_contato_e_mescla.sql";
 const BASELINE = readFileSync("supabase/baseline.sql", "utf8");
 const MIGRATION = existsSync(ARQUIVO) ? readFileSync(ARQUIVO, "utf8") : "";
 
@@ -918,7 +918,7 @@ Expected: FAIL (o arquivo não existe: o manifesto não casa).
 
 - [ ] **Step 2: A migration**
 
-Create `supabase/migrations/20261106120000_9106_ficha_do_contato_e_mescla.sql`:
+Create `supabase/migrations/20261104120000_9106_ficha_do_contato_e_mescla.sql`:
 
 ```sql
 -- manifest: **Ficha do contato e mescla da casca (fork Escale, Fase 2E).** `fn_escale_chave_do_telefone` (a chave do telefone com o nono dígito, espelho de `canonicalPhoneBR`); `fn_escale_chaves_de_mescla(p_org)` (invoker: as chaves de telefone — também o parkado em `source_metadata.telefone_em_conflito` —, e-mail, ID do WhatsApp e Instagram que se repetem entre 2 e 50 contatos vivos; o servidor agrupa e pontua); `fn_escale_mesclar_contatos` (invoker: chama o `fn_mesclar_contatos` do original, que confere o papel de gerente e reponta tudo, e grava no principal o nome, o e-mail, o telefone e o Instagram escolhidos, na mesma transação); `crm_notas_do_negocio.lead_id` aceita nulo para a nota do contato, com as policies refeitas (nota solta: a organização vê; agente+ escreve como autor).
@@ -1257,7 +1257,7 @@ Expected: PASS nos dois (o da 9008 continua verde: a nota do negócio não mudou
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/20261106120000_9106_ficha_do_contato_e_mescla.sql supabase/baseline.sql tests/unit/escale-ficha-e-mescla-migration.test.ts tests/invariants/escale-ficha-e-mescla.test.ts
+git add supabase/migrations/20261104120000_9106_ficha_do_contato_e_mescla.sql supabase/baseline.sql tests/unit/escale-ficha-e-mescla-migration.test.ts tests/invariants/escale-ficha-e-mescla.test.ts
 git commit -m "feat(escale): migration 9106 — chaves de mescla, mesclar com escolhas e a nota do contato (Fase 2E)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"

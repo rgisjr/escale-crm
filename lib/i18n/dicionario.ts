@@ -10312,6 +10312,15 @@ export const DICIONARIO: Traducoes = {
   "Importações / Exportações": { es: "Importaciones / Exportaciones" },
   "Gerando exportação": { es: "Generando exportación" },
   "Importe contatos e negócios por planilha e acompanhe as exportações.": { es: "Importa contactos y negocios por hoja de cálculo y sigue las exportaciones." },
+  // ─── FORK ESCALE · Fase 2E (PR A): mescla e notas do contato ───
+  "Outro contato já usa este telefone": { es: "Otro contacto ya usa este teléfono" },
+  "Estes contatos mudaram durante a mescla": { es: "Estos contactos cambiaron durante la fusión" },
+  "Atendimento ativo impede a mescla deste grupo.": { es: "Una atención activa impide fusionar este grupo." },
+  "Não foi possível mesclar os contatos": { es: "No fue posible fusionar los contactos" },
+  "Seleção acima do limite": { es: "Selección por encima del límite" },
+  "São necessários ao menos 2 contatos.": { es: "Se necesitan al menos 2 contactos." },
+  "Ocorreu um erro ao carregar as notas.": { es: "Ocurrió un error al cargar las notas." },
+  "Você não tem permissão para anotar neste contato.": { es: "No tienes permiso para agregar notas a este contacto." },
   // ─── FORK ESCALE · Fase 1G (PR A): a ficha do negócio ───
   "Arquivos": { es: "Archivos" },
   "Caminho do negócio": { es: "Ruta del negocio" },

@@ -1009,6 +1009,10 @@ export const AUDIT_ACTIONS = [
   "companies.contact_linked",
   "companies.contact_unlinked",
   "companies.primary_changed",
+  // FORK ESCALE · Fase 2E: as notas do contato (migration 9106). O texto da nota nunca vai ao metadata.
+  "contact.note_added",
+  "contact.note_edited",
+  "contact.note_removed",
   // FORK ESCALE · Fase 2F: importar contatos e negócios (migration 9107).
   "contacts.import_started",
   "contacts.import_canceled",

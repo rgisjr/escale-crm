@@ -5,7 +5,8 @@ export const MAX_TEXTO_DA_NOTA = 4000;
 
 export interface Nota {
   id: string;
-  lead_id: string;
+  /** Nulo: nota do contato (9106, Fase 2E). */
+  lead_id: string | null;
   contact_id: string | null;
   user_id: string;
   user_nome: string | null;
@@ -27,6 +28,12 @@ export const notaSchema = z
   .strict();
 
 export const rotaDasNotas = (leadId: string) => `/api/v1/leads/${leadId}/notas`;
+
+/** FORK ESCALE · Fase 2E (Q5): a nota é do negócio ou do contato. */
+export type AlvoDaNota = { tipo: "negocio" | "contato"; id: string };
+
+export const rotaDasNotasDoAlvo = (alvo: AlvoDaNota) =>
+  alvo.tipo === "negocio" ? rotaDasNotas(alvo.id) : `/api/v1/contatos/${alvo.id}/notas`;
 
 /**
  * O nome que a nota leva como autor: o do perfil; sem ele, a parte local do
