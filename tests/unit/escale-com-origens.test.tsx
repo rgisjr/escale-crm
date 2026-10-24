@@ -55,15 +55,18 @@ describe("<ComOrigens>", () => {
     expect(lerOrigens).toHaveBeenCalledWith(expect.anything(), "org-1");
   });
 
-  it("com a lateral (ou sem a chave), é a tela de sempre e o banco nem é lido", async () => {
-    for (const menu of ["lateral", undefined]) {
-      cookies = menu ? { escale_menu: menu } : {};
-      vi.mocked(lerOrigens).mockClear();
-      const { unmount } = mostrar(await ComOrigens({ children: <p>o quadro</p> }));
-      expect(screen.queryByRole("complementary", { name: "Origens" })).toBeNull();
-      expect(lerOrigens).not.toHaveBeenCalled();
-      unmount();
-    }
+  it("com a lateral, é a tela de sempre e o banco nem é lido", async () => {
+    cookies = { escale_menu: "lateral" };
+    vi.mocked(lerOrigens).mockClear();
+    mostrar(await ComOrigens({ children: <p>o quadro</p> }));
+    expect(screen.queryByRole("complementary", { name: "Origens" })).toBeNull();
+    expect(lerOrigens).not.toHaveBeenCalled();
+  });
+
+  it("sem a chave, vale o padrão: a casca, com o painel Origens", async () => {
+    cookies = {};
+    mostrar(await ComOrigens({ children: <p>o quadro</p> }));
+    expect(screen.getByRole("complementary", { name: "Origens" })).toBeInTheDocument();
   });
 
   it("o painel recolhido no cookie já chega recolhido", async () => {

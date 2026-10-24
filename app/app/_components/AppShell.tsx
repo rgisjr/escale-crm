@@ -18,7 +18,7 @@ import { useTelaGrande } from "@/lib/escale/usa-tela-grande";
 
 interface AppShellProps {
   sidebarCollapsed: boolean;
-  /** Fork Escale: `"topo"` liga a casca nova (cookie `escale_menu`). Padrão: a lateral do original. */
+  /** Fork Escale: `"topo"` liga a casca nova (cookie `escale_menu`, padrão `topo`). Sem a prop: a lateral. */
   menu?: PreferenciaDeMenu;
   /**
    * A pessoa pode atender (agent+)? Vem do papel resolvido no layout, e não de
