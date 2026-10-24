@@ -53,9 +53,14 @@ export function falhaInesperada(
  * serialização ou o `updated_at` da origem mudou entre a leitura e a escrita).
  */
 export function conflitoDeGravacao(t: Traduzir, requestId: string): Response {
-  return fail("state_conflict", t("Outra pessoa está salvando ao mesmo tempo. Tente de novo."), 409, {
-    requestId,
-  });
+  return fail(
+    "state_conflict",
+    t("Outra pessoa está salvando ao mesmo tempo. Tente de novo."),
+    409,
+    {
+      requestId,
+    },
+  );
 }
 
 /**
@@ -128,7 +133,7 @@ export async function lerOrigemDaConfiguracao(
       .maybeSingle(),
     supabase
       .from("crm_stages")
-      .select("id, name, position, is_won, is_lost")
+      .select("id, name, description, position, is_won, is_lost")
       .eq("pipeline_id", pipelineId)
       .eq("organization_id", orgId)
       .eq("is_archived", false)
@@ -153,6 +158,7 @@ export async function lerOrigemDaConfiguracao(
   const linhas = (etapas.data ?? []) as Array<{
     id: string;
     name: string;
+    description?: string | null;
     position: number | string;
     is_won?: boolean;
     is_lost?: boolean;
@@ -181,6 +187,7 @@ export async function lerOrigemDaConfiguracao(
     etapas: linhas.map((e) => ({
       id: e.id,
       name: e.name,
+      description: e.description ?? null,
       position: Number(e.position),
       is_won: e.is_won === true,
       is_lost: e.is_lost === true,
