@@ -25,6 +25,11 @@ export function ConteudoDaAba({ aba, ficha }: { aba: AbaDoNegocio; ficha: FichaC
     case "arquivos":
       return <AbaArquivos contatoId={ficha.lead.contact_id} leadId={ficha.lead.id} />;
     case "historico":
-      return <AbaHistorico lead={ficha.lead} stages={ficha.stages} />;
+      return (
+        <AbaHistorico
+          alvo={{ tipo: "negocio", id: ficha.lead.id }}
+          nomesDasEtapas={Object.fromEntries(ficha.stages.map((s) => [s.id, s.name]))}
+        />
+      );
   }
 }

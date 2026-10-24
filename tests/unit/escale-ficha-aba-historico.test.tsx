@@ -49,8 +49,8 @@ const hist = vi.hoisted(() => ({
   temMais: true,
   carregarMais: vi.fn(),
 }));
-vi.mock("@/hooks/escale/useHistoricoDoNegocio", () => ({
-  useHistoricoDoNegocio: (_lead: string, grupo: string) => {
+vi.mock("@/hooks/escale/useHistoricoDoNegocio", () => {
+  const ler = (grupo: string) => {
     hist.grupo = grupo;
     return {
       itens: hist.itens,
@@ -60,11 +60,15 @@ vi.mock("@/hooks/escale/useHistoricoDoNegocio", () => ({
       carregarMais: hist.carregarMais,
       carregandoMais: false,
     };
-  },
-}));
+  };
+  return {
+    useHistoricoDoNegocio: (_lead: string, grupo: string) => ler(grupo),
+    useHistorico: (_alvo: unknown, grupo: string) => ler(grupo),
+  };
+});
 const notas = vi.hoisted(() => ({ excluir: vi.fn(async () => undefined) }));
-vi.mock("@/hooks/escale/useNotasDoNegocio", () => ({
-  useNotasDoNegocio: () => ({
+vi.mock("@/hooks/escale/useNotasDoNegocio", () => {
+  const lidas = () => ({
     data: [
       {
         id: "x1",
@@ -76,11 +80,12 @@ vi.mock("@/hooks/escale/useNotasDoNegocio", () => ({
         updated_at: "",
       },
     ],
-  }),
-  useExcluirNota: () => ({ mutateAsync: notas.excluir }),
+  });
+  return { useNotasDoNegocio: lidas, useNotas: lidas, useExcluirNota: () => ({ mutateAsync: notas.excluir }),
   useCriarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useEditarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
+  };
+});
 
 import { AbaHistorico } from "@/components/escale/negocio/abas/AbaHistorico";
 import { CartaoDoHistorico } from "@/components/escale/negocio/abas/CartaoDoHistorico";
@@ -98,7 +103,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("AbaHistorico", () => {
   it("seções Hoje/Ontem e os cartões com título, corpo e autor; a etapa com os nomes do quadro", () => {
-    render(<AbaHistorico lead={LEAD} stages={STAGES} />);
+    render(<AbaHistorico alvo={{ tipo: "negocio", id: LEAD.id }} nomesDasEtapas={Object.fromEntries(STAGES.map((s) => [s.id, s.name]))} />);
     expect(screen.getByText("Hoje")).toBeInTheDocument();
     expect(screen.getByText("Ontem")).toBeInTheDocument();
     const etapa = screen.getByText("Mudou de etapa").closest("li") as HTMLElement;
@@ -108,7 +113,7 @@ describe("AbaHistorico", () => {
   });
 
   it("a busca filtra na tela; o filtro de grupo vai ao hook", async () => {
-    render(<AbaHistorico lead={LEAD} stages={STAGES} />);
+    render(<AbaHistorico alvo={{ tipo: "negocio", id: LEAD.id }} nomesDasEtapas={Object.fromEntries(STAGES.map((s) => [s.id, s.name]))} />);
     await userEvent.type(
       screen.getByRole("searchbox", { name: "Buscar no histórico..." }),
       "qualifica",
@@ -122,7 +127,7 @@ describe("AbaHistorico", () => {
   });
 
   it("a nota mostra 'Ver nota'; expandida, o texto, 'Editar nota' e a lixeira com a confirmação", async () => {
-    render(<AbaHistorico lead={LEAD} stages={STAGES} />);
+    render(<AbaHistorico alvo={{ tipo: "negocio", id: LEAD.id }} nomesDasEtapas={Object.fromEntries(STAGES.map((s) => [s.id, s.name]))} />);
     await userEvent.click(screen.getByRole("button", { name: "Ver nota" }));
     expect(screen.getByText("Ligar amanhã cedo")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Editar nota" })).toBeInTheDocument();
@@ -133,7 +138,7 @@ describe("AbaHistorico", () => {
   });
 
   it("'Carregar mais' enquanto houver página; sem resultado, o texto da Clint", async () => {
-    render(<AbaHistorico lead={LEAD} stages={STAGES} />);
+    render(<AbaHistorico alvo={{ tipo: "negocio", id: LEAD.id }} nomesDasEtapas={Object.fromEntries(STAGES.map((s) => [s.id, s.name]))} />);
     await userEvent.click(screen.getByRole("button", { name: "Carregar mais" }));
     expect(hist.carregarMais).toHaveBeenCalled();
     await userEvent.type(screen.getByRole("searchbox", { name: "Buscar no histórico..." }), "zzzz");
