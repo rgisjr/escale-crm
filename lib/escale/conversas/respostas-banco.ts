@@ -97,19 +97,26 @@ export async function gravarExtras(
     { onConflict: "template_id" },
   );
   if (extras.error) throw extras.error;
-  const apagar = await db
+  // Sem transação no PostgREST: os setores novos entram primeiro e só depois saem
+  // os que ficaram de fora, para uma falha na entrada não deixar a resposta sem setores.
+  const setores = r.todos_os_setores ? [] : [...new Set(r.setores)];
+  if (setores.length > 0) {
+    const inserir = await db.from("crm_respostas_rapidas_setores").upsert(
+      setores.map((setor_id) => ({
+        template_id: templateId,
+        setor_id,
+        organization_id: orgId,
+      })),
+      { onConflict: "template_id,setor_id", ignoreDuplicates: true },
+    );
+    if (inserir.error) throw inserir.error;
+  }
+  let apagar = db
     .from("crm_respostas_rapidas_setores")
     .delete()
     .eq("organization_id", orgId)
     .eq("template_id", templateId);
-  if (apagar.error) throw apagar.error;
-  if (r.todos_os_setores || r.setores.length === 0) return;
-  const inserir = await db.from("crm_respostas_rapidas_setores").insert(
-    [...new Set(r.setores)].map((setor_id) => ({
-      template_id: templateId,
-      setor_id,
-      organization_id: orgId,
-    })),
-  );
-  if (inserir.error) throw inserir.error;
+  if (setores.length > 0) apagar = apagar.not("setor_id", "in", `(${setores.join(",")})`);
+  const { error } = await apagar;
+  if (error) throw error;
 }

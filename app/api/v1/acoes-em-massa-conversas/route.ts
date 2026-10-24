@@ -47,6 +47,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     const supabase = await createClient();
     if (!(await pode(supabase, orgId, "CHAT_BULK_ACTIONS")))
       return recusa("Sem permissão para ações em massa.", 403);
+    // Trocar ou soltar o atendente em lote passa por cima das permissões de
+    // atendente (o executor grava como serviço). Sem a de "todos", não vale.
+    if (acao === "atendente" && !(await pode(supabase, orgId, "CHAT_CHANGE_ATTENDANT_ALL")))
+      return recusa("Sem permissão para alterar o atendente das conversas.", 403);
     if (acao === "atendente" && parametros.user_id) {
       const { data: membro } = await createAdminClient()
         .from("user_organizations")

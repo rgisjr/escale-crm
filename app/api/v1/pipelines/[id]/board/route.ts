@@ -35,6 +35,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { idsDeContatosPessoais } from "@/app/api/v1/conversations/_handler";
 import type { BoardData, Pipeline, Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
+import { lerEmPaginas } from "@/lib/escale/quadro/ler-em-paginas";
 
 export const dynamic = "force-dynamic";
 
@@ -514,12 +515,18 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
       .eq("pipeline_id", pipelineId)
       .eq("is_archived", false)
       .order("position"),
-    supabase
-      .from("crm_leads")
-      .select("*")
-      .eq("pipeline_id", pipelineId)
-      .neq("status", "archived")
-      .order("position_in_stage"),
+    // O PostgREST corta cada resposta em `max_rows` (1.000) sem avisar: lê em
+    // páginas até esgotar, com `id` de desempate para a ordem não oscilar.
+    lerEmPaginas((de, ate) =>
+      supabase
+        .from("crm_leads")
+        .select("*")
+        .eq("pipeline_id", pipelineId)
+        .neq("status", "archived")
+        .order("position_in_stage")
+        .order("id")
+        .range(de, ate),
+    ),
   ]);
 
   if (pipelineErr) return fail("internal_error", pipelineErr.message, 500, { requestId });

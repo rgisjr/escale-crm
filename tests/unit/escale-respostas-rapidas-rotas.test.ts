@@ -121,7 +121,7 @@ describe("criar", () => {
     ).toMatchObject({ template_id: T1, canais: ["whatsapp"], todos_os_setores: false });
     expect(
       sessao.escritas.find(
-        (e) => e.tabela === "crm_respostas_rapidas_setores" && e.op === "insert",
+        (e) => e.tabela === "crm_respostas_rapidas_setores" && e.op === "upsert",
       )!.valores,
     ).toEqual([{ template_id: T1, setor_id: S1, organization_id: ORG_ID }]);
     expect(vi.mocked(audit).mock.calls.at(-1)?.[0]).toMatchObject({

@@ -4,7 +4,11 @@ import { z } from "zod";
 
 import { fail, noContent, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
-import { setorEfetivo, transferirConversaParaSetor } from "@/lib/escale/conversas/setores-banco";
+import {
+  AtendenteMudouError,
+  setorEfetivo,
+  transferirConversaParaSetor,
+} from "@/lib/escale/conversas/setores-banco";
 import { lerJson } from "@/lib/escale/origens/respostas";
 
 import { comAConversa } from "../_comum";
@@ -44,6 +48,8 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
         authz.user.id,
       );
     } catch (err) {
+      if (err instanceof AtendenteMudouError)
+        return fail("state_conflict", t(err.message), 409, { requestId });
       return fail("internal_error", (err as Error).message, 500, { requestId });
     }
     if (resultado === "mesmo_setor")

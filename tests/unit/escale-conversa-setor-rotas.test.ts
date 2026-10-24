@@ -108,6 +108,22 @@ describe("Alterar setor (Em transferência)", () => {
     });
     expect((await ALTERAR(req("POST", { setor_id: S2 }), ctx)).status).toBe(422);
   });
+  it("se o atendente mudou no meio (a RPC não devolve linha), responde 409 e não toca o setor", async () => {
+    const { escritas } = usar(
+      {
+        conversations: [conversa()],
+        crm_setor_da_conversa: [],
+        crm_setor_do_dispositivo: [{ channel_session_id: "cs", setor_id: S1 }],
+        crm_setores: [{ id: S2 }],
+      },
+      {},
+      { fn_conversation_assign: { data: [], error: null } },
+    );
+    const r = await ALTERAR(req("POST", { setor_id: S2 }), ctx);
+    expect(r.status).toBe(409);
+    expect(escritas.find((e) => e.tabela === "crm_setor_da_conversa")).toBeUndefined();
+    expect(vi.mocked(audit)).not.toHaveBeenCalled();
+  });
   it("cancelar volta o setor anterior e reatribui ao atendente anterior; sem transferência → 409", async () => {
     const { escritas, db } = usar({
       conversations: [conversa({ assigned_to_user_id: null })],

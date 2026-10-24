@@ -75,7 +75,7 @@ describe("GET e POST /api/v1/setores", () => {
       valores: { organization_id: ORG_ID, nome: "Vendas", cor: "#1C3FD8", criado_por: USER_ID },
     });
     expect(
-      escritas.find((e) => e.tabela === "crm_setores_membros" && e.op === "insert")!.valores,
+      escritas.find((e) => e.tabela === "crm_setores_membros" && e.op === "upsert")!.valores,
     ).toEqual([{ organization_id: ORG_ID, setor_id: S1, user_id: M1 }]);
     expect(vi.mocked(audit).mock.calls.at(-1)?.[0]).toMatchObject({ action: "crm_setor.created" });
     usar({}, { erros: { crm_setores: { code: "23505", message: "duplicate" } } });

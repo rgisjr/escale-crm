@@ -199,6 +199,39 @@ describe("PATCH /api/v1/pipeline-views/:id", () => {
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "pipeline_view.updated", resourceId: V_TIME }));
   });
 
+  it("mantém as origens que a RLS esconde desta sessão ao renomear (B4-3)", async () => {
+    const db = banco();
+    const F_ESCONDIDA = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb9";
+    (db.tabelas as unknown as Record<string, unknown[]>).crm_pipeline_view_origens!.push({
+      view_id: V_TIME,
+      organization_id: ORG_ID,
+      pipeline_id: F_ESCONDIDA,
+      position: 4,
+    });
+    const res = await mudar(V_TIME, { name: "Time comercial 2" });
+    expect(res.status).toBe(200);
+    expect((db.rpcs[0]!.args as { p_origens: string[] }).p_origens).toEqual([
+      F_NAYARA,
+      F_LEADS,
+      F_ESCONDIDA,
+    ]);
+  });
+
+  it("com as escondidas, passar de 20 origens ainda é 422 e nada é gravado", async () => {
+    const db = banco();
+    const tabelas = db.tabelas as unknown as Record<string, unknown[]>;
+    for (let i = 0; i < 19; i += 1)
+      tabelas.crm_pipeline_view_origens!.push({
+        view_id: V_TIME,
+        organization_id: ORG_ID,
+        pipeline_id: `bbbbbbbb-bbbb-4bbb-8bbb-${String(100000000000 + i)}`,
+        position: 10 + i,
+      });
+    const res = await mudar(V_TIME, { name: "Time comercial 3" });
+    expect(res.status).toBe(422);
+    expect(db.rpcs).toEqual([]);
+  });
+
   it("trocar as origens e passar para todos", async () => {
     const db = banco();
     await mudar(V_TIME, { origens: [F_LEADS], acesso: "todos" });

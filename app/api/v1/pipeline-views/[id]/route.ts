@@ -19,7 +19,9 @@ import { lerJson, origensOuFalha } from "@/lib/escale/origens/respostas";
 import {
   ACESSOS_DE_VISUALIZACAO,
   montarGravacao,
+  origensQueASessaoNaoVe,
   origensVivasDaVisualizacao,
+  VISUALIZACAO_MAX_ORIGENS,
 } from "@/lib/escale/visualizacoes/regras";
 import {
   falhaDaGravacao,
@@ -92,12 +94,22 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   if (!veredito.ok) return fail("unprocessable_entity", t(veredito.erro), 422, { requestId });
   const { gravacao } = veredito;
 
+  // A função regrava a lista inteira. Origem que a RLS esconde desta sessão (gerente sem
+  // acesso a ela) não está na lista lida: sem preservá-la, qualquer edição a apagaria da
+  // visualização para todo mundo. Ela segue no fim, na posição que ainda não ocupa.
+  const invisiveis = origensQueASessaoNaoVe(atual, origens.origens);
+  const origensGravadas = [...gravacao.origens, ...invisiveis];
+  if (origensGravadas.length > VISUALIZACAO_MAX_ORIGENS)
+    return fail("unprocessable_entity", t("Uma visualização junta de 1 a 20 origens."), 422, {
+      requestId,
+    });
+
   const { error } = await supabase.rpc("fn_escale_salvar_visualizacao", {
     p_id: id,
     p_org: orgId,
     p_nome: gravacao.nome,
     p_acesso: gravacao.acesso,
-    p_origens: gravacao.origens,
+    p_origens: origensGravadas,
     p_pessoas: gravacao.pessoas,
   });
   if (error) return falhaDaGravacao(error, t, requestId);
