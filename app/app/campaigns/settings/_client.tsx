@@ -97,7 +97,9 @@ function Padroes() {
       <div>
         <h2 className="font-medium">{t("Padrões desta organização")}</h2>
         <p className="text-sm text-muted-foreground">
-          {t("Campo vazio significa herdar o número. Toda campanha nova nasce com estes valores e pode ficar mais devagar, nunca mais rápida.")}
+          {t(
+            "Campo vazio significa herdar o número. Toda campanha nova nasce com estes valores e pode ficar mais devagar, nunca mais rápida.",
+          )}
         </p>
       </div>
 
@@ -112,21 +114,35 @@ function Padroes() {
           onChange={(e) => setAtribuicao(e.target.value)}
         />
         <p className="text-sm text-muted-foreground">
-          {t("Uma mensagem que chega depois desse prazo é conversa nova, não resposta à campanha. Isso muda o número de respostas que a tela mostra, inclusive das campanhas já enviadas.")}
+          {t(
+            "Uma mensagem que chega depois desse prazo é conversa nova, não resposta à campanha. Isso muda o número de respostas que a tela mostra, inclusive das campanhas já enviadas.",
+          )}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Campo id="p-intervalo" rotulo={t("Intervalo mínimo entre mensagens (segundos)")} valor={intervalo} onChange={setIntervalo} />
+        <Campo
+          id="p-intervalo"
+          rotulo={t("Intervalo mínimo entre mensagens (segundos)")}
+          valor={intervalo}
+          onChange={setIntervalo}
+        />
         <Campo id="p-dia" rotulo={t("Máximo por dia")} valor={tetoDia} onChange={setTetoDia} />
         <Campo id="p-hora" rotulo={t("Máximo por hora")} valor={tetoHora} onChange={setTetoHora} />
         <div />
-        <Campo id="p-inicio" rotulo={t("Enviar só a partir das (hora)")} valor={inicio} onChange={setInicio} />
+        <Campo
+          id="p-inicio"
+          rotulo={t("Enviar só a partir das (hora)")}
+          valor={inicio}
+          onChange={setInicio}
+        />
         <Campo id="p-fim" rotulo={t("Parar de enviar às (hora)")} valor={fim} onChange={setFim} />
       </div>
 
       <p className="text-sm text-muted-foreground">
-        {t("A proteção do número — ritmo, janela e aquecimento que valem para tudo que sai por ele — fica em")}{" "}
+        {t(
+          "A proteção do número — ritmo, janela e aquecimento que valem para tudo que sai por ele — fica em",
+        )}{" "}
         <Link href="/app/connections" className="underline">
           {t("Conexões › Proteção de envio")}
         </Link>
@@ -171,13 +187,20 @@ function TextosSalvos() {
       <div>
         <h2 className="font-medium">{t("Textos salvos")}</h2>
         <p className="text-sm text-muted-foreground">
-          {t("Copy que você reusa entre campanhas. Mudar um texto aqui não muda mensagem que já foi preparada nem que já foi enviada.")}
+          {t(
+            "Copy que você reusa entre campanhas. Mudar um texto aqui não muda mensagem que já foi preparada nem que já foi enviada.",
+          )}
         </p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="t-nome">{t("Nome")}</Label>
-        <Input id="t-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder={t("Ex.: Primeiro contato — produtor")} />
+        <Input
+          id="t-nome"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder={t("Ex.: Primeiro contato — produtor")}
+        />
         <Label htmlFor="t-corpo">{t("Texto")}</Label>
         <Textarea id="t-corpo" rows={4} value={corpo} onChange={(e) => setCorpo(e.target.value)} />
         <Button
@@ -200,7 +223,12 @@ function TextosSalvos() {
               <p className="font-medium">{texto.name}</p>
               <p className="truncate text-sm text-muted-foreground">{texto.body}</p>
             </div>
-            <Button size="sm" variant="outline" disabled={apagar.isPending} onClick={() => apagar.mutate(texto.id)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={apagar.isPending}
+              onClick={() => apagar.mutate(texto.id)}
+            >
               {t("Apagar")}
             </Button>
           </div>
@@ -226,14 +254,21 @@ function ListaDeExclusao() {
       <div>
         <h2 className="font-medium">{t("Lista de exclusão")}</h2>
         <p className="text-sm text-muted-foreground">
-          {t("Números que nenhuma campanha alcança. Diferente de quem pediu para parar: aqui o atendimento continua normal se a pessoa escrever — isto é uma decisão sua, não dela.")}
+          {t(
+            "Números que nenhuma campanha alcança. Diferente de quem pediu para parar: aqui o atendimento continua normal se a pessoa escrever — isto é uma decisão sua, não dela.",
+          )}
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="x-tel">{t("Telefone com DDI e DDD")}</Label>
-          <Input id="x-tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="+5548999990000" />
+          <Input
+            id="x-tel"
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+            placeholder="+5548999990000"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="x-motivo">{t("Motivo (opcional)")}</Label>
@@ -260,7 +295,12 @@ function ListaDeExclusao() {
               {t("termina em")} {e.address_tail ?? "—"}
               {e.reason ? ` · ${e.reason}` : ""}
             </span>
-            <Button size="sm" variant="outline" disabled={tirar.isPending} onClick={() => tirar.mutate(e.id)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={tirar.isPending}
+              onClick={() => tirar.mutate(e.id)}
+            >
               {t("Tirar da lista")}
             </Button>
           </div>
@@ -287,7 +327,13 @@ function Campo({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{rotulo}</Label>
-      <Input id={id} type="number" min={0} value={valor} onChange={(e) => onChange(e.target.value)} />
+      <Input
+        id={id}
+        type="number"
+        min={0}
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   );
 }

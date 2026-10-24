@@ -26,7 +26,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { useCampanha, useEditarCampanha, usePreviaDaAudiencia } from "@/hooks/campanhas/useCampanhas";
+import {
+  useCampanha,
+  useEditarCampanha,
+  usePreviaDaAudiencia,
+} from "@/hooks/campanhas/useCampanhas";
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useT } from "@/hooks/i18n/useT";
 import { useAgentesPublicados, useEtapas, useFunis } from "@/hooks/campanhas/useDestinoDaCampanha";
@@ -248,7 +252,9 @@ export function EditarCampanha({ id }: { id: string }) {
             type="button"
             variant="outline"
             disabled={!temCriterio || previa.isPending}
-            onClick={() => previa.mutate({ audience_filter: filtro, message_body: texto, campaign_id: id })}
+            onClick={() =>
+              previa.mutate({ audience_filter: filtro, message_body: texto, campaign_id: id })
+            }
           >
             {previa.isPending ? t("Contando…") : t("Ver quantas pessoas")}
           </Button>
@@ -271,7 +277,9 @@ export function EditarCampanha({ id }: { id: string }) {
       <Card className="space-y-4 p-4">
         <h2 className="font-medium">{t("Quem responder")}</h2>
         <p className="text-sm text-muted-foreground">
-          {t("Em branco, tudo segue como hoje: o card nasce no funil do número e quem atende é o agente publicado nele.")}
+          {t(
+            "Em branco, tudo segue como hoje: o card nasce no funil do número e quem atende é o agente publicado nele.",
+          )}
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
