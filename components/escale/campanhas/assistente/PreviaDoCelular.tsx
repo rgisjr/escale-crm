@@ -4,9 +4,22 @@ import { Fragment, useEffect, useState } from "react";
 
 import { useT } from "@/hooks/i18n/useT";
 import type { ParteDaPrevia } from "@/lib/escale/campanhas/previa";
-import { ArrowLeft, BatteryMedium, CheckCheck, EllipsisVertical, Phone, Signal, Video, Wifi } from "@/lib/ui/icons-da-casca";
+import {
+  ArrowLeft,
+  BatteryMedium,
+  CheckCheck,
+  EllipsisVertical,
+  Phone,
+  Signal,
+  Video,
+  Wifi,
+} from "@/lib/ui/icons-da-casca";
 
-const HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
+const HORA = new Intl.DateTimeFormat("pt-BR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 
 /** A hora de agora, só no navegador (no servidor ficaria diferente e a hidratação reclamaria). */
 function useHora(): string {
@@ -44,7 +57,10 @@ export function PreviaDoCelular({
       </div>
       <div className="flex h-14 shrink-0 items-center gap-2.5 bg-(--escale-celular-cabecalho) px-3 text-white">
         <ArrowLeft className="size-[18px] shrink-0" aria-hidden />
-        <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25 text-[13px] font-semibold">
+        <span
+          aria-hidden
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25 text-[13px] font-semibold"
+        >
           {nome.trim().charAt(0).toUpperCase()}
         </span>
         <span className="min-w-0 flex-1">
@@ -64,7 +80,10 @@ export function PreviaDoCelular({
               p.tipo === "texto" ? (
                 <Fragment key={i}>{p.texto}</Fragment>
               ) : (
-                <span key={i} className="mx-0.5 rounded-[4px] bg-casca-marca-suave px-1.5 py-0.5 font-medium text-casca-marca">
+                <span
+                  key={i}
+                  className="mx-0.5 rounded-[4px] bg-casca-marca-suave px-1.5 py-0.5 font-medium text-casca-marca"
+                >
                   {p.rotulo}
                 </span>
               ),
@@ -75,7 +94,9 @@ export function PreviaDoCelular({
             </span>
           </div>
         ) : (
-          <p className="flex h-full items-center justify-center px-6 text-center text-[13px] text-casca-suave">{vazio}</p>
+          <p className="flex h-full items-center justify-center px-6 text-center text-[13px] text-casca-suave">
+            {vazio}
+          </p>
         )}
       </div>
     </div>
