@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import type { ParteDaPrevia } from "@/lib/escale/campanhas/previa";
 import {
@@ -15,16 +16,19 @@ import {
   Wifi,
 } from "@/lib/ui/icons-da-casca";
 
-const HORA = new Intl.DateTimeFormat("pt-BR", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
 /** A hora de agora, só no navegador (no servidor ficaria diferente e a hidratação reclamaria). */
 function useHora(): string {
+  const tag = useTagDeIdioma();
   const [hora, setHora] = useState("");
-  useEffect(() => setHora(HORA.format(new Date())), []);
+  useEffect(
+    () =>
+      setHora(
+        new Intl.DateTimeFormat(tag, { hour: "2-digit", minute: "2-digit", hour12: false }).format(
+          new Date(),
+        ),
+      ),
+    [tag],
+  );
   return hora;
 }
 

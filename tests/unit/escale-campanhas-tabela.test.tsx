@@ -82,7 +82,7 @@ describe("TabelaDeCampanhas (002)", () => {
     unmount();
     envolver(<TabelaDeCampanhas {...props} linhas={[linha()]} />);
     fireEvent.click(screen.getByText("Comercial"));
-    expect(push).toHaveBeenLastCalledWith("/app/campaigns/c1");
+    expect(push).toHaveBeenLastCalledWith("/app/campaigns?campanha=c1");
   });
 
   it("o ⋮ do rascunho: Editar, Excluir (vermelho, com a confirmação da Clint) e Duplicar", async () => {

@@ -841,6 +841,12 @@ const HOSTS_DECLARADOS: Record<string, EntradaDeHost> = {
     motivo:
       "endpoint oficial da Google Meet REST API (`POST /v2/spaces`, em `lib/agenda/google/transport.ts`): é o DESTINO do request que cria a sala de reunião com acesso aberto (#2063), com o token da própria organização. Diferente de `meet.google.com` — que é o LINK de convite, e por isso entra como PLATAFORMA em CONFERÊNCIA —, este é host que o produto BUSCA: trocar pelo domínio do revendedor faria a chamada não chegar a lugar nenhum, e a sala nunca seria criada.",
   },
+  // ── assistente de campanha da casca (Fase 8B): o link do limite de envio da Meta ──
+  "developers.facebook.com": {
+    categoria: "FORNECEDOR",
+    motivo:
+      "documentação oficial da Meta sobre os limites de envio do WhatsApp, aberta pelo link 'saiba mais' do passo 4 do assistente de campanha (components/escale/campanhas/assistente/PassoConfirmar.tsx). É o painel do fornecedor onde a pessoa lê a regra; trocar o domínio quebraria o link.",
+  },
   // ── lista de contatos da casca (Fase 2A): o link do Instagram do contato ──
   "instagram.com": {
     categoria: "PLATAFORMA",

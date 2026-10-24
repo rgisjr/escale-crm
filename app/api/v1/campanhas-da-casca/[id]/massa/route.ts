@@ -9,7 +9,7 @@ import {
   novaCampanhaComContatosAcao,
   tirarDaListaAcao,
 } from "@/lib/escale/campanhas/detalhe/acoes";
-import { ehIdDeCampanha } from "@/lib/escale/campanhas/detalhe/banco";
+import { ehIdDeCampanha, lerSelecaoDaCampanha } from "@/lib/escale/campanhas/detalhe/banco";
 import {
   compilarFiltrosDeDestinatarios,
   filtrosDeDestinatariosDoTexto,
@@ -53,20 +53,17 @@ export async function POST(
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc("fn_escale_selecao_da_campanha", {
+    const selecao = await lerSelecaoDaCampanha(supabase, {
       p_org: orgId,
       p_campanha: id,
       p_filtros: pedido.alvo.tipo === "filtro" ? compilarFiltrosDeDestinatarios(filtros) : {},
       p_ids: pedido.alvo.tipo === "ids" ? pedido.alvo.ids : null,
       p_excluidos: pedido.alvo.tipo === "filtro" ? pedido.alvo.excluidos : null,
     });
-    if (error) throw new Error(error.message);
-    const alvos = ((data ?? []) as Array<{ destinatario_id: string; contato_id: string }>).map(
-      (l) => ({
-        destinatarioId: l.destinatario_id,
-        contatoId: l.contato_id,
-      }),
-    );
+    const alvos = selecao.map((l) => ({
+      destinatarioId: l.destinatario_id,
+      contatoId: l.contato_id,
+    }));
     if (alvos.length === 0) return recusa("Nenhum contato selecionado.");
     const contatos = [...new Set(alvos.map((a) => a.contatoId))];
     const registrar = (

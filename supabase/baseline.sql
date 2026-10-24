@@ -34019,55 +34019,7 @@ create policy crm_notas_do_negocio_select on public.crm_notas_do_negocio
                        and public.fn_can_view_lead(l.organization_id, l.owner_user_id)))
   );
 
--- Escreve agent+ (viewer é só leitura), sempre como autor, e só em negócio que ENXERGA.
-create policy crm_notas_do_negocio_insert on public.crm_notas_do_negocio
-  for insert with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and user_id = auth.uid()
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  );
-
--- Edita e apaga o autor, ou gerente ou acima (PRD §5). UMA policy por comando, nunca `for all`:
--- policies permissivas somam por OR e a `for all` também valeria para SELECT e INSERT, abrindo a
--- leitura e a escrita fora da regra do negócio (achado do revisor). A visibilidade do negócio é
--- repetida AQUI, nas duas policies: o Postgres só confronta a linha com a policy de SELECT quando o
--- comando LÊ coluna (WHERE/RETURNING). Um UPDATE/DELETE sem filtro não lê nada, então sem este
--- `exists` o autor alcançaria a nota de um negócio que deixou de enxergar. A subconsulta roda sob a
--- RLS de quem escreve, e `crm_leads` aplica `fn_can_view_lead`.
-create policy crm_notas_do_negocio_dono_ou_gerente_write on public.crm_notas_do_negocio
-  for update using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  )
-  with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  );
-
-create policy crm_notas_do_negocio_dono_ou_gerente_delete on public.crm_notas_do_negocio
-  for delete using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  );
+-- (As policies de INSERT, UPDATE e DELETE de crm_notas_do_negocio nascem mais adiante, no bloco da 9106, que já as redefine: não se instala a versão intermediária.)
 
 revoke all on public.crm_notas_do_negocio from anon;
 grant select, insert, update, delete on public.crm_notas_do_negocio to authenticated;
@@ -59638,12 +59590,12 @@ as $$
        and ct.organization_id = p_org
        and ct.kind = 'person'
        and ct.is_merged_into is null
-     where not (x.contact_id = any ((select r.ids from removidos r)))
+     where not (x.contact_id = any (coalesce((select r.ids from removidos r), '{}'::uuid[])))
      order by x.contact_id, x.bloco, x.ordem
   )
   select v.contact_id, row_number() over (order by v.bloco, v.ordem, v.contact_id) as posicao
     from validos v
-   where coalesce(auth.role(), '') = 'service_role' or public.fn_role_at_least(p_org, 'manager');
+   where current_user in ('postgres', 'service_role') or public.fn_role_at_least(p_org, 'manager');
 $$;
 
 revoke all on function public.fn_escale_contatos_do_publico(uuid, jsonb) from public, anon;
@@ -59685,7 +59637,7 @@ as $$
    where r.organization_id = p_org
      and r.campaign_id = p_campanha
      and r.eligibility_status = 'excluded'
-     and (coalesce(auth.role(), '') = 'service_role' or public.fn_role_at_least(p_org, 'manager'))
+     and (current_user in ('postgres', 'service_role') or public.fn_role_at_least(p_org, 'manager'))
    group by 1
    order by 2 desc, 1;
 $$;
@@ -59837,6 +59789,21 @@ as $$
      order by r.replied_at desc
      limit 1000
   ),
+  candidatas as (
+    select c.id, c.completed_at
+      from public.campaigns c, pode
+     where pode.ok and c.organization_id = p_org and c.id = p_campanha
+    union all
+    (select c.id, c.completed_at
+       from public.campaigns c, pode
+      where pode.ok
+        and c.organization_id = p_org
+        and c.status = 'completed'
+        and c.completed_at is not null
+        and c.id <> p_campanha
+      order by c.completed_at desc, c.id desc
+      limit 5)
+  ),
   taxas as (
     select c.id,
            (select (count(*) filter (where k.situacao = 'respondido'))::numeric
@@ -59845,10 +59812,7 @@ as $$
                       from public.campaign_recipients r
                      where r.organization_id = p_org and r.campaign_id = c.id) k) as taxa,
            c.completed_at
-      from public.campaigns c, pode
-     where pode.ok
-       and c.organization_id = p_org
-       and (c.id = p_campanha or c.status = 'completed')
+      from candidatas c
   ),
   ultimas as (
     select x.taxa

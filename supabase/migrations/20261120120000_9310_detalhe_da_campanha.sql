@@ -143,6 +143,21 @@ as $$
      order by r.replied_at desc
      limit 1000
   ),
+  candidatas as (
+    select c.id, c.completed_at
+      from public.campaigns c, pode
+     where pode.ok and c.organization_id = p_org and c.id = p_campanha
+    union all
+    (select c.id, c.completed_at
+       from public.campaigns c, pode
+      where pode.ok
+        and c.organization_id = p_org
+        and c.status = 'completed'
+        and c.completed_at is not null
+        and c.id <> p_campanha
+      order by c.completed_at desc, c.id desc
+      limit 5)
+  ),
   taxas as (
     select c.id,
            (select (count(*) filter (where k.situacao = 'respondido'))::numeric
@@ -151,10 +166,7 @@ as $$
                       from public.campaign_recipients r
                      where r.organization_id = p_org and r.campaign_id = c.id) k) as taxa,
            c.completed_at
-      from public.campaigns c, pode
-     where pode.ok
-       and c.organization_id = p_org
-       and (c.id = p_campanha or c.status = 'completed')
+      from candidatas c
   ),
   ultimas as (
     select x.taxa

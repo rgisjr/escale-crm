@@ -44,6 +44,8 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/setores": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/usuarios": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/campaigns/prospeccao/nova":
+    "assistente de nova prospecção da casca Escale (Fase 8D), alcançado pelo botão 'Nova prospecção' do cabeçalho da aba Prospecção de Campanhas",
   "/app/campaigns/new":
     "sub-fluxo de criar campanha, alcançado pelo botão dentro da lista de Campanhas",
   "/app/campaigns/settings":

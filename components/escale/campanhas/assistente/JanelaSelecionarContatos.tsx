@@ -19,6 +19,7 @@ import {
 } from "@/hooks/escale/useFiltrosDaLista";
 import { useListaDeContatos } from "@/hooks/escale/useListaDeContatos";
 import { useT } from "@/hooks/i18n/useT";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { SelecaoDoPublico } from "@/lib/escale/campanhas/assistente";
 import { numeroBr } from "@/lib/escale/campanhas/apresentacao";
 import {
@@ -232,7 +233,7 @@ export function JanelaSelecionarContatos({
         ) : (
           linhas.map((l, i) => {
             const semTelefone = !l.telefone;
-            const nome = l.nome ?? l.display_name ?? "";
+            const nome = nomeDoContato({ name: l.nome, display_name: l.display_name }) ?? "";
             return (
               <div
                 key={l.id}

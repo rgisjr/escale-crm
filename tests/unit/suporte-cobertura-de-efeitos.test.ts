@@ -50,6 +50,9 @@ it("todo handler mutante do app declara guarda de suporte ou é infraestrutura i
   // linhas acima. Não há sessão de suporte para a guarda ler; chamá-la aqui
   // seria um no-op que devolve 503 quando o GoTrue oscila.
   if(path==="app/api/v1/tenants/provision/route.ts")continue;
+  // Só LÊ: o POST existe porque o público (ids e filtro) não cabe na URL. Não há efeito
+  // a bloquear em support_readonly; a rota segue atrás de requireRole("manager").
+  if(path==="app/api/v1/campanhas-da-casca/publico/route.ts")continue;
   if(path.includes("/impersonate"))continue; // início/fim autenticam a posse e têm contrato próprio
   const source=ts.createSourceFile(path,readFileSync(path,"utf8"),ts.ScriptTarget.Latest,true);
   // DUAS FORMAS de exportar um handler, e o gate precisa das duas. A varredura
