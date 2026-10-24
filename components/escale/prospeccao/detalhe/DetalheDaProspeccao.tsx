@@ -13,6 +13,7 @@ import type { DetalheDaProspeccao as Detalhe } from "@/lib/escale/prospeccao/tip
 import { CirclePause, Play } from "@/lib/ui/icons-da-casca";
 
 import { SumarioDaProspeccao } from "./SumarioDaProspeccao";
+import { EmpresasDaProspeccao } from "./EmpresasDaProspeccao";
 
 type Aba = "sumario" | "detalhes";
 
@@ -102,7 +103,7 @@ export function DetalheDaProspeccao({
       ) : aba === "sumario" ? (
         <SumarioDaProspeccao detalhe={d} opcoes={opcoes.data} />
       ) : (
-        <p className="py-10 text-center text-[13px] text-casca-suave">{t("Detalhes")}</p>
+        <EmpresasDaProspeccao detalhe={d} />
       )}
     </JanelaDoDetalhe>
   );
