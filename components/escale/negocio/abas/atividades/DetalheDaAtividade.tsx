@@ -52,9 +52,20 @@ export function DetalheDaAtividade({
   const pendente = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mensagem = tipo === "whatsapp" || tipo === "instagram";
 
+  // Q0b (B2-5): o que a limpeza precisa saber mora em refs (ela roda só ao desmontar).
+  const ultimoTexto = useRef(texto);
+  const salvarAtual = useRef({ conteudo, aoSalvarConteudo });
+  useEffect(() => {
+    salvarAtual.current = { conteudo, aoSalvarConteudo };
+  });
   useEffect(
     () => () => {
-      if (pendente.current) clearTimeout(pendente.current);
+      if (!pendente.current) return;
+      clearTimeout(pendente.current);
+      pendente.current = null;
+      // Trocar de atividade, aba ou negócio antes dos 750ms não pode descartar o digitado.
+      const { conteudo: gravado, aoSalvarConteudo: salvar } = salvarAtual.current;
+      if (ultimoTexto.current !== (gravado ?? "")) salvar?.(ultimoTexto.current);
     },
     [],
   );
@@ -66,6 +77,7 @@ export function DetalheDaAtividade({
   };
   const mudar = (valor: string) => {
     setTexto(valor);
+    ultimoTexto.current = valor;
     if (pendente.current) clearTimeout(pendente.current);
     pendente.current = setTimeout(() => gravarJa(valor), ESPERA_PARA_GRAVAR);
   };
