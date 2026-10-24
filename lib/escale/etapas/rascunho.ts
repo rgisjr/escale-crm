@@ -7,6 +7,7 @@
  * Limites da tela, como na Clint: nome 40, descrição 200 (a API do original aceita mais).
  */
 import type { EtapaDaOrigem } from "@/lib/escale/configuracoes/montar";
+import { randomId } from "@/lib/random-id";
 
 export const MAX_NOME_DA_ETAPA = 40;
 export const MAX_DESCRICAO_DA_ETAPA = 200;
@@ -61,7 +62,7 @@ export function erroDaEtapa(
 
 export function criarEtapaProvisoria(
   r: RascunhoDasEtapas,
-  id: string = `${PREFIXO_DA_PROVISORIA}${globalThis.crypto.randomUUID()}`,
+  id: string = `${PREFIXO_DA_PROVISORIA}${randomId()}`,
 ): RascunhoDasEtapas {
   const nova: EtapaDoRascunho = {
     id,

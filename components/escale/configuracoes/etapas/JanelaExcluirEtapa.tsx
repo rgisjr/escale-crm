@@ -6,13 +6,7 @@ import {
   CabecaDaJanela,
   JanelaDaCasca,
 } from "@/components/escale/origens/JanelaDaCasca";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import type { DecisaoDosNegocios } from "@/lib/escale/etapas/rascunho";
 import { Trash2 } from "@/lib/ui/icons-da-casca";
@@ -88,26 +82,17 @@ export function JanelaExcluirEtapa({
                 {t("Mover para outra etapa")}
               </label>
               {acao === "mover" ? (
-                <Select
-                  value={destinoId}
-                  onValueChange={(id) =>
-                    setEscolhas((x) => ({ ...x, [e.id]: { acao: "mover", destinoId: id } }))
-                  }
-                >
-                  <SelectTrigger
-                    aria-label={t("Escolha a etapa")}
-                    className="h-[36px] w-full text-[13px]"
-                  >
-                    <SelectValue placeholder={t("Escolha a etapa")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {destinos.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        {o.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SeletorDaCasca
+                  aparencia="janela"
+                  aria-label={t("Escolha a etapa")}
+                  vazio={t("Escolha a etapa")}
+                  valor={destinoId}
+                  opcoes={destinos.map((o) => ({ valor: o.id, rotulo: o.nome }))}
+                  aoMudar={(id) => {
+                    if (id)
+                      setEscolhas((x) => ({ ...x, [e.id]: { acao: "mover", destinoId: id } }));
+                  }}
+                />
               ) : null}
               <label className="flex items-center gap-2 text-[13px] text-casca-texto">
                 <input
