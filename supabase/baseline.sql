@@ -34019,55 +34019,7 @@ create policy crm_notas_do_negocio_select on public.crm_notas_do_negocio
                        and public.fn_can_view_lead(l.organization_id, l.owner_user_id)))
   );
 
--- Escreve agent+ (viewer é só leitura), sempre como autor, e só em negócio que ENXERGA.
-create policy crm_notas_do_negocio_insert on public.crm_notas_do_negocio
-  for insert with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and user_id = auth.uid()
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  );
-
--- Edita e apaga o autor, ou gerente ou acima (PRD §5). UMA policy por comando, nunca `for all`:
--- policies permissivas somam por OR e a `for all` também valeria para SELECT e INSERT, abrindo a
--- leitura e a escrita fora da regra do negócio (achado do revisor). A visibilidade do negócio é
--- repetida AQUI, nas duas policies: o Postgres só confronta a linha com a policy de SELECT quando o
--- comando LÊ coluna (WHERE/RETURNING). Um UPDATE/DELETE sem filtro não lê nada, então sem este
--- `exists` o autor alcançaria a nota de um negócio que deixou de enxergar. A subconsulta roda sob a
--- RLS de quem escreve, e `crm_leads` aplica `fn_can_view_lead`.
-create policy crm_notas_do_negocio_dono_ou_gerente_write on public.crm_notas_do_negocio
-  for update using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  )
-  with check (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  );
-
-create policy crm_notas_do_negocio_dono_ou_gerente_delete on public.crm_notas_do_negocio
-  for delete using (
-    public.fn_is_platform_admin_full()
-    or ((organization_id in (select public.fn_user_org_ids()))
-        and public.fn_role_at_least(organization_id, 'agent')
-        and (user_id = auth.uid() or public.fn_role_at_least(organization_id, 'manager'))
-        and exists (select 1 from public.crm_leads l
-                     where l.id = crm_notas_do_negocio.lead_id
-                       and l.organization_id = crm_notas_do_negocio.organization_id))
-  );
+-- (As policies de INSERT, UPDATE e DELETE de crm_notas_do_negocio nascem mais adiante, no bloco da 9106, que já as redefine: não se instala a versão intermediária.)
 
 revoke all on public.crm_notas_do_negocio from anon;
 grant select, insert, update, delete on public.crm_notas_do_negocio to authenticated;
@@ -59638,7 +59590,7 @@ as $$
        and ct.organization_id = p_org
        and ct.kind = 'person'
        and ct.is_merged_into is null
-     where not (x.contact_id = any ((select r.ids from removidos r)))
+     where not (x.contact_id = any (coalesce((select r.ids from removidos r), '{}'::uuid[])))
      order by x.contact_id, x.bloco, x.ordem
   )
   select v.contact_id, row_number() over (order by v.bloco, v.ordem, v.contact_id) as posicao

@@ -60,7 +60,14 @@ describe("o CSV da campanha", () => {
 
 function banco(campanha: unknown, linhas: unknown[]) {
   const db = {
-    rpc: vi.fn(() => Promise.resolve({ data: linhas, error: null })),
+    rpc: vi.fn((_nome: string, args?: { p_limite?: number; p_deslocamento?: number }) =>
+      Promise.resolve({
+        data: args?.p_limite
+          ? linhas.slice(args.p_deslocamento ?? 0, (args.p_deslocamento ?? 0) + args.p_limite)
+          : linhas,
+        error: null,
+      }),
+    ),
     from: vi.fn((tabela: string) => {
       const c: Record<string, unknown> = {};
       for (const m of ["select", "eq"]) c[m] = vi.fn(() => c);
@@ -84,6 +91,33 @@ beforeEach(() => {
 });
 
 describe("GET /api/v1/campanhas-da-casca/[id]/csv", () => {
+  it("campanha com mais de 1.000 destinatários: lê em páginas e o arquivo sai inteiro", async () => {
+    authOk("manager");
+    const muitas = Array.from({ length: 2500 }, (_, i) => ({
+      destinatario_id: `r${i}`,
+      contato_id: `k${i}`,
+      telefone: "+5553984555965",
+      nome: `Pessoa ${i}`,
+      email: null,
+      situacao: "lida",
+      motivo: null,
+      enviado_em: null,
+      total: "2500",
+    }));
+    const db = banco({ id: ID, name: "grande" }, muitas);
+    const r = await GET(new NextRequest(new URL("http://x/csv")), {
+      params: Promise.resolve({ id: ID }),
+    });
+    expect(r.status).toBe(200);
+    const linhasDoArquivo = (await r.text()).split(String.fromCharCode(13, 10)).filter(Boolean);
+    expect(linhasDoArquivo).toHaveLength(2501); // cabeçalho + 2.500
+    const paginas = db.rpc.mock.calls.filter(([n]) => n === "fn_escale_destinatarios_da_campanha");
+    expect(paginas).toHaveLength(3);
+    expect(vi.mocked(audit)).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { linhas: 2500, parcial: false } }),
+    );
+  });
+
   it("baixa a campanha inteira (até 20.000), com o nome do arquivo, e audita", async () => {
     authOk("manager");
     const db = banco({ id: ID, name: "10.09" }, [
@@ -111,7 +145,7 @@ describe("GET /api/v1/campanhas-da-casca/[id]/csv", () => {
       p_org: ORG_ID,
       p_campanha: ID,
       p_filtros: {},
-      p_limite: 20_000,
+      p_limite: 1000,
       p_deslocamento: 0,
     });
     expect((await r.text()).split("\r\n")[1]).toBe(

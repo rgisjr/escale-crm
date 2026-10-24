@@ -171,6 +171,61 @@ type LinhaDaPagina = {
   total: Numero;
 };
 
+/** O teto de linhas por resposta do PostgREST (`max_rows`, 1.000 no Supabase). */
+const PAGINA_DO_BANCO = 1000;
+/** O corte da própria função de seleção (`limit 100001`). */
+const TETO_DA_SELECAO = 100_001;
+
+export type AlvoDaSelecao = { destinatario_id: string; contato_id: string };
+
+/**
+ * Todos os alvos da seleção, página a página: o PostgREST corta cada resposta em
+ * `max_rows` (1.000) e a função devolve até 100.001. Sem isto, "Selecionar todos
+ * os N" agia só nos primeiros 1.000 e dizia que deu certo. A ordem da função é
+ * fixa (created_at, id), então as faixas não se repetem nem pulam linha.
+ */
+export async function lerSelecaoDaCampanha(
+  supabase: SupabaseClient,
+  args: Record<string, unknown>,
+): Promise<AlvoDaSelecao[]> {
+  const todos: AlvoDaSelecao[] = [];
+  while (todos.length < TETO_DA_SELECAO) {
+    const { data, error } = await supabase
+      .rpc("fn_escale_selecao_da_campanha", args)
+      .range(todos.length, todos.length + PAGINA_DO_BANCO - 1);
+    if (error) throw new Error(error.message);
+    const linhas = (data ?? []) as AlvoDaSelecao[];
+    if (linhas.length === 0) break;
+    todos.push(...linhas);
+  }
+  return todos.slice(0, TETO_DA_SELECAO);
+}
+
+/**
+ * Os destinatários até `teto` linhas, em páginas de 1.000 (o corte do
+ * PostgREST). O fim é o total da 1ª página, não a página curta: o `max_rows` da
+ * instalação pode ser menor que 1.000.
+ */
+export async function lerDestinatariosAteOTeto(
+  supabase: SupabaseClient,
+  orgId: string,
+  id: string,
+  filtro: FiltroDeDestinatariosCompilado,
+  teto: number,
+): Promise<PaginaDeDestinatarios> {
+  let pagina = await lerDestinatarios(supabase, orgId, id, filtro, 1, PAGINA_DO_BANCO);
+  const linhas = [...pagina.linhas];
+  const alvo = Math.min(pagina.total, teto);
+  let n = 1;
+  while (linhas.length < alvo) {
+    n += 1;
+    pagina = await lerDestinatarios(supabase, orgId, id, filtro, n, PAGINA_DO_BANCO);
+    if (pagina.linhas.length === 0) break;
+    linhas.push(...pagina.linhas);
+  }
+  return { ...pagina, linhas: linhas.slice(0, teto), pagina: 1, porPagina: teto };
+}
+
 export async function lerDestinatarios(
   supabase: SupabaseClient,
   orgId: string,

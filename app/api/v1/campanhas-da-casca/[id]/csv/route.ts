@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 import { fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
-import { ehIdDeCampanha, lerDestinatarios } from "@/lib/escale/campanhas/detalhe/banco";
+import { ehIdDeCampanha, lerDestinatariosAteOTeto } from "@/lib/escale/campanhas/detalhe/banco";
 import {
   TETO_DO_CSV,
   csvDaCampanha,
@@ -44,7 +44,7 @@ export async function GET(
       .maybeSingle();
     if (!campanha) return naoAchou();
     const fuso = await fusoDaOrganizacao(supabase, authz.org.orgId);
-    const pagina = await lerDestinatarios(supabase, authz.org.orgId, id, {}, 1, TETO_DO_CSV);
+    const pagina = await lerDestinatariosAteOTeto(supabase, authz.org.orgId, id, {}, TETO_DO_CSV);
     void audit({
       action: "campaign.exported",
       actorUserId: authz.user.id,

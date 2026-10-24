@@ -8,6 +8,7 @@ import { DialogTitle } from "@/components/ui/dialog";
 import { useListaDeContatos } from "@/hooks/escale/useListaDeContatos";
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { formatarTelefone } from "@/lib/escale/contatos/regras";
 import { Search } from "@/lib/ui/icons-da-casca";
 
@@ -75,7 +76,7 @@ export function JanelaTesteDaCampanha({
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] text-casca-texto">
-                  {l.nome ?? l.display_name}
+                  {nomeDoContato({ name: l.nome, display_name: l.display_name })}
                 </span>
                 <span className="block text-[12px] text-casca-suave">
                   {formatarTelefone(l.telefone)}

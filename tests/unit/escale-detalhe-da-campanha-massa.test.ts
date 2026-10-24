@@ -31,13 +31,21 @@ const ETAPA = "e5ca1e00-8c00-4000-8000-0000000000f2";
 
 function sessao(selecao: unknown[], etapa: unknown = null) {
   const db = {
-    rpc: vi.fn((nome: string) =>
-      Promise.resolve(
-        nome === "fn_escale_selecao_da_campanha"
-          ? { data: selecao, error: null }
-          : { data: [{ acao_id: "a1", quantidade: 1, status: "na_fila" }], error: null },
-      ),
-    ),
+    faixas: [] as Array<[number, number]>,
+    rpc: vi.fn((nome: string) => {
+      if (nome === "fn_escale_selecao_da_campanha")
+        // Como o PostgREST: a resposta vem em faixas (`.range`), no máximo 1.000 por vez.
+        return {
+          range: (de: number, ate: number) => {
+            db.faixas.push([de, ate]);
+            return Promise.resolve({ data: selecao.slice(de, ate + 1), error: null });
+          },
+        };
+      return Promise.resolve({
+        data: [{ acao_id: "a1", quantidade: 1, status: "na_fila" }],
+        error: null,
+      });
+    }),
     from: vi.fn(() => {
       const c: Record<string, unknown> = {};
       for (const m of ["select", "eq"]) c[m] = vi.fn(() => c);
@@ -123,6 +131,31 @@ describe("POST /api/v1/campanhas-da-casca/[id]/massa", () => {
     expect(vi.mocked(audit)).toHaveBeenCalledWith(
       expect.objectContaining({ action: "contacts.bulk_requested" }),
     );
+  });
+
+  it("seleção com mais de 1.000 alvos: lê em faixas de 1.000 e age em todos", async () => {
+    authOk("manager");
+    const muitos = Array.from({ length: 2300 }, (_, i) => ({
+      destinatario_id: `d${i}`,
+      contato_id: `k${i}`,
+    }));
+    const db = sessao(muitos);
+    const r = await pedir({
+      acao: "incluir_tag",
+      alvo: { tipo: "filtro", excluidos: [] },
+      parametros: { tag: "vip" },
+    });
+    expect(r.status).toBe(201);
+    expect(db.faixas).toEqual([
+      [0, 999],
+      [1000, 1999],
+      [2000, 2999],
+      [2300, 3299],
+    ]);
+    const criar = (db.rpc.mock.calls as unknown as Array<[string, { p_ids: string[] }]>).find(
+      ([n]) => n === "fn_escale_criar_acao_em_massa",
+    );
+    expect(criar?.[1].p_ids).toHaveLength(2300);
   });
 
   it("Criar campanha pelo filtro: compila, passa os desmarcados e devolve o rascunho novo", async () => {

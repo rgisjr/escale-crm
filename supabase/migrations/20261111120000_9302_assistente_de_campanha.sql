@@ -83,7 +83,7 @@ as $$
        and ct.organization_id = p_org
        and ct.kind = 'person'
        and ct.is_merged_into is null
-     where not (x.contact_id = any ((select r.ids from removidos r)))
+     where not (x.contact_id = any (coalesce((select r.ids from removidos r), '{}'::uuid[])))
      order by x.contact_id, x.bloco, x.ordem
   )
   select v.contact_id, row_number() over (order by v.bloco, v.ordem, v.contact_id) as posicao

@@ -37,18 +37,24 @@ const NAV_ALLOWLIST: Record<string, string> = {
   "/app/team/invite": "sub-fluxo de convite, alcançado de dentro de Equipe",
   "/app/inbox/configuracoes":
     "hub de configurações de Conversas da casca Escale (Fase 3C), alcançado pelo ⚙ do cabeçalho da tela de Conversas",
-  "/app/inbox/configuracoes/canais": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/canais":
+    "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/mensagens-agendadas":
     "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/respostas-rapidas":
     "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
-  "/app/inbox/configuracoes/setores": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
-  "/app/inbox/configuracoes/usuarios": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/setores":
+    "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/usuarios":
+    "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/campaigns/prospeccao/nova":
+    'assistente de nova prospecção da casca Escale (Fase 8D), alcançado pelo botão "Nova prospecção" do cabeçalho da aba Prospecção de Campanhas',
   "/app/campaigns/new":
     "sub-fluxo de criar campanha, alcançado pelo botão dentro da lista de Campanhas",
   "/app/campaigns/settings":
     "padrões de campanha da organização, alcançados pelo botão dentro da lista de Campanhas — é ajuste que se faz uma vez, não tela de uso diário",
-  "/app/settings/tenant/whatsapp": "redirect legado para /app/connections; mantido por links salvos",
+  "/app/settings/tenant/whatsapp":
+    "redirect legado para /app/connections; mantido por links salvos",
   "/app/settings/canal-oficial":
     "redirect para /app/connections?aba=oficial desde o PR #105 — conectar canal passou a ter um lugar só. Conexões é a porta; a aba é navegação interna dela",
   "/app/settings/templates":
@@ -116,9 +122,10 @@ describe("completude da navegação", () => {
 
   it("a allowlist não guarda rota que já morreu", () => {
     const obsoletas = Object.keys(NAV_ALLOWLIST).filter((r) => !ROTAS.includes(r));
-    expect(obsoletas, `Allowlist cita rota que não existe mais:\n  ${obsoletas.join("\n  ")}`).toEqual(
-      [],
-    );
+    expect(
+      obsoletas,
+      `Allowlist cita rota que não existe mais:\n  ${obsoletas.join("\n  ")}`,
+    ).toEqual([]);
   });
 
   it("toda entrada da allowlist explica o porquê", () => {
