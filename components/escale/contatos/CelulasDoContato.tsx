@@ -114,9 +114,12 @@ export function CelulaTags({ tags }: { tags: string[] }) {
 export function CelulaNegocios({
   linha,
   aoAdicionar,
+  aoVerNegocios,
 }: {
   linha: LinhaDeContato;
   aoAdicionar: (linha: LinhaDeContato) => void;
+  /** FORK ESCALE · Fase 2E (N4): com mais de um negócio, abre a janela do contato na aba Negócios. */
+  aoVerNegocios?: () => void;
 }) {
   const t = useT();
   const botao =
@@ -130,6 +133,11 @@ export function CelulaNegocios({
     return (
       <Link
         href={href}
+        onClick={(e) => {
+          if (linha.negocios <= 1 || !aoVerNegocios || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+          e.preventDefault();
+          aoVerNegocios();
+        }}
         className={`${botao} border-casca-marca text-casca-marca hover:bg-casca-marca-suave`}
       >
         {rotulo}

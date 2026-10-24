@@ -65,7 +65,6 @@ import {
   Trash2,
   type LucideIcon,
 } from "@/lib/ui/icons-da-casca";
-import type { Lead } from "@/lib/types/leads";
 import { cn } from "@/lib/utils";
 
 import { JanelaDeNovoDocumento } from "./JanelaDeNovoDocumento";
@@ -93,11 +92,11 @@ function abrirArquivo(a: Arquivo) {
   window.open(`${rotaDosArquivos(a.contact_id)}/${a.id}`, "_blank", "noopener,noreferrer");
 }
 
-export function AbaArquivos({ lead }: { lead: Lead }) {
+export function AbaArquivos({ contatoId, leadId }: { contatoId: string | null; leadId: string | null }) {
   const t = useT();
-  const contactId = lead.contact_id;
+  const contactId = contatoId;
   const { data, isLoading, isError } = useArquivosDoContato(contactId);
-  const enviar = useEnviarArquivos(contactId ?? "", lead.id);
+  const enviar = useEnviarArquivos(contactId ?? "", leadId);
   const excluir = useExcluirArquivo(contactId ?? "");
   const user = useUser();
   const org = useActiveOrg();

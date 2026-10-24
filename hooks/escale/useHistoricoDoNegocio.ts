@@ -10,6 +10,7 @@ import {
   tiposDoGrupo,
   type ChaveDoGrupo,
 } from "@/lib/escale/negocio/historico";
+import type { AlvoDaNota } from "@/lib/escale/negocio/notas";
 import type { TimelineItemView } from "@/lib/types/contacts";
 
 /**
@@ -19,33 +20,36 @@ import type { TimelineItemView } from "@/lib/types/contacts";
  */
 type Pagina = { data: TimelineItemView[]; meta?: { has_more?: boolean; cursor?: string | null } };
 
-export const chaveDoHistorico = (leadId: string, grupo: ChaveDoGrupo) =>
-  ["timeline", leadId, "historico", grupo] as const;
+export const chaveDoHistorico = (id: string, grupo: ChaveDoGrupo) => ["timeline", id, "historico", grupo] as const;
 
-export function useHistoricoDoNegocio(leadId: string, grupo: ChaveDoGrupo) {
+const rotaDoHistorico = (alvo: AlvoDaNota) =>
+  alvo.tipo === "negocio" ? `/api/v1/leads/${alvo.id}/timeline` : `/api/v1/contacts/${alvo.id}/timeline`;
+
+/** FORK ESCALE · Fases 1H e 2E: o histórico paginado do negócio ou do contato (N8). */
+export function useHistorico(alvo: AlvoDaNota, grupo: ChaveDoGrupo) {
   const qc = useQueryClient();
   const tipos = tiposDoGrupo(grupo);
   const consulta = useInfiniteQuery({
-    queryKey: chaveDoHistorico(leadId, grupo),
+    queryKey: chaveDoHistorico(alvo.id, grupo),
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
       const busca = new URLSearchParams({ limit: String(PAGINA_DO_HISTORICO) });
       for (const tipo of tipos ?? []) busca.append("type", tipo);
       if (pageParam) busca.set("cursor", pageParam);
-      return apiClient.get<Pagina>(`/api/v1/leads/${leadId}/timeline?${busca.toString()}`);
+      return apiClient.get<Pagina>(`${rotaDoHistorico(alvo)}?${busca.toString()}`);
     },
     getNextPageParam: (ultima) => (ultima.meta?.has_more ? (ultima.meta.cursor ?? null) : null),
     enabled: tipos === null || tipos.length > 0,
   });
 
   useRealtimeChannel({
-    name: `historico-${leadId}`,
+    name: `historico-${alvo.tipo}-${alvo.id}`,
     postgresChanges: {
       event: "INSERT",
       table: "crm_lead_activities",
-      filter: `lead_id=eq.${leadId}`,
+      filter: `${alvo.tipo === "negocio" ? "lead_id" : "contact_id"}=eq.${alvo.id}`,
     },
-    onChange: () => void qc.invalidateQueries({ queryKey: ["timeline", leadId] }),
+    onChange: () => void qc.invalidateQueries({ queryKey: ["timeline", alvo.id] }),
   });
 
   const itens = useMemo(() => {
@@ -62,3 +66,6 @@ export function useHistoricoDoNegocio(leadId: string, grupo: ChaveDoGrupo) {
     carregandoMais: consulta.isFetchingNextPage,
   };
 }
+
+export const useHistoricoDoNegocio = (leadId: string, grupo: ChaveDoGrupo) =>
+  useHistorico({ tipo: "negocio", id: leadId }, grupo);

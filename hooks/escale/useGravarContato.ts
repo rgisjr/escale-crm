@@ -41,7 +41,7 @@ export class ContatoNaoCarregado extends Error {
 // Uma fila por contato, para o nome, as tags e os campos (componentes diferentes) não se cruzarem.
 const filas = new Map<string, Promise<unknown>>();
 
-export function useGravarContato(contactId: string, pipelineId: string) {
+export function useGravarContato(contactId: string, pipelineId: string | null) {
   const qc = useQueryClient();
   const atualizar = useUpdateContact(contactId);
   const mutateAsync = atualizar.mutateAsync;
@@ -69,7 +69,8 @@ export function useGravarContato(contactId: string, pipelineId: string) {
               data: { ...(velho?.data ?? {}), ...resposta.data } as Contact,
             }));
           }
-          void qc.invalidateQueries({ queryKey: chaveDoQuadro(pipelineId) });
+          // FORK ESCALE · Fase 2E: sem origem (janela do contato), não há quadro a refazer.
+          if (pipelineId) void qc.invalidateQueries({ queryKey: chaveDoQuadro(pipelineId) });
           void qc.invalidateQueries({ queryKey: ["timeline"] });
           return true;
         });

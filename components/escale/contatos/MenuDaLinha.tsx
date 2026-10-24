@@ -33,9 +33,12 @@ import { cn } from "@/lib/utils";
 export function MenuDaLinha({
   linha,
   podeExcluir,
+  aoEditar,
 }: {
   linha: LinhaDeContato;
   podeExcluir: boolean;
+  /** FORK ESCALE · Fase 2E (N4): "Editar" abre a janela do contato (aba Contato). */
+  aoEditar?: () => void;
 }) {
   const t = useT();
   const [editando, setEditando] = useState(false);
@@ -87,7 +90,7 @@ export function MenuDaLinha({
               if (confirmando) e.preventDefault();
             }}
           >
-            <DropdownMenuItem className={ITEM_DO_MENU} onSelect={() => setEditando(true)}>
+            <DropdownMenuItem className={ITEM_DO_MENU} onSelect={() => (aoEditar ? aoEditar() : setEditando(true))}>
               <Pencil size={14} aria-hidden />
               {t("Editar")}
             </DropdownMenuItem>

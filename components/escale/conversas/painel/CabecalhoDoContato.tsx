@@ -155,7 +155,7 @@ export function CabecalhoDoContato({
         contatoNome={nome}
       />
       {lead ? (
-        <JanelaDeNota leadId={lead.id} aberta={nota} onFechar={() => setNota(false)} />
+        <JanelaDeNota alvo={{ tipo: "negocio", id: lead.id }} aberta={nota} onFechar={() => setNota(false)} />
       ) : null}
     </div>
   );

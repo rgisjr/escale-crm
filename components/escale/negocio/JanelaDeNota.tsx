@@ -9,27 +9,27 @@ import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCriarNota, useEditarNota } from "@/hooks/escale/useNotasDoNegocio";
 import { useT } from "@/hooks/i18n/useT";
-import { MAX_TEXTO_DA_NOTA } from "@/lib/escale/negocio/notas";
+import { MAX_TEXTO_DA_NOTA, type AlvoDaNota } from "@/lib/escale/negocio/notas";
 
 /**
- * O MODAL "NOVA NOTA" DA CLINT (fork Escale, Fase 1H; C15, N7; NoteModal).
+ * O MODAL "NOVA NOTA" DA CLINT (fork Escale, Fases 1H e 2E; C15, N7; NoteModal). O alvo é o negócio ou o contato (Q5).
  * Título com o "i" (a dica 10608), a caixa de texto (texto simples, Q9), o
  * contador, "Cancelar" e "Salvar". Com `nota`, é "Editar nota".
  */
 export function JanelaDeNota({
-  leadId,
+  alvo,
   aberta,
   onFechar,
   nota,
 }: {
-  leadId: string;
+  alvo: AlvoDaNota;
   aberta: boolean;
   onFechar: () => void;
   nota?: { id: string; texto: string };
 }) {
   const t = useT();
-  const criar = useCriarNota(leadId);
-  const editar = useEditarNota(leadId);
+  const criar = useCriarNota(alvo);
+  const editar = useEditarNota(alvo);
   const [texto, setTexto] = useState(nota?.texto ?? "");
   // Ao abrir (ou trocar a nota), a caixa volta ao texto da nota; ajustado no render, sem efeito.
   const origem = aberta ? (nota?.texto ?? "") : null;

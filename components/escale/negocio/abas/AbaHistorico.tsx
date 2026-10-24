@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
-import { useHistoricoDoNegocio } from "@/hooks/escale/useHistoricoDoNegocio";
-import { useNotasDoNegocio } from "@/hooks/escale/useNotasDoNegocio";
+import { useHistorico } from "@/hooks/escale/useHistoricoDoNegocio";
+import { useNotas } from "@/hooks/escale/useNotasDoNegocio";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { ROLE_RANK } from "@/lib/auth/types";
@@ -14,9 +14,9 @@ import {
   casaComABusca,
   type ChaveDoGrupo,
 } from "@/lib/escale/negocio/historico";
+import { juntarNotasAoHistorico } from "@/lib/escale/ficha-do-contato/regras";
+import type { AlvoDaNota } from "@/lib/escale/negocio/notas";
 import { secoesDoHistorico } from "@/lib/escale/negocio/regras";
-import type { Stage } from "@/lib/kanban/types";
-import type { Lead } from "@/lib/types/leads";
 import { Search } from "@/lib/ui/icons-da-casca";
 
 import { CartaoDoHistorico } from "./CartaoDoHistorico";
@@ -25,9 +25,16 @@ import { CartaoDoHistorico } from "./CartaoDoHistorico";
  * A ABA HISTÓRICO DA FICHA (fork Escale, Fases 1G e 1H; C18, N12; prints 07 e 12).
  * Busca na tela, filtro por grupo (os 16 da Clint; o `type` vai na rota),
  * 25 por página com "Carregar mais", seções Hoje/Ontem/Esta semana/data, e as
- * notas com "Ver nota", "Editar nota" e a lixeira.
+ * notas com "Ver nota", "Editar nota" e a lixeira. Fase 2E: o alvo é o negócio ou o
+ * contato; no contato, as notas soltas entram na ordem do tempo (N8).
  */
-export function AbaHistorico({ lead, stages }: { lead: Lead; stages: readonly Stage[] }) {
+export function AbaHistorico({
+  alvo,
+  nomesDasEtapas,
+}: {
+  alvo: AlvoDaNota;
+  nomesDasEtapas: Readonly<Record<string, string>>;
+}) {
   const t = useT();
   const idioma = useTagDeIdioma();
   const user = useUser();
@@ -35,20 +42,23 @@ export function AbaHistorico({ lead, stages }: { lead: Lead; stages: readonly St
   const gerente = !!org && ROLE_RANK[org.role] >= ROLE_RANK.manager;
   const [busca, setBusca] = useState("");
   const [grupo, setGrupo] = useState<ChaveDoGrupo>("todos");
-  const historico = useHistoricoDoNegocio(lead.id, grupo);
-  const notasDoNegocio = useNotasDoNegocio(lead.id).data;
-  const nomesDasEtapas = useMemo(
-    () => Object.fromEntries(stages.map((s) => [s.id, s.name])),
-    [stages],
-  );
+  const historico = useHistorico(alvo, grupo);
+  const notasDoNegocio = useNotas(alvo).data;
   const notaPorId = useMemo(
     () => new Map((notasDoNegocio ?? []).map((n) => [n.id, n])),
     [notasDoNegocio],
   );
 
+  const itens = useMemo(
+    () =>
+      alvo.tipo === "contato"
+        ? juntarNotasAoHistorico(historico.itens, notasDoNegocio ?? [], historico.temMais, grupo)
+        : historico.itens,
+    [alvo.tipo, historico.itens, historico.temMais, notasDoNegocio, grupo],
+  );
   const visiveis = useMemo(
-    () => historico.itens.filter((i) => casaComABusca(i, busca, t, nomesDasEtapas)),
-    [historico.itens, busca, t, nomesDasEtapas],
+    () => itens.filter((i) => casaComABusca(i, busca, t, nomesDasEtapas)),
+    [itens, busca, t, nomesDasEtapas],
   );
   const secoes = useMemo(() => secoesDoHistorico(visiveis, new Date(), idioma), [visiveis, idioma]);
 
@@ -108,7 +118,7 @@ export function AbaHistorico({ lead, stages }: { lead: Lead; stages: readonly St
                     nota={nota}
                     notaRemovida={item.type === "note" && notasDoNegocio !== undefined && !nota}
                     nomesDasEtapas={nomesDasEtapas}
-                    leadId={lead.id}
+                    alvo={alvo}
                     podeEditarNota={!!nota && (gerente || nota.user_id === user.id)}
                   />
                 );

@@ -61,7 +61,7 @@ function montar(empresa: unknown) {
   estado.empresa = empresa;
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <AbaEmpresa lead={{ id: "l1", contact_id: "c1" } as never} />
+      <AbaEmpresa contatoId="c1" />
     </QueryClientProvider>,
   );
 }

@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useExcluirNota } from "@/hooks/escale/useNotasDoNegocio";
+import type { AlvoDaNota } from "@/lib/escale/negocio/notas";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { grupoDoEvento, textoDoEvento, type ChaveDoGrupo } from "@/lib/escale/negocio/historico";
@@ -79,7 +80,7 @@ export function CartaoDoHistorico({
   nota,
   notaRemovida = false,
   nomesDasEtapas,
-  leadId,
+  alvo,
   podeEditarNota,
 }: {
   item: TimelineItemView;
@@ -87,12 +88,12 @@ export function CartaoDoHistorico({
   /** Só vale "removida" quando a lista de notas carregou e não traz esta; carregando ou com erro, nada aparece. */
   notaRemovida?: boolean;
   nomesDasEtapas: Readonly<Record<string, string>>;
-  leadId: string;
+  alvo: AlvoDaNota;
   podeEditarNota: boolean;
 }) {
   const t = useT();
   const idioma = useTagDeIdioma();
-  const excluir = useExcluirNota(leadId);
+  const excluir = useExcluirNota(alvo);
   const [aberta, setAberta] = useState(false);
   const [editando, setEditando] = useState(false);
   const [removendo, setRemovendo] = useState(false);
@@ -189,7 +190,7 @@ export function CartaoDoHistorico({
       {nota ? (
         <>
           <JanelaDeNota
-            leadId={leadId}
+            alvo={alvo}
             aberta={editando}
             onFechar={() => setEditando(false)}
             nota={{ id: nota.id, texto: nota.texto }}

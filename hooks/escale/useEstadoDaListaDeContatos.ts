@@ -8,6 +8,7 @@ import {
   type FiltrosDeContatos,
 } from "@/lib/escale/contatos/filtros";
 import { VISOES_DE_CONTATOS, type VisaoDeContatos } from "@/lib/escale/contatos/regras";
+import { PARAM_ABA_DO_CONTATO, ROTA_DA_LISTA_DE_CONTATOS } from "@/lib/escale/ficha-do-contato/regras";
 
 /**
  * O ESTADO DA LISTA DE CONTATOS NA URL (fork Escale, 2A e 2B): busca `q`, visão
@@ -31,7 +32,10 @@ export function useEstadoDaListaDeContatos() {
       if (valor === null || valor === "") novo.delete(k);
       else novo.set(k, valor);
     }
-    router.replace(`${caminho}?${novo.toString()}`, { scroll: false });
+    // FORK ESCALE · Fase 2E (N1): com a janela do contato aberta o caminho é /app/contacts/<id>; mexer na lista volta à lista.
+    novo.delete(PARAM_ABA_DO_CONTATO);
+    const base = caminho.startsWith(ROTA_DA_LISTA_DE_CONTATOS) ? ROTA_DA_LISTA_DE_CONTATOS : caminho;
+    router.replace(`${base}?${novo.toString()}`, { scroll: false });
   };
 
   return {
