@@ -74,14 +74,14 @@ export function EsqueletoDaLista() {
           <td className="pr-3 pl-6">
             <div className="flex items-center gap-3">
               <span className="size-[34px] animate-pulse rounded-[8px] bg-casca-raia" />
-              <span className="h-3 w-32 animate-pulse rounded bg-casca-raia" />
+              <span className="h-3 w-32 animate-pulse rounded-[4px] bg-casca-raia" />
             </div>
           </td>
           <td className="px-3">
-            <span className="block h-3 w-24 animate-pulse rounded bg-casca-raia" />
+            <span className="block h-3 w-24 animate-pulse rounded-[4px] bg-casca-raia" />
           </td>
           <td className="px-3">
-            <span className="block h-3 w-28 animate-pulse rounded bg-casca-raia" />
+            <span className="block h-3 w-28 animate-pulse rounded-[4px] bg-casca-raia" />
           </td>
           <td className="px-3">
             <span className="block h-2 w-[200px] animate-pulse rounded-full bg-casca-raia" />
