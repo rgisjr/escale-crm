@@ -58,7 +58,8 @@ export function AssistenteDeProspeccao({
   const fonte = useDetalheDaProspeccao(fonteId);
   const opcoes = useOpcoesDaProspeccao();
 
-  if (opcoes.isError || fonte.isError)
+  // Q0b (B9-1): só vira erro quando falta o dado; reconsulta que falha com cache não desmonta o rascunho.
+  if ((opcoes.isError && !opcoes.data) || (fonte.isError && !fonte.data))
     return (
       <p className="p-6 text-[13px] text-casca-alerta">
         {t("Não foi possível carregar a prospecção.")}
