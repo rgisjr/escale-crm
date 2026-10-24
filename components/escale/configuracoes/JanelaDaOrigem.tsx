@@ -32,7 +32,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useGravarEtapas } from "@/hooks/escale/useGravarEtapas";
 import { usePlaybookDaOrigem, useSalvarPlaybook } from "@/hooks/escale/usePlaybookDaOrigem";
+import { ApiError } from "@/lib/api/types";
+import {
+  decidirNegocios,
+  etapasMudaram,
+  nomeRepetido,
+  pedidoDeGravarEtapas,
+  rascunhoInicialDasEtapas,
+  type DecisaoDosNegocios,
+  type RascunhoDasEtapas,
+} from "@/lib/escale/etapas/rascunho";
 import type { AbaDaOrigem } from "@/lib/escale/configuracoes/abrir";
 import {
   doServidor,
@@ -66,6 +77,7 @@ import { cn } from "@/lib/utils";
 
 import { AbaDeEtapas } from "./AbaDeEtapas";
 import { EmBreve } from "./EmBreve";
+import { JanelaExcluirEtapa, type EtapaComNegocios } from "./etapas/JanelaExcluirEtapa";
 import { membrosAtivosDaEquipe } from "./ListaDePessoas";
 import { SecaoAlerta } from "./SecaoAlerta";
 import { SecaoAtribuicao } from "./SecaoAtribuicao";
@@ -130,6 +142,21 @@ export function JanelaDaOrigem({
   // O playbook (Fase 1I) tem rascunho próprio: "Salvar na origem" é separado do "Salvar" da aba Geral.
   const playbook = usePlaybookDaOrigem(id);
   const salvarPlaybook = useSalvarPlaybook(id);
+  const gravarEtapas = useGravarEtapas(id);
+  // As etapas (Fase 1L) têm rascunho próprio, gravado junto do playbook no "Salvar na origem".
+  const [etapasEditadas, setEtapasEditadas] = useState<RascunhoDasEtapas | null>(null);
+  const [pendentes, setPendentes] = useState<EtapaComNegocios[] | null>(null);
+  const etapasDoRascunho = useMemo(
+    () => etapasEditadas ?? (config ? rascunhoInicialDasEtapas(config.etapas) : null),
+    [etapasEditadas, config],
+  );
+  const etapasMexidas =
+    !!config && !!etapasEditadas && etapasMudaram(etapasEditadas, config.etapas);
+  const mudarEtapas = (f: (r: RascunhoDasEtapas) => RascunhoDasEtapas) =>
+    setEtapasEditadas((e) => {
+      const base = e ?? etapasDoRascunho;
+      return base ? f(base) : e;
+    });
   const playbookSalvo = useMemo(() => playbook.data?.map(doServidor) ?? null, [playbook.data]);
   const [playbookEditado, setPlaybookEditado] = useState<readonly AtividadeDoPlaybook[] | null>(
     null,
@@ -139,6 +166,7 @@ export function JanelaDaOrigem({
   const rascunhoDoPlaybook = playbookEditado ?? playbookSalvo;
   const playbookMexido =
     !!playbookSalvo && !!playbookEditado && playbookMudou(playbookEditado, playbookSalvo);
+  const abaMexida = playbookMexido || etapasMexidas;
   const mudarPlaybook = (
     f: (l: readonly AtividadeDoPlaybook[]) => readonly AtividadeDoPlaybook[],
   ) => setPlaybookEditado((e) => f(e ?? playbookSalvo ?? []));
@@ -235,22 +263,44 @@ export function JanelaDaOrigem({
       );
       // O rascunho do playbook é independente: se há mudança dele por salvar, a janela fica aberta.
       setEditado(null);
-      if (!playbookMexido) onFechar();
+      if (!abaMexida) onFechar();
     } catch (e) {
       setErro(`${t("Falha na edição da origem!")} ${textoDoErro(e, t)}`);
     }
   }
 
-  async function aoSalvarPlaybook() {
+  async function aoSalvarPlaybook(etapas: RascunhoDasEtapas | null = etapasEditadas) {
     if (!rascunhoDoPlaybook) return;
     setErroDoPlaybook(null);
+    const gravaEtapas = !!config && !!etapas && etapasMudaram(etapas, config.etapas);
+    if (gravaEtapas && etapas) {
+      const repetido = nomeRepetido(etapas);
+      if (repetido) {
+        setErroDoPlaybook(`${t("Já existe uma etapa com o nome")} «${repetido}».`);
+        return;
+      }
+    }
     try {
-      await salvarPlaybook.mutateAsync(rascunhoDoPlaybook.map(paraOServidor));
+      if (gravaEtapas && etapas) {
+        await gravarEtapas.mutateAsync({
+          ...pedidoDeGravarEtapas(etapas),
+          atividades: rascunhoDoPlaybook.map(paraOServidor),
+        });
+        setEtapasEditadas(null);
+      } else {
+        await salvarPlaybook.mutateAsync(rascunhoDoPlaybook.map(paraOServidor));
+      }
       setPlaybookEditado(null);
       toast.success(t("Origem alterada com sucesso!"));
       // E o das subabas: se há mudança dele por salvar, a janela fica aberta.
       if (!podeSalvar) onFechar();
     } catch (e) {
+      // O servidor pede, antes de gravar, o que fazer com os negócios das etapas excluídas.
+      const faltam = e instanceof ApiError ? e.details?.precisa_destino : undefined;
+      if (Array.isArray(faltam)) {
+        setPendentes(faltam as EtapaComNegocios[]);
+        return;
+      }
       setErroDoPlaybook(`${t("Falha na edição da origem!")} ${textoDoErro(e, t)}`);
     }
   }
@@ -288,8 +338,8 @@ export function JanelaDaOrigem({
         <DialogPrimitive.Content
           data-escale-janela-da-origem=""
           // Com alteração por salvar, clicar na cortina não fecha: o rascunho não se perde. Esc e Cancelar fecham.
-          onPointerDownOutside={(e) => (podeSalvar || playbookMexido) && e.preventDefault()}
-          onInteractOutside={(e) => (podeSalvar || playbookMexido) && e.preventDefault()}
+          onPointerDownOutside={(e) => (podeSalvar || abaMexida) && e.preventDefault()}
+          onInteractOutside={(e) => (podeSalvar || abaMexida) && e.preventDefault()}
           // A animação do `ds-modal` termina deslocada -50% na horizontal (feita para quem centraliza com
           // `left: 50%`). Esta janela ocupa a largura toda, então zera o deslocamento: senão meia janela some à esquerda.
           className="ds-modal fixed inset-x-2 top-1/2 z-50 flex max-h-[calc(100dvh-100px)] -translate-y-1/2 flex-col overflow-hidden rounded-[12px] bg-surface text-casca-texto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] [--ds-modal-x:0px]"
@@ -346,6 +396,8 @@ export function JanelaDaOrigem({
                       atividades={rascunhoDoPlaybook}
                       temSalvas={(playbookSalvo?.length ?? 0) > 0}
                       mudar={mudarPlaybook}
+                      etapas={etapasDoRascunho ?? undefined}
+                      mudarEtapas={mudarEtapas}
                     />
                   </div>
                 )
@@ -387,7 +439,7 @@ export function JanelaDaOrigem({
             <div className="flex items-center justify-between gap-2 px-8 pt-3 pb-[22px]">
               <span />
               <div className="flex gap-2">
-                {aba === "etapas" && playbookMexido ? (
+                {aba === "etapas" && abaMexida ? (
                   <BotaoDaJanela variante="cancelar" onClick={() => setConfirmarDesfazer(true)}>
                     {t("Desfazer")}
                   </BotaoDaJanela>
@@ -400,8 +452,8 @@ export function JanelaDaOrigem({
                   <span className="inline-flex">
                     <BotaoDaJanela
                       variante="salvar"
-                      disabled={!playbookMexido || salvarPlaybook.isPending}
-                      title={playbookMexido ? undefined : t("Nenhuma alteração para salvar")}
+                      disabled={!abaMexida || salvarPlaybook.isPending || gravarEtapas.isPending}
+                      title={abaMexida ? undefined : t("Nenhuma alteração para salvar")}
                       onClick={() => void aoSalvarPlaybook()}
                       className="rounded-r-none disabled:pointer-events-auto disabled:cursor-not-allowed"
                     >
@@ -428,6 +480,24 @@ export function JanelaDaOrigem({
                 )}
               </div>
             </div>
+            {pendentes && etapasDoRascunho ? (
+              <JanelaExcluirEtapa
+                etapas={pendentes}
+                destinos={etapasDoRascunho.etapas
+                  .filter((e) => !e.nova)
+                  .map((e) => ({ id: e.id, nome: e.nome }))}
+                aoCancelar={() => setPendentes(null)}
+                aoConfirmar={(decisoes: Record<string, DecisaoDosNegocios>) => {
+                  const proximo = Object.entries(decisoes).reduce(
+                    (r, [idDaEtapa, d]) => decidirNegocios(r, idDaEtapa, d),
+                    etapasDoRascunho,
+                  );
+                  setEtapasEditadas(proximo);
+                  setPendentes(null);
+                  void aoSalvarPlaybook(proximo);
+                }}
+              />
+            ) : null}
             <AlertDialog open={confirmarDesfazer} onOpenChange={setConfirmarDesfazer}>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -443,6 +513,7 @@ export function JanelaDaOrigem({
                   <AlertDialogAction
                     onClick={() => {
                       setPlaybookEditado(null);
+                      setEtapasEditadas(null);
                       setErroDoPlaybook(null);
                     }}
                   >

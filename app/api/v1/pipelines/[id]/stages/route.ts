@@ -44,6 +44,7 @@ interface RouteCtx {
 const bodySchema = z
   .object({
     name: z.string().min(1).max(80),
+    description: z.string().max(200).nullable().optional(),
     expected_duration_hours: z.number().int().min(1).max(8760).nullable().optional(),
   })
   .strict();
@@ -104,10 +105,15 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return fail("unprocessable_entity", t("Dê um nome à etapa — é o que aparece no topo da coluna."), 422, {
-      requestId,
-      details: parsed.error.flatten(),
-    });
+    return fail(
+      "unprocessable_entity",
+      t("Dê um nome à etapa — é o que aparece no topo da coluna."),
+      422,
+      {
+        requestId,
+        details: parsed.error.flatten(),
+      },
+    );
   }
 
   const supabase = await createClient();
@@ -122,6 +128,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
       {
         pipelineId,
         nome: parsed.data.name,
+        ...(parsed.data.description !== undefined ? { description: parsed.data.description } : {}),
         // Só quando veio pedido: a chave ausente é o comportamento de hoje.
         ...(parsed.data.expected_duration_hours !== undefined
           ? { expected_duration_hours: parsed.data.expected_duration_hours }

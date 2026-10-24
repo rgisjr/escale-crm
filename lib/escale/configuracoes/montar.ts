@@ -15,6 +15,8 @@ import { lerConfiguracoesDoFork, type ConfiguracoesDoFork } from "./tipos";
 export interface EtapaDaOrigem {
   id: string;
   name: string;
+  /** Descrição opcional da etapa (até 200 caracteres), a que a Clint mostra na dica do título. */
+  description: string | null;
   position: number;
   is_won: boolean;
   is_lost: boolean;
@@ -83,7 +85,9 @@ export function montarConfiguracoes(entrada: {
     visualizacaoDaOrganizacao: entrada.visualizacaoDaOrganizacao,
     pessoasDoGrupo: pessoasDaOrigem(entrada.grupo?.settings),
     ocultosDoGrupo:
-      entrada.grupo?.settings && typeof entrada.grupo.settings === "object" && CHAVE_DOS_OCULTOS in entrada.grupo.settings
+      entrada.grupo?.settings &&
+      typeof entrada.grupo.settings === "object" &&
+      CHAVE_DOS_OCULTOS in entrada.grupo.settings
         ? lerOcultos(entrada.grupo.settings)
         : null,
     podeAdministrar: entrada.podeAdministrar,

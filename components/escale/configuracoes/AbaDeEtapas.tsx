@@ -1,8 +1,26 @@
 "use client";
-import { useState } from "react";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DraggableProvidedDragHandleProps,
+  type DropResult,
+} from "@hello-pangea/dnd";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { DicaEscura } from "@/components/escale/origens/DicaEscura";
 import { CAIXA_DO_MENU, ITEM_DO_MENU } from "@/components/escale/quadro/estilos-do-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +29,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/montar";
+import {
+  criarEtapaProvisoria,
+  editarEtapa,
+  excluirEtapa,
+  moverEtapa,
+  rascunhoInicialDasEtapas,
+  type EtapaDoRascunho,
+  type RascunhoDasEtapas,
+} from "@/lib/escale/etapas/rascunho";
 import {
   adicionarAtividade,
   atividadesDaEtapa,
@@ -27,12 +54,16 @@ import {
   Flag,
   LayoutPanelLeft,
   ListChecks,
+  Pencil,
   Plus,
   Share2,
+  Trash2,
   TriangleAlert,
 } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
+import { JanelaDaEtapa, MARCA_DO_LAPIS } from "./etapas/JanelaDaEtapa";
+import { NovaEtapa } from "./etapas/NovaEtapa";
 import { ItemDoPlaybook } from "./playbook/ItemDoPlaybook";
 import { JanelaConfiguracoesDeAtividades } from "./playbook/JanelaConfiguracoesDeAtividades";
 import { JanelaNovaAtividade } from "./playbook/JanelaNovaAtividade";
@@ -41,46 +72,129 @@ import { JanelaNovaAtividade } from "./playbook/JanelaNovaAtividade";
 const VISIVEIS = 6;
 
 type Lista = readonly AtividadeDoPlaybook[];
+type Alca = DraggableProvidedDragHandleProps | null | undefined;
 
 /**
- * A ABA "ETAPAS E ATIVIDADES" (fork Escale, Fase 1I; D10, P8; prints F20, F21
- * e 030). Uma coluna por etapa aberta com o playbook dela. Tudo mexe só no
- * RASCUNHO, que a `JanelaDaOrigem` guarda e grava no "Salvar na origem". Editar
- * etapas fica no original (Q13); os modelos de playbook ficam "Em breve" (Q12).
+ * A ABA "ETAPAS E ATIVIDADES" (fork Escale, Fases 1I e 1L; prints F20, F21, 030 e os de
+ * 24/10). Uma coluna por etapa aberta com o playbook dela. Com `mudarEtapas`, as etapas
+ * também se editam como na Clint (lápis, lixeira, arrastar e "+ Nova Etapa"). Tudo mexe só
+ * no RASCUNHO, que a `JanelaDaOrigem` guarda e grava no "Salvar na origem". Sem
+ * `mudarEtapas` a aba só mostra as etapas (modo leitura). Os modelos de playbook ficam
+ * "Em breve" (Q12 da 1I).
  */
 export function AbaDeEtapas({
   config,
   atividades,
   temSalvas,
   mudar,
+  etapas,
+  mudarEtapas,
 }: {
   config: ConfiguracoesDaOrigem;
   atividades: Lista;
   temSalvas: boolean;
   mudar: (f: (lista: Lista) => Lista) => void;
+  etapas?: RascunhoDasEtapas;
+  mudarEtapas?: (f: (r: RascunhoDasEtapas) => RascunhoDasEtapas) => void;
 }) {
-  const abertas = config.etapas.filter((e) => !e.is_won && !e.is_lost);
+  const rascunho = useMemo(
+    () => etapas ?? rascunhoInicialDasEtapas(config.etapas),
+    [etapas, config.etapas],
+  );
+  const abertas = rascunho.etapas;
+  const podeEditar = mudarEtapas !== undefined;
   const [novaEm, setNovaEm] = useState<{ id: string; name: string } | null>(null);
   const [editando, setEditando] = useState<string | null>(null);
+  const [lapisEm, setLapisEm] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState<EtapaDoRascunho | null>(null);
+  const t = useT();
+
+  const aoSoltar = (r: DropResult) => {
+    if (!r.destination || !mudarEtapas) return;
+    const { index: de } = r.source;
+    const { index: para } = r.destination;
+    mudarEtapas((x) => moverEtapa(x, de, para));
+  };
+
+  function excluir(e: EtapaDoRascunho) {
+    if (!mudarEtapas) return;
+    // A etapa criada agora some com as atividades que ganhou; a salva só vai para a lista de exclusões.
+    if (e.nova) mudar((l) => l.filter((a) => a.etapaId !== e.id));
+    mudarEtapas((x) => excluirEtapa(x, e.id));
+  }
+
+  const coluna = (e: EtapaDoRascunho, i: number, alca?: Alca) => (
+    <ColunaDaEtapa
+      etapa={e}
+      inicial={i === 0}
+      alca={alca}
+      daEtapa={atividadesDaEtapa(atividades, e.id)}
+      todas={atividades}
+      aoNova={() => setNovaEm({ id: e.id, name: e.nome })}
+      aoAbrir={setEditando}
+      aoMover={(id, passo) => mudar((l) => trocarDeLugar(l, id, passo))}
+      aoRemover={(id) => mudar((l) => removerAtividade(l, id))}
+      edicao={
+        podeEditar
+          ? {
+              abertaAqui: lapisEm === e.id,
+              aoLapis: () => setLapisEm((v) => (v === e.id ? null : e.id)),
+              aoFecharLapis: () => setLapisEm(null),
+              aoSalvarLapis: (v) => {
+                mudarEtapas?.((x) => editarEtapa(x, e.id, v));
+                setLapisEm(null);
+              },
+              aoExcluir: () => (e.nova ? setExcluindo(e) : excluir(e)),
+            }
+          : undefined
+      }
+    />
+  );
 
   return (
     <div className="flex h-full flex-col">
       <SeloDoModelo temSalvas={temSalvas} />
-      <div className="flex min-h-0 flex-1 [scrollbar-width:thin] gap-2.5 overflow-x-auto pb-3">
-        {abertas.map((etapa, i) => (
-          <ColunaDaEtapa
-            key={etapa.id}
-            etapa={etapa}
-            inicial={i === 0}
-            daEtapa={atividadesDaEtapa(atividades, etapa.id)}
-            todas={atividades}
-            aoNova={() => setNovaEm({ id: etapa.id, name: etapa.name })}
-            aoAbrir={setEditando}
-            aoMover={(id, passo) => mudar((l) => trocarDeLugar(l, id, passo))}
-            aoRemover={(id) => mudar((l) => removerAtividade(l, id))}
-          />
-        ))}
-      </div>
+      <DragDropContext onDragEnd={aoSoltar}>
+        <Droppable
+          droppableId="etapas"
+          direction="horizontal"
+          // A janela da origem usa `transform`: a coluna arrastada é desenhada fora dela.
+          renderClone={(prov, _snap, r) =>
+            createPortal(
+              <div
+                ref={prov.innerRef}
+                {...prov.draggableProps}
+                style={{ ...prov.draggableProps.style, zIndex: 1300 }}
+              >
+                {coluna(abertas[r.source.index]!, r.source.index, prov.dragHandleProps)}
+              </div>,
+              document.body,
+            )
+          }
+        >
+          {(prov) => (
+            <div
+              ref={prov.innerRef}
+              {...prov.droppableProps}
+              className="flex min-h-0 flex-1 [scrollbar-width:thin] gap-2.5 overflow-x-auto pb-3"
+            >
+              {abertas.map((e, i) => (
+                <Draggable key={e.id} draggableId={e.id} index={i} isDragDisabled={!podeEditar}>
+                  {(p) => (
+                    <div ref={p.innerRef} {...p.draggableProps} className="shrink-0">
+                      {coluna(e, i, p.dragHandleProps)}
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {prov.placeholder}
+              {podeEditar ? (
+                <NovaEtapa aoCriar={() => mudarEtapas?.((x) => criarEtapaProvisoria(x))} />
+              ) : null}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
       {novaEm ? (
         <JanelaNovaAtividade
           aberta
@@ -96,7 +210,7 @@ export function AbaDeEtapas({
       {editando ? (
         <JanelaConfiguracoesDeAtividades
           aberta
-          etapas={abertas}
+          etapas={abertas.map((e) => ({ id: e.id, name: e.nome }))}
           atividades={atividades}
           escolhidaId={editando}
           campos={config.campos.map((c) => ({ chave: c.campo, rotulo: c.rotulo }))}
@@ -105,11 +219,32 @@ export function AbaDeEtapas({
           aoNova={(etapaId) => {
             const etapa = abertas.find((e) => e.id === etapaId);
             setEditando(null);
-            if (etapa) setNovaEm({ id: etapa.id, name: etapa.name });
+            if (etapa) setNovaEm({ id: etapa.id, name: etapa.nome });
           }}
           aoFechar={() => setEditando(null)}
         />
       ) : null}
+      <AlertDialog open={excluindo !== null} onOpenChange={(a) => !a && setExcluindo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Deletar etapa")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("Tem certeza que deseja excluir esta etapa em rascunho?")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Cancelar")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (excluindo) excluir(excluindo);
+                setExcluindo(null);
+              }}
+            >
+              {t("Confirmar")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -158,37 +293,57 @@ function SeloDoModelo({ temSalvas }: { temSalvas: boolean }) {
   );
 }
 
+interface EdicaoDaColuna {
+  abertaAqui: boolean;
+  aoLapis: () => void;
+  aoFecharLapis: () => void;
+  aoSalvarLapis: (v: { nome: string; descricao: string }) => void;
+  aoExcluir: () => void;
+}
+
 function ColunaDaEtapa({
   etapa,
   inicial,
+  alca,
   daEtapa,
   todas,
   aoNova,
   aoAbrir,
   aoMover,
   aoRemover,
+  edicao,
 }: {
-  etapa: { id: string; name: string };
+  etapa: EtapaDoRascunho;
   inicial: boolean;
+  alca?: Alca;
   daEtapa: AtividadeDoPlaybook[];
   todas: Lista;
   aoNova: () => void;
   aoAbrir: (id: string) => void;
   aoMover: (id: string, passo: -1 | 1) => void;
   aoRemover: (id: string) => void;
+  edicao?: EdicaoDaColuna;
 }) {
   const t = useT();
   const [aberta, setAberta] = useState(true);
   const [todasVisiveis, setTodasVisiveis] = useState(false);
   const total = daEtapa.length;
   const mostradas = todasVisiveis ? daEtapa : daEtapa.slice(0, VISIVEIS);
+  const titulo = (
+    <h4 className="min-w-0 flex-1 truncate text-[12px] font-semibold text-casca-texto">
+      {etapa.nome}
+    </h4>
+  );
 
   return (
     <section
-      aria-label={etapa.name}
-      className="flex h-full min-h-[340px] w-[227px] shrink-0 flex-col rounded-[4px] bg-casca-busca"
+      aria-label={etapa.nome}
+      className="relative flex h-full min-h-[340px] w-[227px] shrink-0 flex-col rounded-[4px] bg-casca-busca"
     >
-      <header className="flex h-[38px] shrink-0 items-center gap-2 rounded-t-[4px] bg-casca-raia px-3">
+      <header
+        {...alca}
+        className="group flex h-[38px] shrink-0 items-center gap-2 rounded-t-[4px] bg-casca-raia px-3"
+      >
         {inicial ? (
           <span
             role="img"
@@ -198,8 +353,45 @@ function ColunaDaEtapa({
             <Flag size={11} aria-hidden />
           </span>
         ) : null}
-        <h4 className="truncate text-[12px] font-semibold text-casca-texto">{etapa.name}</h4>
+        {etapa.descricao ? (
+          <DicaEscura texto={`${etapa.nome} — ${etapa.descricao}`}>{titulo}</DicaEscura>
+        ) : (
+          titulo
+        )}
+        {edicao ? (
+          <div className="flex items-center gap-2 text-casca-texto opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+            <DicaEscura texto={t("Deletar etapa")}>
+              <button
+                type="button"
+                aria-label={t("Deletar etapa")}
+                onClick={edicao.aoExcluir}
+                className="grid size-5 place-items-center"
+              >
+                <Trash2 size={14} aria-hidden />
+              </button>
+            </DicaEscura>
+            <DicaEscura texto={t("Editar etapa")}>
+              <button
+                type="button"
+                aria-label={t("Editar etapa")}
+                {...{ [MARCA_DO_LAPIS]: "" }}
+                onClick={edicao.aoLapis}
+                className="grid size-5 place-items-center"
+              >
+                <Pencil size={12} aria-hidden />
+              </button>
+            </DicaEscura>
+          </div>
+        ) : null}
       </header>
+      {edicao?.abertaAqui ? (
+        <JanelaDaEtapa
+          nome={etapa.nome}
+          descricao={etapa.descricao}
+          aoSalvar={edicao.aoSalvarLapis}
+          aoFechar={edicao.aoFecharLapis}
+        />
+      ) : null}
       {total === 0 ? (
         <p className="mx-3 border-b border-casca-borda py-3 text-[11px] font-semibold text-casca-texto">
           {t("Nenhuma atividade nessa etapa")}
