@@ -4,12 +4,7 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ehIdentificadorTecnico,
-  nomeDoContato,
-  rotuloDoContato,
-  SEM_NOME,
-} from "@/lib/contacts/rotulo-do-contato";
+import { ehIdentificadorTecnico, nomeDoContato, rotuloDoContato, SEM_NOME } from "@/lib/contacts/rotulo-do-contato";
 
 /**
  * COMO SE CHAMA ESTA PESSOA NA TELA.
@@ -54,19 +49,13 @@ describe("rotuloDoContato", () => {
     // escreve; `display_name` é o nome do perfil do WhatsApp, gravado pela
     // ingestão, e nenhuma tela o edita. Esta asserção esperava o contrário, e o
     // nome digitado pelo operador nunca aparecia (issue #906).
-    expect(
-      rotuloDoContato({
-        display_name: "🌸 Kaio",
-        name: "Kaio Gomes",
-        phone_number: "+5531988887777",
-      }),
-    ).toBe("Kaio Gomes");
+    expect(rotuloDoContato({ display_name: "🌸 Kaio", name: "Kaio Gomes", phone_number: "+5531988887777" })).toBe(
+      "Kaio Gomes",
+    );
   });
 
   it("sem nome escolhido, usa o que o canal informou", () => {
-    expect(
-      rotuloDoContato({ display_name: "🌸 Kaio", name: null, phone_number: "+5531988887777" }),
-    ).toBe("🌸 Kaio");
+    expect(rotuloDoContato({ display_name: "🌸 Kaio", name: null, phone_number: "+5531988887777" })).toBe("🌸 Kaio");
   });
 
   it("pula o display_name TÉCNICO e usa o que vier depois", () => {
@@ -74,18 +63,14 @@ describe("rotuloDoContato", () => {
     // Sem esta regra, consertar o título do lead para ler do cadastro faria
     // `Contato 543134@lid` aparecer no card do kanban.
     expect(
-      rotuloDoContato({
-        display_name: "Contato 543134@lid",
-        name: null,
-        phone_number: "+5531988887777",
-      }),
+      rotuloDoContato({ display_name: "Contato 543134@lid", name: null, phone_number: "+5531988887777" }),
     ).toBe("+5531988887777");
   });
 
   it("o TELEFONE vale mais que 'Sem nome' — e duas telas o ignoravam", () => {
-    expect(
-      rotuloDoContato({ display_name: null, name: null, phone_number: "+5531988887777" }),
-    ).toBe("+5531988887777");
+    expect(rotuloDoContato({ display_name: null, name: null, phone_number: "+5531988887777" })).toBe(
+      "+5531988887777",
+    );
   });
 
   it("celular BR sem o nono aparece COM o 9", () => {
@@ -105,9 +90,9 @@ describe("rotuloDoContato", () => {
     // A saída aqui é admitir que não se sabe o nome. Mostrar o `@lid` seria
     // vocabulário de máquina na tela de quem atende — a doença que a spec 16
     // mediu em 30% dos turnos.
-    expect(
-      rotuloDoContato({ display_name: "Contato 543134@lid", name: null, phone_number: null }),
-    ).toBe(SEM_NOME);
+    expect(rotuloDoContato({ display_name: "Contato 543134@lid", name: null, phone_number: null })).toBe(
+      SEM_NOME,
+    );
   });
 });
 
@@ -124,9 +109,7 @@ describe("nomeDoContato — o nome de gente, sem telefone nem literal", () => {
   });
 
   it("sem nome de gente devolve null, nunca o telefone", () => {
-    expect(
-      nomeDoContato({ display_name: null, name: " ", phone_number: "+5531988887777" }),
-    ).toBeNull();
+    expect(nomeDoContato({ display_name: null, name: " ", phone_number: "+5531988887777" })).toBeNull();
     expect(nomeDoContato(null)).toBeNull();
   });
 });
@@ -162,8 +145,7 @@ describe("a sétima cópia não nasce", () => {
    * `contexto-do-agente-chama-o-cliente-pelo-nome-escolhido` e
    * `radar-chama-o-contato-pelo-nome-escolhido`.
    */
-  const CADEIA =
-    /(display_name\b\s*(\?\.\s*trim\(\)\s*)?(\|\||\?\?))|((\|\||\?\?)\s*[\w$.?]*display_name\b)/;
+  const CADEIA = /(display_name\b\s*(\?\.\s*trim\(\)\s*)?(\|\||\?\?))|((\|\||\?\?)\s*[\w$.?]*display_name\b)/;
 
   /**
    * As leituras de `display_name` com coalescente que NÃO são o nome de um
@@ -175,12 +157,6 @@ describe("a sétima cópia não nasce", () => {
    * último caso), para não sobrar autorização em nome de código que sumiu.
    */
   const LEITURAS_LEGITIMAS: ReadonlyArray<{ arquivo: string; trecho: string; motivo: string }> = [
-    {
-      arquivo: "components/escale/negocio/abas/ConversaEmLeitura.tsx",
-      trecho: 'canal?.display_name ?? ""',
-      motivo:
-        "rótulo do CANAL (channel_sessions) no cabeçalho da conversa em leitura, não de contato",
-    },
     // ── prospecção (PR #963): nenhuma destas é nome de CONTATO ──────────────
     {
       arquivo: "app/app/prospecting/_client.tsx",
@@ -209,10 +185,8 @@ describe("a sétima cópia não nasce", () => {
     },
     {
       arquivo: "app/api/v1/channels/official/route.ts",
-      trecho:
-        'display_name: existente?.display_name || (validacao.verifiedName ?? "Canal oficial"),',
-      motivo:
-        "nome interno do CANAL oficial preservado ao salvar a credencial de novo, não de contato",
+      trecho: 'display_name: existente?.display_name || (validacao.verifiedName ?? "Canal oficial"),',
+      motivo: "nome interno do CANAL oficial preservado ao salvar a credencial de novo, não de contato",
     },
     {
       arquivo: "app/api/v1/contacts/_handler.ts",
@@ -268,8 +242,7 @@ describe("a sétima cópia não nasce", () => {
     {
       arquivo: "components/escale/conversas/filtros/SecaoCanaisDaFila.tsx",
       trecho: 'rotulo: c.display_name?.trim() || c.phone_number || t("Sem nome"),',
-      motivo:
-        "rótulo do CANAL (channel_sessions) na seção Canais do filtro da fila, não de contato",
+      motivo: "rótulo do CANAL (channel_sessions) na seção Canais do filtro da fila, não de contato",
     },
   ];
 
@@ -289,10 +262,7 @@ describe("a sétima cópia não nasce", () => {
   }
 
   /** Uma passada só serve aos dois casos: o que reincide e o que a lista autoriza em vão. */
-  function varrer(): {
-    reincidentes: string[];
-    autorizadas: Set<(typeof LEITURAS_LEGITIMAS)[number]>;
-  } {
+  function varrer(): { reincidentes: string[]; autorizadas: Set<(typeof LEITURAS_LEGITIMAS)[number]> } {
     const reincidentes: string[] = [];
     const autorizadas = new Set<(typeof LEITURAS_LEGITIMAS)[number]>();
     for (const f of arquivosVarridos()) {
@@ -301,9 +271,7 @@ describe("a sétima cópia não nasce", () => {
         // Fora as organizações: `organizations.display_name` é outro conceito e
         // tem cadeia própria e legítima.
         if (!CADEIA.test(linha) || /org|tenant|session/i.test(linha)) return;
-        const legitima = LEITURAS_LEGITIMAS.find(
-          (l) => l.arquivo === f && linha.includes(l.trecho),
-        );
+        const legitima = LEITURAS_LEGITIMAS.find((l) => l.arquivo === f && linha.includes(l.trecho));
         if (legitima) autorizadas.add(legitima);
         else reincidentes.push(`${f}:${i + 1}: ${linha.trim().slice(0, 110)}`);
       });
@@ -352,9 +320,7 @@ describe("a sétima cópia não nasce", () => {
 
   it("toda entrada de LEITURAS_LEGITIMAS ainda casa com uma linha real — a lista só encolhe", () => {
     const { autorizadas } = varrer();
-    const vencidas = LEITURAS_LEGITIMAS.filter((l) => !autorizadas.has(l)).map(
-      (l) => `${l.arquivo}: ${l.trecho}`,
-    );
+    const vencidas = LEITURAS_LEGITIMAS.filter((l) => !autorizadas.has(l)).map((l) => `${l.arquivo}: ${l.trecho}`);
     expect(vencidas, `\napague da lista:\n${vencidas.join("\n")}\n`).toEqual([]);
   });
 
