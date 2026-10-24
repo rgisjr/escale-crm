@@ -467,3 +467,39 @@ body:has([data-escale-casca]) {
   --escale-categoria-fundo: #252b4a;
   --escale-categoria-texto: #a9b4f5;
 }
+
+/* ─── FORK ESCALE · Fase 8C (detalhe da campanha) ───
+   A rosca "Distribuição por status", o trilho do funil e a prévia do WhatsApp
+   (amostra de pixel no print 09-009). Lidas por valor arbitrário
+   (`bg-(--escale-…)`), como as da 8A. */
+body:has([data-escale-casca]) {
+  --escale-detalhe-trilho: #ededef; /* medido, 09-009 */
+  --escale-rosca-lida: #596df0; /* medido, 09-009 */
+  --escale-rosca-entregue: #e7e4f7; /* medido, 09-009 */
+  --escale-rosca-enviado: #171926; /* medido, 09-009 */
+  --escale-rosca-erro: #d62829; /* medido, 09-009 */
+  --escale-rosca-nao-enviado: #dc520a; /* medido, 09-009 */
+  --escale-rosca-aguardando: #a1a1aa; /* provisório: a Clint não tem */
+  --escale-zap-moldura: #1a1921; /* medido, 09-009 */
+  --escale-zap-cabeca: #085e55; /* medido, 09-009 */
+  --escale-zap-avatar: #2b7a70; /* provisório */
+  --escale-zap-fundo: #ede4df; /* medido, 09-009 */
+  --escale-zap-balao: #ffffff;
+  --escale-zap-visto: #53bdeb; /* provisório: o azul do WhatsApp */
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --escale-detalhe-trilho: #2a2d3d;
+  --escale-rosca-lida: #7c8cf5;
+  --escale-rosca-entregue: #4b4670;
+  --escale-rosca-enviado: #e4e4e7;
+  --escale-rosca-erro: #f87171;
+  --escale-rosca-nao-enviado: #fb923c;
+  --escale-rosca-aguardando: #71717a;
+  --escale-zap-moldura: #000000;
+  --escale-zap-cabeca: #1f2c34;
+  --escale-zap-avatar: #2a3942;
+  --escale-zap-fundo: #0b141a;
+  --escale-zap-balao: #202c33;
+  --escale-zap-visto: #53bdeb;
+}
