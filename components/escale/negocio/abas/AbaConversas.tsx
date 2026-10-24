@@ -1,27 +1,28 @@
 "use client";
-import Link from "next/link";
+import { useState, type ReactNode } from "react";
 
 import { useConversasDoContato } from "@/hooks/escale/useConversasDoContato";
 import { useT } from "@/hooks/i18n/useT";
 import { ROTULO_DO_STATUS, classeDoStatus } from "@/lib/escale/negocio/conversas";
 import { dataDaMensagem } from "@/lib/escale/quadro/aparencia";
-import type { Lead } from "@/lib/types/leads";
 import { CheckCheck, Glasses, MessagesSquare } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
-import { FotoDaFicha } from "../FotoDaFicha";
+import { ConversaEmLeitura } from "./ConversaEmLeitura";
 
 /**
  * A ABA CONVERSAS DA FICHA (fork Escale, Fases 1G e 1H; C16, N9; print 05).
  *
  * Todas as sessões do contato, como na Clint atual (sem filtros, Q7). Clicar
- * abre no Inbox; abrir aqui dentro é a C22 (Fase 3), e por isso o modo espião
- * segue "Em breve" (Q6).
+ * escolhe a sessão, que abre à direita em leitura (2E, N7); responder dali é da
+ * 3E, e o modo espião segue "Em breve" (Q6).
  */
-export function AbaConversas({ lead }: { lead: Lead }) {
+export function AbaConversas({ contatoId, foto }: { contatoId: string | null; foto: ReactNode }) {
   const t = useT();
-  const { data, isLoading, isError } = useConversasDoContato(lead.contact_id);
+  const { data, isLoading, isError } = useConversasDoContato(contatoId);
   const sessoes = data ?? [];
+  const [escolhida, setEscolhida] = useState<string | null>(null);
+  const atual = sessoes.find((c) => c.id === escolhida) ?? sessoes[0] ?? null;
   return (
     <div className="flex h-full min-h-0 flex-col px-4 py-6">
       <div className="flex h-10 shrink-0 items-center justify-between rounded-t-lg bg-casca-raia px-4 text-[13px] text-casca-texto-2">
@@ -39,8 +40,8 @@ export function AbaConversas({ lead }: { lead: Lead }) {
         </button>
       </div>
       <div className="flex min-h-0 flex-1 rounded-b-lg border border-t-0 border-casca-borda">
-        <div className="w-[337px] shrink-0 overflow-y-auto border-r border-casca-borda">
-          {!lead.contact_id ? (
+        <div className="w-[340px] shrink-0 overflow-y-auto border-r border-casca-borda">
+          {!contatoId ? (
             <p className="px-3 py-6 text-xs text-casca-suave">
               {t("Este negócio não tem contato.")}
             </p>
@@ -60,11 +61,16 @@ export function AbaConversas({ lead }: { lead: Lead }) {
               <ul>
                 {sessoes.map((c) => (
                   <li key={c.id}>
-                    <Link
-                      href={`/app/inbox?id=${c.id}`}
-                      className="flex h-[72px] items-center gap-3 border-b border-casca-borda px-3 hover:bg-casca-raia"
+                    <button
+                      type="button"
+                      onClick={() => setEscolhida(c.id)}
+                      aria-pressed={atual?.id === c.id}
+                      className={cn(
+                        "flex h-[72px] w-full items-center gap-3 border-b border-l-[3px] border-casca-borda border-l-transparent px-3 text-left hover:bg-casca-raia",
+                        atual?.id === c.id && "border-l-casca-marca bg-casca-raia",
+                      )}
                     >
-                      <FotoDaFicha lead={lead} tamanho="conversa" />
+                      {foto}
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center justify-between">
                           <span
@@ -104,13 +110,16 @@ export function AbaConversas({ lead }: { lead: Lead }) {
                           </span>
                         ) : null}
                       </span>
-                    </Link>
+                    </button>
                   </li>
                 ))}
               </ul>
             </>
           )}
         </div>
+        {atual && contatoId ? (
+          <ConversaEmLeitura conversa={atual} contatoId={contatoId} />
+        ) : (
         <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-2 text-center">
           <span className="grid size-20 place-items-center rounded-2xl bg-casca-marca-suave text-casca-marca">
             <MessagesSquare size={32} aria-hidden />
@@ -122,6 +131,7 @@ export function AbaConversas({ lead }: { lead: Lead }) {
             {t("Escolha uma conversa ao lado para ver as mensagens.")}
           </p>
         </div>
+        )}
       </div>
     </div>
   );

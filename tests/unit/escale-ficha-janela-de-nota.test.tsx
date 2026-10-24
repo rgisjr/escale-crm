@@ -21,7 +21,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("JanelaDeNota", () => {
   it("título, dica, textarea e Salvar desligado até haver texto; salvar cria e fecha", async () => {
     const onFechar = vi.fn();
-    render(<JanelaDeNota leadId="n1" aberta onFechar={onFechar} />);
+    render(<JanelaDeNota alvo={{ tipo: "negocio", id: "n1" }} aberta onFechar={onFechar} />);
     expect(screen.getByRole("dialog", { name: "Nova nota" })).toBeInTheDocument();
     // A dica só monta o balão no hover: o "i" carrega o texto no nome acessível.
     expect(
@@ -42,7 +42,7 @@ describe("JanelaDeNota", () => {
   it("com nota, é 'Editar nota' e grava pelo editar", async () => {
     const onFechar = vi.fn();
     render(
-      <JanelaDeNota leadId="n1" aberta onFechar={onFechar} nota={{ id: "x1", texto: "antiga" }} />,
+      <JanelaDeNota alvo={{ tipo: "negocio", id: "n1" }} aberta onFechar={onFechar} nota={{ id: "x1", texto: "antiga" }} />,
     );
     expect(screen.getByRole("dialog", { name: "Editar nota" })).toBeInTheDocument();
     const caixa = screen.getByRole("textbox", { name: "Editar nota" });
@@ -56,7 +56,7 @@ describe("JanelaDeNota", () => {
     const { toast } = await import("sonner");
     notas.criar.mockRejectedValueOnce(new Error("x"));
     const onFechar = vi.fn();
-    render(<JanelaDeNota leadId="n1" aberta onFechar={onFechar} />);
+    render(<JanelaDeNota alvo={{ tipo: "negocio", id: "n1" }} aberta onFechar={onFechar} />);
     await userEvent.type(screen.getByRole("textbox", { name: "Nova nota" }), "a");
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
     expect(toast.error).toHaveBeenCalledWith("Ocorreu um erro ao salvar a nota!");

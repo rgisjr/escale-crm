@@ -368,7 +368,7 @@ describe("aba Empresa (print 03)", () => {
   });
 
   it("Empresa: os oito campos da Clint; sem empresa só o nome é um seletor e o resto fica travado (2D)", () => {
-    render(<AbaEmpresa lead={LEAD} />);
+    render(<AbaEmpresa contatoId={LEAD.contact_id} />);
     expect(screen.getByRole("combobox", { name: "Nome da empresa" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Campos de empresa" })).toBeInTheDocument();
     expect(screen.getAllByRole("term").map((d) => d.textContent)).toEqual([

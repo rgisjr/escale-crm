@@ -58,24 +58,43 @@ export function AbaContato({ lead, pipeline }: { lead: Lead; pipeline: Pipeline 
       </>
     );
   }
-  return <ContatoEditavel contactId={lead.contact_id} lead={lead} pipeline={pipeline} />;
+  return (
+    <ContatoEditavel
+      contatoId={lead.contact_id}
+      pipeline={pipeline}
+      reserva={{
+        nome: dadosDeFiltro(lead)?.contato_nome ?? null,
+        telefone: lead.contact_phone ?? null,
+        email: lead.contact_email ?? null,
+      }}
+    />
+  );
 }
 
-function ContatoEditavel({
-  contactId,
-  lead,
+/**
+ * FORK ESCALE · Fase 2E (N5): os campos do contato servem à ficha do negócio e à
+ * janela do contato. Sem origem (`pipeline` nulo), nenhum campo fica oculto por
+ * origem e a gravação não refaz o quadro. A `reserva` (nome, telefone e e-mail do
+ * negócio) só vale enquanto o contato carrega.
+ */
+export function ContatoEditavel({
+  contatoId,
   pipeline,
+  reserva,
 }: {
-  contactId: string;
-  lead: Lead;
-  pipeline: Pipeline;
+  contatoId: string;
+  pipeline: Pipeline | null;
+  reserva?: { nome: string | null; telefone: string | null; email: string | null };
 }) {
   const t = useT();
   const administra = usePermission("settings.write");
-  const { data, isError } = useContact(contactId);
-  const { gravar } = useGravarContato(contactId, pipeline.id);
+  const { data, isError } = useContact(contatoId);
+  const { gravar } = useGravarContato(contatoId, pipeline?.id ?? null);
   const contato = data?.data ?? null;
   const carregado = contato !== null;
+  const reservaNome = reserva?.nome ?? null;
+  const reservaTelefone = reserva?.telefone ?? null;
+  const reservaEmail = reserva?.email ?? null;
   const [janela, setJanela] = useState(false);
   const { catalogo } = useCatalogoDeCampos("contato");
   const ocultos = useOcultosDaOrigem(pipeline);
@@ -84,14 +103,10 @@ function ContatoEditavel({
   const campos: CampoEditavel[] = useMemo(
     () =>
       esconderOcultos(
-        camposDoContatoComGrupos(contato, catalogo, t, {
-          nome: dadosDeFiltro(lead)?.contato_nome ?? null,
-          telefone: lead.contact_phone ?? null,
-          email: lead.contact_email ?? null,
-        }),
+        camposDoContatoComGrupos(contato, catalogo, t, { nome: reservaNome, telefone: reservaTelefone, email: reservaEmail }),
         ocultos.contato,
       ),
-    [contato, catalogo, t, lead, ocultos.contato],
+    [contato, catalogo, t, reservaNome, reservaTelefone, reservaEmail, ocultos.contato],
   );
 
   const aoSalvar = useCallback(
@@ -138,13 +153,12 @@ function ContatoEditavel({
   );
 }
 
-export function AbaEmpresa({ lead }: { lead: Lead }) {
+export function AbaEmpresa({ contatoId }: { contatoId: string | null }) {
   const t = useT();
   const podeEditar = usePermission("contact.update"); // atendente ou acima (PRD §5)
   const administra = usePermission("settings.write");
   const [janela, setJanela] = useState<"gerenciar" | { nova: string } | null>(null);
   const { catalogo } = useCatalogoDeCampos("empresa");
-  const contatoId = lead.contact_id ?? null;
   const { data: empresa, isLoading } = useEmpresaDoContato(contatoId);
   const trocar = useTrocarEmpresa(contatoId);
   const mudar = useMudarEmpresa(empresa?.id ?? null);

@@ -65,7 +65,7 @@ beforeEach(() => {
 
 describe("a tabela", () => {
   it("lista nome, tamanho, data e usuário; data desc por padrão; clicar no cabeçalho reordena", async () => {
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     const linhas = () =>
       screen
         .getAllByRole("row")
@@ -82,7 +82,7 @@ describe("a tabela", () => {
   });
 
   it("busca e filtro por extensão; 'Limpar filtros' aparece e limpa", async () => {
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.type(screen.getByRole("searchbox", { name: "Pesquisar..." }), "foto");
     expect(screen.getAllByRole("row")).toHaveLength(2);
     await userEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
@@ -94,7 +94,7 @@ describe("a tabela", () => {
 
   it("o ⋯ da linha: Baixar abre a rota de download; Excluir pede confirmação e chama o excluir", async () => {
     const abrir = vi.spyOn(window, "open").mockImplementation(() => null);
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.click(screen.getAllByRole("button", { name: "Mais opções" })[0]!);
     await userEvent.click(await screen.findByRole("menuitem", { name: "Baixar arquivo" }));
     expect(abrir).toHaveBeenCalledWith(
@@ -113,7 +113,7 @@ describe("a tabela", () => {
 
   it("clicar na linha abre o arquivo; o clique no ⋯ não abre", async () => {
     const abrir = vi.spyOn(window, "open").mockImplementation(() => null);
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.click(screen.getByText("contrato.pdf"));
     expect(abrir).toHaveBeenCalledWith(
       "/api/v1/contacts/c1/arquivos/a1",
@@ -126,7 +126,7 @@ describe("a tabela", () => {
   });
 
   it("o arquivo de outra pessoa não tem Excluir para agent", async () => {
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.click(screen.getAllByRole("button", { name: "Mais opções" })[1]!);
     expect(await screen.findByRole("menuitem", { name: "Baixar arquivo" })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Excluir" })).toBeNull();
@@ -140,7 +140,7 @@ describe("Novo arquivo", () => {
       enviados: 1,
       falhas: [{ arquivo: fs[0]!, nome: fs[0]!.name, mensagem: null }],
     }));
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
     const janela = await screen.findByRole("dialog", { name: "Novo documento" });
     await userEvent.upload(within(janela).getByLabelText("Adicionar"), [
@@ -160,7 +160,7 @@ describe("Novo arquivo", () => {
       enviados: 1,
       falhas: [{ arquivo: fs[1]!, nome: fs[1]!.name, mensagem: null }],
     }));
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
     const janela = await screen.findByRole("dialog", { name: "Novo documento" });
     const primeiro = new File(["x"], "a.pdf", { type: "application/pdf" });
@@ -174,7 +174,7 @@ describe("Novo arquivo", () => {
 
   it("sem permissão (quem só lê): 'Novo arquivo' desligado com 'Sem permissão'", () => {
     permissao.pode = false;
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     for (const b of screen.getAllByRole("button", { name: "Novo arquivo" })) {
       expect(b).toBeDisabled();
       expect(b).toHaveAttribute("title", "Sem permissão");
@@ -183,7 +183,7 @@ describe("Novo arquivo", () => {
 
   it("abre 'Novo documento'; adicionar lista o arquivo; Salvar envia e mostra o toast da Clint", async () => {
     const { toast } = await import("sonner");
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
     const janela = await screen.findByRole("dialog", { name: "Novo documento" });
     expect(within(janela).getByText("Nenhum documento adicionado")).toBeInTheDocument();
@@ -199,7 +199,7 @@ describe("Novo arquivo", () => {
   });
 
   it("arquivo fora da lista ou acima do teto nem entra na lista, com o aviso", async () => {
-    render(<AbaArquivos lead={LEAD} />);
+    render(<AbaArquivos contatoId={LEAD.contact_id} leadId={LEAD.id} />);
     await userEvent.click(screen.getByRole("button", { name: "Novo arquivo" }));
     const janela = await screen.findByRole("dialog", { name: "Novo documento" });
     // O seletor filtraria pelo `accept`; a validação da tela é o que se prova aqui.
@@ -213,7 +213,7 @@ describe("Novo arquivo", () => {
   });
 
   it("negócio sem contato: o vazio com 'Novo arquivo' desligado", () => {
-    render(<AbaArquivos lead={{ id: "n1", contact_id: null } as unknown as Lead} />);
+    render(<AbaArquivos contatoId={null} leadId="n1" />);
     for (const b of screen.getAllByRole("button", { name: "Novo arquivo" })) {
       expect(b).toBeDisabled();
       expect(b).toHaveAttribute("title", "Este negócio não tem contato.");

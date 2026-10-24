@@ -60,9 +60,9 @@ export function SecaoNotas({
       )}
       {quadro ? (
         <>
-          <JanelaDeNota leadId={quadro.lead.id} aberta={nova} onFechar={() => setNova(false)} />
+          <JanelaDeNota alvo={{ tipo: "negocio", id: quadro.lead.id }} aberta={nova} onFechar={() => setNova(false)} />
           <JanelaDeNota
-            leadId={quadro.lead.id}
+            alvo={{ tipo: "negocio", id: quadro.lead.id }}
             aberta={editando !== null}
             onFechar={() => setEditando(null)}
             nota={editando ?? undefined}

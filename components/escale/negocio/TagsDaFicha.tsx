@@ -42,15 +42,28 @@ import { Plus, Search, X } from "@/lib/ui/icons-da-casca";
 // Referência estável: o `?? []` novo a cada render desfaria o `useMemo` da lista.
 const SEM_TAGS: string[] = [];
 
+/** FORK ESCALE · Fase 2E (N6): a ficha do negócio entra pelo lead; a janela do contato, direto pelo contato. */
 export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: string }) {
+  return <TagsDoContato contatoId={lead.contact_id ?? ""} pipelineId={pipelineId} tagsDeReserva={lead.contact_tags ?? undefined} />;
+}
+
+/** FORK ESCALE · Fase 2E (N6): as tags do contato, na ficha do negócio e na aba Contato da janela do contato. */
+export function TagsDoContato({
+  contatoId,
+  pipelineId,
+  tagsDeReserva,
+}: {
+  contatoId: string;
+  pipelineId: string | null;
+  tagsDeReserva?: string[];
+}) {
   const t = useT();
   const org = useActiveOrg();
-  const contactId = lead.contact_id ?? "";
-  const { data, isError } = useContact(contactId);
-  const { gravar } = useGravarContato(contactId, pipelineId);
+  const { data, isError } = useContact(contatoId);
+  const { gravar } = useGravarContato(contatoId, pipelineId);
   const vocabulario = useContactTagVocabulary(org?.orgId ?? null).data ?? SEM_TAGS;
   const carregado = Boolean(data?.data);
-  const tags = data?.data?.tags ?? lead.contact_tags ?? SEM_TAGS;
+  const tags = data?.data?.tags ?? tagsDeReserva ?? SEM_TAGS;
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
   const [removendo, setRemovendo] = useState<string | null>(null);
@@ -82,7 +95,7 @@ export function TagsDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: stri
     );
   }
 
-  const semContato = !lead.contact_id;
+  const semContato = !contatoId;
   const desligado = semContato || !carregado;
   const motivo = semContato
     ? t("Este negócio não tem contato.")

@@ -2,6 +2,7 @@
 import type { FichaCarregada } from "@/hooks/escale/useFichaDoNegocio";
 import type { AbaDoNegocio } from "@/lib/escale/negocio/regras";
 
+import { FotoDaFicha } from "./FotoDaFicha";
 import { AbaArquivos } from "./abas/AbaArquivos";
 import { AbaAtividades } from "./abas/AbaAtividades";
 import { AbaConversas } from "./abas/AbaConversas";
@@ -16,13 +17,13 @@ export function ConteudoDaAba({ aba, ficha }: { aba: AbaDoNegocio; ficha: FichaC
     case "contato":
       return <AbaContato lead={ficha.lead} pipeline={ficha.pipeline} />;
     case "empresa":
-      return <AbaEmpresa lead={ficha.lead} />;
+      return <AbaEmpresa contatoId={ficha.lead.contact_id} />;
     case "negocio":
       return <AbaNegocio lead={ficha.lead} pipeline={ficha.pipeline} />;
     case "conversas":
-      return <AbaConversas lead={ficha.lead} />;
+      return <AbaConversas contatoId={ficha.lead.contact_id} foto={<FotoDaFicha lead={ficha.lead} tamanho="conversa" />} />;
     case "arquivos":
-      return <AbaArquivos lead={ficha.lead} />;
+      return <AbaArquivos contatoId={ficha.lead.contact_id} leadId={ficha.lead.id} />;
     case "historico":
       return <AbaHistorico lead={ficha.lead} stages={ficha.stages} />;
   }

@@ -109,7 +109,7 @@ export function AcoesDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: str
       </BotaoDaCasca>
       {/* A `key` zera a busca e o pedido de remover ao trocar de negócio. */}
       <TagsDaFicha key={`tags-${lead.id}`} lead={lead} pipelineId={pipelineId} />
-      <JanelaDeNota leadId={lead.id} aberta={nota} onFechar={() => setNota(false)} />
+      <JanelaDeNota alvo={{ tipo: "negocio", id: lead.id }} aberta={nota} onFechar={() => setNota(false)} />
     </div>
   );
 }

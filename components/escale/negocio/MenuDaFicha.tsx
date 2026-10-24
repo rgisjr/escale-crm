@@ -160,7 +160,7 @@ export function MenuDaFicha({
         leadId={lead.id}
         pipelineId={pipelineId}
       />
-      <JanelaDeNota leadId={lead.id} aberta={nota} onFechar={() => setNota(false)} />
+      <JanelaDeNota alvo={{ tipo: "negocio", id: lead.id }} aberta={nota} onFechar={() => setNota(false)} />
       {ganho ? (
         <JanelaAtribuicaoDeGanho aberta aoFechar={() => setGanho(false)} leadId={lead.id} />
       ) : null}

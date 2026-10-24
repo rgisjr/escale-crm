@@ -142,7 +142,7 @@ describe("AbaHistorico", () => {
 
   it("só diz que a nota foi removida quando a lista de notas carregou e não a traz", () => {
     const item = hist.itens[2] as unknown as TimelineItemView;
-    const props = { item, nomesDasEtapas: {}, leadId: "n1", podeEditarNota: false };
+    const props = { item, nomesDasEtapas: {}, alvo: { tipo: "negocio" as const, id: "n1" }, podeEditarNota: false };
     const { rerender } = render(<CartaoDoHistorico {...props} />);
     expect(screen.queryByText("Esta nota foi removida.")).toBeNull();
     rerender(<CartaoDoHistorico {...props} notaRemovida />);

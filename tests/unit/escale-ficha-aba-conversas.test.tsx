@@ -2,6 +2,9 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
+vi.mock("@/components/inbox/ChatThread", () => ({
+  ChatThread: ({ conversationId }: { conversationId: string }) => <div data-testid="thread">{conversationId}</div>,
+}));
 const conversas = vi.hoisted(() => ({
   data: [
     {
@@ -35,37 +38,38 @@ import type { Lead } from "@/lib/types/leads";
 const LEAD = { id: "n1", contact_id: "c1", title: "Ana" } as unknown as Lead;
 
 describe("AbaConversas", () => {
-  it("'N sessões', cada sessão com status, prévia, não lidas e atendente; clique abre no Inbox", () => {
-    render(<AbaConversas lead={LEAD} />);
+  it("'N sessões', cada sessão com status, prévia, não lidas e atendente; a primeira abre à direita em leitura (2E)", () => {
+    render(<AbaConversas contatoId={LEAD.contact_id} foto={null} />);
     expect(screen.getByText("2 sessões")).toBeInTheDocument();
-    const itens = screen.getAllByRole("link");
-    expect(itens[0]).toHaveAttribute("href", "/app/inbox?id=cv1");
+    const itens = screen.getAllByRole("button").filter((b) => b.hasAttribute("aria-pressed"));
+    expect(itens[0]).toHaveAttribute("aria-pressed", "true");
     expect(within(itens[0]!).getByText("Em aberto")).toBeInTheDocument();
     expect(within(itens[0]!).getByText("Olá, me chamo Camilly")).toBeInTheDocument();
     expect(within(itens[0]!).getByText("2")).toBeInTheDocument();
     expect(within(itens[0]!).getByTitle("Atendente: Camilly Victória")).toHaveTextContent("C");
     expect(within(itens[1]!).getByText("Encerrada")).toBeInTheDocument();
-    expect(screen.getByText("Selecione uma conversa")).toBeInTheDocument();
+    expect(screen.getByTestId("thread")).toHaveTextContent("cv1");
+    expect(screen.getByRole("link", { name: /Abrir em Conversas/ })).toHaveAttribute("href", "/app/inbox?id=cv1");
   });
 
   it("vazio, erro e negócio sem contato", () => {
     conversas.data = [];
-    const { unmount } = render(<AbaConversas lead={LEAD} />);
+    const { unmount } = render(<AbaConversas contatoId={LEAD.contact_id} foto={null} />);
     expect(
       screen.getByText("Este contato não possui conversas no atendimento"),
     ).toBeInTheDocument();
     unmount();
     conversas.isError = true;
-    const r2 = render(<AbaConversas lead={LEAD} />);
+    const r2 = render(<AbaConversas contatoId={LEAD.contact_id} foto={null} />);
     expect(screen.getByText("Não foi possível carregar as conversas.")).toBeInTheDocument();
     r2.unmount();
     conversas.isError = false;
-    render(<AbaConversas lead={{ ...LEAD, contact_id: null } as unknown as Lead} />);
+    render(<AbaConversas contatoId={null} foto={null} />);
     expect(screen.getByText("Este negócio não tem contato.")).toBeInTheDocument();
   });
 
   it("o modo espião continua 'Em breve' (Fase 3)", () => {
-    render(<AbaConversas lead={LEAD} />);
+    render(<AbaConversas contatoId={LEAD.contact_id} foto={null} />);
     expect(screen.getByRole("button", { name: "Ativar modo espião" })).toHaveAttribute(
       "title",
       "Em breve",

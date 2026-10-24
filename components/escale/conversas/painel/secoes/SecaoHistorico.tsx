@@ -85,7 +85,7 @@ export function SecaoHistorico({
                     nota={nota}
                     notaRemovida={item.type === "note" && notas !== undefined && !nota}
                     nomesDasEtapas={nomesDasEtapas}
-                    leadId={quadro.lead.id}
+                    alvo={{ tipo: "negocio", id: quadro.lead.id }}
                     podeEditarNota={!!nota && (gerente || nota.user_id === user.id)}
                   />
                 );

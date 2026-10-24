@@ -108,7 +108,7 @@ export function AbaHistorico({ lead, stages }: { lead: Lead; stages: readonly St
                     nota={nota}
                     notaRemovida={item.type === "note" && notasDoNegocio !== undefined && !nota}
                     nomesDasEtapas={nomesDasEtapas}
-                    leadId={lead.id}
+                    alvo={{ tipo: "negocio", id: lead.id }}
                     podeEditarNota={!!nota && (gerente || nota.user_id === user.id)}
                   />
                 );
