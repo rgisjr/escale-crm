@@ -48,6 +48,7 @@ import { FaixaDeFiltros } from "./filtros/FaixaDeFiltros";
 import { PainelDeFiltros } from "./filtros/PainelDeFiltros";
 import { SeletorDeFiltros } from "./filtros/SeletorDeFiltros";
 import { JanelaDoContato, type ContatoParaNegocio } from "./ficha/JanelaDoContato";
+import { JanelaDeMescla } from "./mescla/JanelaDeMescla";
 import { JanelaNovoNegocio } from "./JanelaNovoNegocio";
 import { MenuNovoContato } from "./MenuNovoContato";
 import { PainelDeColunas } from "./PainelDeColunas";
@@ -231,7 +232,7 @@ export function ListaDeContatos({
       <header className="flex h-[50px] shrink-0 items-center justify-between gap-4 border-b border-casca-borda px-6">
         <h1 className="text-[16px] font-medium text-casca-texto">{t("Contatos")}</h1>
         <div className="flex items-center gap-4">
-          {podeMesclar && <SeloDeMescla />}
+          {podeMesclar && <SeloDeMescla aoAbrir={() => setMescla({ aberta: true })} />}
           {/* FORK ESCALE · Fase 2B (Q4): minhas exportações e, para o admin, os pedidos para aprovar. */}
           {podeSelecionar && <PainelDeExportacoes ehAdmin={papel === "admin"} />}
           <MenuNovoContato origens={origens} podeCriar={podeCriar} podeImportar={ROLE_RANK[papel] >= ROLE_RANK.manager} />
@@ -418,6 +419,22 @@ export function ListaDeContatos({
             setNovoNegocio(c);
           }}
           aoRevisarDuplicado={(id) => setMescla({ aberta: true, contatoInicial: id })}
+        />
+      ) : null}
+      {podeMesclar ? (
+        <JanelaDeMescla
+          aberta={mescla.aberta}
+          contatoInicial={mescla.contatoInicial}
+          aoFechar={() => setMescla({ aberta: false })}
+          aoMesclar={(r) => {
+            if (contatoAberto.contatoId && r.contatos_mesclados.includes(contatoAberto.contatoId)) {
+              contatoAberto.trocar(r.contato_id);
+            }
+          }}
+          aoVerContato={(id) => {
+            setMescla({ aberta: false });
+            contatoAberto.abrir(id);
+          }}
         />
       ) : null}
       <JanelaNovoNegocio
