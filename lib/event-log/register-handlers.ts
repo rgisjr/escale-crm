@@ -15,6 +15,7 @@ import { lgpdExportHandler } from "@/workers/lgpd-export-worker.handler";
 import { lgpdRedactHandler } from "@/workers/lgpd-redact-worker.handler";
 // FORK ESCALE · Fase 2B: as ações em massa da lista de contatos.
 import { acaoEmMassaHandler } from "@/lib/escale/massa/handler";
+import { posEnvioHandler } from "@/lib/escale/campanhas/pos-envio-handler";
 // FORK ESCALE · Fase 2F: as importações de contatos e negócios.
 import { importacaoHandler } from "@/lib/escale/importacao/handler";
 // FORK ESCALE · Fase 3D: as ações em massa da fila de Conversas.
@@ -66,6 +67,8 @@ export function ensureHandlersRegistered(): void {
   // FORK ESCALE · Fase 2B: escrita interna pedida pela própria organização (lotes com orçamento).
   registerHandler(acaoEmMassaHandler);
   registerHandler(importacaoHandler);
+  // FORK ESCALE · Fase 8B: o pós-envio da campanha (tags, negócio, atendente e status para quem recebeu).
+  registerHandler(posEnvioHandler);
   // FORK ESCALE · Fase 3D: ações em massa da fila de Conversas (lotes com orçamento).
   registerHandler(acaoEmMassaDaFilaHandler);
   registerHandler(automationRulesHandler);

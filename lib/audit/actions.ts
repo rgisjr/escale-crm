@@ -1018,6 +1018,9 @@ export const AUDIT_ACTIONS = [
   "campaign.rescheduled",
   "campaign.back_to_draft",
   "campaign.draft_deleted",
+  // FORK ESCALE · Fase 8B: o assistente de campanha da casca (migration 9302).
+  "campaign.wizard_saved",
+  "campaign.post_send_applied",
 
   // O banco de dados externo do agente (migration 0372). Dado de terceiro pode
   // ter PII: a configuração da conexão é auditada, e a LEITURA também — mas o

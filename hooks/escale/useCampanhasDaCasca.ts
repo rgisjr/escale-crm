@@ -98,6 +98,9 @@ export function caminhoDaAcao(p: PedidoDeAcao): {
       };
     case "rascunho":
       return { metodo: "post", url: `/api/v1/campanhas-da-casca/${p.id}/rascunho` };
+    // FORK ESCALE · Fase 8B (N17): a cópia leva também o que o assistente guarda.
+    case "duplicar":
+      return { metodo: "post", url: `/api/v1/campanhas-da-casca/${p.id}/duplicar` };
     case "excluir":
       return { metodo: "delete", url: `/api/v1/campanhas-da-casca/${p.id}` };
     default:

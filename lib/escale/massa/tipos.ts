@@ -23,7 +23,8 @@ const tag = z.string().trim().min(1).max(40);
 /** Fase 2C: a chave de um campo do catálogo do contato (nunca os links). */
 const chaveDoCampo = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/).refine((c) => !c.startsWith("link_"));
 
-const alvoSchema = z.discriminatedUnion("tipo", [
+// FORK ESCALE · Fase 8B: o público da campanha guarda a mesma seleção (ids ou o filtro).
+export const alvoSchema = z.discriminatedUnion("tipo", [
   z.object({ tipo: z.literal("ids"), ids: z.array(uuid).min(1).max(IDS_MAX) }).strict(),
   z
     .object({

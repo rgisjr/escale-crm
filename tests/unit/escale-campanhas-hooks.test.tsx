@@ -39,7 +39,7 @@ describe("caminhos e reconsulta", () => {
     });
     expect(caminhoDaAcao({ id: "c1", acao: "duplicar" })).toEqual({
       metodo: "post",
-      url: "/api/v1/campaigns/c1/duplicar",
+      url: "/api/v1/campanhas-da-casca/c1/duplicar",
     });
     expect(caminhoDaAcao({ id: "c1", acao: "rascunho" })).toEqual({
       metodo: "post",
@@ -121,7 +121,7 @@ describe("useAcoesDaCampanha", () => {
     await act(async () => {
       copia = await result.current.mutateAsync({ id: "c1", acao: "duplicar" });
     });
-    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/campaigns/c1/duplicar", {});
+    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/campanhas-da-casca/c1/duplicar", {});
     expect(copia).toEqual({ id: "c9" });
   });
 });

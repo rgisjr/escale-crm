@@ -43,6 +43,9 @@ import {
 } from "./elegibilidade";
 import { renderizar } from "./renderizador";
 import type { MotivoDeExclusao } from "./tipos";
+// FORK ESCALE · Fase 8B: o público da casca chega resolvido; o modelo da Meta tem os valores próprios.
+import type { MensagemDeModelo } from "@/lib/escale/campanhas/assistente";
+import { corpoComValores, valoresDoModelo } from "@/lib/escale/campanhas/modelo";
 
 export interface ResumoDoSnapshot {
   total: number;
@@ -99,14 +102,20 @@ async function classificar(
     corpo: string;
     agora: Date;
     campanhaId?: string;
+    // FORK ESCALE · Fase 8B
+    candidatos?: readonly CandidatoDaAudiencia[];
+    modelo?: MensagemDeModelo | null;
   },
 ): Promise<{ linhas: ReturnType<typeof classificarAudiencia>; truncado: boolean }> {
-  const { candidatos, truncado } = await buscarCandidatos(admin, {
-    organizationId: entrada.organizationId,
-    filtro: entrada.filtro,
-    agora: entrada.agora,
-    corpo: entrada.corpo,
-  });
+  // FORK ESCALE · Fase 8B: com o público da casca, os candidatos já vêm do banco.
+  const { candidatos, truncado } = entrada.candidatos
+    ? { candidatos: [...entrada.candidatos], truncado: false }
+    : await buscarCandidatos(admin, {
+        organizationId: entrada.organizationId,
+        filtro: entrada.filtro,
+        agora: entrada.agora,
+        corpo: entrada.corpo,
+      });
   const jaEmCampanha = await contatosJaEmCampanha(
     admin,
     entrada.organizationId,
@@ -122,6 +131,11 @@ async function classificar(
       // A saudação NÃO é resolvida aqui: ela é da hora do envio. O token fica no
       // corpo congelado e o despacho o troca — ver `rodada.ts`.
       renderizar: (c: CandidatoDaAudiencia) => {
+        // FORK ESCALE · Fase 8B: o modelo resolve as variáveis dele; a saudação segue para o envio.
+        if (entrada.modelo) {
+          const v = valoresDoModelo(entrada.modelo, { nome: c.nome, lead: c.lead, contato: c.contato });
+          return { texto: corpoComValores(entrada.modelo.corpo, v.valores), faltando: v.faltando };
+        }
         const r = renderizar(entrada.corpo, { nome: c.nome, lead: c.lead, contato: c.contato });
         return { texto: r.texto, faltando: r.faltando };
       },
@@ -143,19 +157,29 @@ export async function prepararCampanha(
     corpo: string;
     contentVersion: number;
     agora: Date;
+    // FORK ESCALE · Fase 8B
+    candidatos?: readonly CandidatoDaAudiencia[];
+    modelo?: MensagemDeModelo | null;
   },
 ): Promise<ResumoDoSnapshot> {
-  const filtro = filtroDeAudienciaSchema.safeParse(entrada.filtro);
-  if (!filtro.success) {
-    throw new Error(`Filtro de audiência inválido: ${filtro.error.issues[0]?.message ?? "sem critério"}`);
+  // FORK ESCALE · Fase 8B: com o público da casca, o filtro antigo (vazio) não é validado.
+  let filtro: FiltroDeAudiencia = FILTRO_VAZIO;
+  if (!entrada.candidatos) {
+    const lido = filtroDeAudienciaSchema.safeParse(entrada.filtro);
+    if (!lido.success) {
+      throw new Error(`Filtro de audiência inválido: ${lido.error.issues[0]?.message ?? "sem critério"}`);
+    }
+    filtro = lido.data;
   }
 
   const { linhas } = await classificar(admin, {
     organizationId: entrada.organizationId,
-    filtro: filtro.data,
+    filtro,
     corpo: entrada.corpo,
     agora: entrada.agora,
     campanhaId: entrada.campanhaId,
+    candidatos: entrada.candidatos,
+    modelo: entrada.modelo ?? null,
   });
 
   // Reconstrução limpa: a rota só chega aqui quando nada saiu, então apagar a
@@ -180,7 +204,18 @@ export async function prepararCampanha(
     exclusion_reason: l.motivo,
     rendered_body: l.corpo,
     content_version: entrada.contentVersion,
-    variables: { nome: l.candidato.nome },
+    // FORK ESCALE · Fase 8B: com modelo, os valores de cada variável ficam congelados aqui.
+    variables:
+      entrada.modelo && l.elegivel
+        ? {
+            nome: l.candidato.nome,
+            modelo: valoresDoModelo(entrada.modelo, {
+              nome: l.candidato.nome,
+              lead: l.candidato.lead,
+              contato: l.candidato.contato,
+            }).valores,
+          }
+        : { nome: l.candidato.nome },
     cancelled_at: null,
     created_at: agoraIso,
   }));
