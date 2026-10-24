@@ -47,8 +47,8 @@ export function SumarioDaProspeccao({
     : "—";
   const cartao = (rotulo: string, dica: string, parte: number) => (
     <CartaoDoSumario
-      rotulo={t(rotulo)}
-      dica={t(dica)}
+      rotulo={rotulo}
+      dica={dica}
       valor={textoDoPorcento(parte, c.encontradas)}
       complemento={numeroBr(parte)}
     />
@@ -64,14 +64,14 @@ export function SumarioDaProspeccao({
             valor={numeroBr(c.encontradas)}
           />
           {cartao(
-            "Abordadas",
-            "Empresas que receberam a primeira mensagem do agente.",
+            t("Abordadas"),
+            t("Empresas que receberam a primeira mensagem do agente."),
             c.abordadas,
           )}
-          {cartao("Responderam", "Empresas que responderam à abordagem.", c.responderam)}
+          {cartao(t("Responderam"), t("Empresas que responderam à abordagem."), c.responderam)}
           {cartao(
-            "Qualificadas",
-            "Empresas que o agente moveu para a etapa de qualificados.",
+            t("Qualificadas"),
+            t("Empresas que o agente moveu para a etapa de qualificados."),
             c.qualificadas,
           )}
         </div>

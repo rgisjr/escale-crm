@@ -72,7 +72,7 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
   async function executar(pedido: Parameters<typeof acao.mutateAsync>[0], sucesso: string) {
     try {
       await acao.mutateAsync(pedido);
-      toast.success(t(sucesso));
+      toast.success(sucesso);
       return true;
     } catch (e) {
       toast.error(
@@ -85,14 +85,14 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
   const marcar = (ids: string[], selected: boolean) =>
     void executar(
       { action: acaoDaSelecao(detalhe), id: detalhe.linha.id, candidate_ids: ids, selected },
-      "Seleção da fila atualizada.",
+      t("Seleção da fila atualizada."),
     );
 
   async function excluir() {
     if (
       await executar(
         { action: "discard_unselected", id: detalhe.linha.id },
-        "Empresas desmarcadas excluídas.",
+        t("Empresas desmarcadas excluídas."),
       )
     )
       setConfirmando(false);
@@ -101,7 +101,7 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative w-[240px]">
+        <label className="relative block w-[240px]">
           <span className="sr-only">{t("Buscar empresa")}</span>
           <input
             value={busca}

@@ -140,15 +140,15 @@ export function etapasDoFunil(
 ): { chave: string; rotulo: string; quantidade: number; porcento: number | null }[] {
   const etapa = (chave: string, rotulo: string, quantidade: number) => ({
     chave,
-    rotulo: t(rotulo),
+    rotulo,
     quantidade,
     porcento: porcento(quantidade, c.encontradas),
   });
   return [
-    etapa("encontradas", "Encontradas", c.encontradas),
-    etapa("abordadas", "Abordadas", c.abordadas),
-    etapa("responderam", "Responderam", c.responderam),
-    etapa("qualificadas", "Qualificadas", c.qualificadas),
+    etapa("encontradas", t("Encontradas"), c.encontradas),
+    etapa("abordadas", t("Abordadas"), c.abordadas),
+    etapa("responderam", t("Responderam"), c.responderam),
+    etapa("qualificadas", t("Qualificadas"), c.qualificadas),
   ];
 }
 

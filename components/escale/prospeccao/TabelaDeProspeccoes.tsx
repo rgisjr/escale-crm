@@ -12,8 +12,6 @@ import { MenuDaProspeccao } from "./MenuDaProspeccao";
 import { SeloDaSituacao } from "./SeloDaProspeccao";
 
 const COLUNAS = ["w-[28%] pl-6", "w-[14%]", "w-[18%]", "w-[22%]", "w-[12%]", "w-[6%]"];
-const TITULOS = ["Prospecção", "Data de início", "Número", "Resultado", "Status"];
-
 /**
  * A TABELA DE PROSPECÇÕES (molde 002; D6, D8): a linha com o quadrado, o nome
  * e o subtítulo, a data de início, o número, a barra, o selo, Pausar/Retomar e
@@ -58,11 +56,13 @@ export function TabelaDeProspeccoes({
     <table className="w-full table-fixed border-collapse">
       <thead>
         <tr className="h-[42px] border-y border-casca-divisoria text-left text-[10px] font-semibold tracking-[0.1em] text-casca-texto uppercase">
-          {TITULOS.map((titulo, i) => (
-            <th key={titulo} className={COLUNAS[i]}>
-              {t(titulo)}
-            </th>
-          ))}
+          {[t("Prospecção"), t("Data de início"), t("Número"), t("Resultado"), t("Status")].map(
+            (titulo, i) => (
+              <th key={i} className={COLUNAS[i]}>
+                {titulo}
+              </th>
+            ),
+          )}
           <th className={COLUNAS[5]}>
             <span className="sr-only">{t("Ações")}</span>
           </th>
@@ -73,7 +73,10 @@ export function TabelaDeProspeccoes({
           <tr role="status" aria-label={t("Carregando prospecções")}>
             <td colSpan={6}>
               {Array.from({ length: 10 }, (_, i) => (
-                <div key={i} className="mx-6 my-[19px] h-4 animate-pulse rounded bg-casca-busca" />
+                <div
+                  key={i}
+                  className="mx-6 my-[19px] h-4 animate-pulse rounded-md bg-casca-busca"
+                />
               ))}
             </td>
           </tr>
