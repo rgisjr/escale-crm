@@ -38,7 +38,8 @@ export const ITENS_DO_TOPO: readonly ItemDoTopo[] = [
   // "Atendimento" na Clint é o nosso Conversas (Inbox), com o contador da fila.
   { href: "/app/inbox", rotulo: "Atendimento", contador: "fila", ativoEm: ["/app/inbox"] },
   { href: "/app/settings/automacoes", rotulo: "Automações", ativoEm: ["/app/settings/automacoes"] },
-  { href: "/app/campaigns", rotulo: "Campanhas", ativoEm: ["/app/campaigns"] },
+  // FORK ESCALE · Fase 8A: a Prospecção é uma aba de Campanhas.
+  { href: "/app/campaigns", rotulo: "Campanhas", ativoEm: ["/app/campaigns", "/app/prospecting"] },
   { href: "/app/metrics", rotulo: "Indicadores", ativoEm: ["/app/metrics"] },
 ];
 
@@ -65,7 +66,22 @@ export function itemAtivo(pathname: string, item: ItemDoTopo): boolean {
   return item.ativoEm.some((prefixo) => destinoAtivo(pathname, prefixo));
 }
 
-export function montarMenuDoTopo(visiveis: readonly NavDestination[]): MenuDoTopo {
+/**
+ * FORK ESCALE · Fase 8A (N3): telas que a casca esconde abaixo de um papel,
+ * além da régua do registro. Campanhas exige gerente nas rotas e na RLS, mas o
+ * registro não declara `minRole` (o original mostra o item a todos).
+ */
+export const PAPEL_MINIMO_NO_TOPO: Readonly<Record<string, Role>> = { "/app/campaigns": "manager" };
+
+export function montarMenuDoTopo(todas: readonly NavDestination[], papel?: Role | null): MenuDoTopo {
+  // Sem papel (os testes antigos), a lista vale como veio.
+  const visiveis =
+    papel === undefined
+      ? todas
+      : todas.filter((d) => {
+          const minimo = PAPEL_MINIMO_NO_TOPO[d.href];
+          return !minimo || roleAtLeast(papel, minimo);
+        });
   const hrefs = new Set(visiveis.map((d) => d.href));
   const topo = ITENS_DO_TOPO.filter((i) => hrefs.has(i.href));
   const noTopo = new Set(topo.map((i) => i.href));

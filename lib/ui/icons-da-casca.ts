@@ -168,3 +168,6 @@ export {
 
 // Fase 2F (importação): o escudo do aviso de proteção.
 export { Shield } from "lucide-react";
+
+// FORK ESCALE · Fase 8A: o cartão "Entregues" do resumo de campanhas (003).
+export { MailCheck } from "lucide-react";

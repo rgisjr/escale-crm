@@ -344,3 +344,99 @@ body:has([data-escale-casca])
   :is(input, [role="combobox"], [role="listbox"], [role="option"], [data-chip]) {
   font-weight: 300;
 }
+
+/* ─── FORK ESCALE · Fase 8A (lista de campanhas) ───
+   A barra de resultado (amostra de pixel nos prints 09-002 e 09-008) e os selos
+   de status (Badge "subtle" do Chakra v3 da Clint: .100 de fundo, .700 de texto;
+   o tom de cada estado na seção 6 do PRD 8). Lidas por valor arbitrário
+   (`bg-(--escale-…)`), como as da 1F. */
+body:has([data-escale-casca]) {
+  --escale-campanha-trilho: #ededf2; /* provisório: no print todas estão completas */
+  --escale-campanha-erro: #f2453e; /* medido, 09-002 */
+  --escale-campanha-entregues: #20cc9c; /* medido, 09-002 */
+  --escale-campanha-lidos: #16e2a7; /* medido, 09-002 e 09-008 */
+  --escale-campanha-enviados: #2fba6a; /* medido, 09-002 (a ponta mais escura) */
+  --escale-tom-cinza-fundo: #f4f4f5;
+  --escale-tom-cinza-texto: #52525b;
+  --escale-tom-ciano-fundo: #cffafe;
+  --escale-tom-ciano-texto: #0e7490;
+  --escale-tom-amarelo-fundo: #fef9c3;
+  --escale-tom-amarelo-texto: #a16207;
+  --escale-tom-azul-fundo: #dbeafe;
+  --escale-tom-azul-texto: #1d4ed8;
+  --escale-tom-laranja-fundo: #ffedd5;
+  --escale-tom-laranja-texto: #c2410c;
+  --escale-tom-verde-fundo: #dcfce7; /* medido no selo "Completo", 09-002 */
+  --escale-tom-verde-texto: #15803d;
+  --escale-tom-granito-fundo: #e7e5e4;
+  --escale-tom-granito-texto: #57534e;
+  --escale-tom-vermelho-fundo: #fee2e2;
+  --escale-tom-vermelho-texto: #b91c1c;
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --escale-campanha-trilho: #2a2d3d;
+  --escale-campanha-erro: #f87171;
+  --escale-campanha-entregues: #2dd4bf;
+  --escale-campanha-lidos: #34d399;
+  --escale-campanha-enviados: #4ade80;
+  --escale-tom-cinza-fundo: #2a2d3d;
+  --escale-tom-cinza-texto: #d4d4d8;
+  --escale-tom-ciano-fundo: #164e63;
+  --escale-tom-ciano-texto: #a5f3fc;
+  --escale-tom-amarelo-fundo: #422006;
+  --escale-tom-amarelo-texto: #fde68a;
+  --escale-tom-azul-fundo: #1e3a8a;
+  --escale-tom-azul-texto: #bfdbfe;
+  --escale-tom-laranja-fundo: #431407;
+  --escale-tom-laranja-texto: #fed7aa;
+  --escale-tom-verde-fundo: #14351f;
+  --escale-tom-verde-texto: #86efac;
+  --escale-tom-granito-fundo: #292524;
+  --escale-tom-granito-texto: #d6d3d1;
+  --escale-tom-vermelho-fundo: #3d1515;
+  --escale-tom-vermelho-texto: #fca5a5;
+}
+
+/* As listras da campanha em andamento (material 6) e a entrada dos cartões do
+   resumo (0,26 s, material 6). Sem movimento para quem pediu menos movimento. */
+.escale-listras {
+  background-image: linear-gradient(
+    45deg,
+    rgb(255 255 255 / 0.28) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgb(255 255 255 / 0.28) 50%,
+    rgb(255 255 255 / 0.28) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+  animation: escale-listras 1s linear infinite;
+}
+
+@keyframes escale-listras {
+  from {
+    background-position: 1rem 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@keyframes escale-desce {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escale-listras {
+    animation: none;
+  }
+}
