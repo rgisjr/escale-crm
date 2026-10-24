@@ -27,7 +27,7 @@ export function ConversaEmLeitura({
       <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-casca-borda px-4">
         <span className="flex min-w-0 items-center gap-2 text-[13px] text-casca-texto">
           <ChannelLogo channel={canal} size={16} />
-          <span className="truncate">{canal?.display_name ?? ""}</span>
+          <span className="truncate">{canal ? canal.display_name : ""}</span>
         </span>
         <Link
           href={`/app/inbox?id=${conversa.id}`}
