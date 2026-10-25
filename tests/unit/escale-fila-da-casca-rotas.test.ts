@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET as TOTAL } from "@/app/api/v1/fila-da-casca/total/route";
+import { GET as TEM_GRUPOS } from "@/app/api/v1/fila-da-casca/tem-grupos/route";
 import { GET as FILA } from "@/app/api/v1/fila-da-casca/route";
 import {
   codificarCursor,
@@ -34,6 +35,7 @@ function bancoDaFila(linhas: Array<Record<string, unknown>>, total = 0) {
   };
   const rpc = vi.fn((nome: string, args: Record<string, unknown>) => {
     chamadas.push({ nome, args });
+    if (nome === "fn_escale_fila_tem_grupos") return Promise.resolve({ data: total > 0, error: null });
     return nome === "fn_escale_contar_fila_da_casca"
       ? Promise.resolve({ data: total, error: null })
       : builder;
@@ -114,5 +116,13 @@ describe("as rotas", () => {
     vi.mocked(createClient).mockResolvedValue(bancoDaFila([], 56128).db as never);
     const r = await TOTAL(new NextRequest("http://x/api/v1/fila-da-casca/total"));
     expect(((await r.json()) as { data: { total: number } }).data.total).toBe(56128);
+  });
+
+  it("tem-grupos: pergunta ao banco só da organização, sem contar", async () => {
+    const banco = bancoDaFila([], 3);
+    vi.mocked(createClient).mockResolvedValue(banco.db as never);
+    const r = await TEM_GRUPOS();
+    expect(((await r.json()) as { data: { temGrupos: boolean } }).data.temGrupos).toBe(true);
+    expect(banco.chamadas).toEqual([{ nome: "fn_escale_fila_tem_grupos", args: { p_org: ORG_ID } }]);
   });
 });

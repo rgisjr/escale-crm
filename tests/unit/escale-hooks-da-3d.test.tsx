@@ -8,6 +8,7 @@ vi.mock("@/lib/api/client", () => ({ apiClient: api }));
 
 import { useAcaoDaFila, useExecutarAcaoDaFila } from "@/hooks/escale/useAcoesEmMassaDaFila";
 import { useGruposDasOrigens } from "@/hooks/escale/useGruposDasOrigens";
+import { useTemGruposNaFila } from "@/hooks/escale/useTemGruposNaFila";
 import { useTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 
 const envolver = (qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })) =>
@@ -29,6 +30,19 @@ describe("hooks da 3D", () => {
     rerender({ ativo: true });
     await waitFor(() => expect(result.current.data).toBe(56128));
     expect(api.get).toHaveBeenCalledWith("/api/v1/fila-da-casca/total");
+  });
+
+  it("tem grupos lê a rota barata, só com organização, e devolve o booleano", async () => {
+    api.get.mockReset();
+    api.get.mockResolvedValueOnce({ data: { temGrupos: true } });
+    const { result, rerender } = renderHook(({ org }) => useTemGruposNaFila(org), {
+      wrapper: envolver(),
+      initialProps: { org: null as string | null },
+    });
+    expect(api.get).not.toHaveBeenCalled();
+    rerender({ org: "org-1" });
+    await waitFor(() => expect(result.current.data).toBe(true));
+    expect(api.get).toHaveBeenCalledWith("/api/v1/fila-da-casca/tem-grupos");
   });
 
   it("executar posta o pedido; acompanhar lê a ação", async () => {

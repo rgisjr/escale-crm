@@ -41,6 +41,7 @@ vi.mock("@/hooks/escale/useFilaDeConversas", () => ({
 }));
 // FORK ESCALE · Fase 3D: os hooks de dados da fila (o provedor de dicas continua de verdade).
 vi.mock("@/hooks/escale/useTotalDaFila", () => ({ useTotalDaFila: () => ({ data: 0 }) }));
+vi.mock("@/hooks/escale/useTemGruposNaFila", () => ({ useTemGruposNaFila: () => ({ data: false }) }));
 vi.mock("@/hooks/escale/usePermissoesDeAtendimento", () => ({
   useMinhasPermissoes: () => ({ CHAT_BULK_ACTIONS: true }),
 }));
