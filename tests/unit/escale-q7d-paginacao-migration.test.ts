@@ -61,7 +61,7 @@ describe("migration 9406 (paginação de contatos e empresas, Q7d)", () => {
   });
 
   it("o baseline traz o bloco antes da varredura de anon, e derruba a lista antiga antes de reaplicar a história", () => {
-    const bloco = MIGRATION.slice(MIGRATION.indexOf("-- ---- FORK ESCALE"));
+    const bloco = MIGRATION.slice(MIGRATION.indexOf("-- ---- FORK ESCALE · revisão Q7d: paginação de contatos e empresas (migration 9406) ----"));
     expect(BASELINE).toContain(bloco);
     expect(BASELINE.indexOf(bloco)).toBeLessThan(BASELINE.indexOf("VARREDURA anon: função nova nasce exposta"));
     for (const [marca, drop] of [
