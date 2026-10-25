@@ -133,10 +133,18 @@ export function QuadroCombinado({
           { proposalId: p.proposal_id, expiresAt: p.expires_at },
         ]),
       ),
-      pulses: new Map(Object.values(pulsosPorOrigem).flatMap((m) => [...m])),
       camposDoCard: camposDaCapa(quadros.map((q) => q.pipeline.settings)),
     };
-  }, [quadros, members, atRisk, propostasVivas, pulsosPorOrigem]);
+  }, [quadros, members, atRisk, propostasVivas]);
+  const pulsos = useMemo(
+    () => new Map(Object.values(pulsosPorOrigem).flatMap((m) => [...m])),
+    [pulsosPorOrigem],
+  );
+  // Filtra e ordena os leads de cada coluna uma vez por mudança de dados, não a cada render.
+  const cardsPorColuna = useMemo(
+    () => new Map(colunas.map((c) => [c.chave, cardsDaColuna(c, leads, ordemDosCards)])),
+    [colunas, leads, ordemDosCards],
+  );
 
   const [dossieId, setDossieId] = useState<string | null>(leadInicial ?? null);
   const leadDoDossie = dossieId ? (leads.find((l) => l.id === dossieId) ?? null) : null;
@@ -193,7 +201,7 @@ export function QuadroCombinado({
       const soltura = planejarSoltura({
         lead,
         coluna,
-        visiveis: cardsDaColuna(coluna, leads),
+        visiveis: cardsPorColuna.get(coluna.chave) ?? cardsDaColuna(coluna, leads),
         indice: destination.index,
         etapaInteira,
       });
@@ -209,7 +217,7 @@ export function QuadroCombinado({
         expectedUpdatedAt: lead.updated_at,
       });
     },
-    [leads, colunas, qc, quadroDe, t, ordemDosCards],
+    [leads, colunas, qc, quadroDe, t, ordemDosCards, cardsPorColuna],
   );
 
   return (
@@ -235,8 +243,9 @@ export function QuadroCombinado({
             <ColunaDaVisualizacao
               key={coluna.chave}
               coluna={coluna}
-              leads={cardsDaColuna(coluna, leads, ordemDosCards)}
+              leads={cardsPorColuna.get(coluna.chave) ?? []}
               contexto={contexto}
+              pulsos={pulsos}
               selecionados={selecionadosSet}
               onSelectMany={selecionarVarios}
               onOpen={aoAbrirNegocio ?? setDossieId}

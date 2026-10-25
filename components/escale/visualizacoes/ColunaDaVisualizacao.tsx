@@ -1,4 +1,6 @@
 "use client";
+import { memo } from "react";
+
 import { CardDaCasca } from "@/components/escale/quadro/CardDaCasca";
 import { ColunaDaCasca } from "@/components/escale/quadro/ColunaDaCasca";
 import { useChaveDosRecentes, useNegociosRecentes } from "@/hooks/escale/useNegociosRecentes";
@@ -19,7 +21,6 @@ export interface ContextoDosCards {
   ownerNames: Map<string, string | null>;
   coolingIds: Set<string>;
   reactivations: Map<string, { proposalId: string; expiresAt: string }>;
-  pulses: Map<string, number>;
   /** Os campos que o "Personalizar cards" pode pôr no card: a união das origens (Fase 1E). */
   camposDoCard: readonly CampoDaCapa[];
 }
@@ -31,10 +32,11 @@ export interface ContextoDosCards {
  * funcionam igual ao funil) e mostra o nome dela. O cabeçalho é só leitura e não
  * tem "+ Adicionar negócio": a etapa é de várias origens.
  */
-export function ColunaDaVisualizacao({
+function ColunaDaVisualizacaoSemMemo({
   coluna,
   leads,
   contexto,
+  pulsos,
   selecionados,
   onSelectMany,
   onOpen,
@@ -42,6 +44,8 @@ export function ColunaDaVisualizacao({
   coluna: ColunaCombinada;
   leads: Lead[];
   contexto: ContextoDosCards;
+  /** Card → quantos pulsos de tempo real; fora do `contexto` para um pulso não refazê-lo. */
+  pulsos: Map<string, number>;
   selecionados: Set<string>;
   onSelectMany: (ids: string[], marcar: boolean) => void;
   onOpen: (leadId: string) => void;
@@ -75,7 +79,7 @@ export function ColunaDaVisualizacao({
             pipelineId={lead.pipeline_id}
             isSelected={selecionados.has(lead.id)}
             isSelecting={selecionados.size > 0}
-            pulseCount={contexto.pulses.get(lead.id) ?? 0}
+            pulseCount={pulsos.get(lead.id) ?? 0}
             onSelect={aoSelecionar}
             onOpen={(id) => {
               onOpen(id);
@@ -92,3 +96,6 @@ export function ColunaDaVisualizacao({
     />
   );
 }
+
+/** Memoizada: o quadro só redesenha a coluna cujos cards, contexto ou pulsos mudaram. */
+export const ColunaDaVisualizacao = memo(ColunaDaVisualizacaoSemMemo);

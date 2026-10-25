@@ -2850,6 +2850,7 @@ export const DICIONARIO: Traducoes = {
     es: "Este seguimiento no está pausado por una persona.",
   },
   "Data inválida.": { es: "Fecha inválida." },
+  "Número inválido.": { es: "Número inválido." },
   "Escolha um horário no futuro.": { es: "Elige un horario en el futuro." },
   "O adiamento máximo é de 90 dias.": { es: "El aplazamiento máximo es de 90 días." },
   "Só dá para adiar um follow-up que está andando (ativo ou aguardando resposta).": {

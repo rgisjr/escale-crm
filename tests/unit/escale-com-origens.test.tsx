@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({})) 
 vi.mock("@/lib/escale/origens/ler-origens", () => ({ lerOrigens: vi.fn() }));
 vi.mock("@/lib/escale/visualizacoes/ler-visualizacoes", () => ({ lerVisualizacoes: vi.fn() }));
 vi.mock("@/lib/api/client", () => ({ apiClient: {} }));
-vi.mock("@/app/actions/escale/origens", () => ({ guardarPreferenciaDeOrigens: vi.fn(async () => undefined) }));
+vi.mock("@/lib/escale/origens/guardar-preferencia", () => ({ guardarPreferenciaDeOrigens: vi.fn(async () => undefined) }));
 
 import { lerOrigens } from "@/lib/escale/origens/ler-origens";
 import { lerVisualizacoes } from "@/lib/escale/visualizacoes/ler-visualizacoes";
@@ -53,6 +53,18 @@ describe("<ComOrigens>", () => {
     expect(screen.getByRole("complementary", { name: "Origens" })).toBeInTheDocument();
     expect(screen.getByText("o quadro")).toBeInTheDocument();
     expect(lerOrigens).toHaveBeenCalledWith(expect.anything(), "org-1");
+  });
+
+  it("G4-3: lê origens e visualizações em paralelo (a segunda começa antes de a primeira acabar)", async () => {
+    let liberar: () => void = () => undefined;
+    vi.mocked(lerOrigens).mockImplementationOnce(
+      () => new Promise((resolve) => (liberar = () => resolve({ grupos: [], funis: [] }))),
+    );
+    vi.mocked(lerVisualizacoes).mockClear();
+    const pronto = ComOrigens({ children: <p>o quadro</p> });
+    await vi.waitFor(() => expect(lerVisualizacoes).toHaveBeenCalled());
+    liberar();
+    await pronto;
   });
 
   it("com a lateral, é a tela de sempre e o banco nem é lido", async () => {

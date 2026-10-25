@@ -8,12 +8,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/app/pipelines/f-leads",
   useRouter: () => ({ refresh: vi.fn(), push }),
 }));
-vi.mock("@/app/actions/escale/origens", () => ({ guardarPreferenciaDeOrigens: vi.fn(async () => undefined) }));
+vi.mock("@/lib/escale/origens/guardar-preferencia", () => ({ guardarPreferenciaDeOrigens: vi.fn(async () => undefined) }));
 vi.mock("@/lib/api/client", () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
-import { guardarPreferenciaDeOrigens } from "@/app/actions/escale/origens";
+import { guardarPreferenciaDeOrigens } from "@/lib/escale/origens/guardar-preferencia";
 import { apiClient } from "@/lib/api/client";
 import type { Origens } from "@/lib/escale/origens/regras";
 import type { Visualizacao } from "@/lib/escale/visualizacoes/regras";
@@ -45,6 +45,7 @@ function renderizar(
   podeGerenciar = true,
   preferencias: PreferenciasDoPainel = ABERTO,
   visualizacoes: Visualizacao[] = VISUALIZACOES,
+  ultimoFunil: string | null = null,
 ) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}>
@@ -53,6 +54,7 @@ function renderizar(
         visualizacoes={visualizacoes}
         podeGerenciar={podeGerenciar}
         preferencias={preferencias}
+        ultimoFunil={ultimoFunil}
       />
     </QueryClientProvider>,
   );
@@ -79,6 +81,11 @@ describe("<PainelOrigens> — lista e navegação", () => {
     expect(screen.queryByRole("link", { name: "Funil Nayara" })).toBeNull();
     expect(screen.queryByText("Sem grupo")).toBeNull();
     expect(guardarPreferenciaDeOrigens).toHaveBeenCalledWith({ nome: "ultimo_funil", valor: "f-leads" });
+  });
+
+  it("não regrava o último funil quando o cookie já guarda o funil aberto", () => {
+    renderizar(true, ABERTO, VISUALIZACOES, "f-leads");
+    expect(guardarPreferenciaDeOrigens).not.toHaveBeenCalled();
   });
 
   it("a seta do grupo abre e fecha as origens dele", async () => {

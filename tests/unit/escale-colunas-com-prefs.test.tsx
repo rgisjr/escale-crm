@@ -106,7 +106,6 @@ describe("as colunas da casca passam a preferência ao card", () => {
       ownerNames: new Map(),
       coolingIds: new Set(),
       reactivations: new Map(),
-      pulses: new Map(),
       camposDoCard: CAMPOS,
     };
     const coluna: ColunaCombinada = {
@@ -119,6 +118,7 @@ describe("as colunas da casca passam a preferência ao card", () => {
         coluna={coluna}
         leads={LEADS}
         contexto={contexto}
+        pulsos={new Map()}
         selecionados={new Set()}
         onSelectMany={vi.fn()}
         onOpen={vi.fn()}
@@ -177,7 +177,6 @@ describe("abrir um card guarda o negócio nos Recentes (Fase 1E)", () => {
       ownerNames: new Map(),
       coolingIds: new Set(),
       reactivations: new Map(),
-      pulses: new Map(),
       camposDoCard: CAMPOS,
     };
     const onOpen = vi.fn();
@@ -186,6 +185,7 @@ describe("abrir um card guarda o negócio nos Recentes (Fase 1E)", () => {
         coluna={{ chave: "entrada", nome: "Entrada", destinos: {} } as ColunaCombinada}
         leads={LEADS}
         contexto={contexto}
+        pulsos={new Map()}
         selecionados={new Set()}
         onSelectMany={vi.fn()}
         onOpen={onOpen}

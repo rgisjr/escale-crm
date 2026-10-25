@@ -209,7 +209,13 @@ export function pedidoDoSalvar(
     patch.gerais = {
       moeda: r.gerais.moeda === config.moedaDaOrganizacao ? null : r.gerais.moeda,
       tags_padrao: r.gerais.tags,
-      visualizacao: r.gerais.visualizacao,
+      // Só vai quando a pessoa mexeu: igual à da organização = volta a segui-la (null).
+      ...(r.gerais.visualizacao !== inicial.gerais.visualizacao
+        ? {
+            visualizacao:
+              r.gerais.visualizacao === config.visualizacaoDaOrganizacao ? null : r.gerais.visualizacao,
+          }
+        : {}),
     };
   }
   if (!igual(r.motivos, inicial.motivos)) {

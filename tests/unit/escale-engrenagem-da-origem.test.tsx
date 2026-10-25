@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/app/pipelines/f-1",
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
-vi.mock("@/app/actions/escale/origens", () => ({
+vi.mock("@/lib/escale/origens/guardar-preferencia", () => ({
   guardarPreferenciaDeOrigens: vi.fn(async () => undefined),
 }));
 vi.mock("@/lib/api/client", () => ({
@@ -178,6 +178,23 @@ describe("a engrenagem abre a janela do PainelOrigens (integração)", () => {
       </QueryClientProvider>,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+    await userEvent.click(screen.getByRole("button", NOME));
+    expect(await screen.findByRole("dialog", { name: "Clayton" })).toBeInTheDocument();
+  });
+
+  it("com o painel recolhido a engrenagem também abre a janela da origem", async () => {
+    vi.mocked(apiClient.get).mockReturnValue(new Promise(() => {}));
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Engrenagem gerente />
+        <PainelOrigens
+          origens={ORIGENS}
+          visualizacoes={[]}
+          podeGerenciar
+          preferencias={{ ...PREFERENCIAS, painelAberto: false }}
+        />
+      </QueryClientProvider>,
+    );
     await userEvent.click(screen.getByRole("button", NOME));
     expect(await screen.findByRole("dialog", { name: "Clayton" })).toBeInTheDocument();
   });

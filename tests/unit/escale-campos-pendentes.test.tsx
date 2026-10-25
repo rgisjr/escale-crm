@@ -100,6 +100,30 @@ describe("JanelaDeCamposPendentes", () => {
     fireEvent.click(salvar);
     expect(fn).toHaveBeenCalledWith({ customFields: { valor: 1250.5, prazo: "2026-02-28" } });
   });
+
+  it("B4-5: milhar brasileiro sem vírgula vira inteiro, e número inválido mostra o erro do campo", () => {
+    const fn = vi.fn();
+    render(
+      <JanelaDeCamposPendentes
+        aberta
+        modo="mover"
+        recusa={{ args: ARGS, faltando: [{ chave: "valor", rotulo: "Valor", tipo: "currency" }] }}
+        onConfirmar={fn}
+        onFechar={vi.fn()}
+      />,
+    );
+    const salvar = screen.getByRole("button", { name: "Salvar e mover" }) as HTMLButtonElement;
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "1.250.000" } });
+    expect(salvar.disabled).toBe(false);
+    fireEvent.click(salvar);
+    expect(fn).toHaveBeenLastCalledWith({ customFields: { valor: 1250000 } });
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "1.250" } });
+    fireEvent.click(salvar);
+    expect(fn).toHaveBeenLastCalledWith({ customFields: { valor: 1250 } });
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "abc" } });
+    expect(salvar.disabled).toBe(true);
+    expect(screen.getByRole("alert").textContent).toBe("Número inválido.");
+  });
 });
 
 const PIPE = "44444444-4444-4444-8444-444444444444";

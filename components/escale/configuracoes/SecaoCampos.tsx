@@ -93,8 +93,10 @@ export function SecaoCampos({ config, rascunho, mudar }: PropsDaSecao) {
               </div>
               {regras.map((regra, i) => {
                 const rotulo = rotuloDo(regra.campo);
+                // Chave estável: o campo + qual repetição dele é esta (o mesmo campo pode ter 2 regras).
+                const repeticao = regras.slice(0, i).filter((x) => x.campo === regra.campo).length;
                 return (
-                  <div key={`${regra.campo}-${i}`} className="border-b border-casca-borda py-4">
+                  <div key={`${regra.campo}#${repeticao}`} className="border-b border-casca-borda py-4">
                     <div className="grid grid-cols-4 items-center gap-3">
                       <div>
                         <p className="text-[12px] font-medium text-casca-texto">{rotulo}</p>
