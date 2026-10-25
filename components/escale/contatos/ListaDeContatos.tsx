@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { CampoDeBuscaDaLista } from "@/components/escale/ui/CampoDeBuscaDaLista";
 import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover } from "@/components/ui/popover";
@@ -40,7 +41,7 @@ import {
   camposDeColuna,
 } from "@/lib/escale/contatos/regras";
 import { alvoDaSelecao } from "@/lib/escale/contatos/selecao";
-import { Bookmark, RefreshCw, Search } from "@/lib/ui/icons-da-casca";
+import { Bookmark, RefreshCw } from "@/lib/ui/icons-da-casca";
 
 import type { OrigemParaCriar } from "./CamposDaOportunidade";
 import { BalaoDoFiltro } from "./filtros/BalaoDoFiltro";
@@ -112,7 +113,6 @@ export function ListaDeContatos({
     irPara,
     mudarFiltros,
   } = useEstadoDaListaDeContatos();
-  const [busca, setBusca] = useState(buscaDaUrl);
   const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
   const [faixaAberta, setFaixaAberta] = useState(false);
   const [painelAberto, setPainelAberto] = useState(false);
@@ -128,14 +128,6 @@ export function ListaDeContatos({
     setPorPagina(lerPorPagina());
     setFaixaAberta(lerFaixaAberta());
   }, []);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      if (busca !== buscaDaUrl) irPara({ q: busca.trim() || null, p: null });
-    }, 250);
-    return () => window.clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só a busca digitada dispara
-  }, [busca]);
 
   const consulta = useListaDeContatos({ q: buscaDaUrl, v: visao, p: pagina, n: porPagina, f });
   const colunas = useColunasDaLista("contatos");
@@ -251,16 +243,13 @@ export function ListaDeContatos({
       </header>
 
       <div className="flex shrink-0 items-center gap-3 border-b border-casca-borda px-6 py-3">
-        <label className="flex h-8 w-[280px] items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3">
-          <input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder={t("Buscar por contato ou Empresa")}
-            aria-label={t("Buscar por contato ou Empresa")}
-            className="w-full bg-transparent text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta"
-          />
-          <Search size={15} aria-hidden className="shrink-0 text-casca-suave" />
-        </label>
+        <CampoDeBuscaDaLista
+          valorDaUrl={buscaDaUrl}
+          aoBuscar={(q) => irPara({ q, p: null })}
+          rotulo={t("Buscar por contato ou Empresa")}
+          atrasoMs={250}
+          className="flex h-8 w-[280px] items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3"
+        />
         <SeletorDeFiltros
           visao={visao}
           filtros={filtros}

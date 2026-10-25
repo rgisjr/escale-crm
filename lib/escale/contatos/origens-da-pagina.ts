@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import type { OrigemParaCriar } from "@/components/escale/contatos/CamposDaOportunidade";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { lerCatalogo, semearSeVazio } from "@/lib/escale/campos/banco";
+import { lerCatalogosSemeando } from "@/lib/escale/campos/banco";
 import { CATALOGO_VAZIO, catalogoVisivel } from "@/lib/escale/campos/regras";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -63,9 +63,9 @@ export async function origensDaPagina(): Promise<{
   let catalogo = CATALOGO_VAZIO;
   let catalogoDaEmpresa = CATALOGO_VAZIO;
   try {
-    await semearSeVazio(createAdminClient(), activeOrg.orgId);
-    catalogo = catalogoVisivel(await lerCatalogo(supabase, activeOrg.orgId, "contato"), activeOrg.role as Role);
-    catalogoDaEmpresa = catalogoVisivel(await lerCatalogo(supabase, activeOrg.orgId, "empresa"), activeOrg.role as Role);
+    const [doContato, daEmpresa] = await lerCatalogosSemeando(supabase, createAdminClient(), activeOrg.orgId, ["contato", "empresa"]);
+    catalogo = catalogoVisivel(doContato!, activeOrg.role as Role);
+    catalogoDaEmpresa = catalogoVisivel(daEmpresa!, activeOrg.role as Role);
   } catch (err) {
     logger.error("contatos.origens-da-pagina.catalogo", { err });
   }

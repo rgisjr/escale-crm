@@ -1,8 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { useConversaNovaComEscolhaDeCanal } from "@/components/channels/SeletorDeCanalParaConversa";
 import { ChipDaTag } from "@/components/escale/quadro/PecasDoCard";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
@@ -21,12 +19,15 @@ const dataNoIdioma = (iso: string | null, tag: string) =>
   iso ? new Date(iso).toLocaleDateString(tag) : "—";
 
 /** Telefone com ligar e WhatsApp no hover da linha, e-mail e Instagram embaixo (Clint `n:contact`). */
-export function CelulaContato({ linha }: { linha: LinhaDeContato }) {
+export function CelulaContato({
+  linha,
+  aoIniciarConversa,
+}: {
+  linha: LinhaDeContato;
+  /** Vem da tabela (um só para todas as linhas): o hook de conversa com a escolha de canal custa observadores. */
+  aoIniciarConversa: (alvo: { contact_id: string; phone_number?: string }) => void;
+}) {
   const t = useT();
-  const router = useRouter();
-  const { iniciarConversa, seletor } = useConversaNovaComEscolhaDeCanal({
-    aoAbrir: (id) => router.push(`/app/inbox?id=${id}`),
-  });
   const acao =
     "grid size-5 place-items-center rounded-casca-gatilho text-casca-marca hover:bg-casca-marca-suave";
   return (
@@ -62,7 +63,7 @@ export function CelulaContato({ linha }: { linha: LinhaDeContato }) {
                 title={t("Abrir WhatsApp")}
                 className={acao}
                 onClick={() =>
-                  iniciarConversa({
+                  aoIniciarConversa({
                     contact_id: linha.id,
                     phone_number: linha.telefone ?? undefined,
                   })
@@ -72,7 +73,6 @@ export function CelulaContato({ linha }: { linha: LinhaDeContato }) {
               </button>
             )}
           </span>
-          {seletor}
         </div>
       )}
       {linha.email && (

@@ -53,14 +53,16 @@ export function useNegociosDaEmpresa(id: string, ativo = true) {
   });
 }
 
-/** As escritas da ficha da empresa; cada uma invalida as empresas e os contatos. */
+/** As escritas da ficha da empresa; cada uma invalida só a ficha dela, a lista de empresas e os contatos. */
 export function useMudarEmpresa(idOuNulo: string | null) {
   const qc = useQueryClient();
   // Sem empresa (a aba Empresa do negócio, antes do vínculo) as escritas ficam sem alvo e falham.
   const id = idOuNulo ?? "";
   const depois = () => {
-    void qc.invalidateQueries({ queryKey: ["companies"] });
+    void qc.invalidateQueries({ queryKey: ["companies", id] });
+    void qc.invalidateQueries({ queryKey: ["companies", "lista-da-casca"] });
     void qc.invalidateQueries({ queryKey: ["contacts"] });
+    void qc.invalidateQueries({ queryKey: ["empresa-do-contato"] });
   };
   return {
     mudarCampo: useMutation({

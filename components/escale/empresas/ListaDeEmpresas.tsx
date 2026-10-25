@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { CampoDeBuscaDaLista } from "@/components/escale/ui/CampoDeBuscaDaLista";
 import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
@@ -25,7 +26,7 @@ import {
   ROTULO_DA_COLUNA_DE_EMPRESA,
   ROTULO_DO_ESCOPO,
 } from "@/lib/escale/empresas/regras";
-import { Building2, Funnel, RefreshCw, Search } from "@/lib/ui/icons-da-casca";
+import { Building2, Funnel, RefreshCw } from "@/lib/ui/icons-da-casca";
 
 import { PainelDeColunas } from "../contatos/PainelDeColunas";
 import { SecaoCamposDoFiltro } from "../contatos/filtros/SecaoCamposDoFiltro";
@@ -61,7 +62,8 @@ export function ListaDeEmpresas({ papel, moedaPadrao }: { papel: Role; moedaPadr
     irPara,
     mudarFiltros,
   } = useEstadoDaListaDeEmpresas();
-  const [busca, setBusca] = useState(buscaDaUrl);
+  // Muda quando a busca é limpa por fora, para o campo recomeçar vazio.
+  const [versaoDaBusca, setVersaoDaBusca] = useState(0);
   const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
   const [novaAberta, setNovaAberta] = useState(false);
   const [filtroAberto, setFiltroAberto] = useState(false);
@@ -93,14 +95,6 @@ export function ListaDeEmpresas({ papel, moedaPadrao }: { papel: Role; moedaPadr
     irPara({ nova: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só o parâmetro da URL dispara
   }, [novaNaUrl]);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      if (busca !== buscaDaUrl) irPara({ q: busca.trim() || null, p: null });
-    }, 300);
-    return () => window.clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só a busca digitada dispara
-  }, [busca]);
 
   const consulta = useListaDeEmpresas({ q: buscaDaUrl, e: escopo, p: pagina, n: porPagina, f });
   const dados = consulta.data;
@@ -148,16 +142,14 @@ export function ListaDeEmpresas({ papel, moedaPadrao }: { papel: Role; moedaPadr
       </header>
 
       <div className="flex shrink-0 items-center gap-3 border-b border-casca-borda px-[30px] pt-1 pb-4">
-        <label className="flex h-10 w-[300px] items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3">
-          <input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder={t("Buscar por empresa ou CNPJ")}
-            aria-label={t("Buscar por empresa ou CNPJ")}
-            className="w-full bg-transparent text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta"
-          />
-          <Search size={15} aria-hidden className="shrink-0 text-casca-suave" />
-        </label>
+        <CampoDeBuscaDaLista
+          key={versaoDaBusca}
+          valorDaUrl={buscaDaUrl}
+          aoBuscar={(q) => irPara({ q, p: null })}
+          rotulo={t("Buscar por empresa ou CNPJ")}
+          atrasoMs={300}
+          className="flex h-10 w-[300px] items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3"
+        />
         <div className="flex h-10 items-center gap-1.5 rounded-casca-gatilho border border-casca-borda px-2">
           <Building2 size={16} aria-hidden className="text-casca-suave" />
           <SeletorDaCasca
@@ -256,7 +248,7 @@ export function ListaDeEmpresas({ papel, moedaPadrao }: { papel: Role; moedaPadr
           podeExcluir={podeExcluir}
           aoTentarDeNovo={() => void consulta.refetch()}
           aoLimparBusca={() => {
-            setBusca("");
+            setVersaoDaBusca((v) => v + 1);
             irPara({ q: null, p: null });
           }}
           aoNovaEmpresa={() => setNovaAberta(true)}

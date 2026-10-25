@@ -15,6 +15,7 @@ vi.mock("@/components/escale/contatos/JanelaNovoContato", () => ({ JanelaNovoCon
 
 type Chamada = { url: string; metodo: string; corpo?: unknown };
 const chamadas: Chamada[] = [];
+let falhaDosContatos = false;
 
 const FICHA = {
   id: "e1",
@@ -58,6 +59,7 @@ vi.stubGlobal(
     const dados = (data: unknown) => new Response(JSON.stringify({ data }), { status: 200 });
     if (url.startsWith("/api/v1/campos-do-crm")) return dados(CATALOGO);
     if (url === "/api/v1/empresas/e1") return dados(FICHA);
+    if (url === "/api/v1/empresas/e1/contatos" && falhaDosContatos) return new Response(JSON.stringify({ error: { message: "falhou" } }), { status: 500 });
     if (url === "/api/v1/empresas/e1/contatos") return dados(CONTATOS);
     if (url === "/api/v1/empresas/e1/negocios") return dados(NEGOCIOS);
     return dados({ id: "e1", desfecho: "removido" });
@@ -113,5 +115,15 @@ describe("FichaDaEmpresa (Clint index-BYxUbJr8)", () => {
       expect(await screen.findByText(r)).toBeInTheDocument();
     }
     expect(screen.queryByRole("menuitem", { name: "Excluir empresa" })).not.toBeInTheDocument();
+  });
+
+  it("contatos com erro mostram o erro e 'Tentar de novo', nunca 'Nenhum contato' (B3-6)", async () => {
+    falhaDosContatos = true;
+    montar("contatos");
+    expect(await screen.findByText("Não foi possível carregar os contatos.")).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum contato/)).not.toBeInTheDocument();
+    falhaDosContatos = false;
+    await userEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    expect(await screen.findByText("Bia")).toBeInTheDocument();
   });
 });

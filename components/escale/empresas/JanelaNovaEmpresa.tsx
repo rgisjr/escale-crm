@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { BotaoDaJanela, CabecaDaJanela, Campo, CampoDeTexto, JanelaDaCasca, RodapeDaJanela } from "@/components/escale/origens/JanelaDaCasca";
@@ -42,12 +42,15 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
   const [site, setSite] = useState("");
   const [contato, setContato] = useState<EscolhaDoContato>({ modo: "existente", contato: null });
   const [criando, setCriando] = useState(false);
+  // O contato novo já criado: se a empresa falha, "Criar" de novo reaproveita em vez de recriar.
+  const contatoCriado = useRef<{ id: string; nome: string } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     if (!aberta) return;
     setPasso("empresa"); setNome(""); setCnpj(""); setSite(""); setErro(null);
     setContato({ modo: "existente", contato: null });
+    contatoCriado.current = null;
   }, [aberta]);
 
   const cnpjLido = lerCnpj(cnpj);
@@ -59,6 +62,7 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
 
   const resolverContato = async (): Promise<{ id: string; nome: string } | null> => {
     if (contato.modo === "existente") return contato.contato;
+    if (contatoCriado.current) return contatoCriado.current;
     const telefone = contato.telefone.trim() ? telefoneE164(contato.ddi, contato.telefone) : null;
     const r = await fetch("/api/v1/contacts", {
       method: "POST",
@@ -70,7 +74,8 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
       setErro(corpo?.error?.code === "contact_exists" ? t("Telefone já cadastrado.") : t("Falha ao criar o contato."));
       return null;
     }
-    return { id: String(corpo.data.contact.id), nome: String(corpo.data.contact.name ?? contato.nome.trim()) };
+    contatoCriado.current = { id: String(corpo.data.contact.id), nome: String(corpo.data.contact.name ?? contato.nome.trim()) };
+    return contatoCriado.current;
   };
 
   const criar = async () => {
@@ -95,6 +100,8 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
       void qc.invalidateQueries({ queryKey: ["contacts"] });
       aoFechar();
       router.push(`/app/companies/${corpo.data.id}`);
+    } catch {
+      setErro(t("Não foi possível criar a empresa. Tente novamente."));
     } finally {
       setCriando(false);
     }
@@ -130,7 +137,7 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
             </Campo>
           </>
         ) : (
-          <PassoContatoDaEmpresa valor={contato} aoMudar={setContato} />
+          <PassoContatoDaEmpresa valor={contato} aoMudar={(v) => { contatoCriado.current = null; setContato(v); }} />
         )}
         {erro && <p className="text-[12px] text-casca-alerta">{erro}</p>}
       </div>

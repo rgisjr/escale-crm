@@ -50,24 +50,38 @@ function linhaParaCampo(objeto: ObjetoDeCampo, l: Record<string, unknown>): Camp
 }
 
 export async function lerCatalogo(sb: SB, orgId: string, objeto: ObjetoDeCampo): Promise<Catalogo> {
-  const grupos = await sb
-    .from("crm_grupos_de_campos")
-    .select("id, chave, nome, posicao, padrao")
-    .eq("organization_id", orgId)
-    .eq("objeto", objeto)
-    .order("posicao")
-    .order("nome");
-  if (grupos.error) throw grupos.error;
-
+  // Grupos e campos não dependem um do outro: lidos ao mesmo tempo.
   let consulta = sb.from(tabelaDe(objeto)).select(COLUNAS).eq("organization_id", orgId);
   if (objeto !== "negocio") consulta = consulta.eq("objeto", objeto);
-  const campos = await consulta.order("posicao").order("chave");
+  const [grupos, campos] = await Promise.all([
+    sb
+      .from("crm_grupos_de_campos")
+      .select("id, chave, nome, posicao, padrao")
+      .eq("organization_id", orgId)
+      .eq("objeto", objeto)
+      .order("posicao")
+      .order("nome"),
+    consulta.order("posicao").order("chave"),
+  ]);
+  if (grupos.error) throw grupos.error;
   if (campos.error) throw campos.error;
 
   return {
     grupos: (grupos.data ?? []) as GrupoDeCampos[],
     campos: ((campos.data ?? []) as Record<string, unknown>[]).map((l) => linhaParaCampo(objeto, l)),
   };
+}
+
+/**
+ * Lê o catálogo de vários objetos ao mesmo tempo. A semente (organização criada depois da 9104)
+ * só roda se algum voltar sem grupos, e então os catálogos são lidos de novo.
+ */
+export async function lerCatalogosSemeando(sb: SB, admin: SB, orgId: string, objetos: readonly ObjetoDeCampo[]): Promise<Catalogo[]> {
+  const ler = () => Promise.all(objetos.map((o) => lerCatalogo(sb, orgId, o)));
+  const lidos = await ler();
+  if (lidos.every((c) => c.grupos.length > 0)) return lidos;
+  await semearSeVazio(admin, orgId);
+  return ler();
 }
 
 /** Organização sem o grupo padrão (criada depois da 9104) recebe a semente. */
@@ -213,18 +227,22 @@ export async function excluirGrupo(sb: SB, orgId: string, id: string): Promise<v
   if (del.error) throw del.error;
 }
 
+/** Quantas gravações de posição vão ao banco ao mesmo tempo. */
+const GRAVACOES_EM_PARALELO = 25;
+
 /** Grava `posicao` dos grupos e dos campos (e o `grupo_id` de cada campo) na ordem recebida. */
 export async function reordenar(sb: SB, orgId: string, ordem: OrdemDoCatalogo): Promise<void> {
-  for (const [i, id] of ordem.grupos.entries()) {
-    const { error } = await sb.from("crm_grupos_de_campos").update({ posicao: i }).eq("organization_id", orgId).eq("id", id);
-    if (error) throw error;
-  }
   const tabela = tabelaDe(ordem.objeto);
-  for (const grupo of ordem.campos) {
-    for (const [i, id] of grupo.ids.entries()) {
-      const { error } = await sb.from(tabela).update({ posicao: i, grupo_id: grupo.grupo_id }).eq("organization_id", orgId).eq("id", id);
-      if (error) throw error;
-    }
+  const gravacoes: Array<() => PromiseLike<{ error: unknown }>> = [
+    ...ordem.grupos.map((id, i) => () => sb.from("crm_grupos_de_campos").update({ posicao: i }).eq("organization_id", orgId).eq("id", id)),
+    ...ordem.campos.flatMap((grupo) =>
+      grupo.ids.map((id, i) => () => sb.from(tabela).update({ posicao: i, grupo_id: grupo.grupo_id }).eq("organization_id", orgId).eq("id", id)),
+    ),
+  ];
+  for (let inicio = 0; inicio < gravacoes.length; inicio += GRAVACOES_EM_PARALELO) {
+    const respostas = await Promise.all(gravacoes.slice(inicio, inicio + GRAVACOES_EM_PARALELO).map((g) => g()));
+    const falha = respostas.find((r) => r.error);
+    if (falha) throw falha.error;
   }
 }
 

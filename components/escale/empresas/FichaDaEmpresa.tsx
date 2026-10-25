@@ -3,7 +3,7 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
 import { FotoDaLinha } from "@/components/escale/contatos/FotoDaLinha";
@@ -26,6 +26,39 @@ import { AbaContatosDaEmpresa } from "./AbaContatosDaEmpresa";
 import { AbaDadosDaEmpresa } from "./AbaDadosDaEmpresa";
 import { AbaNegociosDaEmpresa } from "./AbaNegociosDaEmpresa";
 import { Monograma } from "./Monograma";
+
+/** Carregando ou com erro, a aba mostra esqueleto ou erro com "Tentar de novo", não uma lista vazia. */
+function EstadoDaAba({
+  consulta,
+  mensagemDeErro,
+  children,
+}: {
+  consulta: { isLoading: boolean; isError: boolean; refetch: () => unknown };
+  mensagemDeErro: string;
+  children: ReactNode;
+}) {
+  const t = useT();
+  if (consulta.isError) {
+    return (
+      <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+        <p className="text-[14px] text-casca-texto">{mensagemDeErro}</p>
+        <BotaoDaCasca type="button" variante="novo" onClick={() => void consulta.refetch()}>
+          {t("Tentar de novo")}
+        </BotaoDaCasca>
+      </div>
+    );
+  }
+  if (consulta.isLoading) {
+    return (
+      <div className="flex flex-col gap-2 px-[30px] py-4" aria-busy>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-12 animate-pulse rounded-md bg-casca-raia" />
+        ))}
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
 
 type Aba = "contatos" | "negocios" | "dados";
 const ABAS: readonly Aba[] = ["contatos", "negocios", "dados"];
@@ -199,9 +232,13 @@ export function FichaDaEmpresa({
       </div>
 
       {aba === "contatos" ? (
-        <AbaContatosDaEmpresa empresaId={id} contatos={contatos.data ?? []} podeEditar={podeEditar} />
+        <EstadoDaAba consulta={contatos} mensagemDeErro={t("Não foi possível carregar os contatos.")}>
+          <AbaContatosDaEmpresa empresaId={id} contatos={contatos.data ?? []} podeEditar={podeEditar} />
+        </EstadoDaAba>
       ) : aba === "negocios" ? (
-        <AbaNegociosDaEmpresa negocios={negocios.data ?? []} moeda={e.moeda} />
+        <EstadoDaAba consulta={negocios} mensagemDeErro={t("Não foi possível carregar os negócios.")}>
+          <AbaNegociosDaEmpresa negocios={negocios.data ?? []} moeda={e.moeda} />
+        </EstadoDaAba>
       ) : (
         <AbaDadosDaEmpresa
           empresa={e}

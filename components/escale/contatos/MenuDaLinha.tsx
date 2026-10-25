@@ -30,6 +30,67 @@ import { cn } from "@/lib/utils";
  * negócios do contato, pela rota do fork (`DELETE /api/v1/lista-de-contatos/[id]`),
  * e o balão ganha a linha que avisa disso.
  */
+/** O balão de confirmar: as consultas (vínculos, exclusão) só existem enquanto ele está aberto. */
+function ConfirmacaoDeExclusao({ linha, aoFechar }: { linha: LinhaDeContato; aoFechar: () => void }) {
+  const t = useT();
+  const excluir = useExcluirContatoDaLista();
+  const vinculos = useQuery({
+    queryKey: ["contato-vinculos-para-excluir", linha.id],
+    retry: false,
+    queryFn: async () => {
+      const corpo = await apiClient.get<{
+        data?: { vinculos: string[]; por_tabela: Record<string, number> };
+      }>(`/api/v1/contacts/${linha.id}/vinculos`);
+      return corpo.data ?? { vinculos: [], por_tabela: {} };
+    },
+  });
+  const bloqueio = mensagemDeBloqueioPorVinculo(vinculos.data, t);
+  const ocupado = excluir.isPending || vinculos.isLoading;
+
+  const confirmar = () =>
+    excluir.mutate(linha.id, {
+      onSuccess: () => {
+        aoFechar();
+        toast.success(t("Contato excluído."));
+      },
+    });
+
+  if (bloqueio) return <p>{bloqueio}</p>;
+  return (
+    <>
+      <p>{t("Tem certeza que deseja excluir o contato selecionado?")}</p>
+      <p className="mt-1 text-[12px] text-casca-suave">
+        {t("Os negócios associados ao contato também serão excluídos.")}
+      </p>
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={aoFechar}
+          className="h-8 rounded-[4px] border border-casca-borda px-3 font-medium hover:bg-casca-raia"
+        >
+          {t("Cancelar")}
+        </button>
+        <button
+          type="button"
+          onClick={confirmar}
+          disabled={ocupado}
+          title={ocupado ? t("Aguarde…") : undefined}
+          className="h-8 rounded-[4px] bg-casca-alerta px-3 font-medium text-white hover:brightness-95 disabled:opacity-60"
+        >
+          {t("Excluir")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** A janela de edição: o contato completo só é buscado quando "Editar" é escolhido. */
+function EdicaoDoContato({ id, aoFechar }: { id: string; aoFechar: () => void }) {
+  const contato = useContact(id);
+  if (!contato.data) return null;
+  return <EditContactDialog contact={contato.data.data} open onOpenChange={(v) => !v && aoFechar()} />;
+}
+
 export function MenuDaLinha({
   linha,
   podeExcluir,
@@ -43,30 +104,6 @@ export function MenuDaLinha({
   const t = useT();
   const [editando, setEditando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
-  const excluir = useExcluirContatoDaLista();
-  // O contato completo só é buscado quando "Editar" é escolhido.
-  const contato = useContact(editando ? linha.id : "");
-  const vinculos = useQuery({
-    queryKey: ["contato-vinculos-para-excluir", linha.id],
-    enabled: confirmando,
-    retry: false,
-    queryFn: async () => {
-      const corpo = await apiClient.get<{
-        data?: { vinculos: string[]; por_tabela: Record<string, number> };
-      }>(`/api/v1/contacts/${linha.id}/vinculos`);
-      return corpo.data ?? { vinculos: [], por_tabela: {} };
-    },
-  });
-  const bloqueio = confirmando ? mensagemDeBloqueioPorVinculo(vinculos.data, t) : null;
-  const ocupado = excluir.isPending || vinculos.isLoading;
-
-  const confirmar = () =>
-    excluir.mutate(linha.id, {
-      onSuccess: () => {
-        setConfirmando(false);
-        toast.success(t("Contato excluído."));
-      },
-    });
 
   return (
     <>
@@ -112,43 +149,10 @@ export function MenuDaLinha({
           side="top"
           className="w-72 rounded-[8px] p-4 text-[13px] text-casca-texto shadow-casca-painel"
         >
-          {bloqueio ? (
-            <p>{bloqueio}</p>
-          ) : (
-            <>
-              <p>{t("Tem certeza que deseja excluir o contato selecionado?")}</p>
-              <p className="mt-1 text-[12px] text-casca-suave">
-                {t("Os negócios associados ao contato também serão excluídos.")}
-              </p>
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmando(false)}
-                  className="h-8 rounded-[4px] border border-casca-borda px-3 font-medium hover:bg-casca-raia"
-                >
-                  {t("Cancelar")}
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmar}
-                  disabled={ocupado}
-                  title={ocupado ? t("Aguarde…") : undefined}
-                  className="h-8 rounded-[4px] bg-casca-alerta px-3 font-medium text-white hover:brightness-95 disabled:opacity-60"
-                >
-                  {t("Excluir")}
-                </button>
-              </div>
-            </>
-          )}
+          <ConfirmacaoDeExclusao linha={linha} aoFechar={() => setConfirmando(false)} />
         </PopoverContent>
       </Popover>
-      {editando && contato.data && (
-        <EditContactDialog
-          contact={contato.data.data}
-          open
-          onOpenChange={(v) => !v && setEditando(false)}
-        />
-      )}
+      {editando && <EdicaoDoContato id={linha.id} aoFechar={() => setEditando(false)} />}
     </>
   );
 }
