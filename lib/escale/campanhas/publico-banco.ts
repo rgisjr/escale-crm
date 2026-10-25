@@ -56,36 +56,25 @@ export function compilarPublico(p: PublicoDaCampanha, fuso: string): PublicoComp
   };
 }
 
-/** O teto de linhas por resposta do PostgREST (`max_rows`); a função também corta em 1.000. */
-const PAGINA_DO_BANCO = 1000;
-
 type LinhaDaPagina = { contact_id: string; total: number | string };
 
 /**
- * Todos os ids, em ordem, sem teto (resposta 8). O fim é o TOTAL da 1ª página,
- * não a página curta: o `max_rows` da instalação pode ser menor que 1.000 (#2404).
+ * Todos os ids, em ordem, sem teto (resposta 8), numa chamada só (G7-2, 9401):
+ * `fn_escale_ids_do_publico` devolve um `uuid[]` numa linha, que o `max_rows`
+ * do PostgREST não corta. Ler em páginas com OFFSET recalculava o filtro
+ * inteiro a cada página (custo quadrático).
  */
 export async function idsDoPublico(
   db: SupabaseClient,
   org: string,
   compilado: PublicoCompilado,
 ): Promise<string[]> {
-  const ids: string[] = [];
-  let total: number | null = null;
-  for (;;) {
-    const { data, error } = await db.rpc("fn_escale_pagina_do_publico", {
-      p_org: org,
-      p_publico: compilado,
-      p_limite: PAGINA_DO_BANCO,
-      p_deslocamento: ids.length,
-    });
-    if (error) throw new Error(`público: ${error.message}`);
-    const linhas = (data ?? []) as LinhaDaPagina[];
-    if (linhas.length === 0) return ids;
-    total ??= Number(linhas[0]!.total);
-    for (const l of linhas) ids.push(l.contact_id);
-    if (ids.length >= total) return ids;
-  }
+  const { data, error } = await db.rpc("fn_escale_ids_do_publico", {
+    p_org: org,
+    p_publico: compilado,
+  });
+  if (error) throw new Error(`público: ${error.message}`);
+  return [...((data ?? []) as string[])];
 }
 
 export interface LinhaDoDestinatario {

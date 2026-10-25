@@ -25,7 +25,10 @@ import { esconderOcultos } from "@/lib/escale/campos/ocultos";
 import { GRUPO_PADRAO } from "@/lib/escale/campos/regras";
 import { dadosDeFiltro } from "@/lib/escale/filtros/dados-do-quadro";
 import {
+  campoVazio,
   CHAVE_EMAIL,
+  CHAVE_NASCIMENTO,
+  CHAVE_NOME,
   CHAVE_TELEFONE,
   patchDoContato,
   type CampoEditavel,
@@ -116,6 +119,13 @@ export function ContatoEditavel({
       // O schema do original não aceita apagar telefone nem e-mail (Q4): explica e não grava.
       if (campo.origem === "coluna" && campo.chave === CHAVE_EMAIL && valor == null) {
         throw new Error(t("Para apagar o e-mail, use a ficha do contato."));
+      }
+      // Q2a (B2-10): nome e nascimento também não geram patch vazio; sem o erro a tela dizia "Salvo" sem gravar.
+      if (campo.origem === "coluna" && campo.chave === CHAVE_NOME && campoVazio(valor)) {
+        throw new Error(t("Não é possível apagar o nome do contato."));
+      }
+      if (campo.origem === "coluna" && campo.chave === CHAVE_NASCIMENTO && campoVazio(valor)) {
+        throw new Error(t("Não é possível apagar a data de nascimento do contato."));
       }
       if (campo.origem === "coluna" && campo.chave === CHAVE_TELEFONE && valor == null) {
         throw new Error(t("Para apagar o telefone, use a ficha do contato."));

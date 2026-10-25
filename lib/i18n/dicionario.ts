@@ -10480,6 +10480,8 @@ export const DICIONARIO: Traducoes = {
   "Digite um endereço válido.": { es: "Escribe una dirección válida." },
   "Para apagar o telefone, use a ficha do contato.": { es: "Para borrar el teléfono, usa la ficha del contacto." },
   "Para apagar o e-mail, use a ficha do contato.": { es: "Para borrar el email, usa la ficha del contacto." },
+  "Não é possível apagar o nome do contato.": { es: "No es posible borrar el nombre del contacto." },
+  "Não é possível apagar a data de nascimento do contato.": { es: "No es posible borrar la fecha de nacimiento del contacto." },
   "Este negócio não tem contato.": { es: "Este negocio no tiene contacto." },
   "Nome atualizado.": { es: "Nombre actualizado." },
   "O título precisa ter pelo menos 2 caracteres.": { es: "El título debe tener al menos 2 caracteres." },

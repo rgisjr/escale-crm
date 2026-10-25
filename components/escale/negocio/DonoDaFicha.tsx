@@ -8,12 +8,12 @@ import { useActiveOrg, usePermission } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { useAssignableAgents } from "@/hooks/kanban/useAssignableAgents";
-import { useBoard } from "@/hooks/kanban/useBoard";
 import { useEditLead } from "@/hooks/kanban/useUpdateLead";
 import type { Role } from "@/lib/auth/types";
 import { podeTrocarDono, regraEmVigor } from "@/lib/escale/acesso/regras";
 import { corDoAvatar, inicialDoNome } from "@/lib/escale/quadro/aparencia";
 import { resolveLeadOwner } from "@/lib/kanban/owner";
+import type { Pipeline } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 import { User } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
@@ -26,14 +26,22 @@ import { cn } from "@/lib/utils";
  * `pipeline.move_card`, o círculo fica desligado com o texto da Clint. Fase 1J
  * (N14): sob "só os seus" ou "seus e sem dono", quem não é gerente também não troca.
  */
-export function DonoDaFicha({ lead, pipelineId }: { lead: Lead; pipelineId: string }) {
+export function DonoDaFicha({
+  lead,
+  pipelineId,
+  settings,
+}: {
+  lead: Lead;
+  pipelineId: string;
+  /** `pipeline.settings` da origem: quem monta a ficha já tem (Q2a, G2-24: sem `useBoard` aqui). */
+  settings: Pipeline["settings"];
+}) {
   const t = useT();
   const pode = usePermission("pipeline.move_card");
   // 1J (N14): sob "só os seus" ou "seus e sem dono", quem não é gerente perderia o negócio ao
   // passá-lo a outro (a RLS recusa). A Clint desliga o seletor; aqui também.
   const org = useActiveOrg();
-  const { data: quadro } = useBoard(pipelineId);
-  const regra = regraEmVigor(quadro?.pipeline.settings, org?.visibility_mode);
+  const regra = regraEmVigor(settings, org?.visibility_mode);
   const liberado = pode && podeTrocarDono({ papel: (org?.role as Role | undefined) ?? null, regra });
   const { data: membros } = useAssignableMembers(true);
   const { data: agentes } = useAssignableAgents(liberado);
