@@ -83,6 +83,29 @@ describe("hooks", () => {
     });
     expect(apiClient.post).toHaveBeenCalledWith("/api/v1/prospecting", { action: "pause", id: ID });
     expect(resposta).toEqual({ paused: true });
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: ["prospeccao-da-casca", "lista"] });
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: ["prospeccao-da-casca", "detalhe", ID] });
+    expect(invalidar).not.toHaveBeenCalledWith({ queryKey: ["prospeccao-da-casca"] });
+    expect(invalidar).not.toHaveBeenCalledWith({ queryKey: ["prospeccao-da-casca", "opcoes"] });
+  });
+
+  it("só o configure refaz as opções; a busca nova refaz todos os detalhes (G9-4)", async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: {} });
+    const { Wrapper, invalidar } = envoltorio();
+    const { result } = renderHook(() => useAcaoDaProspeccao(), { wrapper: Wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ action: "configure", api_key: "k" });
+    });
     expect(invalidar).toHaveBeenCalledWith({ queryKey: ["prospeccao-da-casca"] });
+    invalidar.mockClear();
+    await act(async () => {
+      await result.current.mutateAsync({
+        action: "search",
+        request_id: "r1",
+        search: { name: "x" } as never,
+      });
+    });
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: ["prospeccao-da-casca", "detalhe"] });
+    expect(invalidar).not.toHaveBeenCalledWith({ queryKey: ["prospeccao-da-casca"] });
   });
 });

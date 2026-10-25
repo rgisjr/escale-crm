@@ -25,9 +25,17 @@ export function BarraDeFiltrosDaProspeccao({
 }) {
   const t = useT();
   const [texto, setTexto] = useState(filtros.busca ?? "");
+  // A busca que mudou por fora (Limpar filtros) volta para o campo: sem isso o texto antigo
+  // ficava digitado e o efeito abaixo o reaplicava 500 ms depois.
+  const [buscaVista, setBuscaVista] = useState(filtros.busca);
+  if (filtros.busca !== buscaVista) {
+    setBuscaVista(filtros.busca);
+    if ((filtros.busca ?? "") !== texto) setTexto(filtros.busca ?? "");
+  }
 
   useEffect(() => {
-    if (texto === (filtros.busca ?? "")) return;
+    // Só espaços ou espaço nas pontas não é mudança: evita um filtros novo (e página 1) a cada ciclo.
+    if (texto.trim() === (filtros.busca ?? "").trim()) return;
     const espera = setTimeout(
       () => aoMudar({ ...filtros, busca: texto.trim() ? texto : undefined }),
       ESPERA_DA_BUSCA_MS,

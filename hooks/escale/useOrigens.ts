@@ -70,15 +70,6 @@ export function useExcluirGrupo() {
   });
 }
 
-export function useMoverFunil() {
-  const onSettled = useAoTerminar();
-  return useMutation({
-    mutationFn: async ({ funilId, groupId }: { funilId: string; groupId: string }) =>
-      (await apiClient.put<RespostaDeOrigens>(grupoDoFunil(funilId), { group_id: groupId })).data,
-    onSettled,
-  });
-}
-
 /**
  * Cria pela rota do original (que dá as etapas iniciais e o slug) e depois põe
  * no grupo. Entre as duas escritas o funil fica no "Geral" (gatilho da 9002) —

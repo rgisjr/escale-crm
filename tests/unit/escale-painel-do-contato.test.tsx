@@ -31,7 +31,6 @@ const negocios = vi.hoisted(() => ({
 }));
 vi.mock("@/hooks/escale/useNegociosDoContato", () => ({
   useNegociosDoContato: () => negocios,
-  invalidarNegociosDoContato: vi.fn(),
 }));
 const quadro = vi.hoisted(() => ({
   data: {

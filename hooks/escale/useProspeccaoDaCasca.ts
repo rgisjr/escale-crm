@@ -82,11 +82,34 @@ export type PedidoDaProspeccao =
   | { action: "select" | "select_in_queue"; id: string; candidate_ids: string[]; selected: boolean }
   | { action: "discard_unselected"; id: string };
 
+/**
+ * O que a ação desatualizou. Só o `configure` mexe nas opções; a busca nova cria uma prospecção
+ * (qualquer detalhe pode ser a dela); as demais mexem na lista e no detalhe do próprio id.
+ */
+export function chavesDesatualizadas(pedido: PedidoDaProspeccao): readonly (readonly string[])[] {
+  if (pedido.action === "configure") return [[CHAVE_DA_PROSPECCAO]];
+  if (pedido.action === "search") {
+    return [
+      [CHAVE_DA_PROSPECCAO, "lista"],
+      [CHAVE_DA_PROSPECCAO, "detalhe"],
+    ];
+  }
+  return [
+    [CHAVE_DA_PROSPECCAO, "lista"],
+    [CHAVE_DA_PROSPECCAO, "detalhe", pedido.id],
+  ];
+}
+
 export function useAcaoDaProspeccao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (pedido: PedidoDaProspeccao) =>
       (await apiClient.post<{ data: unknown }>("/api/v1/prospecting", pedido)).data,
-    onSettled: () => qc.invalidateQueries({ queryKey: [CHAVE_DA_PROSPECCAO] }),
+    onSettled: (_dados, _erro, pedido) =>
+      Promise.all(
+        chavesDesatualizadas(pedido).map((queryKey) =>
+          qc.invalidateQueries({ queryKey: [...queryKey] }),
+        ),
+      ),
   });
 }

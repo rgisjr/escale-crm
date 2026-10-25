@@ -109,6 +109,29 @@ describe("filtros (D7)", () => {
     act(() => vi.advanceTimersByTime(500));
     expect(aoMudar).toHaveBeenCalledWith({ busca: "clin" });
   });
+
+  it("Limpar filtros esvazia o campo e não reaplica a busca (B9-3)", () => {
+    vi.useFakeTimers();
+    const aoMudar = vi.fn();
+    const { rerender } = render(
+      <BarraDeFiltrosDaProspeccao filtros={{ busca: "clin" }} aoMudar={aoMudar} />,
+    );
+    rerender(<BarraDeFiltrosDaProspeccao filtros={{}} aoMudar={aoMudar} />);
+    expect(screen.getByPlaceholderText("Buscar prospecção")).toHaveValue("");
+    act(() => vi.advanceTimersByTime(1500));
+    expect(aoMudar).not.toHaveBeenCalled();
+  });
+
+  it("busca só com espaços não chama aoMudar (B9-4)", () => {
+    vi.useFakeTimers();
+    const aoMudar = vi.fn();
+    render(<BarraDeFiltrosDaProspeccao filtros={{}} aoMudar={aoMudar} />);
+    fireEvent.change(screen.getByPlaceholderText("Buscar prospecção"), {
+      target: { value: "   " },
+    });
+    act(() => vi.advanceTimersByTime(1500));
+    expect(aoMudar).not.toHaveBeenCalled();
+  });
 });
 
 describe("chave e vazio (D11)", () => {

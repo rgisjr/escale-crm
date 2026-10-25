@@ -63,7 +63,6 @@ export function DetalheDaProspeccao({
 }: {
   id: string;
   aoFechar: () => void;
-  fuso?: string;
 }) {
   const t = useT();
   const [aba, setAba] = useState<Aba>("sumario");
@@ -85,7 +84,7 @@ export function DetalheDaProspeccao({
       abaAtiva={aba}
       aoTrocarAba={(v) => setAba(v === "detalhes" ? "detalhes" : "sumario")}
     >
-      {detalhe.isError ? (
+      {detalhe.isError && !d ? (
         <div className="py-10 text-center text-[13px] text-casca-suave">
           <p>{t("Não foi possível carregar a prospecção.")}</p>
           <button
@@ -100,10 +99,19 @@ export function DetalheDaProspeccao({
         <p role="status" className="py-10 text-center text-[13px] text-casca-suave">
           {t("Carregando prospecção")}
         </p>
-      ) : aba === "sumario" ? (
-        <SumarioDaProspeccao detalhe={d} opcoes={opcoes.data} />
       ) : (
-        <EmpresasDaProspeccao detalhe={d} />
+        <>
+          {detalhe.isError ? (
+            <p role="alert" className="pb-2 text-[12px] text-casca-suave">
+              {t("Não foi possível atualizar a prospecção.")}
+            </p>
+          ) : null}
+          {aba === "sumario" ? (
+            <SumarioDaProspeccao detalhe={d} opcoes={opcoes.data} />
+          ) : (
+            <EmpresasDaProspeccao detalhe={d} />
+          )}
+        </>
       )}
     </JanelaDoDetalhe>
   );

@@ -1,5 +1,5 @@
 "use client";
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import type { NegocioDoContato } from "@/app/api/v1/negocios-do-contato/route";
 import { apiClient } from "@/lib/api/client";
@@ -21,8 +21,4 @@ export function useNegociosDoContato(contactId: string | null) {
         )
       ).data,
   });
-}
-
-export function invalidarNegociosDoContato(qc: QueryClient, contactId: string): void {
-  void qc.invalidateQueries({ queryKey: chaveDosNegociosDoContato(contactId) });
 }

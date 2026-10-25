@@ -42,6 +42,19 @@ describe("DetalheDaProspeccao (009; D10)", () => {
     expect(mutateAsync).toHaveBeenCalledWith({ action: "pause", id: ID });
   });
 
+  it("falha na reconsulta com dado em mãos mantém o conteúdo e avisa (B9-13)", () => {
+    vi.mocked(useDetalheDaProspeccao).mockReturnValue({
+      data: detalhe(),
+      isError: true,
+      refetch: vi.fn(),
+    } as never);
+    render(<DetalheDaProspeccao id={ID} aoFechar={vi.fn()} />);
+    expect(screen.getByText("Clínicas Campinas")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pausar prospecção" })).toBeInTheDocument();
+    expect(screen.getByText("Não foi possível atualizar a prospecção.")).toBeInTheDocument();
+    expect(screen.queryByText("Não foi possível carregar a prospecção.")).not.toBeInTheDocument();
+  });
+
   it("pausada mostra Retomar", async () => {
     vi.mocked(useDetalheDaProspeccao).mockReturnValue({
       data: detalhe({ status: "paused", linha: linha({ situacao: "pausada" }) }),
