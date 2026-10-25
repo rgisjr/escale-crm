@@ -2,10 +2,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 
-import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import { useMoveCard, type RecusaDeCampos } from "@/hooks/kanban/useMoveCard";
 import { faltandoAoMover } from "@/lib/escale/configuracoes/ao-sair";
-import type { BoardData } from "@/lib/kanban/types";
+import { quadroEmCache } from "@/lib/kanban/quadro-em-cache";
 
 type OpcoesDoMove = NonNullable<Parameters<typeof useMoveCard>[1]>;
 type ArgsDoMove = RecusaDeCampos["args"];
@@ -42,7 +41,7 @@ export function useMoverComCamposDaEtapa(
 
   const mutate = useCallback(
     (args: ArgsDoMove) => {
-      const quadro = qc.getQueryData<BoardData>(chaveDoQuadro(pipelineId));
+      const quadro = quadroEmCache(qc, pipelineId);
       const lead = quadro?.leads.find((l) => l.id === args.leadId);
       const avisar = aoFaltar.current;
       if (conferir && quadro && lead && avisar) {

@@ -144,7 +144,7 @@ describe("o elo que some sem barulho", () => {
     // componente com `conversa={null}` direto, um valor que a rota não produzia:
     // ela fazia `...(conversa ? { conversa } : {})` e o campo saía AUSENTE. O
     // componente estava certo e o botão nunca aparecia no quadro de verdade.
-    const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
+    const fonte = readFileSync("lib/kanban/enriquecer-negocios.ts", "utf8");
     const corpo = fonte.slice(fonte.indexOf("function withConversas"));
     const daFuncao = corpo.slice(0, corpo.indexOf("\n}\n"));
     // Lead sem contato continua sem o campo: ele sai antes, e é ausência legítima.

@@ -93,14 +93,17 @@ export function useMoveCard(pipelineId: string, opcoes: OpcoesDeMove = {}) {
       // Sem gravá-la aqui, o cache seguia com o valor de antes até o refetch do
       // `onSettled` chegar, e arrastar o mesmo card de novo nesse intervalo
       // mandava `expected_updated_at` velho → 409 (issue #916).
-      qc.setQueryData<BoardData>(queryKey, (atual) =>
+      const comOServidor = (atual: BoardData | undefined) =>
         atual
           ? {
               ...atual,
               leads: atual.leads.map((l) => (l.id === args.leadId ? { ...l, ...res.data } : l)),
             }
-          : atual,
-      );
+          : atual;
+      qc.setQueryData<BoardData>(queryKey, comOServidor);
+      // Ficha aberta por link, com o quadro ainda a caminho: o negócio leve guarda o
+      // `updated_at` que a próxima movida manda (G2-9, mesma causa da #916).
+      qc.setQueriesData<BoardData>({ queryKey: [...queryKey, "negocio"] }, comOServidor);
     },
     onError: (err, args, ctx) => {
       if (ctx?.snapshot) qc.setQueryData(queryKey, ctx.snapshot);

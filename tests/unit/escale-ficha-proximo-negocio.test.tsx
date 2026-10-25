@@ -59,6 +59,23 @@ describe("<ProximoNegocio>", () => {
     expect(nav.push).toHaveBeenLastCalledWith("/app/negocios/a?st=open");
   });
 
+  it("ficha aberta por link (quadro ainda não chegou): setas desligadas e sem o texto de 'não existem'", () => {
+    render(
+      <ProximoNegocio
+        lead={LEADS[1]!}
+        etapas={ETAPAS}
+        leads={null}
+        ordem={undefined}
+        aba="atividades"
+      />,
+    );
+    for (const nome of ["Negócio anterior", "Próximo negócio"]) {
+      const seta = screen.getByRole("button", { name: nome });
+      expect(seta).toBeDisabled();
+      expect(seta).not.toHaveAttribute("title");
+    }
+  });
+
   it("sem vizinho, a seta fica desligada com o texto da Clint", () => {
     render(
       <ProximoNegocio

@@ -29,11 +29,14 @@ function gravaLeadNoQuadro(
   lead: Lead | undefined,
 ): void {
   if (!lead) return;
-  qc.setQueryData<BoardData>(queryKey, (atual) =>
+  const comOLead = (atual: BoardData | undefined) =>
     atual
       ? { ...atual, leads: atual.leads.map((l) => (l.id === leadId ? { ...l, ...lead } : l)) }
-      : atual,
-  );
+      : atual;
+  qc.setQueryData<BoardData>(queryKey, comOLead);
+  // Ficha aberta por link, com o quadro ainda a caminho: o negócio leve guarda o `updated_at`
+  // que a próxima ação manda (G2-9, mesma causa da #916).
+  qc.setQueriesData<BoardData>({ queryKey: [...queryKey, "negocio"] }, comOLead);
 }
 
 interface WinArgs {

@@ -254,8 +254,10 @@ describe("motivosDoFunil (a régua da leitura)", () => {
     // o hook volta a devolver `[]` em silêncio — a janela cai no padrão do
     // produto, que é o defeito da #918. É essa regressão que este caso pega.
     const raiz = process.cwd();
+    // O hook lê pelo `quadroEmCache` (G2-9: com a ficha aberta por link o quadro pode não estar
+    // em cache), e é ELE quem monta a chave a partir de `chaveDoQuadro`.
     for (const arquivo of [
-      "hooks/kanban/useMotivosDePerdaDoFunil.ts",
+      "lib/kanban/quadro-em-cache.ts",
       "tests/unit/kanban-motivos-de-perda-do-funil.test.tsx",
     ]) {
       expect(readFileSync(join(raiz, arquivo), "utf8"), arquivo).toContain("chaveDoQuadro(");
@@ -264,7 +266,10 @@ describe("motivosDoFunil (a régua da leitura)", () => {
     // a literal antiga no próprio texto do caso, e cobrá-la aqui seria o teste
     // reprovando a si mesmo.
     const hook = readFileSync(join(raiz, "hooks/kanban/useMotivosDePerdaDoFunil.ts"), "utf8");
+    expect(hook).toContain("quadroEmCache(");
     expect(hook.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "")).not.toContain("\"board\"");
+    const ajudante = readFileSync(join(raiz, "lib/kanban/quadro-em-cache.ts"), "utf8");
+    expect(ajudante.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "")).not.toContain("\"board\"");
   });
 
   it("lixo no settings vira lista vazia, não motivo na tela", () => {
