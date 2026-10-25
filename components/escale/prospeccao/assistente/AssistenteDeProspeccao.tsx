@@ -248,6 +248,18 @@ function AssistenteCarregado({
           aoNovaBusca={novaBusca}
           aoMarcar={(ids, v) => void marcar(ids, v)}
         />
+      ) : !d && detalhe.isError ? (
+        // Q0c (B9-2): sem dado e com erro, a consulta não tenta de novo sozinha; oferece a nova tentativa.
+        <div className="text-[13px]">
+          <p className="text-casca-alerta">{t("Não foi possível carregar a prospecção.")}</p>
+          <button
+            type="button"
+            onClick={() => void detalhe.refetch()}
+            className="mt-2 text-casca-marca hover:underline"
+          >
+            {t("Tentar novamente")}
+          </button>
+        </div>
       ) : !d ? (
         <p role="status" className="text-[13px] text-casca-suave">
           {t("Carregando prospecção")}
