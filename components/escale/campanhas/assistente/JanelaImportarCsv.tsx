@@ -19,7 +19,8 @@ function baixarExemplo() {
   a.href = url;
   a.download = nomeDoExemplo("contato");
   a.click();
-  URL.revokeObjectURL(url);
+  // O Safari aborta o download se a URL for revogada no mesmo instante do clique.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 /**

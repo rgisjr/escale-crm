@@ -1,5 +1,6 @@
 "use client";
 import * as Popover from "@radix-ui/react-popover";
+import { useState } from "react";
 
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import type { FiltroDasSugestoes } from "@/hooks/escale/useSugestoesDeMescla";
@@ -16,6 +17,8 @@ export function FiltrosDaMescla({
   aoMudar: (novo: FiltroDasSugestoes) => void;
 }) {
   const t = useT();
+  // O texto digitado fica aqui: transformar em lista a cada tecla comia a vírgula antes da próxima tag.
+  const [textoDasTags, setTextoDasTags] = useState(() => filtro.tags.join(", "));
   const ativos =
     (filtro.regras.length > 0 ? 1 : 0) + (filtro.min > 0 || filtro.max < 100 ? 1 : 0) + (filtro.tags.length > 0 ? 1 : 0) + (filtro.validos ? 1 : 0);
   const alternarRegra = (r: RegraDeMescla, marcada: boolean) =>
@@ -48,8 +51,11 @@ export function FiltrosDaMescla({
           <input
             aria-label={t("Filtrar por tags")}
             placeholder={t("Filtrar por tags")}
-            value={filtro.tags.join(", ")}
-            onChange={(e) => aoMudar({ ...filtro, tags: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
+            value={textoDasTags}
+            onChange={(e) => {
+              setTextoDasTags(e.target.value);
+              aoMudar({ ...filtro, tags: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) });
+            }}
             className="mt-2 h-8 w-full rounded-md bg-casca-busca px-2"
           />
           <p className="mt-4 text-[11px] font-semibold tracking-[0.08em] text-casca-suave uppercase">{t("Outros")}</p>
@@ -57,7 +63,7 @@ export function FiltrosDaMescla({
             <CaixaDaCasca marcada={filtro.validos} aoMudar={(m) => aoMudar({ ...filtro, validos: m })} rotulo={t("Ignorar telefones inválidos")} aria-label={t("Ignorar telefones inválidos")} />
           </div>
           <div className="mt-4 flex justify-end">
-            <button type="button" onClick={() => aoMudar({ ...filtro, regras: [], min: 0, max: 100, tags: [], validos: false })} className="text-[13px] font-medium text-casca-marca hover:underline">
+            <button type="button" onClick={() => { setTextoDasTags(""); aoMudar({ ...filtro, regras: [], min: 0, max: 100, tags: [], validos: false }); }} className="text-[13px] font-medium text-casca-marca hover:underline">
               {t("Limpar")}
             </button>
           </div>

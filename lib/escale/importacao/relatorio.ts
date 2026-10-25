@@ -69,9 +69,9 @@ export function detalheDaLinha(l: LinhaLida): { titulo: string; meio: string | n
   return { titulo, meio: meio === titulo ? null : meio, avisos, erro: l.mensagem };
 }
 
-const celula = (v: string) => {
-  const seguro = /^[=+\-@]/.test(v) ? `'${v}` : v;
-  return /[",\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
+export const celula = (v: string) => {
+  const seguro = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[",\n\r]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 };
 
 export function csvDoRelatorio(linhas: readonly LinhaLida[], t: (texto: string) => string): string {

@@ -4,6 +4,7 @@ import { type NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
+import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
 import { listarSetores, trocarMembros } from "@/lib/escale/conversas/setores-banco";
 import { setorSchema } from "@/lib/escale/conversas/setores";
 import { lerJson } from "@/lib/escale/origens/respostas";
@@ -18,10 +19,11 @@ export async function GET(_req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
   const authz = await requireRole("agent", { requestId, resource: "crm_setores" });
   if (!authz.ok) return authz.response;
+  const t = (texto: string) => traduzir(texto, authz.user.idioma);
   try {
     return ok(await listarSetores(await createClient(), authz.org.orgId), { requestId });
   } catch (err) {
-    return fail("internal_error", (err as Error).message ?? "erro", 500, { requestId });
+    return falhaInesperadaDoQuadro(err as Error, { rota: "setores", operacao: "listar" }, t, requestId);
   }
 }
 
@@ -52,13 +54,13 @@ export async function POST(req: NextRequest): Promise<Response> {
       return fail("conflict", t("Já existe um setor com esse nome."), 409, { requestId });
     if (error.code === "42501")
       return fail("forbidden", t("Você não pode editar setores."), 403, { requestId });
-    return fail("internal_error", error.message, 500, { requestId });
+    return falhaInesperadaDoQuadro(error, { rota: "setores", operacao: "criar" }, t, requestId);
   }
   const id = (data as { id: string }).id;
   try {
     await trocarMembros(supabase, authz.org.orgId, id, parsed.data.membros);
   } catch (err) {
-    return fail("internal_error", (err as Error).message, 500, { requestId });
+    return falhaInesperadaDoQuadro(err as Error, { rota: "setores", operacao: "membros" }, t, requestId);
   }
   void audit({
     action: "crm_setor.created",

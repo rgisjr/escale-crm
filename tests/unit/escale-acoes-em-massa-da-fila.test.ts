@@ -185,3 +185,37 @@ describe("processarAcaoDaFila (N14)", () => {
     expect(r.status).toBe("error");
   });
 });
+
+describe("desistência da ação (fora-3 da revisão)", () => {
+  it("mantém os erros que os lotes já gravaram em vez do que foi lido no começo", async () => {
+    const velho = { conversa: CV1, motivo: "falha do lote anterior" };
+    let leituras = 0;
+    const tabelas: Record<string, Array<Record<string, unknown>>> = {
+      crm_acoes_em_massa_conversas_itens: [{ conversation_id: CV1 }],
+    };
+    Object.defineProperty(tabelas, "crm_acoes_em_massa_conversas", {
+      enumerable: true,
+      get: () => [{ ...linhaDaAcao("status", { status: "em_aberto" }), erros: (leituras += 1) === 1 ? [] : [velho] }],
+    });
+    const b = bancoPorTabela(tabelas);
+    const d: DependenciasDaMassa = {
+      db: {
+        ...b.db,
+        from: (t: string) => {
+          if (t === "conversations") throw new Error("banco fora do ar");
+          return b.db.from(t);
+        },
+      } as never,
+      agora: () => 0,
+      mudarContato: vi.fn(async () => undefined),
+      transferirSetor: vi.fn(async () => "transferida" as const),
+    };
+    const r = await processarAcaoDaFila({ ...row, attempts: 4 } as EventRow, d);
+    expect(r.status).toBe("ok");
+    const final = b.escritas.filter((e) => e.tabela === "crm_acoes_em_massa_conversas").at(-1);
+    expect(final?.valores).toMatchObject({
+      status: "falhou",
+      erros: [velho, { conversa: null, motivo: "banco fora do ar" }],
+    });
+  });
+});

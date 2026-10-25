@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { agruparPorChave, chavesDaLinha, csvDoRelatorio, dataEHora, detalheDaLinha, processadas } from "@/lib/escale/importacao/relatorio";
+import { agruparPorChave, celula, chavesDaLinha, csvDoRelatorio, dataEHora, detalheDaLinha, processadas } from "@/lib/escale/importacao/relatorio";
 import type { ImportacaoLida, LinhaLida } from "@/lib/escale/importacao/tipos";
 
 const linha = (extra: Partial<LinhaLida>): LinhaLida => ({
@@ -48,5 +48,11 @@ describe("relatório da importação (Fase 2F)", () => {
     const csv = csvDoRelatorio([linha({ motivo: "INVALID_EMAIL_FORMAT", normalizado: { nome: "=SOMA(1)" } })], (x) => x);
     expect(csv.startsWith("\uFEFFLinha,Motivo,Detalhe\n")).toBe(true);
     expect(csv).toContain(`2,E-mail inválido,'=SOMA(1)`);
+  });
+
+  it("a guarda de fórmula cobre também tabulação e retorno de carro no começo (fora-8)", () => {
+    expect(celula("\t=SOMA(1)")).toBe("'\t=SOMA(1)");
+    expect(celula("\r@x")).toBe(`"'\r@x"`);
+    expect(celula("normal")).toBe("normal");
   });
 });

@@ -287,11 +287,18 @@ export async function processarAcaoDaFila(
   } catch (e) {
     const motivo = e instanceof Error ? e.message : String(e);
     if (row.attempts >= TENTATIVAS_ANTES_DE_DESISTIR) {
+      // Os lotes já gravaram erros depois da leitura do começo: relê, senão a desistência os apaga.
+      const atual = await deps.db
+        .from("crm_acoes_em_massa_conversas")
+        .select("erros")
+        .eq("id", acao.id)
+        .maybeSingle();
+      const jaGravados = Array.isArray(atual.data?.erros) ? (atual.data.erros as Acao["erros"]) : acao.erros;
       await deps.db
         .from("crm_acoes_em_massa_conversas")
         .update({
           status: "falhou",
-          erros: [...acao.erros, { conversa: null, motivo }].slice(-ERROS_GUARDADOS),
+          erros: [...jaGravados, { conversa: null, motivo }].slice(-ERROS_GUARDADOS),
         })
         .eq("id", acao.id);
       return resultado("ok", "falhou");
