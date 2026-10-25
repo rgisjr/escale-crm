@@ -81,6 +81,14 @@ export function AbaAtividades({
   const [escolhidaId, setEscolhidaId] = useState<string | null>(null);
   const [nova, setNova] = useState(false);
   const [editandoData, setEditandoData] = useState<AtividadeDoNegocio | null>(null);
+  // Quando o negócio muda de etapa (outra pessoa arrasta, reabre pelo status), a lista acompanha.
+  const [etapaDoNegocio, setEtapaDoNegocio] = useState(lead.stage_id);
+  if (etapaDoNegocio !== lead.stage_id) {
+    setEtapaDoNegocio(lead.stage_id);
+    setVista(lead.stage_id);
+    setDia(null);
+    setEscolhidaId(null);
+  }
 
   const agora = new Date();
   const etapaVista = etapas.find((e) => e.id === vista) ?? null;
@@ -186,7 +194,9 @@ export function AbaAtividades({
             nomes={nomes}
             idioma={idioma}
             agora={agora}
-            aoNova={() => setNova(true)}
+            aoNova={() => {
+              if (etapaVista) setNova(true);
+            }}
             aoRecarregar={ativ.recarregar}
           />
           {escolhida ? (

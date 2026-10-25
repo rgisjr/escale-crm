@@ -427,7 +427,9 @@ export function KanbanBoard({
               // FORK ESCALE · Fase 1G (N3): na casca, o card abre a ficha do negócio.
               onOpen={aoAbrirNegocio ?? setDossieId}
               podeRenomear={podeRenomearEtapa}
-              onRenomear={(nome) => renameStage.mutate({ stageId: stage.id, name: nome })}
+              onRenomear={(nome, aoFalhar) =>
+                renameStage.mutate({ stageId: stage.id, name: nome }, { onError: aoFalhar })
+              }
               aoAdicionar={aoAdicionarNegocio}
               // FORK ESCALE · Fase 1E: "Selecione N", campos do "Personalizar cards" e nome da origem.
               aoSelecionarNaEtapa={podeSelecionarNaEtapa ? selecionarNaEtapa : undefined}

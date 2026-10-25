@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -149,10 +149,22 @@ describe("<ColunaDoFunilNaCasca> (Casca V4)", () => {
     const campo = screen.getByTestId("nome-etapa-quadro");
     await u.clear(campo);
     await u.type(campo, "Triagem{Enter}");
-    expect(onRenomear).toHaveBeenCalledWith("Triagem");
+    expect(onRenomear).toHaveBeenCalledWith("Triagem", expect.any(Function));
     onRenomear.mockClear();
     await u.clear(campo);
     await u.type(campo, "Outro{Escape}");
     expect(onRenomear).not.toHaveBeenCalled();
+  });
+
+  it("renomear recusado devolve o campo ao nome gravado (B2-18)", async () => {
+    const onRenomear = vi.fn();
+    const { u } = coluna({ podeRenomear: true, onRenomear });
+    const campo = screen.getByTestId("nome-etapa-quadro") as HTMLInputElement;
+    const gravado = campo.value;
+    await u.clear(campo);
+    await u.type(campo, "Recusado{Enter}");
+    const aoFalhar = onRenomear.mock.calls[0]![1] as () => void;
+    await act(async () => aoFalhar());
+    expect(campo.value).toBe(gravado);
   });
 });

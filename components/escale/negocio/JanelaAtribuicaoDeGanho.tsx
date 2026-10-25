@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { membrosAtivosDaEquipe } from "@/components/escale/configuracoes/ListaDePessoas";
+import { ErroDaLista } from "@/components/escale/ui/ErroDaLista";
 import {
   BotaoDaJanela,
   CabecaDaJanela,
@@ -58,6 +59,11 @@ export function JanelaAtribuicaoDeGanho({
       <CabecaDaJanela titulo={t("Atribuição de ganho")} />
       {consulta.isPending ? (
         <p className="text-[13px] text-casca-suave">{t("Carregando…")}</p>
+      ) : consulta.isError && !ganho ? (
+        <ErroDaLista
+          mensagem={t("Não foi possível carregar a atribuição do ganho.")}
+          aoTentar={() => void consulta.refetch()}
+        />
       ) : !ganho ? (
         <p className="text-[13px] text-casca-suave">{t("Negócio ganho não encontrado.")}</p>
       ) : (
