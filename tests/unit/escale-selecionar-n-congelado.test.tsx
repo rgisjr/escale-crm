@@ -113,6 +113,63 @@ describe("Selecionar [N] congela os ids (B3-1)", () => {
     expect(result.current.selecao).toEqual({ tipo: "ids", ids: [] });
   });
 
+  it("digitar 2, 20 e 2000: a resposta atrasada do 20 não sobrescreve o 2000", async () => {
+    const pendentes: Array<(ids: string[]) => void> = [];
+    const resolverPrimeiros = vi.fn(() => new Promise<string[]>((r) => pendentes.push(r)));
+    const { result } = renderHook(() =>
+      useSelecaoDaLista({ ...base, total: 5000, chaveDaConsulta: "c1", resolverPrimeiros }),
+    );
+    act(() => result.current.selecionarQuantidade(2));
+    act(() => result.current.selecionarQuantidade(20));
+    act(() => result.current.selecionarQuantidade(2000));
+    await act(async () => pendentes.forEach((r) => r(IDS)));
+    expect(result.current.selecao).toMatchObject({ tipo: "todos", quantidade: 2000 });
+  });
+
+  it("respostas fora de ordem: vale só a do último pedido", async () => {
+    const pendentes: Array<(ids: string[]) => void> = [];
+    const resolverPrimeiros = vi.fn(() => new Promise<string[]>((r) => pendentes.push(r)));
+    const { result } = renderHook(() =>
+      useSelecaoDaLista({ ...base, total: 5000, chaveDaConsulta: "c1", resolverPrimeiros }),
+    );
+    act(() => result.current.selecionarQuantidade(5));
+    act(() => result.current.selecionarQuantidade(500));
+    await act(async () => pendentes[1]!(IDS));
+    await act(async () => pendentes[0]!(["velho"]));
+    expect(result.current.selecao).toEqual({ tipo: "ids", ids: IDS });
+  });
+
+  it("limpar com uma resposta em voo: a seleção não volta depois", async () => {
+    let resolver: (ids: string[]) => void = () => {};
+    const resolverPrimeiros = vi.fn(() => new Promise<string[]>((r) => (resolver = r)));
+    const { result } = renderHook(() =>
+      useSelecaoDaLista({ ...base, chaveDaConsulta: "c1", resolverPrimeiros }),
+    );
+    act(() => result.current.selecionarQuantidade(2));
+    act(() => result.current.limpar());
+    await act(async () => resolver(IDS));
+    expect(result.current.selecao).toEqual({ tipo: "ids", ids: [] });
+  });
+
+  it("a seleção de 'Selecionar N' não mostra a faixa 'desta página'", async () => {
+    const linhas = [{ id: IDS[0]! }, { id: IDS[1]! }];
+    const resolverPrimeiros = vi.fn(async () => IDS);
+    const { result } = renderHook(() =>
+      useSelecaoDaLista({
+        linhas,
+        total: 50,
+        primeiro: 0,
+        chaveDaConsulta: "c1",
+        resolverPrimeiros,
+      }),
+    );
+    act(() => result.current.selecionarQuantidade(2));
+    await waitFor(() => expect(result.current.selecao.tipo).toBe("ids"));
+    expect(result.current.modoDaFaixa).toBeNull();
+    act(() => result.current.marcarPagina(true));
+    expect(result.current.modoDaFaixa).toBe("pagina");
+  });
+
   it("se a resolução falha, avisa e deixa a seleção como estava", async () => {
     const aoFalharAoResolver = vi.fn();
     const resolverPrimeiros = vi.fn(async () => {

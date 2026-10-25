@@ -26,7 +26,7 @@ const campanha = {
 } as unknown as CampanhaCarregada;
 
 /** Supabase de mentira da campanha: anota cada update e deixa escolher o que falha. */
-function banco(falhaAoFicarPronta: boolean) {
+function banco(falhaAoFicarPronta: boolean, semLinha = false) {
   const updates: Array<Record<string, unknown>> = [];
   const from = (tabela: string) => {
     let dados: Record<string, unknown> | null = null;
@@ -40,7 +40,9 @@ function banco(falhaAoFicarPronta: boolean) {
     q.then = (ok: (r: unknown) => unknown) => {
       if (tabela === "campaign_recipients")
         return Promise.resolve({ data: null, error: null, count: 0 }).then(ok);
-      if (dados?.status === "preparing")
+      if (dados?.status === "ready" && semLinha)
+        return Promise.resolve({ data: [], error: null }).then(ok);
+      if (dados?.status === "preparing" || (dados?.status === "ready" && !falhaAoFicarPronta))
         return Promise.resolve({ data: [{ id: "x" }], error: null }).then(ok);
       if (dados?.status === "ready" && falhaAoFicarPronta)
         return Promise.resolve({ data: null, error: { message: "timeout do banco" } }).then(ok);
@@ -57,6 +59,12 @@ describe("prepararAcao — o update para `ready` (B8-1)", () => {
     const r = await prepararAcao(admin, campanha, new Date("2026-10-24T12:00:00Z"));
     expect(r.ok).toBe(false);
     expect(updates.at(-1)).toMatchObject({ status: "draft", failure_code: "erro_na_preparacao" });
+  });
+
+  it("se o resgate já tirou a campanha de preparing, o update não casa linha e não devolve ok", async () => {
+    const { admin } = banco(false, true);
+    const r = await prepararAcao(admin, campanha, new Date("2026-10-24T12:00:00Z"));
+    expect(r.ok).toBe(false);
   });
 
   it("quando grava, devolve ok com o resumo", async () => {

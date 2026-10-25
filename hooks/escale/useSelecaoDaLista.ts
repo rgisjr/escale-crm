@@ -37,19 +37,34 @@ export function useSelecaoDaLista({
   aoFalharAoResolver?: () => void;
 }) {
   const [selecao, setSelecao] = useState<Selecao>(SEM_SELECAO);
+  // Veio de "Selecionar [N]" (ids congelados): a faixa "desta página" não vale para ela.
+  const [daQuantidade, setDaQuantidade] = useState(false);
   // A consulta que valia no clique: se mudou até a resposta chegar, a resposta é de outra lista.
   const consultaAtual = useRef(chaveDaConsulta);
+  // Quantas mudanças de seleção já houve. A resposta de "Selecionar [N]" só vale se nada mais
+  // mexeu na seleção depois do clique (o campo dispara a cada tecla; limpar, marcar linha, etc.).
+  const mudancas = useRef(0);
   useEffect(() => {
     consultaAtual.current = chaveDaConsulta;
   }, [chaveDaConsulta]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- a seleção é da consulta: outra busca, outro conjunto
-  useEffect(() => setSelecao(SEM_SELECAO), [chaveDaConsulta]);
+  useEffect(() => {
+    mudancas.current += 1;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a seleção é da consulta: outra busca, outro conjunto
+    setSelecao(SEM_SELECAO);
+    setDaQuantidade(false);
+  }, [chaveDaConsulta]);
+
+  const mudar = (proxima: Selecao | ((s: Selecao) => Selecao), deQuantidade = false) => {
+    mudancas.current += 1;
+    setDaQuantidade(deQuantidade);
+    setSelecao(proxima);
+  };
 
   const estado = estadoDaPagina(selecao, linhas, primeiro);
   const modoDaFaixa: "pagina" | "todos" | null = todosMarcados(selecao)
     ? "todos"
-    : selecao.tipo === "ids" && estado === true && total > linhas.length
+    : selecao.tipo === "ids" && !daQuantidade && estado === true && total > linhas.length
       ? "pagina"
       : null;
 
@@ -60,23 +75,27 @@ export function useSelecaoDaLista({
     modoDaFaixa,
     marcada: (id: string, i: number) => linhaMarcada(selecao, id, primeiro + i),
     alternar: (id: string, i: number, marcar: boolean) =>
-      setSelecao((s) => alternarLinha(s, id, primeiro + i, marcar)),
-    marcarPagina: (marcar: boolean) => setSelecao((s) => marcarPagina(s, linhas, primeiro, marcar)),
-    selecionarTodos: () => setSelecao(SELECIONAR_TODOS),
+      mudar((s) => alternarLinha(s, id, primeiro + i, marcar)),
+    marcarPagina: (marcar: boolean) => mudar((s) => marcarPagina(s, linhas, primeiro, marcar)),
+    selecionarTodos: () => mudar(SELECIONAR_TODOS),
     selecionarQuantidade: (n: number) => {
       const porQuantidade = selecionarQuantidade(n, total);
       const quantos = porQuantidade.tipo === "todos" ? porQuantidade.quantidade : null;
       // Só congela o que cabe numa seleção por ids; o resto segue por quantidade.
       if (resolverPrimeiros === undefined || quantos === null || quantos > IDS_MAX)
-        return setSelecao(porQuantidade);
+        return mudar(porQuantidade);
       const chave = chaveDaConsulta;
+      mudancas.current += 1;
+      const meu = mudancas.current;
       resolverPrimeiros(quantos)
         .then((ids) => {
-          if (consultaAtual.current !== chave) return;
-          setSelecao(selecaoDeIds(ids));
+          if (consultaAtual.current !== chave || mudancas.current !== meu) return;
+          mudar(selecaoDeIds(ids), true);
         })
-        .catch(() => aoFalharAoResolver?.());
+        .catch(() => {
+          if (mudancas.current === meu) aoFalharAoResolver?.();
+        });
     },
-    limpar: () => setSelecao(SEM_SELECAO),
+    limpar: () => mudar(SEM_SELECAO),
   };
 }
