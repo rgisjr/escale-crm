@@ -81,6 +81,11 @@ export function JanelaExcluirContatos({
       <p className="text-[12px] font-semibold text-casca-texto">
         {t("Ao continuar, eu entendo que:")}
       </p>
+      <p className="text-[12px] text-casca-texto">
+        {t(
+          "A exclusão roda em segundo plano e pode levar alguns minutos. Você pode continuar usando o sistema.",
+        )}
+      </p>
       <ul className="space-y-2">
         {linhas.map((linha) => (
           <li key={linha} className="flex items-center gap-2 text-[12px] text-casca-texto">

@@ -33,6 +33,7 @@ export function AcoesEmMassa({
   camposDoContato,
   aoLimpar,
   aoPedir,
+  exclusaoEmAndamento = false,
 }: {
   quantidade: number;
   alvo: AlvoDaAcao;
@@ -41,6 +42,8 @@ export function AcoesEmMassa({
   camposDoContato: CampoDeColuna[];
   aoLimpar: () => void;
   aoPedir: (id: string, acao: AcaoEmMassa) => void;
+  /** Há exclusão em massa desta pessoa em andamento: o "Excluir" fica desligado. */
+  exclusaoEmAndamento?: boolean;
 }) {
   const t = useT();
   const pedir = usePedirAcaoEmMassa();
@@ -87,6 +90,7 @@ export function AcoesEmMassa({
         }
         aoExportar={() => setJanela("exportar")}
         aoExcluir={() => setJanela("excluir")}
+        excluirDesligado={exclusaoEmAndamento}
       />
       <JanelaCriarNegocios
         aberta={janela === "negocio"}

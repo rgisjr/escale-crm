@@ -1,6 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 
+import { DicaAoPassar } from "@/components/escale/campanhas/DicaAoPassar";
 import { useT } from "@/hooks/i18n/useT";
 import { Trash2, X } from "@/lib/ui/icons-da-casca";
 
@@ -21,6 +22,7 @@ export function BarraDeLote({
   painelDeTag,
   aoExportar,
   aoExcluir,
+  excluirDesligado = false,
 }: {
   quantidade: number;
   aoLimpar: () => void;
@@ -29,6 +31,8 @@ export function BarraDeLote({
   painelDeTag: ReactNode;
   aoExportar: () => void;
   aoExcluir: () => void;
+  /** Há uma exclusão em massa em andamento: o Excluir fica desligado (sem exclusão duplicada). */
+  excluirDesligado?: boolean;
 }) {
   const t = useT();
   return (
@@ -57,15 +61,21 @@ export function BarraDeLote({
       <button type="button" onClick={aoExportar} className={BOTAO_DA_BARRA_DE_LOTE}>
         {t("Exportar")}
       </button>
-      <button
-        type="button"
-        aria-label={t("Excluir selecionados")}
-        title={t("Excluir selecionados")}
-        onClick={aoExcluir}
-        className={BOTAO_DA_BARRA_DE_LOTE}
+      <DicaAoPassar
+        texto={excluirDesligado ? t("Já existe uma exclusão em andamento.") : ""}
+        className={excluirDesligado ? undefined : "[&>[role=tooltip]]:hidden"}
       >
-        <Trash2 size={18} aria-hidden />
-      </button>
+        <button
+          type="button"
+          aria-label={t("Excluir selecionados")}
+          title={excluirDesligado ? undefined : t("Excluir selecionados")}
+          disabled={excluirDesligado}
+          onClick={aoExcluir}
+          className={BOTAO_DA_BARRA_DE_LOTE}
+        >
+          <Trash2 size={18} aria-hidden />
+        </button>
+      </DicaAoPassar>
     </div>
   );
 }
