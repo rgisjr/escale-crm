@@ -36,6 +36,7 @@ export function useListaDeCampanhas(
   filtros: FiltrosDeCampanhas,
   pagina: number,
   porPagina: number,
+  reconsultar = true,
 ) {
   return useQuery({
     queryKey: [CHAVE_DAS_CAMPANHAS, "lista", textoDosFiltros(filtros), pagina, porPagina],
@@ -46,7 +47,8 @@ export function useListaDeCampanhas(
         )
       ).data,
     placeholderData: keepPreviousData,
-    refetchInterval: (q) => reconsultaDaLista(q.state.data),
+    // Com o detalhe aberto a lista fica parada atrás dele: sem reconsulta a cada 10 s (G8-6).
+    refetchInterval: (q) => (reconsultar ? reconsultaDaLista(q.state.data) : false),
   });
 }
 
@@ -64,6 +66,13 @@ export function useResumoDasCampanhas(filtros: FiltrosDeCampanhas, aberto: boole
   });
 }
 
+/** O id da campanha do evento do tempo real (`new` no insert/update, `old` no delete). */
+export function idDoEvento(payload: unknown): string | null {
+  const p = payload as { new?: { id?: unknown }; old?: { id?: unknown } } | null;
+  const id = p?.new?.id ?? p?.old?.id;
+  return typeof id === "string" && id !== "" ? id : null;
+}
+
 export function useCampanhasAoVivo(organizacaoId: string): void {
   const qc = useQueryClient();
   useRealtimeChannel({
@@ -73,8 +82,15 @@ export function useCampanhasAoVivo(organizacaoId: string): void {
       table: "campaigns",
       filter: `organization_id=eq.${organizacaoId}`,
     },
-    onChange: () => {
-      void qc.invalidateQueries({ queryKey: [CHAVE_DAS_CAMPANHAS] });
+    onChange: (payload) => {
+      // Só a lista, o resumo e o detalhe DA campanha do evento: o resto (destinatários,
+      // negócios de outras campanhas) não muda por um UPDATE em `campaigns` (G8-12).
+      void qc.invalidateQueries({ queryKey: [CHAVE_DAS_CAMPANHAS, "lista"] });
+      void qc.invalidateQueries({ queryKey: [CHAVE_DAS_CAMPANHAS, "resumo"] });
+      const id = idDoEvento(payload);
+      void qc.invalidateQueries({
+        queryKey: id ? [CHAVE_DAS_CAMPANHAS, "detalhe", id] : [CHAVE_DAS_CAMPANHAS, "detalhe"],
+      });
     },
     enabled: organizacaoId !== "",
   });

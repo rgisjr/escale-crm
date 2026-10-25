@@ -664,20 +664,36 @@ export async function estadoDeEnvio(
   // O dia do teto diário é o dia DO CLIENTE, como o resto do ritmo. Ver a nota
   // no chamador: `setUTCHours` fazia o dia virar 21h em `America/Sao_Paulo`.
   const inicioDoDia = dayStartInTz(agora, fuso);
-  const { data } = await admin
-    .from("campaign_recipients")
-    .select("sent_at")
-    .eq("campaign_id", campanhaId)
-    .not("sent_at", "is", null)
-    .gte("sent_at", inicioDoDia.toISOString())
-    .order("sent_at", { ascending: false });
-
-  const enviados = (data ?? []).map((r) => new Date((r as { sent_at: string }).sent_at));
-  const umaHoraAtras = agora.getTime() - 3_600_000;
+  const umaHoraAtras = new Date(Math.max(agora.getTime() - 3_600_000, inicioDoDia.getTime()));
+  // Contagens no banco: trazer os `sent_at` do dia esbarrava nas 1.000 linhas do
+  // PostgREST e o teto diário acima disso nunca segurava (G8-2).
+  const enviadasDesde = (desde: Date) =>
+    admin
+      .from("campaign_recipients")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campanhaId)
+      .not("sent_at", "is", null)
+      .gte("sent_at", desde.toISOString());
+  const [hoje, naHora, ultimo] = await Promise.all([
+    enviadasDesde(inicioDoDia),
+    enviadasDesde(umaHoraAtras),
+    admin
+      .from("campaign_recipients")
+      .select("sent_at")
+      .eq("campaign_id", campanhaId)
+      .not("sent_at", "is", null)
+      .gte("sent_at", inicioDoDia.toISOString())
+      .order("sent_at", { ascending: false })
+      .limit(1),
+  ]);
+  // Contagem que falha não vira zero: zero soltaria o teto e o ritmo.
+  const erro = hoje.error ?? naHora.error ?? ultimo.error;
+  if (erro) throw new Error(`Não foi possível ler os envios da campanha: ${erro.message}`);
+  const ultimoEm = ((ultimo.data ?? [])[0] as { sent_at: string } | undefined)?.sent_at;
   return {
-    ultimoEnvio: enviados[0] ?? null,
-    enviadasHoje: enviados.length,
-    enviadasNaUltimaHora: enviados.filter((d) => d.getTime() >= umaHoraAtras).length,
+    ultimoEnvio: ultimoEm ? new Date(ultimoEm) : null,
+    enviadasHoje: hoje.count ?? 0,
+    enviadasNaUltimaHora: naHora.count ?? 0,
   };
 }
 

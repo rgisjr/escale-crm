@@ -24,9 +24,12 @@ import { VazioSemCampanhas } from "./VaziosDasCampanhas";
 export function ListaDeCampanhasDaCasca({
   organizacaoId,
   fuso,
+  reconsultar = true,
 }: {
   organizacaoId: string;
   fuso?: string;
+  /** Falso com o detalhe aberto por cima: a lista não reconsulta a cada 10 s. */
+  reconsultar?: boolean;
 }) {
   const t = useT();
   const [filtros, setFiltros] = useState<FiltrosDeCampanhas>(FILTROS_VAZIOS);
@@ -35,7 +38,7 @@ export function ListaDeCampanhasDaCasca({
   const [porPagina, setPorPagina] = useState<number>(POR_PAGINA_PADRAO);
   const [resumoAberto, setResumoAberto] = useState(false);
   useCampanhasAoVivo(organizacaoId);
-  const lista = useListaDeCampanhas(filtros, pagina, porPagina);
+  const lista = useListaDeCampanhas(filtros, pagina, porPagina, reconsultar);
   const resumo = useResumoDasCampanhas(filtros, resumoAberto);
   const sessoes = useChannelSessions().data;
   const numeros = useMemo(

@@ -41,6 +41,8 @@ export interface EstadoDoAssistente {
   /** O "Próximo" foi apertado com erro: os avisos aparecem. */
   tentou: boolean;
   publicoAntigo: boolean;
+  /** A importação do .csv em andamento: vive aqui para sobreviver à troca de passo (B8-6). */
+  importacaoId: string | null;
 }
 
 export type AcaoDoAssistente =
@@ -49,6 +51,7 @@ export type AcaoDoAssistente =
   | { tipo: "mudarPublico"; publico: PublicoDaCampanha }
   | { tipo: "irPara"; passo: Passo }
   | { tipo: "tentou" }
+  | { tipo: "importacao"; id: string | null }
   | { tipo: "salvo"; campanhaId: string }
   | { tipo: "carregar"; campanhaId: string; dados: Assistente; publicoAntigo: boolean }
   | { tipo: "reiniciar" };
@@ -59,6 +62,7 @@ export const estadoInicial = (): EstadoDoAssistente => ({
   dados: ASSISTENTE_VAZIO,
   tentou: false,
   publicoAntigo: false,
+  importacaoId: null,
 });
 
 export function redutorDoAssistente(
@@ -76,6 +80,8 @@ export function redutorDoAssistente(
       return { ...e, passo: a.passo, tentou: false };
     case "tentou":
       return { ...e, tentou: true };
+    case "importacao":
+      return { ...e, importacaoId: a.id };
     case "salvo":
       return { ...e, campanhaId: a.campanhaId };
     case "carregar":
@@ -85,6 +91,7 @@ export function redutorDoAssistente(
         dados: a.dados,
         tentou: false,
         publicoAntigo: a.publicoAntigo,
+        importacaoId: null,
       };
     case "reiniciar":
       return estadoInicial();

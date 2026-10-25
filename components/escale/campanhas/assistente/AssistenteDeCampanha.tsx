@@ -159,7 +159,9 @@ export function AssistenteDeCampanha({
 
   async function voltar() {
     if (estado.passo === 0) return router.push(ROTA_DAS_CAMPANHAS);
-    if (estado.passo === 3 && estado.campanhaId && resumo) {
+    // Sempre devolve a rascunho (o servidor trata "já é rascunho" como sucesso): a
+    // campanha pode estar `ready` sem resumo na tela (preparo lento, erro depois do ready, B8-2).
+    if (estado.passo === 3 && estado.campanhaId) {
       try {
         await acao.mutateAsync({ id: estado.campanhaId, acao: "rascunho" });
       } catch (e) {
@@ -236,6 +238,22 @@ export function AssistenteDeCampanha({
       </div>
     );
   }
+  if (campanhaId && estado.campanhaId === null && salvo.isError) {
+    // Sem o rascunho carregado, o assistente vazio criaria uma campanha nova no passo 4 (B8-4).
+    return (
+      <div className="flex flex-col bg-surface">
+        {trilha}
+        <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+          <p role="alert" className="text-[15px] font-semibold text-casca-texto">
+            {t("Não foi possível carregar a campanha.")}
+          </p>
+          <button type="button" onClick={() => void salvo.refetch()} className={BOTAO_CONTORNADO}>
+            {t("Tentar novamente")}
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (campanhaId && estado.campanhaId === null && salvo.isLoading) {
     return (
       <div className="flex flex-col bg-surface">
@@ -281,6 +299,7 @@ export function AssistenteDeCampanha({
     estado.passo === 3 ? (
       <RodapeDoAssistente
         aoVoltar={() => void voltar()}
+        voltarDesabilitado={preparando || enviando}
         extras={
           <button
             type="button"

@@ -160,6 +160,12 @@ describe("voltarAoRascunhoAcao", () => {
     expect(await voltarAoRascunhoAcao(admin({}) as never, campanha("ready"))).toEqual({ ok: true });
   });
 
+  it("rascunho que pede rascunho é sucesso e não grava nada (B8-2)", async () => {
+    const db = admin({});
+    expect(await voltarAoRascunhoAcao(db as never, campanha("draft"))).toEqual({ ok: true });
+    expect(db.chamadas.some((c) => c.metodo === "update")).toBe(false);
+  });
+
   it("quem já enviou não volta; concluída não volta", async () => {
     expect(
       await voltarAoRascunhoAcao(admin({ enviados: 3 }) as never, campanha("scheduled")),

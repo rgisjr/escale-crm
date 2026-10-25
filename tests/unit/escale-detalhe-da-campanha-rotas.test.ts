@@ -120,6 +120,11 @@ describe("GET /api/v1/campanhas-da-casca/[id]/sumario", () => {
     });
     const r = await GET_SUMARIO(pedido(`/api/v1/campanhas-da-casca/${ID}/sumario`), ctx());
     expect(r.status).toBe(200);
+    // G8-7: nada de `select("*")` (audience_filter e escale_publico ficam no banco).
+    const selects = db.from.mock.results.flatMap((x) => (x.value as { select: { mock: { calls: unknown[][] } } }).select.mock.calls);
+    expect(selects.some((c) => c[0] === "*")).toBe(false);
+    expect(selects.some((c) => String(c[0]).includes("escale_mensagem"))).toBe(true);
+    expect(selects.some((c) => String(c[0]).includes("audience_filter"))).toBe(false);
     expect(vi.mocked(requireRole)).toHaveBeenCalledWith("manager", expect.anything());
     expect(db.rpc).toHaveBeenCalledWith("fn_escale_ritmo_da_campanha", {
       p_org: ORG_ID,

@@ -34,6 +34,8 @@ export function useAssistenteSalvo(id: string | null) {
         )
       ).data,
     staleTime: Infinity,
+    // Sem cache entre aberturas: reabrir "Editar" traz o que está no servidor, não o de minutos atrás (B8-3).
+    gcTime: 0,
   });
 }
 

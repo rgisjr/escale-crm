@@ -52,7 +52,11 @@ export function CampanhasDaCasca({
       {aba === "prospeccao" ? (
         <ListaDeProspeccoes fuso={fuso} />
       ) : (
-        <ListaDeCampanhasDaCasca organizacaoId={organizacaoId} fuso={fuso} />
+        <ListaDeCampanhasDaCasca
+          organizacaoId={organizacaoId}
+          fuso={fuso}
+          reconsultar={!campanhaAberta}
+        />
       )}
       {aba === "whatsapp" && campanhaAberta ? (
         <DetalheDaCampanhaDaCasca

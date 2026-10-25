@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -130,6 +130,31 @@ describe("PassoContatos", () => {
       tipo: "mudarPublico",
       publico: { selecao: null, avulsos: ["novo"], removidos: [] },
     });
+  });
+
+  it("a busca da janela de contatos espera a pausa na digitação, não pede por tecla (G8-1)", async () => {
+    render(
+      comConsulta(
+        <PassoContatos
+          estado={{ ...estadoInicial(), passo: 1 }}
+          despachar={vi.fn()}
+          numeroOficial
+          origens={[]}
+          opcoesDoFiltro={OPCOES_VAZIAS}
+        />,
+      ),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Selecionar contatos/ }));
+    vi.mocked(useListaDeContatos).mockClear();
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Buscar por contato ou Empresa" }),
+      "ana",
+    );
+    const buscas = () =>
+      vi.mocked(useListaDeContatos).mock.calls.map((c) => (c[0] as { q?: string }).q);
+    expect(buscas()).not.toContain("a");
+    expect(buscas()).not.toContain("an");
+    await waitFor(() => expect(buscas()).toContain("ana"), { timeout: 2000 });
   });
 
   it("com destinatários: a contagem, a linha e 'Remover da lista'", async () => {

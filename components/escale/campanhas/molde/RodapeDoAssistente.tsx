@@ -23,11 +23,13 @@ export interface BotaoPrincipalDoRodape {
 export function RodapeDoAssistente({
   aoVoltar,
   rotuloVoltar,
+  voltarDesabilitado,
   extras,
   principal,
 }: {
   aoVoltar?: () => void;
   rotuloVoltar?: string;
+  voltarDesabilitado?: boolean;
   extras?: ReactNode;
   principal: BotaoPrincipalDoRodape;
 }) {
@@ -35,7 +37,12 @@ export function RodapeDoAssistente({
   return (
     <footer className="flex h-14 shrink-0 items-center justify-end gap-2 border-t border-casca-divisoria bg-surface px-6">
       {aoVoltar && (
-        <button type="button" onClick={aoVoltar} className={BOTAO_CONTORNADO}>
+        <button
+          type="button"
+          onClick={aoVoltar}
+          disabled={voltarDesabilitado}
+          className={BOTAO_CONTORNADO}
+        >
           {rotuloVoltar ?? t("Voltar")}
         </button>
       )}
