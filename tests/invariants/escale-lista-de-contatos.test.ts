@@ -102,11 +102,11 @@ describe("fn_escale_lista_de_contatos", () => {
     expect(countAs(GOV_MANAGER, lista("pessoais", "listadois"))).toBe(1);
   });
 
-  it("o total vem em toda linha e não depende do limite", () => {
+  it("o total vem da função própria e não depende do limite", () => {
     expect(
       countAs(
         GOV_MANAGER,
-        `select count(*) from public.fn_escale_lista_de_contatos('${GOV_ORG}', 'todos', 'listadois', null, null, 1, 0) where total = 3`,
+        `select count(*) from (select public.fn_escale_total_de_contatos('${GOV_ORG}', 'todos', 'listadois', null, null) as total) t where total = 3`,
       ),
     ).toBe(1);
   });

@@ -70,7 +70,7 @@ describe("useExclusaoEmAndamento", () => {
     expect(result.current.emAndamento).toBe(false);
   });
 
-  it("refaz só a lista da casca quando `feitos` muda e quando a exclusão termina", () => {
+  it("refaz só a lista e o total da casca quando `feitos` muda e quando a exclusão termina", () => {
     const espiao = vi.spyOn(qc, "invalidateQueries");
     consulta.valor = comAcoes([exclusao("processando", 10)]);
     const { rerender } = renderHook(() => useExclusaoEmAndamento(), { wrapper: envolver });
@@ -80,11 +80,14 @@ describe("useExclusaoEmAndamento", () => {
     expect(espiao).not.toHaveBeenCalled();
     consulta.valor = comAcoes([exclusao("processando", 40)]);
     act(() => rerender());
-    expect(espiao).toHaveBeenCalledTimes(1);
-    expect(espiao).toHaveBeenLastCalledWith({ queryKey: ["contacts", "lista-da-casca"] });
+    // Q7d: a página e o total são duas consultas; as linhas somem e o contador acompanha
+    expect(espiao.mock.calls.map((c) => c[0])).toEqual([
+      { queryKey: ["contacts", "lista-da-casca"] },
+      { queryKey: ["contacts", "total-da-casca"] },
+    ]);
     consulta.valor = comAcoes([exclusao("concluida", 100)]);
     act(() => rerender());
-    expect(espiao).toHaveBeenCalledTimes(2);
+    expect(espiao).toHaveBeenCalledTimes(4);
   });
 });
 

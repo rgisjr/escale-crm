@@ -265,11 +265,11 @@ describe("fn_escale_contatos_do_filtro", () => {
     ).toBe(2);
   });
 
-  it("a lista de 8 parâmetros devolve o total filtrado", () => {
+  it("o total filtrado vem da função própria", () => {
     expect(
       countAs(
         GOV_MANAGER,
-        `select count(*) from public.fn_escale_lista_de_contatos('${GOV_ORG}', 'todos', 'filtrodois', null, null, 100, 0, ${filtro({ telefone: "sem" })}) where total = 1`,
+        `select count(*) from (select public.fn_escale_total_de_contatos('${GOV_ORG}', 'todos', 'filtrodois', null, null, ${filtro({ telefone: "sem" })}) as total) t where total = 1`,
       ),
     ).toBe(1);
   });

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET, POST } from "@/app/api/v1/empresas/route";
+import { GET as GET_TOTAL } from "@/app/api/v1/empresas/total/route";
 import { requireRole } from "@/lib/auth/require-role";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createClient } from "@/lib/supabase/server";
@@ -56,7 +57,7 @@ describe("GET /api/v1/empresas", () => {
     const db = banco({
       rpc: {
         fn_escale_lista_de_empresas: {
-          data: [{ company_id: "e1", total: 3, contatos: 1, negocios: 1, negocio_unico: "l1", valor_aberto_cents: 150050, principal: "c1" }],
+          data: [{ company_id: "e1", contatos: 1, negocios: 1, negocio_unico: "l1", valor_aberto_cents: 150050, principal: "c1" }],
           error: null,
         },
       },
@@ -73,7 +74,7 @@ describe("GET /api/v1/empresas", () => {
       p_org: ORG_ID, p_escopo: "todas", p_digitos: "11222", p_limite: 25, p_deslocamento: 25,
     }));
     const { data } = await r.json();
-    expect(data.total).toBe(3);
+    expect(data).not.toHaveProperty("total"); // Q7d: o total vem de /total
     expect(data.moeda).toBe("BRL");
     expect(data.linhas[0]).toMatchObject({ id: "e1", nome: "Atlas", valor_aberto: 1500.5, contatos: 1, negocio_unico: "l1", campos: { segmento: "Varejo" } });
     expect(data.linhas[0].principal).toMatchObject({ id: "c1", nome: "Alex", telefone: "+5553999998393" });
@@ -113,5 +114,35 @@ describe("POST /api/v1/empresas", () => {
     const r2 = await POST(pedido("/api/v1/empresas", json({ nome: "Atlas", cnpj: "11.222.333/0001-81", contato_id: CONTATO })));
     expect(r2.status).toBe(409);
     expect((await r2.json()).error.message).toBe("CNPJ já cadastrado em outra empresa.");
+  });
+});
+
+describe("GET /api/v1/empresas/total (Q7d)", () => {
+  it("chama a função do total com escopo, busca e dígitos — sem página — e devolve o número", async () => {
+    authOk("viewer");
+    const db = banco({ rpc: { fn_escale_total_de_empresas: { data: 7, error: null } } });
+    const r = await GET_TOTAL(pedido("/api/v1/empresas/total?q=11.222&e=todas&p=2&n=25"));
+    expect(r.status).toBe(200);
+    expect(db.rpc).toHaveBeenCalledWith("fn_escale_total_de_empresas", {
+      p_org: ORG_ID, p_escopo: "todas", p_padrao: null, p_digitos: "11222", p_filtros: expect.any(Object),
+    });
+    expect((await r.json()).data.total).toBe(7);
+    expect(vi.mocked(requireRole)).toHaveBeenCalledWith("viewer", expect.anything());
+  });
+
+  it("escopo inválido e filtro que não vale são 422, sem chamar o banco", async () => {
+    authOk("viewer");
+    const db = banco({});
+    expect((await GET_TOTAL(pedido("/api/v1/empresas/total?e=xyz"))).status).toBe(422);
+    expect((await GET_TOTAL(pedido("/api/v1/empresas/total?f=isto-nao-e-json"))).status).toBe(422);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it("erro do banco é 500 sem a mensagem crua", async () => {
+    authOk("viewer");
+    banco({ rpc: { fn_escale_total_de_empresas: { data: null, error: { code: "XX000", message: "falha em fn_escale_total_de_empresas" } } } });
+    const r = await GET_TOTAL(pedido("/api/v1/empresas/total"));
+    expect(r.status).toBe(500);
+    expect(JSON.stringify(await r.json())).not.toContain("fn_escale_total_de_empresas");
   });
 });

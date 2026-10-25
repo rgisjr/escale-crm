@@ -36,8 +36,10 @@ export function useExclusaoEmAndamento(): ExclusaoEmAndamento {
   useEffect(() => {
     const antes = anterior.current;
     anterior.current = emAndamento ? feitos : null;
-    if (antes !== null && anterior.current !== antes)
+    if (antes !== null && anterior.current !== antes) {
       void qc.invalidateQueries({ queryKey: ["contacts", "lista-da-casca"] });
+      void qc.invalidateQueries({ queryKey: ["contacts", "total-da-casca"] });
+    }
   }, [emAndamento, feitos, qc]);
 
   return { emAndamento, total, feitos };
