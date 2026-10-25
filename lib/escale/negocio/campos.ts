@@ -51,6 +51,7 @@ export interface CampoEditavel {
 export const CHAVE_NOME = "nome";
 export const CHAVE_TELEFONE = "telefone";
 export const CHAVE_EMAIL = "email";
+export const CHAVE_NASCIMENTO = "nascimento";
 export const MAX_TAGS_DO_CONTATO = 20;
 
 const SIMBOLO: Record<string, string> = {
@@ -302,7 +303,7 @@ export function patchDoContato(
     if (chave === CHAVE_TELEFONE) return { phone_number: String(valor) };
     if (chave === CHAVE_EMAIL) return { email: String(valor) };
     // FORK ESCALE · Fase 2C: "Data de nascimento" é fixo do contato.
-    if (chave === "nascimento") return { birthdate: String(valor) };
+    if (chave === CHAVE_NASCIMENTO) return { birthdate: String(valor) };
     return null;
   }
   if (origem === "link") {

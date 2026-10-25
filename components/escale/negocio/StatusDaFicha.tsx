@@ -9,7 +9,6 @@ import { RetomarComoNovoNegocioDialog } from "@/components/kanban/RetomarComoNov
 import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useActiveOrg, usePermission } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
-import { useBoard } from "@/hooks/kanban/useBoard";
 import { useMotivosDePerdaDoFunil } from "@/hooks/kanban/useMotivosDePerdaDoFunil";
 import { useMoveCard, type RetomadaPendente } from "@/hooks/kanban/useMoveCard";
 import { useLoseLead, useWinLead } from "@/hooks/kanban/useUpdateLead";
@@ -17,7 +16,7 @@ import { opcoesDeMotivoDePerda } from "@/lib/leads/motivos-de-perda-do-funil";
 import { rotuloDoMotivoDePerda } from "@/lib/schemas/leads";
 import { podeMarcarGanho, soAdminGanha } from "@/lib/escale/ganho/regras";
 import { etapaParaReabrir, type StatusDoNegocio } from "@/lib/escale/negocio/regras";
-import type { Stage } from "@/lib/kanban/types";
+import type { Pipeline, Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 import {
   Check,
@@ -73,17 +72,19 @@ export function StatusDaFicha({
   lead,
   stages,
   pipelineId,
+  settings,
 }: {
   lead: Lead;
   stages: Stage[];
   pipelineId: string;
+  /** `pipeline.settings` da origem, da ficha (Q2a, G2-24: sem `useBoard` aqui). */
+  settings: Pipeline["settings"];
 }) {
   const t = useT();
   const pode = usePermission("pipeline.move_card");
   // FORK ESCALE · Fase 1K (N21): com "só o administrador marca ganho", quem não é admin não vê "Ganho".
   const papel = useActiveOrg()?.role;
-  const settingsDaOrigem = useBoard(pipelineId).data?.pipeline.settings;
-  const podeGanhar = podeMarcarGanho({ papel, soAdmin: soAdminGanha(settingsDaOrigem) });
+  const podeGanhar = podeMarcarGanho({ papel, soAdmin: soAdminGanha(settings) });
   const opcoes = STATUS.filter((s) => s.valor !== "won" || podeGanhar || lead.status === "won");
   const ganhar = useWinLead(pipelineId);
   const perder = useLoseLead(pipelineId);
