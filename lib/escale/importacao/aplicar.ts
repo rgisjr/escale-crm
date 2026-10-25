@@ -200,7 +200,13 @@ async function gravarNegocio(
       await deps.encerrar(ctx, { leadId: id, desfecho: n.status, motivo: n.status === "lost" ? n.motivoDePerda : null });
     }
     if (n.status === "won" && n.ganhoEm) {
-      await deps.db.from("crm_leads").update({ closed_at: `${n.ganhoEm}T12:00:00Z` }).eq("organization_id", org).eq("id", id);
+      const { error: erroDaData } = await deps.db
+        .from("crm_leads")
+        .update({ closed_at: `${n.ganhoEm}T12:00:00Z` })
+        .eq("organization_id", org)
+        .eq("id", id);
+      // Sem conferir, a linha saía "importada" e o negócio ficava com a data de hoje.
+      if (erroDaData) throw new Error(erroDaData.message);
     }
   } catch (e) {
     // O negócio já existe (aberto): a linha com erro guarda o id para o relatório e a reimportação não o duplicar.

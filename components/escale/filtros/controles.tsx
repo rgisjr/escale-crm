@@ -46,7 +46,7 @@ export function CampoNumerico({
   valor: number | undefined;
   onMudar: (valor: number | undefined) => void;
 }) {
-  const [texto, setTexto] = useState(valor === undefined ? "" : String(valor));
+  const [texto, setTexto] = useState(valor === undefined ? "" : String(valor).replace(".", ","));
   function confirmar() {
     if (texto.trim() === "") {
       if (valor !== undefined) onMudar(undefined);
@@ -57,7 +57,7 @@ export function CampoNumerico({
       if (n !== valor) onMudar(n);
       return;
     }
-    setTexto(valor === undefined ? "" : String(valor));
+    setTexto(valor === undefined ? "" : String(valor).replace(".", ","));
   }
   return (
     <input

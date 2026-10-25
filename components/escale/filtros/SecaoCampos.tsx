@@ -5,6 +5,7 @@ import { useT } from "@/hooks/i18n/useT";
 import {
   chaveDoCampo,
   condicaoNova,
+  numeroDoValor,
   operadoresDoTipo,
   type CampoFiltravel,
 } from "@/lib/escale/filtros/campos";
@@ -17,6 +18,9 @@ import {
 import { Plus, X } from "@/lib/ui/icons-da-casca";
 
 import { CampoDeData, CampoDeTexto, CampoNumerico } from "./controles";
+
+/** Vírgula decimal: "0.125" seria relido como milhar (125) pela leitura brasileira. */
+const textoDoNumero = (n: number): string => String(n).replace(".", ",");
 
 const ROTULO_DO_OPERADOR: Record<OperadorDeCampo, string> = {
   contem: "contém",
@@ -216,14 +220,14 @@ function ValorDaCondicao({
         <CampoNumerico
           key={`min:${c.valor ?? ""}`}
           rotulo={t("Mínimo")}
-          valor={c.valor ? Number(c.valor) : undefined}
-          onMudar={(v) => onMudar({ ...c, valor: v === undefined ? undefined : String(v) })}
+          valor={numeroDoValor(c.valor) ?? undefined}
+          onMudar={(v) => onMudar({ ...c, valor: v === undefined ? undefined : textoDoNumero(v) })}
         />
         <CampoNumerico
           key={`max:${c.ate ?? ""}`}
           rotulo={t("Máximo")}
-          valor={c.ate ? Number(c.ate) : undefined}
-          onMudar={(v) => onMudar({ ...c, ate: v === undefined ? undefined : String(v) })}
+          valor={numeroDoValor(c.ate) ?? undefined}
+          onMudar={(v) => onMudar({ ...c, ate: v === undefined ? undefined : textoDoNumero(v) })}
         />
       </div>
     );

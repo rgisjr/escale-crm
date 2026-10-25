@@ -1,6 +1,7 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { apiClient } from "@/lib/api/client";
 import type { Resolucao } from "@/lib/escale/importacao/classificar";
 import type { Acao, Motivo } from "@/lib/escale/importacao/regras";
@@ -133,5 +134,6 @@ export function useCancelarImportacao() {
   return useMutation({
     mutationFn: async (id: string) => (await apiClient.post<{ data: { status: string } }>(`/api/v1/importacoes/${id}/cancelar`, {})).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: CHAVE_DAS_IMPORTACOES }),
+    onError: showApiError,
   });
 }

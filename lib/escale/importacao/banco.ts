@@ -184,7 +184,10 @@ export async function linhasDaImportacao(
 
 export async function cancelarImportacao(admin: SupabaseClient, id: string): Promise<void> {
   const { error } = await admin.rpc("fn_escale_cancelar_importacao", { p_importacao: id });
-  if (error) throw new ErroDaImportacao("estado", "Só se cancela uma importação na fila ou importando.");
+  // Só a marca de estado da função vira 409; qualquer outra falha do banco sobe como erro de verdade.
+  if (error?.message.includes("importacao_nao_cancelavel"))
+    throw new ErroDaImportacao("estado", "Só se cancela uma importação na fila ou importando.");
+  if (error) throw error;
 }
 
 async function conferirEscolha(sb: SupabaseClient, orgId: string, motivo: Motivo, r: Resolucao, detalhe: Record<string, unknown>) {
@@ -265,6 +268,8 @@ export async function resolverLinha(
   await processarLinhas(deps, rodada, linhas);
   const statusDaImportacao = await contarImportacao(deps, importacaoId);
   const depois = await deps.db.from("crm_importacoes_linhas").select("status, motivo").eq("id", linhaId).maybeSingle();
+  // Linha importada mas releitura falha: sem isto a rota respondia "erro" para uma linha que entrou.
+  if (depois.error) throw depois.error;
   const d = (depois.data ?? { status: "erro", motivo: null }) as { status: StatusDaLinha; motivo: Motivo | null };
   return { status: d.status, motivo: d.motivo, importacao: statusDaImportacao };
 }
