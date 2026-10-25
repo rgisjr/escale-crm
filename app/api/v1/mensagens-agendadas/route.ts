@@ -51,7 +51,9 @@ export async function GET(req: NextRequest): Promise<Response> {
   const f = parsed.data;
   const status = url.searchParams.get("status") === "falhou" ? "falhou" : "pendente";
   const supabase = await createClient();
-  const fuso = await fusoDaOrganizacao(supabase, authz.org.orgId, authz.org.timezone);
+  // O fuso só é lido quando há filtro de data (sem ele, nenhuma ida a mais ao banco).
+  const temData = !!(f.criacao_de || f.criacao_ate || f.envio_de || f.envio_ate);
+  const fuso = temData ? await fusoDaOrganizacao(supabase, authz.org.orgId, authz.org.timezone) : "UTC";
   let q = supabase
     .from("crm_mensagens_agendadas")
     // Com busca, o embed do contato vira `!inner`: sem isso o PostgREST filtra só o contato

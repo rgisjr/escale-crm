@@ -26,7 +26,7 @@ describe("migration 9404 (FB7: banco da Faixa B)", () => {
 
   it("função definer nova fechada a anon e authenticated; a de leitura só a anon", () => {
     expect(MIGRATION).toContain(
-      "revoke all on function public.fn_escale_apagar_itens_da_massa() from public, anon, authenticated;",
+      "revoke all on function public.fn_escale_descartar_itens_da_massa() from public, anon, authenticated;",
     );
     expect(MIGRATION).toContain(
       "revoke all on function public.fn_escale_conversa_mais_recente_por_contato(uuid, uuid[]) from public, anon;",
