@@ -6,6 +6,7 @@ import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover } from "@/components/ui/popover";
+import { apiClient } from "@/lib/api/client";
 import { useCatalogoDeCampos } from "@/hooks/escale/useCatalogoDeCampos";
 import { useColunasDaLista, useSalvarColunasDaLista } from "@/hooks/escale/useColunasDaLista";
 import { useAcompanharAcoes } from "@/hooks/escale/useAcompanharAcoes";
@@ -167,6 +168,16 @@ export function ListaDeContatos({
     total,
     primeiro: (pagina - 1) * porPagina,
     chaveDaConsulta: JSON.stringify([buscaDaUrl, visao, f]),
+    resolverPrimeiros: async (n) => {
+      const qs = new URLSearchParams({ v: visao, quantidade: String(n) });
+      if (buscaDaUrl?.trim()) qs.set("q", buscaDaUrl.trim());
+      if (f) qs.set("f", f);
+      const res = await apiClient.get<{ data: { ids: string[] } }>(
+        `/api/v1/lista-de-contatos/primeiros?${qs}`,
+      );
+      return res.data.ids;
+    },
+    aoFalharAoResolver: () => toast.error(falhou),
   });
   const acompanhamento = useAcompanharAcoes();
 

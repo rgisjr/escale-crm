@@ -72,6 +72,13 @@ export function selecionarQuantidade(n: number, total: number): Selecao {
   return { tipo: "todos", quantidade: Math.floor(n), excluidos: [] };
 }
 
+/**
+ * "Selecionar [N]" com os ids já resolvidos no clique (B3-1): a ação age sobre
+ * quem a pessoa viu entre os N primeiros, e não sobre o que a ordem der depois.
+ */
+export const selecaoDeIds = (ids: readonly string[]): Selecao =>
+  ids.length === 0 ? SEM_SELECAO : { tipo: "ids", ids: [...ids] };
+
 export const todosMarcados = (s: Selecao): boolean =>
   s.tipo === "todos" && s.quantidade === null && s.excluidos.length === 0;
 
