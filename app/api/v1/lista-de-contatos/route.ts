@@ -56,7 +56,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const supabase = await createClient();
     const orgId = authz.org.orgId;
     const filtro = temFiltros(filtros)
-      ? compilarFiltros(filtros, await fusoDaOrganizacao(supabase, orgId))
+      ? compilarFiltros(filtros, await fusoDaOrganizacao(supabase, orgId, authz.org.timezone))
       : undefined;
     return ok(await listarContatos(supabase, orgId, lido.data, filtro), { requestId });
   } catch (err) {

@@ -11,6 +11,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 const LOTE = 50;
+/** Quanto tempo uma linha pode ficar em `processando` antes de ser dada como presa. */
+const PRESA_APOS_MINUTOS = 15;
+const TENTATIVAS_DO_DESFECHO = 2;
 
 interface Vencida {
   id: string;
@@ -62,26 +65,54 @@ async function processarVencida(
     agora,
     requestId,
   );
-  const { error } = await admin
-    .from("crm_mensagens_agendadas")
-    .update(
-      resultado.status === "enviada"
-        ? {
-            status: "enviada",
-            message_id: resultado.message_id,
-            enviada_em: new Date().toISOString(),
-            erro: null,
-          }
-        : { status: "falhou", erro: resultado.erro },
-    )
-    .eq("id", v.id);
-  if (error)
+  const desfecho =
+    resultado.status === "enviada"
+      ? {
+          status: "enviada",
+          message_id: resultado.message_id,
+          enviada_em: new Date().toISOString(),
+          erro: null,
+        }
+      : { status: "falhou", erro: resultado.erro };
+  // O envio JÁ aconteceu: perder só o registro deixaria a linha presa e a
+  // mensagem sem aparecer como enviada. Uma segunda tentativa cobre o soluço.
+  let falhaDoDesfecho: string | null = null;
+  for (let i = 0; i < TENTATIVAS_DO_DESFECHO; i++) {
+    const { error } = await admin.from("crm_mensagens_agendadas").update(desfecho).eq("id", v.id);
+    falhaDoDesfecho = error ? error.message : null;
+    if (!falhaDoDesfecho) break;
+  }
+  if (falhaDoDesfecho)
     logger.error("cron mensagens-agendadas: desfecho não gravado", {
       agendamento: v.id,
       status: resultado.status,
-      error: error.message,
+      error: falhaDoDesfecho,
     });
   return resultado;
+}
+
+/**
+ * Linha em `processando` há mais de PRESA_APOS_MINUTOS: o processo caiu entre o
+ * envio e o registro (ex.: deploy). Não há como saber se a mensagem saiu, então
+ * NÃO volta para `pendente` (reenviaria uma mensagem possivelmente já entregue
+ * ao cliente): vai para `falhou`, com o motivo, e a pessoa decide reenviar.
+ */
+async function soltarPresas(admin: Admin, agora: Date): Promise<number> {
+  const corte = new Date(agora.getTime() - PRESA_APOS_MINUTOS * 60_000).toISOString();
+  const { data, error } = await admin
+    .from("crm_mensagens_agendadas")
+    .update({
+      status: "falhou",
+      erro: "Envio interrompido: não foi possível confirmar se a mensagem saiu. Confira a conversa antes de reenviar.",
+    })
+    .eq("status", "processando")
+    .lt("updated_at", corte)
+    .select("id");
+  if (error) {
+    logger.error("cron mensagens-agendadas: presas não liberadas", { error: error.message });
+    return 0;
+  }
+  return (data ?? []).length;
 }
 
 /**
@@ -96,6 +127,7 @@ async function handle(req: NextRequest): Promise<Response> {
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   const admin = createAdminClient();
   const agora = new Date();
+  const presas = await soltarPresas(admin, agora);
   const { data, error } = await admin
     .from("crm_mensagens_agendadas")
     .select(
@@ -133,7 +165,7 @@ async function handle(req: NextRequest): Promise<Response> {
       });
     }
   }
-  return ok({ enviadas, falhas }, { requestId });
+  return ok({ enviadas, falhas, presas }, { requestId });
 }
 
 export async function GET(req: NextRequest): Promise<Response> {

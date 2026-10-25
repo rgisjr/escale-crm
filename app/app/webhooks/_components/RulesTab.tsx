@@ -40,7 +40,7 @@ function triggerLabel(trigger: string, t: (texto: string) => string): string {
 
 export function RulesTab() {
   const t = useT();
-  const { data, isLoading } = useAutomationRules();
+  const { data, isLoading, isError, refetch } = useAutomationRules();
   const update = useUpdateAutomationRule();
   const del = useDeleteAutomationRule();
   const qc = useQueryClient();
@@ -79,6 +79,25 @@ export function RulesTab() {
       <div className="grid gap-3 pt-4 sm:grid-cols-2">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  // Erro de leitura não é base vazia: "Crie sua primeira automação" levaria a
+  // recriar regras que já existem.
+  if (isError) {
+    return (
+      <div className="flex justify-center pt-10">
+        <Card className="max-w-md border-destructive/40">
+          <CardHeader className="items-center text-center">
+            <CardTitle>{t("Não foi possível carregar as automações.")}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button variant="outline" onClick={() => void refetch()}>
+              {t("Tentar de novo")}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -75,7 +75,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (alvo.tipo === "filtro") {
       const painel = painelDoTexto(alvo.f);
       if (painel === null) return recusa("Ocorreu um erro ao executar a ação em massa!");
-      filtros = compilarFiltrosDaFila(painel, alvo.q, await fusoDaOrganizacao(supabase, orgId));
+      filtros = compilarFiltrosDaFila(painel, alvo.q, await fusoDaOrganizacao(supabase, orgId, authz.org.timezone));
     }
     const { data, error } = await supabase.rpc("fn_escale_criar_acao_em_massa_de_conversas", {
       p_org: orgId,

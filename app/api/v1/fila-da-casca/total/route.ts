@@ -25,7 +25,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const compilado = compilarFiltrosDaFila(
       painel,
       req.nextUrl.searchParams.get("q") ?? undefined,
-      await fusoDaOrganizacao(supabase, authz.org.orgId),
+      await fusoDaOrganizacao(supabase, authz.org.orgId, authz.org.timezone),
     );
     return ok({ total: await contarFila(supabase, authz.org.orgId, compilado) }, { requestId });
   } catch (err) {

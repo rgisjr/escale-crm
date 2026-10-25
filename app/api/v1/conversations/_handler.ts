@@ -454,8 +454,11 @@ export async function listConversationsHandler(
     }
     const op = asc ? "gt" : "lt";
     if (c.sort) {
+      // `.is.null` porque os nulos ficam no fim da ordem: sem ele, o NULL nunca
+      // passa em `col > X` e a região NULL sumia da página seguinte à última
+      // linha preenchida (e o `has_more` virava false).
       query = query.or(
-        `${sortCol}.${op}.${c.sort},and(${sortCol}.eq.${c.sort},id.${op}.${c.id})`,
+        `${sortCol}.${op}.${c.sort},and(${sortCol}.eq.${c.sort},id.${op}.${c.id}),${sortCol}.is.null`,
       );
     } else {
       // Página já na região de sort NULL (nulls last): pagina só por id.

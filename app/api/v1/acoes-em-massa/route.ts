@@ -97,7 +97,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         p_digitos: busca.digitos,
         p_cpf_hash: busca.cpfHash,
         p_filtros: temFiltros(filtros)
-          ? compilarFiltros(filtros, await fusoDaOrganizacao(supabase, orgId))
+          ? compilarFiltros(filtros, await fusoDaOrganizacao(supabase, orgId, authz.org.timezone))
           : {},
         p_quantidade: alvo.quantidade,
         p_excluidos: alvo.excluidos,

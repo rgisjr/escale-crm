@@ -48,8 +48,18 @@ export function filtrosDaConsulta(consulta: { f?: string }): FiltrosDeContatos |
   }
 }
 
-/** O fuso da organização (Configurações › Empresa), sempre utilizável. */
-export async function fusoDaOrganizacao(supabase: SupabaseClient, orgId: string): Promise<string> {
+/**
+ * O fuso da organização (Configurações › Empresa), sempre utilizável.
+ *
+ * `fusoJaLido` é o `authz.org.timezone` da rota (o `ActiveOrg` já o traz): com
+ * ele preenchido não há ida ao banco. Vazio/ausente, consulta como antes.
+ */
+export async function fusoDaOrganizacao(
+  supabase: SupabaseClient,
+  orgId: string,
+  fusoJaLido?: string | null,
+): Promise<string> {
+  if (fusoJaLido?.trim()) return fusoUtilizavel(fusoJaLido);
   const { data } = await supabase
     .from("organizations")
     .select("timezone")

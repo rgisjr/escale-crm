@@ -410,23 +410,28 @@ function PipelineEditor({
       ...(camposRemovidos.length > 0 ? { campos_removidos: camposRemovidos } : {}),
     };
     startTransition(async () => {
-      const r = await updatePipelineConfig(pipeline.id, patch);
-      if (r.ok) {
-        toast.success(`${pipeline.name} ${t("atualizado.")}`);
-        // FORK ESCALE · Fase 1F-a: o que foi salvo passa a ser "do banco".
-        setCarregados(ok);
-        if (r.camposDesatualizados) {
-          toast.warning(
-            t("Outra pessoa alterou os campos enquanto esta tela estava aberta. Recarregue a página para ver a versão atual."),
-          );
+      try {
+        const r = await updatePipelineConfig(pipeline.id, patch);
+        if (r.ok) {
+          toast.success(`${pipeline.name} ${t("atualizado.")}`);
+          // FORK ESCALE · Fase 1F-a: o que foi salvo passa a ser "do banco".
+          setCarregados(ok);
+          if (r.camposDesatualizados) {
+            toast.warning(
+              t("Outra pessoa alterou os campos enquanto esta tela estava aberta. Recarregue a página para ver a versão atual."),
+            );
+          }
+        } else if (r.error === "campos_em_conflito") {
+          // FORK ESCALE · Fase 1F-a: deadlock/serialização no banco
+          toast.error(t("Outra pessoa estava alterando os campos ao mesmo tempo. Tente novamente."));
+        } else if (r.error === "campo_invalido") {
+          toast.error(t("Algum campo tem rótulo ou tipo inválido. Revise os campos e tente novamente."));
+        } else {
+          toast.error(`${t("Erro:")} ${r.error}`);
         }
-      } else if (r.error === "campos_em_conflito") {
-        // FORK ESCALE · Fase 1F-a: deadlock/serialização no banco
-        toast.error(t("Outra pessoa estava alterando os campos ao mesmo tempo. Tente novamente."));
-      } else if (r.error === "campo_invalido") {
-        toast.error(t("Algum campo tem rótulo ou tipo inválido. Revise os campos e tente novamente."));
-      } else {
-        toast.error(`${t("Erro:")} ${r.error}`);
+      } catch {
+        // A action lançou (rede, timeout): sem isto o digitado sumia sem aviso.
+        toast.error(t("Não foi possível salvar. Confira a conexão e tente de novo."));
       }
     });
   }
