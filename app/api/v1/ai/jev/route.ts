@@ -407,8 +407,11 @@ export async function GET(): Promise<Response> {
         .order("created_at", { ascending: false })
         .limit(50);
     const porTarefa: Record<string, Percebidos> = {};
-    for (const t of TAREFAS_DO_JEV.filter((x) => x.familia === "cascata")) {
-      const { data, count, error } = await doJev(t.id);
+    const cascata = TAREFAS_DO_JEV.filter((x) => x.familia === "cascata");
+    // Uma leitura por tarefa, todas ao mesmo tempo (eram uma atrás da outra).
+    const lidas = await Promise.all(cascata.map((t) => doJev(t.id)));
+    for (const [i, t] of cascata.entries()) {
+      const { data, count, error } = lidas[i]!;
       if (error) return { porTarefa, erro: error.message };
       const conversas: Percebidos["conversas"] = [];
       const vistas = new Set<string>();
