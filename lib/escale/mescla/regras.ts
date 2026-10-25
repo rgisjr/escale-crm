@@ -115,6 +115,33 @@ const ordemDasRegras = (regras: Set<RegraDeMescla>): RegraDeMescla[] =>
     (a, b) => PESO_DA_REGRA[b] - PESO_DA_REGRA[a],
   );
 
+/**
+ * Só as chaves do grupo (componente conectado) do contato. Serve para carregar os dados de poucos
+ * contatos em vez da organização inteira; `montarSugestoes` refaz o grupo com o mesmo resultado.
+ */
+export function chavesDoGrupoDe(chaves: readonly ChaveDeMescla[], contatoId: string): ChaveDeMescla[] {
+  const porChave = new Map<string, string[]>();
+  for (const c of chaves) {
+    const k = `${c.regra}:${c.chave}`;
+    porChave.set(k, [...(porChave.get(k) ?? []), c.contato_id]);
+  }
+  const grupo = new Set([contatoId]);
+  let cresceu = true;
+  while (cresceu) {
+    cresceu = false;
+    for (const ids of porChave.values()) {
+      if (!ids.some((id) => grupo.has(id))) continue;
+      for (const id of ids) {
+        if (!grupo.has(id)) {
+          grupo.add(id);
+          cresceu = true;
+        }
+      }
+    }
+  }
+  return chaves.filter((c) => grupo.has(c.contato_id));
+}
+
 export function montarSugestoes(
   chaves: readonly ChaveDeMescla[],
   contatos: ReadonlyMap<string, ContatoDaMescla>,

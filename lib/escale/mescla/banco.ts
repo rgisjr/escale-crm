@@ -5,6 +5,7 @@ import { instagramDoLink } from "@/lib/escale/contatos/regras";
 import { trocarEmpresaDoContato } from "@/lib/escale/empresas/banco";
 import {
   filtrarSugestoes,
+  chavesDoGrupoDe,
   montarSugestoes,
   ordenarSugestoes,
   type CampoDaMescla,
@@ -170,16 +171,37 @@ export async function contatosDaMescla(sb: SB, orgId: string, ids: readonly stri
   );
 }
 
+/** O total do selo da lista (`n=0`) muda pouco e é caro: guardado por pouco tempo, por organização e consulta. */
+const VALIDADE_DO_TOTAL_MS = 15_000;
+const TOTAIS_GUARDADOS_MAX = 200;
+const totaisGuardados = new Map<string, { total: number; vence: number }>();
+
+function esquecerTotais(orgId: string) {
+  for (const chave of totaisGuardados.keys()) if (chave.startsWith(`${orgId}|`)) totaisGuardados.delete(chave);
+}
+
 export async function lerSugestoes(
   sb: SB,
   orgId: string,
   consulta: ConsultaDeSugestoes,
 ): Promise<{ data: Sugestao[]; total: number }> {
+  const soOTotal = consulta.n === 0;
+  const chaveDoTotal = `${orgId}|${JSON.stringify(consulta)}`;
+  if (soOTotal) {
+    const guardado = totaisGuardados.get(chaveDoTotal);
+    if (guardado && guardado.vence > Date.now()) return { data: [], total: guardado.total };
+  }
   const { data, error } = await sb.rpc("fn_escale_chaves_de_mescla", { p_org: orgId });
   if (error) throw error;
-  const chaves = (data ?? []) as ChaveDeMescla[];
+  const todasAsChaves = (data ?? []) as ChaveDeMescla[];
+  // Com `contato`, só o grupo dele interessa: não carrega os duplicados da organização inteira.
+  const chaves = consulta.contato ? chavesDoGrupoDe(todasAsChaves, consulta.contato) : todasAsChaves;
   const contatos = await contatosDaMescla(sb, orgId, chaves.map((c) => c.contato_id));
   const todas = ordenarSugestoes(filtrarSugestoes(montarSugestoes(chaves, contatos), consulta), consulta.ordem);
+  if (soOTotal) {
+    if (totaisGuardados.size >= TOTAIS_GUARDADOS_MAX) totaisGuardados.clear();
+    totaisGuardados.set(chaveDoTotal, { total: todas.length, vence: Date.now() + VALIDADE_DO_TOTAL_MS });
+  }
   const inicio = (consulta.p - 1) * consulta.n;
   return { data: todas.slice(inicio, inicio + consulta.n), total: todas.length };
 }
@@ -221,6 +243,7 @@ export async function mesclarGrupo(
     p_escolhas: valoresDasEscolhas(contatos, escolhas),
   });
   if (error) throw erroDoBanco(error.message);
+  esquecerTotais(orgId);
 
   const empresaEscolhida = escolhas.empresa ? contatos.get(escolhas.empresa)?.empresa : undefined;
   const empresaAtual = contatos.get(principal)?.empresa;

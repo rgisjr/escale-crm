@@ -43,6 +43,9 @@ export function JanelaDeGerenciarCampos({ aberta, aoFechar, objetoInicial }: Jan
   const [restringindo, setRestringindo] = useState<{ campo: CampoDoCatalogo; ancora: HTMLElement } | null>(null);
   const { catalogo, carregando, erro } = useCatalogoDeCampos(objeto, aberta);
   const mudar = useMudarCatalogo(objeto);
+  // O formulário de novo campo deixa trocar o objeto: ele precisa dos grupos e campos do escolhido.
+  const [objetoDoFormulario, setObjetoDoFormulario] = useState<ObjetoDeCampo | null>(null);
+  const doFormulario = useCatalogoDeCampos(objetoDoFormulario ?? objeto, formulario === "campo");
 
   useEffect(() => setObjeto(objetoInicial), [objetoInicial, aberta]);
   const grupoAtivo: GrupoDeCampos | null = useMemo(() => catalogo.grupos.find((g) => g.id === grupoAtivoId) ?? catalogo.grupos[0] ?? null, [catalogo.grupos, grupoAtivoId]);
@@ -96,7 +99,7 @@ export function JanelaDeGerenciarCampos({ aberta, aoFechar, objetoInicial }: Jan
                 aoCopiarVariavel={(c) => void copiar(variavelDoCampo(objeto, c.chave), t("Variável copiada!"))}
                 aoCopiarIdentificador={(c) => void copiar(c.chave, t("Identificador copiado!"))}
                 aoExcluir={setExcluindo}
-                aoReordenar={(grupoId, ids) => mudar.reordenar.mutate({ objeto, grupos: catalogo.grupos.map((g) => g.id), campos: [{ grupo_id: grupoId, ids }] })}
+                aoReordenar={(grupoId, ids) => mudar.reordenar.mutate({ objeto, grupos: [], campos: [{ grupo_id: grupoId, ids }] }, { onError: (e) => toast.error(e.message) })}
               />
             )}
           </div>
@@ -106,13 +109,14 @@ export function JanelaDeGerenciarCampos({ aberta, aoFechar, objetoInicial }: Jan
       {formulario === "campo" && (
         <FormularioDeCampo
           objeto={objeto}
-          catalogo={catalogo}
+          catalogo={doFormulario.catalogo}
           grupoSugerido={grupoAtivo}
-          aoFechar={() => setFormulario(null)}
+          aoMudarObjeto={setObjetoDoFormulario}
+          aoFechar={() => { setFormulario(null); setObjetoDoFormulario(null); }}
           aoSalvar={(entrada) =>
-            mudar.criarCampo.mutateAsync(entrada).then(() => { toast.success(t("As alterações foram salvas com sucesso!")); setFormulario(null); })
+            mudar.criarCampo.mutateAsync(entrada).then(() => { toast.success(t("As alterações foram salvas com sucesso!")); setFormulario(null); setObjetoDoFormulario(null); })
           }
-          aoCriarGrupo={(nome) => mudar.criarGrupo.mutateAsync(nome).then((g) => g as GrupoDeCampos)}
+          aoCriarGrupo={(nome, alvo) => mudar.criarGrupo.mutateAsync({ nome, objeto: alvo }).then((g) => g as GrupoDeCampos)}
         />
       )}
       {formulario === "grupo" && (
@@ -128,7 +132,7 @@ export function JanelaDeGerenciarCampos({ aberta, aoFechar, objetoInicial }: Jan
           aoSalvar={(entrada) =>
             mudar.mudarCampo.mutateAsync({ id: editando.id, patch: { nome: entrada.nome, grupo_id: entrada.grupo_id, opcoes: entrada.opcoes } }).then(() => setEditando(null))
           }
-          aoCriarGrupo={(nome) => mudar.criarGrupo.mutateAsync(nome).then((g) => g as GrupoDeCampos)}
+          aoCriarGrupo={(nome, alvo) => mudar.criarGrupo.mutateAsync({ nome, objeto: alvo }).then((g) => g as GrupoDeCampos)}
         />
       )}
       <JanelaDeConfirmacao

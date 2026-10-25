@@ -244,20 +244,13 @@ export interface EmpresaDoContato {
 
 const COLUNAS_DA_EMPRESA = "id, trade_name, legal_name, cnpj, city, state, custom_fields, created_at";
 
-/** Soma dos negócios abertos dos contatos da empresa, na moeda da organização (N6), pela RLS de quem olha. */
-async function valorEmAbertoDaEmpresa(sb: SB, orgId: string, contatoIds: string[], moeda: string): Promise<number> {
-  if (!contatoIds.length) return 0;
-  const leads = await sb
-    .from("crm_leads")
-    .select("value_cents, currency, crm_pipelines!inner(is_archived)")
-    .eq("organization_id", orgId)
-    .eq("status", "open")
-    .eq("crm_pipelines.is_archived", false)
-    .in("contact_id", contatoIds);
-  if (leads.error) throw leads.error;
+type LeadDoContato = { id: string; contact_id: string; status: string | null; value_cents: number | null; currency: string | null };
+
+/** Soma dos negócios abertos já lidos (N6): na moeda da organização, pela RLS de quem olha. */
+function valorEmAbertoDosLeads(leads: LeadDoContato[], moeda: string): number {
   return (
-    ((leads.data ?? []) as Array<{ value_cents: number | null; currency: string | null }>)
-      .filter((l) => (l.currency ?? moeda).toUpperCase() === moeda)
+    leads
+      .filter((l) => l.status === "open" && (l.currency ?? moeda).toUpperCase() === moeda)
       .reduce((s, l) => s + (l.value_cents ?? 0), 0) / 100
   );
 }
@@ -266,7 +259,8 @@ export async function lerFichaDaEmpresa(sb: SB, orgId: string, id: string): Prom
   const { data: e, error } = await sb.from("companies").select(COLUNAS_DA_EMPRESA).eq("organization_id", orgId).eq("id", id).maybeSingle();
   if (error) throw error;
   if (!e) throw new ErroDaEmpresa("empresa_nao_encontrada");
-  const [moeda, contatos] = await Promise.all([moedaDaOrganizacaoDe(sb, orgId), contatosDaEmpresa(sb, orgId, id)]);
+  // Uma leitura de vínculos, contatos e negócios: o valor em aberto sai dos mesmos negócios da contagem.
+  const [moeda, { contatos, leads }] = await Promise.all([moedaDaOrganizacaoDe(sb, orgId), lerContatosELeadsDaEmpresa(sb, orgId, id)]);
   const p = contatos.find((c) => c.principal);
   return {
     id,
@@ -276,7 +270,7 @@ export async function lerFichaDaEmpresa(sb: SB, orgId: string, id: string): Prom
     estado: (e.state as string | null) ?? null,
     campos: (e.custom_fields as Record<string, unknown> | null) ?? {},
     criada_em: String(e.created_at),
-    valor_aberto: await valorEmAbertoDaEmpresa(sb, orgId, contatos.map((c) => c.id), moeda),
+    valor_aberto: valorEmAbertoDosLeads(leads, moeda),
     moeda,
     principal: p ? { id: p.id, nome: p.nome, telefone: p.telefone, tem_foto: p.tem_foto, conversa_id: p.conversa_id } : null,
     contatos: contatos.length,
@@ -284,11 +278,12 @@ export async function lerFichaDaEmpresa(sb: SB, orgId: string, id: string): Prom
   };
 }
 
-export async function contatosDaEmpresa(sb: SB, orgId: string, id: string): Promise<ContatoDaEmpresa[]> {
+/** Vínculos da empresa e os contatos deles (sem a ficha do contato fundida), numa passada. */
+async function lerPessoasDaEmpresa(sb: SB, orgId: string, id: string) {
   const vinculos = await sb.from("company_people").select("person_id, is_primary, created_at").eq("organization_id", orgId).eq("company_id", id).order("created_at");
   if (vinculos.error) throw vinculos.error;
   const principalPorPessoa = new Map(((vinculos.data ?? []) as Array<{ person_id: string; is_primary: boolean }>).map((v) => [v.person_id, v.is_primary]));
-  if (!principalPorPessoa.size) return [];
+  if (!principalPorPessoa.size) return { principalPorPessoa, lista: [] as Array<Record<string, unknown>> };
   const contatos = await sb
     .from("contacts")
     .select("id, name, display_name, phone_number, email, tags, avatar_path, person_id")
@@ -296,21 +291,39 @@ export async function contatosDaEmpresa(sb: SB, orgId: string, id: string): Prom
     .in("person_id", [...principalPorPessoa.keys()])
     .is("is_merged_into", null);
   if (contatos.error) throw contatos.error;
-  const lista = (contatos.data ?? []) as Array<Record<string, unknown>>;
+  return { principalPorPessoa, lista: (contatos.data ?? []) as Array<Record<string, unknown>> };
+}
+
+export async function contatosDaEmpresa(sb: SB, orgId: string, id: string): Promise<ContatoDaEmpresa[]> {
+  return (await lerContatosELeadsDaEmpresa(sb, orgId, id)).contatos;
+}
+
+/** Os contatos da empresa e os negócios deles (status e valor junto), para a ficha não reler `crm_leads`. */
+async function lerContatosELeadsDaEmpresa(sb: SB, orgId: string, id: string): Promise<{ contatos: ContatoDaEmpresa[]; leads: LeadDoContato[] }> {
+  const { principalPorPessoa, lista } = await lerPessoasDaEmpresa(sb, orgId, id);
+  if (!lista.length) return { contatos: [], leads: [] };
   const ids = lista.map((c) => String(c.id));
   const [leads, conversas] = await Promise.all([
-    sb.from("crm_leads").select("id, contact_id, crm_pipelines!inner(is_archived)").eq("organization_id", orgId).eq("crm_pipelines.is_archived", false).in("contact_id", ids),
+    sb
+      .from("crm_leads")
+      .select("id, contact_id, status, value_cents, currency, crm_pipelines!inner(is_archived)")
+      .eq("organization_id", orgId)
+      .eq("crm_pipelines.is_archived", false)
+      .in("contact_id", ids),
     sb.from("conversations").select("id, contact_id, last_message_at").eq("organization_id", orgId).in("contact_id", ids).order("last_message_at", { ascending: false }),
   ]);
+  // Sem esta conferência o valor em aberto sairia zerado em silêncio.
+  if (leads.error) throw leads.error;
   const negociosPorContato = new Map<string, string[]>();
-  for (const l of (leads.data ?? []) as Array<{ id: string; contact_id: string }>) {
+  const leadsLidos = (leads.data ?? []) as unknown as LeadDoContato[];
+  for (const l of leadsLidos) {
     negociosPorContato.set(l.contact_id, [...(negociosPorContato.get(l.contact_id) ?? []), l.id]);
   }
   const conversaPorContato = new Map<string, string>();
   for (const c of (conversas.data ?? []) as Array<{ id: string; contact_id: string }>) {
     if (!conversaPorContato.has(c.contact_id)) conversaPorContato.set(c.contact_id, c.id);
   }
-  return lista
+  const contatos = lista
     .map((c): ContatoDaEmpresa => {
       const negocios = negociosPorContato.get(String(c.id)) ?? [];
       return {
@@ -327,12 +340,16 @@ export async function contatosDaEmpresa(sb: SB, orgId: string, id: string): Prom
       };
     })
     .sort((a, b) => Number(b.principal) - Number(a.principal) || a.nome.localeCompare(b.nome, "pt-BR"));
+  return { contatos, leads: leadsLidos };
 }
 
 export async function negociosDaEmpresa(sb: SB, orgId: string, id: string): Promise<NegocioDaEmpresa[]> {
-  const contatos = await contatosDaEmpresa(sb, orgId, id);
-  if (!contatos.length) return [];
-  const nomePorContato = new Map(contatos.map((c) => [c.id, c.nome]));
+  // Só os nomes e ids dos contatos: sem recontar negócios nem buscar conversas.
+  const { lista } = await lerPessoasDaEmpresa(sb, orgId, id);
+  if (!lista.length) return [];
+  const nomePorContato = new Map(
+    lista.map((c) => [String(c.id), nomeDoContato({ name: c.name as string | null, display_name: c.display_name as string | null }) ?? String(c.phone_number ?? "")]),
+  );
   const { data, error } = await sb
     .from("crm_leads")
     .select("id, title, status, value_cents, currency, contact_id, crm_pipelines!inner(name, is_archived), crm_stages!crm_leads_stage_id_fkey(name)")

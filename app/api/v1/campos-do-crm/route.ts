@@ -4,7 +4,7 @@ import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { podeAdministrarEmpresa } from "@/lib/auth/pode-administrar-empresa";
-import { ErroDoCatalogo, TEXTO_DO_ERRO, criarCampo, lerCatalogo, novoCampoSchema, semearSeVazio } from "@/lib/escale/campos/banco";
+import { ErroDoCatalogo, TEXTO_DO_ERRO, criarCampo, lerCatalogosSemeando, novoCampoSchema } from "@/lib/escale/campos/banco";
 import { OBJETOS_DE_CAMPO, catalogoVisivel } from "@/lib/escale/campos/regras";
 import type { Idioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -31,9 +31,9 @@ export async function GET(req: NextRequest) {
   const parse = consultaSchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!parse.success) return fail("validation_failed", traduzir("Objeto inválido.", authz.user.idioma), 422);
   try {
-    await semearSeVazio(createAdminClient(), authz.org.orgId);
     const supabase = await createClient();
-    const catalogo = await lerCatalogo(supabase, authz.org.orgId, parse.data.objeto);
+    // A semente só roda se o catálogo voltar sem grupos (organização nova).
+    const [catalogo] = await lerCatalogosSemeando(supabase, createAdminClient(), authz.org.orgId, [parse.data.objeto]);
     return ok(catalogoVisivel(catalogo, authz.org.role));
   } catch (err) {
     logger.error("campos-do-crm.get", { err });

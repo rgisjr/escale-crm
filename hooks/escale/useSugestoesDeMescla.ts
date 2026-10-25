@@ -1,5 +1,5 @@
 "use client";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api/client";
 import type { ResultadoDaMescla } from "@/lib/escale/mescla/banco";
@@ -62,12 +62,28 @@ export function useTotalDeSugestoes(habilitado: boolean): number {
   return q.data?.meta?.total ?? 0;
 }
 
+/** O que uma mescla mexe: contatos, fichas, sugestões, empresas, negócios, conversas e linha do tempo. */
+function invalidarDepoisDeMesclar(qc: QueryClient) {
+  for (const chave of [
+    "contacts",
+    "contact",
+    "sugestoes-de-mescla",
+    "companies",
+    "empresa-do-contato",
+    "board",
+    "conversations",
+    "timeline",
+  ]) {
+    void qc.invalidateQueries({ queryKey: [chave] });
+  }
+}
+
 export function useMesclar() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (pedido: { principal_id: string; secundarios: string[]; escolhas: Escolhas }) =>
       (await apiClient.post<{ data: ResultadoDaMescla }>("/api/v1/mesclas", pedido)).data,
-    onSuccess: () => void qc.invalidateQueries(),
+    onSuccess: () => invalidarDepoisDeMesclar(qc),
   });
 }
 
@@ -81,6 +97,6 @@ export function useMesclarEmMassa() {
           pedido,
         )
       ).data,
-    onSuccess: () => void qc.invalidateQueries(),
+    onSuccess: () => invalidarDepoisDeMesclar(qc),
   });
 }

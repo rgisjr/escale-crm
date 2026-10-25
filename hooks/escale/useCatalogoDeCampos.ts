@@ -26,23 +26,35 @@ export function useCatalogoDeCampos(objeto: ObjetoDeCampo, ativo = true) {
 
 export function useMudarCatalogo(objeto: ObjetoDeCampo) {
   const qc = useQueryClient();
-  const depois = () => {
-    void qc.invalidateQueries({ queryKey: CHAVE_DO_CATALOGO(objeto) });
-    if (objeto === "negocio") {
+  // `alvo` é o objeto do catálogo mexido: o da aba, ou o escolhido no formulário de novo campo.
+  const depoisEm = (alvo: ObjetoDeCampo) => {
+    void qc.invalidateQueries({ queryKey: CHAVE_DO_CATALOGO(alvo) });
+    if (alvo === "negocio") {
       void qc.invalidateQueries({ queryKey: ["board"] });
       void qc.invalidateQueries({ queryKey: ["pipelines"] });
     }
     void qc.invalidateQueries({ queryKey: ["contact"] });
   };
+  const depois = () => depoisEm(objeto);
   const base = `/api/v1/campos-do-crm`;
   return {
-    criarCampo: useMutation({ mutationFn: (e: NovoCampo) => pedir(base, { method: "POST", body: JSON.stringify(e) }), onSuccess: depois }),
+    criarCampo: useMutation({
+      mutationFn: (e: NovoCampo) => pedir(base, { method: "POST", body: JSON.stringify(e) }),
+      onSuccess: (_dados, e) => depoisEm(e.objeto),
+    }),
     mudarCampo: useMutation({
       mutationFn: ({ id, patch }: { id: string; patch: PatchDoCampo }) => pedir(`${base}/${id}?objeto=${objeto}`, { method: "PATCH", body: JSON.stringify(patch) }),
       onSuccess: depois,
     }),
     excluirCampo: useMutation({ mutationFn: (id: string) => pedir(`${base}/${id}?objeto=${objeto}`, { method: "DELETE" }), onSuccess: depois }),
-    criarGrupo: useMutation({ mutationFn: (nome: string) => pedir(`${base}/grupos`, { method: "POST", body: JSON.stringify({ objeto, nome }) }), onSuccess: depois }),
+    // Pelo formulário de novo campo o grupo nasce no objeto escolhido lá, que pode não ser o da aba.
+    criarGrupo: useMutation({
+      mutationFn: (g: string | { nome: string; objeto: ObjetoDeCampo }) => {
+        const { nome, objeto: alvo } = typeof g === "string" ? { nome: g, objeto } : g;
+        return pedir(`${base}/grupos`, { method: "POST", body: JSON.stringify({ objeto: alvo, nome }) });
+      },
+      onSuccess: (_dados, g) => depoisEm(typeof g === "string" ? objeto : g.objeto),
+    }),
     renomearGrupo: useMutation({
       mutationFn: ({ id, nome }: { id: string; nome: string }) => pedir(`${base}/grupos/${id}`, { method: "PATCH", body: JSON.stringify({ nome }) }),
       onSuccess: depois,

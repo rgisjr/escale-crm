@@ -11,12 +11,17 @@ const sucesso = vi.fn();
 vi.mock("sonner", () => ({ toast: { success: (...a: unknown[]) => sucesso(...a), error: vi.fn() } }));
 
 const chamadas: Array<{ url: string; corpo?: unknown }> = [];
+let falhasDaEmpresa = 0;
 vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
   chamadas.push({ url, corpo: init?.body ? JSON.parse(String(init.body)) : undefined });
   if (url.startsWith("/api/v1/lista-de-contatos")) {
     return new Response(JSON.stringify({ data: { linhas: [{ id: "c1", nome: "Alex", telefone: "+5553999998393", email: null }], total: 1 } }));
   }
   if (url === "/api/v1/contacts") return new Response(JSON.stringify({ data: { contact: { id: "c9", name: "Bia" } } }), { status: 201 });
+  if (url === "/api/v1/empresas" && falhasDaEmpresa > 0) {
+    falhasDaEmpresa -= 1;
+    return new Response(JSON.stringify({ error: { message: "CNPJ já cadastrado." } }), { status: 409 });
+  }
   if (url === "/api/v1/empresas") return new Response(JSON.stringify({ data: { id: "e1" } }), { status: 201 });
   return new Response("{}", { status: 404 });
 }));
@@ -71,5 +76,30 @@ describe("JanelaNovaEmpresa (OrganizationCreateWizard da Clint)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Criar empresa" }));
     await waitFor(() => expect(chamadas.find((c) => c.url === "/api/v1/empresas")?.corpo).toMatchObject({ contato_id: "c9" }));
     expect(chamadas.find((c) => c.url === "/api/v1/contacts")?.corpo).toMatchObject({ name: "Bia", source: "manual" });
+  });
+
+  it("empresa que falha depois do contato novo: tentar de novo reaproveita o contato criado (B3-5)", async () => {
+    falhasDaEmpresa = 1;
+    montar();
+    fireEvent.change(screen.getByPlaceholderText("Ex.: Atlas Distribuidora"), { target: { value: "Atlas" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Criar novo" }));
+    fireEvent.change(screen.getByPlaceholderText("Digite o nome do contato"), { target: { value: "Bia" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar empresa" }));
+    expect(await screen.findByText("CNPJ já cadastrado.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Criar empresa" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app/companies/e1"));
+    expect(chamadas.filter((c) => c.url === "/api/v1/contacts")).toHaveLength(1);
+  });
+
+  it("erro de rede ao criar mostra a mensagem em vez de rejeitar sem aviso (B3-5)", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError("rede caiu"));
+    montar();
+    fireEvent.change(screen.getByPlaceholderText("Ex.: Atlas Distribuidora"), { target: { value: "Atlas" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Criar novo" }));
+    fireEvent.change(screen.getByPlaceholderText("Digite o nome do contato"), { target: { value: "Bia" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar empresa" }));
+    expect(await screen.findByText("Não foi possível criar a empresa. Tente novamente.")).toBeInTheDocument();
   });
 });

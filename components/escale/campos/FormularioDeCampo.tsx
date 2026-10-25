@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BotaoDaJanela, CabecaDaJanela, Campo, CampoDeTexto, JanelaDaCasca, RodapeDaJanela } from "@/components/escale/origens/JanelaDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
@@ -33,7 +33,10 @@ export interface FormularioDeCampoProps {
   campo?: CampoDoCatalogo;
   aoFechar: () => void;
   aoSalvar: (entrada: NovoCampo) => Promise<unknown>;
-  aoCriarGrupo: (nome: string) => Promise<GrupoDeCampos>;
+  /** O grupo novo nasce no objeto escolhido no formulário. */
+  aoCriarGrupo: (nome: string, objeto: ObjetoDeCampo) => Promise<GrupoDeCampos>;
+  /** Avisa a janela do objeto escolhido nas pílulas, para ela passar o catálogo dele em `catalogo`. */
+  aoMudarObjeto?: (objeto: ObjetoDeCampo) => void;
 }
 
 /** "Adicionar campo" da Clint (AddFieldForm), por cima da janela de gerenciamento. */
@@ -49,6 +52,19 @@ export function FormularioDeCampo(p: FormularioDeCampoProps) {
   const [novoGrupo, setNovoGrupo] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  // O catálogo da prop é o do objeto escolhido: ao trocar o objeto, os grupos são os dele e o grupo
+  // escolhido (de outro objeto) sai, senão o POST levaria um `grupo_id` que não existe no destino.
+  useEffect(() => {
+    if (editando) return;
+    setGrupos(p.catalogo.grupos);
+    setGrupoId((atual) => {
+      if (atual && p.catalogo.grupos.some((g) => g.id === atual)) return atual;
+      const sugerido = p.grupoSugerido && p.catalogo.grupos.some((g) => g.id === p.grupoSugerido!.id) ? p.grupoSugerido.id : null;
+      return sugerido ?? p.catalogo.grupos[0]?.id ?? null;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só reage ao catálogo recebido
+  }, [p.catalogo.grupos]);
 
   const nomeRepetido = useMemo(() => {
     const n = nome.trim().toLowerCase();
@@ -75,7 +91,7 @@ export function FormularioDeCampo(p: FormularioDeCampoProps) {
   const criarGrupo = async () => {
     if (!novoGrupo?.trim()) return setErro(t("O nome do grupo é obrigatório!"));
     try {
-      const g = await p.aoCriarGrupo(novoGrupo.trim());
+      const g = await p.aoCriarGrupo(novoGrupo.trim(), objeto);
       setGrupos((atuais) => [...atuais, g]);
       setGrupoId(g.id);
       setNovoGrupo(null);
@@ -101,7 +117,7 @@ export function FormularioDeCampo(p: FormularioDeCampoProps) {
                     type="button"
                     role="radio"
                     aria-checked={ativo}
-                    onClick={() => setObjeto(o)}
+                    onClick={() => { setObjeto(o); p.aoMudarObjeto?.(o); }}
                     className={`flex flex-1 flex-col items-center gap-1.5 rounded-[8px] border px-2 py-3 text-[12px] font-medium ${ativo ? "border-casca-marca text-casca-marca" : "border-casca-borda text-casca-texto"} bg-casca-raia`}
                   >
                     <Icone size={22} />

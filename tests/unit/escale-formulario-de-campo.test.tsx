@@ -62,7 +62,22 @@ describe("FormularioDeCampo (AddFieldForm da Clint)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Adicionar um grupo" }));
     fireEvent.change(screen.getByPlaceholderText("Digite para criar um novo grupo"), { target: { value: "Kaio IA" } });
     fireEvent.click(screen.getByRole("button", { name: "Criar grupo" }));
-    await waitFor(() => expect(aoCriarGrupo).toHaveBeenCalledWith("Kaio IA"));
+    await waitFor(() => expect(aoCriarGrupo).toHaveBeenCalledWith("Kaio IA", "contato"));
     expect(await screen.findByText("Kaio IA")).toBeInTheDocument();
+  });
+
+  it("trocar o objeto avisa a janela e passa a usar os grupos do catálogo do objeto escolhido (B3-4)", async () => {
+    const aoMudarObjeto = vi.fn();
+    const aoSalvar = vi.fn().mockResolvedValue(undefined);
+    const props = { objeto: "contato" as const, grupoSugerido: CATALOGO.grupos[0]!, aoFechar: vi.fn(), aoSalvar, aoCriarGrupo: vi.fn(), aoMudarObjeto };
+    const { rerender } = render(<FormularioDeCampo {...props} catalogo={CATALOGO} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Empresa" }));
+    expect(aoMudarObjeto).toHaveBeenCalledWith("empresa");
+    const DA_EMPRESA = { grupos: [{ id: "ge1", chave: "geral", nome: "Geral da empresa", posicao: 0, padrao: true }], campos: [] };
+    rerender(<FormularioDeCampo {...props} catalogo={DA_EMPRESA} />);
+    fireEvent.change(screen.getByLabelText("Nome do campo"), { target: { value: "Porte" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Número" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    await waitFor(() => expect(aoSalvar).toHaveBeenCalledWith({ objeto: "empresa", nome: "Porte", grupo_id: "ge1", tipo: "NUMBER", opcoes: undefined }));
   });
 });

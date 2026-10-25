@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { useConversaNovaComEscolhaDeCanal } from "@/components/channels/SeletorDeCanalParaConversa";
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
@@ -67,6 +69,11 @@ export function TabelaDeContatos({
   camposDoContato?: CampoDeColuna[];
 }) {
   const t = useT();
+  const router = useRouter();
+  // Um só hook de conversa (e uma só leitura de canais) para todas as linhas.
+  const { iniciarConversa, seletor } = useConversaNovaComEscolhaDeCanal({
+    aoAbrir: (id) => router.push(`/app/inbox?id=${id}`),
+  });
   const semPermissao = t("Disponível para gerente ou acima.");
   const visiveis = colunas.filter(
     (c) => !(c.tipo === "nativa" && c.chave === "negocios" && !podeVerNegocios),
@@ -169,7 +176,7 @@ export function TabelaDeContatos({
               className={`${TD} ${item.tipo === "nativa" && item.chave === "negocios" ? "w-40" : "min-w-[200px]"}`}
             >
               {item.tipo === "nativa" && item.chave === "contato" ? (
-                <CelulaContato linha={linha} />
+                <CelulaContato linha={linha} aoIniciarConversa={iniciarConversa} />
               ) : item.tipo === "nativa" && item.chave === "tags" ? (
                 <CelulaTags tags={linha.tags} />
               ) : item.tipo === "nativa" && item.chave === "negocios" ? (
@@ -196,6 +203,7 @@ export function TabelaDeContatos({
   };
 
   return (
+    <>
     <table className="w-full border-collapse">
       <thead>
         <tr className="border-b border-casca-borda">
@@ -220,5 +228,7 @@ export function TabelaDeContatos({
       </thead>
       <tbody>{corpo()}</tbody>
     </table>
+    {seletor}
+    </>
   );
 }
