@@ -136,7 +136,7 @@ describe("os pontos de chamada — a regra só vale se quem a usa a chama", () =
     expect(leitor, "a leitura de conversas não seleciona `tags`").toMatch(
       /COLUNAS_DA_CONVERSA\s*=\s*\n?\s*"[^"]*\btags\b[^"]*"/,
     );
-    const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
+    const fonte = readFileSync("lib/kanban/enriquecer-negocios.ts", "utf8");
     expect(fonte, "o card não recebe `conversation_tags`").toContain("conversation_tags:");
   });
 

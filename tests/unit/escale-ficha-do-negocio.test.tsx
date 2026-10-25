@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { render, renderHook, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  render as renderizar,
+  renderHook as renderizarHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,9 +20,18 @@ vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 const quadro = vi.hoisted(() => ({
   estado: { data: undefined as unknown, isLoading: false, error: null as unknown },
 }));
+const rede = vi.hoisted(() => ({ get: vi.fn(), pedidosDoQuadro: [] as Array<string | null> }));
 vi.mock("@/hooks/kanban/useBoard", () => ({
-  useBoard: () => ({ ...quadro.estado, refetch: vi.fn() }),
+  useBoard: (id: string | null) => {
+    rede.pedidosDoQuadro.push(id);
+    return { ...quadro.estado, refetch: vi.fn() };
+  },
   chaveDoQuadro: (id: string) => ["board", id],
+  chaveDoNegocioLeve: (id: string, negocio: string) => ["board", id, "negocio", negocio],
+}));
+vi.mock("@/lib/api/client", () => ({ apiClient: { get: rede.get } }));
+vi.mock("@/hooks/realtime/useRealtimeChannel", () => ({
+  useRealtimeChannel: () => ({ status: "subscribed", ultimaEntrega: { current: null } }),
 }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({
   useActiveOrg: () => ({ orgId: "org-1", currency: "BRL" }),
@@ -53,6 +69,7 @@ vi.mock("@/components/escale/negocio/AcoesDaFicha", () => ({
 }));
 
 import { FichaDoNegocio } from "@/components/escale/negocio/FichaDoNegocio";
+import { ApiError } from "@/lib/api/types";
 import { useFichaDoNegocio } from "@/hooks/escale/useFichaDoNegocio";
 
 /** FORK ESCALE · Fase 1G (C1, C2): a moldura da ficha do negócio (print 01). */
@@ -98,7 +115,20 @@ const PROPS = {
   negociosDoContato: 1,
 };
 
+/** Cache com o quadro (a ficha aberta pelo clique) ou frio (aberta por link). */
+let cacheFrio = false;
+function provedor({ children }: { children: ReactNode }) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (!cacheFrio) qc.setQueryData(["board", "o1"], QUADRO);
+  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+}
+const render = (ui: ReactElement) => renderizar(ui, { wrapper: provedor });
+const renderHook = <T,>(fn: () => T) => renderizarHook(fn, { wrapper: provedor });
+
 beforeEach(() => {
+  cacheFrio = false;
+  rede.get.mockReset();
+  rede.pedidosDoQuadro.length = 0;
   nav.push.mockReset();
   nav.replace.mockReset();
   nav.busca = "foo=1";
@@ -107,17 +137,8 @@ beforeEach(() => {
 });
 
 describe("useFichaDoNegocio", () => {
-  it("carregando, erro, sumiu e pronto, a partir do cache do quadro", () => {
+  it("sumiu e pronto, a partir do cache do quadro", () => {
     const busca = new URLSearchParams();
-    quadro.estado = { data: undefined, isLoading: true, error: null };
-    expect(renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current.estado).toBe(
-      "carregando",
-    );
-    quadro.estado = { data: undefined, isLoading: false, error: new Error("x") };
-    expect(renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current.estado).toBe(
-      "erro",
-    );
-    quadro.estado = { data: QUADRO, isLoading: false, error: null };
     expect(renderHook(() => useFichaDoNegocio("outro", "o1", busca)).result.current.estado).toBe(
       "sumiu",
     );
@@ -142,7 +163,7 @@ describe("useFichaDoNegocio", () => {
         error: null,
       };
       const f = renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current;
-      return f.estado === "pronto" ? f.leadsDoRecorte.length : -1;
+      return f.estado === "pronto" ? (f.leadsDoRecorte?.length ?? -1) : -1;
     };
     const doQuadro = () => {
       const f = renderHook(() => useFichaDoNegocio("n1", "o1", busca)).result.current;
@@ -155,6 +176,52 @@ describe("useFichaDoNegocio", () => {
     // O funil inteiro (duplicidade do Novo negócio) não passa pelos filtros.
     recorte({});
     expect(doQuadro()).toBe(1);
+  });
+});
+
+describe("useFichaDoNegocio com o cache do quadro frio (G2-9: ficha aberta por link)", () => {
+  it("pinta com a rota leve, sem o quadro, e deixa o próximo negócio e a duplicidade no que se sabe", async () => {
+    cacheFrio = true;
+    quadro.estado = { data: undefined, isLoading: false, error: null };
+    rede.get.mockResolvedValue({ data: QUADRO });
+    const { result } = renderHook(() => useFichaDoNegocio("n1", "o1", new URLSearchParams()));
+    expect(result.current.estado).toBe("carregando");
+    await waitFor(() => expect(result.current.estado).toBe("pronto"));
+
+    expect(rede.get).toHaveBeenCalledWith("/api/v1/leads/n1/ficha");
+    const f = result.current;
+    if (f.estado !== "pronto") throw new Error("esperava pronto");
+    expect(f.lead.id).toBe("n1");
+    expect(f.stages).toHaveLength(1);
+    expect(f.leadsDoRecorte).toBeNull();
+    expect(f.leadsDoQuadro.map((l) => l.id)).toEqual(["n1"]);
+    // O quadro só é pedido (por observador) depois da ficha pintada.
+    expect(rede.pedidosDoQuadro[0]).toBeNull();
+    await waitFor(() => expect(rede.pedidosDoQuadro).toContain("o1"));
+  });
+
+  it("com o quadro em cache não faz nenhuma requisição extra", () => {
+    const { result } = renderHook(() => useFichaDoNegocio("n1", "o1", new URLSearchParams()));
+    expect(result.current.estado).toBe("pronto");
+    expect(rede.get).not.toHaveBeenCalled();
+    expect(rede.pedidosDoQuadro.every((id) => id === "o1")).toBe(true);
+  });
+
+  it("negócio que a rota leve não acha vira erro, não ficha vazia", async () => {
+    cacheFrio = true;
+    quadro.estado = { data: undefined, isLoading: false, error: null };
+    rede.get.mockRejectedValue(new Error("rede"));
+    const { result } = renderHook(() => useFichaDoNegocio("n1", "o1", new URLSearchParams()));
+    await waitFor(() => expect(result.current.estado).toBe("erro"));
+    expect(rede.pedidosDoQuadro.every((id) => id === null)).toBe(true);
+  });
+
+  it("404 da rota leve (arquivado, contato pessoal) é \"sumiu\", não erro", async () => {
+    cacheFrio = true;
+    quadro.estado = { data: undefined, isLoading: false, error: null };
+    rede.get.mockRejectedValue(new ApiError(404, "not_found", undefined, "r1"));
+    const { result } = renderHook(() => useFichaDoNegocio("n1", "o1", new URLSearchParams()));
+    await waitFor(() => expect(result.current.estado).toBe("sumiu"));
   });
 });
 
@@ -246,14 +313,16 @@ describe("<FichaDoNegocio>", () => {
     expect(nav.push).toHaveBeenCalledWith("/app/pipelines/o1?foo=1");
   });
 
-  it("carregando e erro", () => {
-    quadro.estado = { data: undefined, isLoading: true, error: null };
+  it("carregando e erro (da rota leve, com o cache do quadro frio)", async () => {
+    cacheFrio = true;
+    quadro.estado = { data: undefined, isLoading: false, error: null };
+    rede.get.mockReturnValue(new Promise(() => {}));
     const { unmount } = render(<FichaDoNegocio {...PROPS} />);
     expect(screen.getByText("Carregando…")).toBeInTheDocument();
     unmount();
-    quadro.estado = { data: undefined, isLoading: false, error: new Error("x") };
+    rede.get.mockRejectedValue(new Error("x"));
     render(<FichaDoNegocio {...PROPS} />);
-    expect(screen.getByText("Não consegui carregar este negócio.")).toBeInTheDocument();
+    expect(await screen.findByText("Não consegui carregar este negócio.")).toBeInTheDocument();
   });
 });
 

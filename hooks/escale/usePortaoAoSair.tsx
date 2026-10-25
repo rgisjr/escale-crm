@@ -3,13 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState, type ReactNode } from "react";
 
 import { JanelaDeCamposPendentes } from "@/components/escale/configuracoes/JanelaDeCamposPendentes";
-import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import type { RecusaDeCampos } from "@/hooks/kanban/useMoveCard";
 import { useEditLead } from "@/hooks/kanban/useUpdateLead";
 import { faltandoAoEncerrar } from "@/lib/escale/configuracoes/ao-sair";
-import type { BoardData } from "@/lib/kanban/types";
 import type { CampoFaltando } from "@/lib/leads/campos-exigidos";
 import type { Lead } from "@/lib/types/leads";
+import { quadroEmCache } from "@/lib/kanban/quadro-em-cache";
 
 export type Encerramento = "won" | "lost";
 
@@ -50,7 +49,7 @@ export function usePortaoAoSair(
         continuar();
         return;
       }
-      const quadro = qc.getQueryData<BoardData>(chaveDoQuadro(pipelineId));
+      const quadro = quadroEmCache(qc, pipelineId);
       const atual = quadro?.leads.find((l) => l.id === lead.id) ?? lead;
       const faltando = quadro
         ? faltandoAoEncerrar({

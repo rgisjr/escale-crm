@@ -60,6 +60,18 @@ export function chaveDoQuadro(pipelineId: string | null) {
   return ["board", pipelineId] as const;
 }
 
+/**
+ * A CHAVE DO NEGÓCIO LEVE DA FICHA (`GET /api/v1/leads/:id/ficha`).
+ *
+ * Mora DEBAIXO de `["board", pipelineId]` de propósito: todo ponto que hoje invalida
+ * `["board"]` ou `["board", pipelineId]` (mover, editar, tarefa, contato, conversa) alcança
+ * a ficha aberta por link sem mudar uma linha. A chave exata do quadro (`chaveDoQuadro`)
+ * NÃO a alcança, então as escritas otimistas no quadro seguem só no quadro.
+ */
+export function chaveDoNegocioLeve(pipelineId: string | null, negocioId: string) {
+  return ["board", pipelineId, "negocio", negocioId] as const;
+}
+
 export function useBoard(pipelineId: string | null) {
   const qc = useQueryClient();
   const queryKey = chaveDoQuadro(pipelineId);

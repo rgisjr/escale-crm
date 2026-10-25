@@ -69,7 +69,8 @@ export function ProximoNegocio({
 }: {
   lead: Lead;
   etapas: Stage[];
-  leads: Lead[];
+  /** `null` enquanto o quadro não chegou (ficha aberta por link): as setas esperam desativadas. */
+  leads: Lead[] | null;
   ordem: ((a: Lead, b: Lead) => number) | undefined;
   aba: AbaDoNegocio;
 }) {
@@ -82,7 +83,8 @@ export function ProximoNegocio({
   const pedida = busca.get(PARAM_ETAPA_DO_PROXIMO);
   const etapaId = pedida && opcoes.some((s) => s.id === pedida) ? pedida : lead.stage_id;
   const etapa = opcoes.find((s) => s.id === etapaId);
-  const { anterior, proximo } = vizinhosNaEtapa(leads, etapaId, lead.id, ordem);
+  const { anterior, proximo } = vizinhosNaEtapa(leads ?? [], etapaId, lead.id, ordem);
+  const carregando = leads === null;
 
   const ir = (destino: Lead) => router.push(rotaDoNegocio(destino.id, qs, { aba, etapa: pedida }));
   const escolher = (id: string) => {
@@ -160,7 +162,11 @@ export function ProximoNegocio({
           aria-label={t("Negócio anterior")}
           disabled={!anterior}
           title={
-            anterior ? tituloDoCard(anterior) : t("Não existem negócios anteriores nesta etapa.")
+            carregando
+              ? undefined
+              : anterior
+                ? tituloDoCard(anterior)
+                : t("Não existem negócios anteriores nesta etapa.")
           }
           onClick={() => anterior && ir(anterior)}
           className={SETA}
@@ -171,7 +177,13 @@ export function ProximoNegocio({
           type="button"
           aria-label={t("Próximo negócio")}
           disabled={!proximo}
-          title={proximo ? tituloDoCard(proximo) : t("Não existem próximos negócios nesta etapa.")}
+          title={
+            carregando
+              ? undefined
+              : proximo
+                ? tituloDoCard(proximo)
+                : t("Não existem próximos negócios nesta etapa.")
+          }
           onClick={() => proximo && ir(proximo)}
           className={SETA}
         >

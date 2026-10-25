@@ -3,11 +3,10 @@
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
-import type { BoardData } from "@/lib/kanban/types";
 import { motivosDoFunil } from "@/lib/leads/motivos-de-perda-do-funil";
 // FORK ESCALE · Fase 1F: o motivo desativado na origem some da janela de perder (continua aceito).
 import { semMotivosInativos } from "@/lib/escale/configuracoes/motivos";
+import { quadroEmCache } from "@/lib/kanban/quadro-em-cache";
 
 /**
  * OS MOTIVOS DE PERDA CADASTRADOS NO FUNIL DESTE CARD.
@@ -33,6 +32,6 @@ export function useMotivosDePerdaDoFunil(pipelineId: string): string[] {
   const qc = useQueryClient();
   // A MESMA chave de `useBoard`, não uma literal igual: literal igual é igual só
   // até alguém mudar um dos lados, e aí este hook devolve `[]` sem erro nenhum.
-  const settings = qc.getQueryData<BoardData>(chaveDoQuadro(pipelineId))?.pipeline?.settings ?? null;
+  const settings = quadroEmCache(qc, pipelineId)?.pipeline?.settings ?? null;
   return useMemo(() => semMotivosInativos(motivosDoFunil(settings), settings), [settings]);
 }

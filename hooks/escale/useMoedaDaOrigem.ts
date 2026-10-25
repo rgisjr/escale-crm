@@ -2,9 +2,8 @@
 import { QueryClientContext } from "@tanstack/react-query";
 import { useContext } from "react";
 
-import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
+import { quadroEmCache } from "@/lib/kanban/quadro-em-cache";
 import { moedaDaOrigem } from "@/lib/escale/configuracoes/tipos";
-import type { BoardData } from "@/lib/kanban/types";
 import type { MoedaServida } from "@/lib/money";
 
 /**
@@ -16,5 +15,5 @@ import type { MoedaServida } from "@/lib/money";
 export function useMoedaDaOrigem(pipelineId: string): MoedaServida | null {
   // `useContext` e não `useQueryClient`: o formulário também abre onde não há provedor (testes do original).
   const qc = useContext(QueryClientContext);
-  return moedaDaOrigem(qc?.getQueryData<BoardData>(chaveDoQuadro(pipelineId))?.pipeline.settings);
+  return moedaDaOrigem(qc ? quadroEmCache(qc, pipelineId)?.pipeline.settings : undefined);
 }

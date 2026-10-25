@@ -249,10 +249,12 @@ describe("ContatoDoNegocio — as abas do dossiê", () => {
 describe("a fiação — quem usa a regra a chama", () => {
   it("⭐ a rota lê o dado do contato na MESMA consulta dos marcadores e o aplica nos leads", () => {
     const rota = fonte("app/api/v1/pipelines/[id]/board/route.ts");
-    const inicio = rota.indexOf("function withMarcadoresDoContato");
-    const fim = rota.indexOf("async function withNextActions");
-    expect(inicio, "a etapa dos marcadores sumiu da rota").toBeGreaterThan(-1);
-    const etapa = rota.slice(inicio, fim);
+    // As etapas moraram na rota até a ficha por link precisar delas (enriquecer-negocios.ts).
+    const lib = fonte("lib/kanban/enriquecer-negocios.ts");
+    const inicio = lib.indexOf("function withMarcadoresDoContato");
+    const fim = lib.indexOf("export async function withTarefas");
+    expect(inicio, "a etapa dos marcadores sumiu de enriquecer-negocios").toBeGreaterThan(-1);
+    const etapa = lib.slice(inicio, fim);
 
     // Q2b: a leitura de `contacts` é uma só (`lerContatosEConversas`) e traz estas colunas.
     expect(
