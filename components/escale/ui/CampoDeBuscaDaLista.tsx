@@ -23,7 +23,9 @@ export function CampoDeBuscaDaLista({
   const [busca, setBusca] = useState(valorDaUrl);
   // A versão mais nova dos dois, para o temporizador não usar a da hora em que foi armado.
   const ultimo = useRef({ valorDaUrl, aoBuscar });
-  ultimo.current = { valorDaUrl, aoBuscar };
+  useEffect(() => {
+    ultimo.current = { valorDaUrl, aoBuscar };
+  });
 
   useEffect(() => {
     const id = window.setTimeout(() => {

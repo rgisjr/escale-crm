@@ -548,8 +548,6 @@ export const DICIONARIO: Traducoes = {
   "conversas não lidas": { es: "conversaciones no leídas" },
   "Não foi possível atualizar as mensagens.": { es: "No se pudieron actualizar los mensajes." },
   "Não foi possível carregar as conversas.": { es: "No se pudieron cargar las conversaciones." },
-  "Não foi possível carregar os contatos.": { es: "No se pudieron cargar los contactos." },
-  "Não foi possível carregar os negócios.": { es: "No se pudieron cargar los negocios." },
   "Escolher contato para conversar": { es: "Elegir contacto para conversar" },
   "Acompanhamento somente leitura": { es: "Seguimiento de solo lectura" },
   "A janela de atendimento fechou. Abra o Inbox para ver as opções deste canal.": { es: "La ventana de atención se cerró. Abre el Inbox para ver las opciones de este canal." },

@@ -54,8 +54,8 @@ describe("lerCatalogosSemeando (G3-1, G3-5)", () => {
     const admin = { rpc, from: vi.fn() } as never;
     const [contato, empresa] = await lerCatalogosSemeando(sb, admin, ORG, ["contato", "empresa"]);
     expect(rpc).not.toHaveBeenCalled();
-    expect(contato.grupos).toHaveLength(1);
-    expect(empresa.grupos).toHaveLength(1);
+    expect(contato!.grupos).toHaveLength(1);
+    expect(empresa!.grupos).toHaveLength(1);
     expect(estado.picoEmVoo).toBe(4);
   });
 

@@ -5,7 +5,7 @@ import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { podeAdministrarEmpresa } from "@/lib/auth/pode-administrar-empresa";
 import { ErroDoCatalogo, TEXTO_DO_ERRO, criarCampo, lerCatalogosSemeando, novoCampoSchema } from "@/lib/escale/campos/banco";
-import { OBJETOS_DE_CAMPO, catalogoVisivel } from "@/lib/escale/campos/regras";
+import { OBJETOS_DE_CAMPO, type Catalogo, catalogoVisivel } from "@/lib/escale/campos/regras";
 import type { Idioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
     // A semente só roda se o catálogo voltar sem grupos (organização nova).
-    const [catalogo] = await lerCatalogosSemeando(supabase, createAdminClient(), authz.org.orgId, [parse.data.objeto]);
+    const [catalogo] = (await lerCatalogosSemeando(supabase, createAdminClient(), authz.org.orgId, [parse.data.objeto])) as [Catalogo];
     return ok(catalogoVisivel(catalogo, authz.org.role));
   } catch (err) {
     logger.error("campos-do-crm.get", { err });

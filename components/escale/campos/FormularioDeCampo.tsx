@@ -57,6 +57,7 @@ export function FormularioDeCampo(p: FormularioDeCampoProps) {
   // escolhido (de outro objeto) sai, senão o POST levaria um `grupo_id` que não existe no destino.
   useEffect(() => {
     if (editando) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- acompanha o catálogo do objeto escolhido
     setGrupos(p.catalogo.grupos);
     setGrupoId((atual) => {
       if (atual && p.catalogo.grupos.some((g) => g.id === atual)) return atual;
