@@ -40,6 +40,8 @@ const ROTA = "/api/v1/acoes-em-massa";
 const DIA_MS = 24 * 60 * 60 * 1000;
 /** 7 dias de validade do pedido de exportação + 1 dia para a pessoa ver "Expirada". */
 const JANELA_DA_LISTA_MS = 8 * DIA_MS;
+/** Os status em que uma exclusão ainda não terminou (migration 9103). */
+const STATUS_EM_ANDAMENTO = ["preparando", "aguardando_aprovacao", "na_fila", "processando"];
 
 export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
@@ -73,6 +75,21 @@ export async function POST(req: NextRequest): Promise<Response> {
       const e = etapa as { pipeline_id: string; is_archived: boolean } | null;
       if (!e || e.pipeline_id !== p.pipeline_id || e.is_archived)
         return recusa("Escolha a origem e a etapa.");
+    }
+
+    // Só uma exclusão em massa por vez na organização. É uma checagem ANTES de inserir: dois pedidos no
+    // mesmo milissegundo ainda passariam (risco aceito); o que ela barra é o clique repetido enquanto a fila roda.
+    if (acao === "excluir") {
+      const { data: emAndamento, error: erroDaChecagem } = await supabase
+        .from("crm_acoes_em_massa")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("acao", "excluir")
+        .in("status", STATUS_EM_ANDAMENTO)
+        .limit(1);
+      if (erroDaChecagem) throw erroDaChecagem;
+      if ((emAndamento ?? []).length > 0)
+        return fail("state_conflict", t("Já existe uma exclusão em andamento."), 409, { requestId });
     }
 
     let argumentos: Record<string, unknown>;

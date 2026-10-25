@@ -11,6 +11,7 @@ import { apiClient } from "@/lib/api/client";
 import { useCatalogoDeCampos } from "@/hooks/escale/useCatalogoDeCampos";
 import { useColunasDaLista, useSalvarColunasDaLista } from "@/hooks/escale/useColunasDaLista";
 import { useAcompanharAcoes } from "@/hooks/escale/useAcompanharAcoes";
+import { useExclusaoEmAndamento } from "@/hooks/escale/useExclusaoEmAndamento";
 import { useContatoAberto } from "@/hooks/escale/useContatoAberto";
 import { useEstadoDaListaDeContatos } from "@/hooks/escale/useEstadoDaListaDeContatos";
 import {
@@ -55,6 +56,7 @@ import { JanelaNovoNegocio } from "./JanelaNovoNegocio";
 import { MenuNovoContato } from "./MenuNovoContato";
 import { PainelDeColunas } from "./PainelDeColunas";
 import { AcoesEmMassa } from "./massa/AcoesEmMassa";
+import { FaixaDaExclusao } from "./massa/FaixaDaExclusao";
 import { FaixaDaSelecao } from "./massa/FaixaDaSelecao";
 import { MenuDaSelecao } from "./massa/MenuDaSelecao";
 import { PainelDeExportacoes } from "./massa/PainelDeExportacoes";
@@ -120,7 +122,9 @@ export function ListaDeContatos({
   const [novoNegocio, setNovoNegocio] = useState<ContatoParaNegocio | null>(null);
   // FORK ESCALE · Fase 2E: o contato aberto por cima da lista e a mescla (Task 10).
   const contatoAberto = useContatoAberto();
-  const [mescla, setMescla] = useState<{ aberta: boolean; contatoInicial?: string }>({ aberta: false });
+  const [mescla, setMescla] = useState<{ aberta: boolean; contatoInicial?: string }>({
+    aberta: false,
+  });
   const [girando, setGirando] = useState(false);
 
   useEffect(() => {
@@ -172,6 +176,7 @@ export function ListaDeContatos({
     aoFalharAoResolver: () => toast.error(falhou),
   });
   const acompanhamento = useAcompanharAcoes();
+  const exclusao = useExclusaoEmAndamento();
 
   const mudarPorPagina = (n: number) => {
     setPorPagina(n);
@@ -238,7 +243,11 @@ export function ListaDeContatos({
           {podeMesclar && <SeloDeMescla aoAbrir={() => setMescla({ aberta: true })} />}
           {/* FORK ESCALE · Fase 2B (Q4): minhas exportações e, para o admin, os pedidos para aprovar. */}
           {podeSelecionar && <PainelDeExportacoes ehAdmin={papel === "admin"} />}
-          <MenuNovoContato origens={origens} podeCriar={podeCriar} podeImportar={ROLE_RANK[papel] >= ROLE_RANK.manager} />
+          <MenuNovoContato
+            origens={origens}
+            podeCriar={podeCriar}
+            podeImportar={ROLE_RANK[papel] >= ROLE_RANK.manager}
+          />
         </div>
       </header>
 
@@ -349,6 +358,12 @@ export function ListaDeContatos({
         />
       ) : null}
 
+      <FaixaDaExclusao
+        emAndamento={exclusao.emAndamento}
+        total={exclusao.total}
+        feitos={exclusao.feitos}
+      />
+
       <FaixaDaSelecao
         modo={sel.modoDaFaixa}
         naPagina={linhas.length}
@@ -403,6 +418,7 @@ export function ListaDeContatos({
           camposDoContato={camposDoContato}
           aoLimpar={sel.limpar}
           aoPedir={acompanhamento.acompanhar}
+          exclusaoEmAndamento={exclusao.emAndamento}
         />
       ) : null}
       {contatoAberto.contatoId ? (
