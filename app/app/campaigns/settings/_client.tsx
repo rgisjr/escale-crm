@@ -245,7 +245,13 @@ function TextosSalvos() {
             </Button>
           </div>
         ))}
-        {(q.data ?? []).length === 0 && !q.isLoading && (
+        {q.isError && !q.data && (
+          <ErroDeLista
+            mensagem={t("Não foi possível carregar os textos salvos.")}
+            onTentar={() => void q.refetch()}
+          />
+        )}
+        {!q.isError && (q.data ?? []).length === 0 && !q.isLoading && (
           <p className="py-2 text-sm text-muted-foreground">{t("Nenhum texto salvo ainda.")}</p>
         )}
       </div>
@@ -317,11 +323,30 @@ function ListaDeExclusao() {
             </Button>
           </div>
         ))}
-        {(q.data ?? []).length === 0 && !q.isLoading && (
+        {q.isError && !q.data && (
+          <ErroDeLista
+            mensagem={t("Não foi possível carregar a lista de exclusão.")}
+            onTentar={() => void q.refetch()}
+          />
+        )}
+        {!q.isError && (q.data ?? []).length === 0 && !q.isLoading && (
           <p className="py-2 text-sm text-muted-foreground">{t("Nenhum número excluído.")}</p>
         )}
       </div>
     </Card>
+  );
+}
+
+/** Erro de leitura de uma lista: nunca se apresenta como "lista vazia". */
+function ErroDeLista({ mensagem, onTentar }: { mensagem: string; onTentar: () => void }) {
+  const t = useT();
+  return (
+    <div className="flex flex-wrap items-center gap-2 py-2 text-sm">
+      <span className="text-error-fg">{mensagem}</span>
+      <Button size="sm" variant="outline" onClick={onTentar}>
+        {t("Tentar de novo")}
+      </Button>
+    </div>
   );
 }
 

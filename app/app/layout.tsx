@@ -150,20 +150,52 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // A faixa do teste grátis (spec da cobrança §9): uma consulta a mais SÓ com
     // a cobrança ligada (quem não administra só vê o atraso). Falha aberta na INFORMAÇÃO: sem a
     // leitura, nenhuma faixa — o que ela diz não trava nada.
-    if (modulos.includes("cobranca")) {
-      const { data, error } = await admin
-        .from("cobranca_assinaturas")
-        .select("estado, trial_ate, vencida_desde, cancela_no_fim, proximo_vencimento, link_de_pagamento, provedor")
-        .eq("organization_id", activeOrg.orgId)
-        .maybeSingle();
-      if (error) {
+    //
+    // O tema de extensão NUNCA derruba a casca — e por isso a leitura fica FORA
+    // do `Promise.all` lá de cima: o portão de organização (suspensa / onboarding
+    // / ilegível) decide o destino ANTES de qualquer consulta nova, e uma leitura
+    // que falhe aqui (tabela ausente numa instalação antiga, RLS, formato
+    // inesperado) desce para `null` em vez de trocar o `redirect` do portão por
+    // um 500. Quem não escolheu tema fica exatamente como está; quem escolheu só
+    // perde a pintura naquele render.
+    //
+    // As duas leituras são independentes entre si e já depois do portão: rodam
+    // juntas, e não uma atrás da outra.
+    const [assinatura, temaTrace] = await Promise.all([
+      modulos.includes("cobranca")
+        ? admin
+            .from("cobranca_assinaturas")
+            .select("estado, trial_ate, vencida_desde, cancela_no_fim, proximo_vencimento, link_de_pagamento, provedor")
+            .eq("organization_id", activeOrg.orgId)
+            .maybeSingle()
+        : Promise.resolve(null),
+      (async () => {
+        try {
+          return await admin
+            .from("organization_extensions")
+            .select(
+              "configuration," +
+                "extension_installations!organization_extensions_installation_id_fkey(" +
+                "extension_artifacts!extension_installations_artifact_id_fkey(manifest))",
+            )
+            .eq("organization_id", activeOrg.orgId)
+            .eq("enabled", true)
+            .limit(50);
+        } catch {
+          return null;
+        }
+      })(),
+    ]);
+
+    if (assinatura) {
+      if (assinatura.error) {
         logger.warn("app: assinatura ilegível — sem faixa da cobrança", {
           organization_id: activeOrg.orgId,
-          codigo: error.code,
+          codigo: assinatura.error.code,
         });
       } else {
         orgFuso = orgRow?.timezone ?? null;
-        faixa = faixaDaCobranca(data, new Date(), roleAtLeast(activeOrg.role, "admin"));
+        faixa = faixaDaCobranca(assinatura.data, new Date(), roleAtLeast(activeOrg.role, "admin"));
       }
     }
 
@@ -190,34 +222,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       cssDaOrganizacao = cssDaMarca(marca.cor, ESCOPO_DA_ORGANIZACAO).css;
     }
 
-    // O tema de extensão NUNCA derruba a casca — e por isso a leitura fica FORA
-    // do `Promise.all` lá de cima: o portão de organização (suspensa / onboarding
-    // / ilegível) decide o destino ANTES de qualquer consulta nova, e uma leitura
-    // que falhe aqui (tabela ausente numa instalação antiga, RLS, formato
-    // inesperado) desce para `null` em vez de trocar o `redirect` do portão por
-    // um 500. Quem não escolheu tema fica exatamente como está; quem escolheu só
-    // perde a pintura naquele render.
-    try {
-      const temaTrace = await admin
-        .from("organization_extensions")
-        .select(
-          "configuration," +
-            "extension_installations!organization_extensions_installation_id_fkey(" +
-            "extension_artifacts!extension_installations_artifact_id_fkey(manifest))",
-        )
-        .eq("organization_id", activeOrg.orgId)
-        .eq("enabled", true)
-        .limit(50);
-      if (!temaTrace.error) {
-        const linhas = (temaTrace.data ?? [])
-          .map(linhaBrutaDeTema)
-          .filter((linha): linha is NonNullable<typeof linha> => linha !== null);
-        const temaEscolhido = temaAplicavel(linhas);
-        cssDoTemaDaExtensao =
-          temaEscolhido === null ? null : cssDaExtensaoDeTema(temaEscolhido).css;
-      }
-    } catch {
-      cssDoTemaDaExtensao = null;
+    if (temaTrace && !temaTrace.error) {
+      const linhas = (temaTrace.data ?? [])
+        .map(linhaBrutaDeTema)
+        .filter((linha): linha is NonNullable<typeof linha> => linha !== null);
+      const temaEscolhido = temaAplicavel(linhas);
+      cssDoTemaDaExtensao = temaEscolhido === null ? null : cssDaExtensaoDeTema(temaEscolhido).css;
     }
 
     // Desce para o menu CAMPO A CAMPO, e só o campo que a organização definiu.

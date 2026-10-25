@@ -332,15 +332,21 @@ export function TemplatesParceiroClient({
                       method: "POST",
                       body: fd,
                     });
-                    const j = (await r.json()) as { data?: { url?: string }; error?: { message?: string } };
-                    if (!r.ok || !j.data?.url) {
+                    // 413 do proxy volta em HTML: `json()` lançaria sem aviso.
+                    const j = (await r.json().catch(() => null)) as {
+                      data?: { url?: string };
+                      error?: { message?: string };
+                    } | null;
+                    if (!r.ok || !j?.data?.url) {
                       // A mensagem da rota CHEGA ao operador: é ela que
                       // distingue "formato" de "tamanho" de "erro nosso".
-                      toast.error(t(j.error?.message ?? "Não consegui subir a imagem."));
+                      toast.error(t(j?.error?.message ?? "Não consegui subir a imagem."));
                       return;
                     }
                     setMidiaUrl(j.data.url);
                     setCabecalho("");
+                  } catch {
+                    toast.error(t("Não consegui subir a imagem."));
                   } finally {
                     setSubindo(false);
                     e.target.value = "";
@@ -543,6 +549,15 @@ export function TemplatesParceiroClient({
 
       {lista.isLoading ? (
         <p className="text-sm text-muted-foreground">{t("Carregando…")}</p>
+      ) : lista.isError ? (
+        // Erro de leitura não é base vazia: "Nenhum modelo espelhado" levaria a
+        // sincronizar sem necessidade e esconderia que a lista não carregou.
+        <div className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+          <span>{t("Não foi possível carregar os modelos.")}</span>
+          <Button type="button" variant="outline" size="sm" onClick={() => void lista.refetch()}>
+            {t("Tentar de novo")}
+          </Button>
+        </div>
       ) : templates.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {t("Nenhum modelo espelhado ainda. Clique em")} <strong>{t("Sincronizar")}</strong>{" "}

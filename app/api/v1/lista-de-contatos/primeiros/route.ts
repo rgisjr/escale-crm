@@ -48,7 +48,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const supabase = await createClient();
     const orgId = authz.org.orgId;
     const filtro = temFiltros(filtros)
-      ? compilarFiltros(filtros, await fusoDaOrganizacao(supabase, orgId))
+      ? compilarFiltros(filtros, await fusoDaOrganizacao(supabase, orgId, authz.org.timezone))
       : {};
     const ids = await primeirosContatos(supabase, orgId, lido.data, busca, filtro);
     return ok({ ids }, { requestId });

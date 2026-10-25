@@ -45,7 +45,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const compilado = compilarFiltrosDaFila(
       painel,
       url.get("q") ?? undefined,
-      await fusoDaOrganizacao(supabase, authz.org.orgId),
+      await fusoDaOrganizacao(supabase, authz.org.orgId, authz.org.timezone),
     );
     const pagina = await lerPaginaDaFila(
       supabase,
