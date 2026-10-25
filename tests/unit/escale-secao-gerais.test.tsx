@@ -157,7 +157,8 @@ describe("Configurações Gerais", () => {
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     await vi.waitFor(() =>
       expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/pipelines/f-1/configuracoes", {
-        gerais: { moeda: "USD", tags_padrao: ["lead instagram"], visualizacao: "own_and_unassigned" },
+        // B4-4: a regra de visualização só vai quando a pessoa a muda; moeda e tag não a fixam.
+        gerais: { moeda: "USD", tags_padrao: ["lead instagram"] },
       }),
     );
   });

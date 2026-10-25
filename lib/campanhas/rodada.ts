@@ -689,11 +689,14 @@ export async function estadoDeEnvio(
   // Contagem que falha não vira zero: zero soltaria o teto e o ritmo.
   const erro = hoje.error ?? naHora.error ?? ultimo.error;
   if (erro) throw new Error(`Não foi possível ler os envios da campanha: ${erro.message}`);
+  // Resposta sem contagem (sem Content-Range) também não pode virar zero.
+  if (hoje.count === null || naHora.count === null)
+    throw new Error("Não foi possível ler os envios da campanha: o banco não devolveu a contagem.");
   const ultimoEm = ((ultimo.data ?? [])[0] as { sent_at: string } | undefined)?.sent_at;
   return {
     ultimoEnvio: ultimoEm ? new Date(ultimoEm) : null,
-    enviadasHoje: hoje.count ?? 0,
-    enviadasNaUltimaHora: naHora.count ?? 0,
+    enviadasHoje: hoje.count,
+    enviadasNaUltimaHora: naHora.count,
   };
 }
 
