@@ -13,7 +13,7 @@ import { CartaoDeAnuncio, anuncioDaMensagem } from "./CartaoDeAnuncio";
 
 const EDICAO_MAX_MS = 15 * 60_000;
 const ITEM =
-  "flex h-8 w-full items-center px-3 text-left text-[12px] text-casca-texto hover:bg-casca-raia";
+  "flex h-8 w-full items-center px-3 text-left text-[14px] text-casca-texto hover:bg-casca-raia";
 const hora = (iso: string) => {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -118,7 +118,7 @@ export function BalaoDaCasca({
         {anuncio ? <CartaoDeAnuncio anuncio={anuncio} /> : null}
         <div
           className={cn(
-            "group relative rounded-lg border px-3 py-2 text-[13px] text-casca-texto",
+            "group relative rounded-lg border px-3 py-2 text-[15px] text-casca-texto",
             saida
               ? "rounded-tr-none border-casca-borda-msg bg-casca-caixa-msg"
               : "rounded-tl-none border-casca-borda bg-white",
@@ -126,7 +126,7 @@ export function BalaoDaCasca({
           )}
         >
           {autor ? (
-            <div className="mb-0.5 text-[11px] font-medium text-casca-marca">{autor}</div>
+            <div className="mb-0.5 text-[12px] font-medium text-casca-marca">{autor}</div>
           ) : null}
           {revogada ? (
             <p className="text-casca-suave italic">{t("Esta mensagem foi apagada")}</p>
@@ -134,7 +134,7 @@ export function BalaoDaCasca({
             <>
               {temMidia ? <MediaRenderer message={message} agora={agora} /> : null}
               {message.media_derived_text ? (
-                <p className="mt-1 text-[12px] text-casca-suave italic">
+                <p className="mt-1 text-[14px] text-casca-suave italic">
                   {message.media_derived_text}
                 </p>
               ) : null}
@@ -143,10 +143,10 @@ export function BalaoDaCasca({
                   <textarea
                     value={texto}
                     onChange={(e) => setTexto(e.target.value)}
-                    className="min-h-[60px] rounded-casca-gatilho border border-casca-borda p-1 text-[13px]"
+                    className="min-h-[60px] rounded-casca-gatilho border border-casca-borda p-1 text-[15px]"
                     aria-label={t("Editar mensagem")}
                   />
-                  <div className="flex justify-end gap-2 text-[12px]">
+                  <div className="flex justify-end gap-2 text-[14px]">
                     <button
                       type="button"
                       onClick={() => {
@@ -177,7 +177,7 @@ export function BalaoDaCasca({
               ) : null}
             </>
           )}
-          <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-casca-meta">
+          <div className="mt-1 flex items-center justify-end gap-1 text-[12px] text-casca-meta">
             {message.edited_at ? <span className="italic">{t("Editada")}</span> : null}
             {encaminhada ? <span className="italic">{t("Encaminhada")}</span> : null}
             <span>{hora(message.sent_at)}</span>
@@ -257,7 +257,7 @@ export function BalaoDaCasca({
           ) : null}
         </div>
         {falhou ? (
-          <div className="mt-1 flex items-center justify-end gap-2 text-[11px] text-casca-alerta">
+          <div className="mt-1 flex items-center justify-end gap-2 text-[12px] text-casca-alerta">
             <span>{message.error_message ?? t("Não foi possível enviar")}</span>
             <button
               type="button"

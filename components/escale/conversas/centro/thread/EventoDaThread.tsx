@@ -14,7 +14,7 @@ export function EventoDaThread({
   const { partes, hora } = textoDoEvento(evento, nomes, t);
   return (
     <div
-      className="my-2 text-center text-[11px] text-casca-suave"
+      className="my-2 text-center text-[12px] text-casca-suave"
       data-testid={`item-evento-${evento.id}`}
     >
       {partes.map((p, i) => (

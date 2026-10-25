@@ -79,7 +79,6 @@ describe("ConversasDaCasca sem TooltipProvider por fora (hotfix escale.15)", () 
         <ConversasDaCasca />
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("heading", { name: "Conversas" })).toBeInTheDocument();
     expect(screen.getByText("Próximo negócio")).toBeInTheDocument();
     expect(screen.getByText("Nenhuma conversa selecionada")).toBeInTheDocument();
   });

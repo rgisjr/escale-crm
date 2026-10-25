@@ -8,9 +8,9 @@ import { corDoAvatar, inicialDoNome } from "@/lib/escale/quadro/aparencia";
 import { cn } from "@/lib/utils";
 
 const TAMANHO = {
-  linha: "size-11 text-[15px]",
-  secao: "size-9 text-[13px]",
-  topo: "size-10 text-[14px]",
+  linha: "size-[54px] text-[20px]",
+  secao: "size-9 text-[15px]",
+  topo: "size-11 text-[17px]",
 } as const;
 
 /** A foto redonda do contato com o selo do canal no canto (c01). */

@@ -61,11 +61,11 @@ function ContagemDeAtividades({ lead }: { lead: Lead }) {
   if (pendentes.length === 0) return null;
   return (
     <span className="flex items-center gap-2">
-      <span className="rounded-full bg-casca-marca-suave px-1.5 text-[11px] font-semibold text-casca-marca">
+      <span className="rounded-full bg-casca-marca-suave px-1.5 text-[12px] font-semibold text-casca-marca">
         {pendentes.length}
       </span>
       {atrasadas > 0 ? (
-        <span className="rounded-full bg-casca-atraso px-2 text-[11px] font-medium text-casca-alerta">
+        <span className="rounded-full bg-casca-atraso px-2 text-[12px] font-medium text-casca-alerta">
           {`${atrasadas} ${atrasadas === 1 ? t("atrasada") : t("atrasadas")}`}
         </span>
       ) : null}
@@ -129,7 +129,7 @@ export function SecoesDoPainel({
   return (
     <section className="pb-6">
       <div className="flex h-8 items-center justify-between">
-        <span className="text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
+        <span className="text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
           {t("Seções")}
         </span>
         <Popover open={balao} onOpenChange={setBalao}>
@@ -144,14 +144,14 @@ export function SecoesDoPainel({
             </button>
           </PopoverTrigger>
           <PainelSuspenso align="end" sideOffset={6} className="w-[258px] p-3">
-            <p className="pb-2 text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
+            <p className="pb-2 text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
               {t("Seções visíveis")}
             </p>
             <ul>
               {SECOES.map((s) => (
                 <li
                   key={s}
-                  className="flex h-9 items-center justify-between text-[12px] text-casca-texto"
+                  className="flex h-9 items-center justify-between text-[14px] text-casca-texto"
                 >
                   {t(ROTULO_DA_SECAO[s])}
                   <InterruptorDaCasca
@@ -165,7 +165,7 @@ export function SecoesDoPainel({
             <button
               type="button"
               onClick={() => aoMudarSecoes(SECOES_PADRAO)}
-              className="mt-2 w-full text-center text-[12px] text-casca-marca hover:underline"
+              className="mt-2 w-full text-center text-[14px] text-casca-marca hover:underline"
             >
               {t("Mostrar todas")}
             </button>
@@ -174,16 +174,16 @@ export function SecoesDoPainel({
       </div>
       <ul aria-label={t("Seções")} className="flex flex-col gap-2">
         {visiveis.map((s) => {
-          const Icone = ICONE_DA_SECAO[s];
           return (
             <li key={s}>
               <button
                 type="button"
                 onClick={() => setAberta(s)}
-                className="flex h-11 w-full items-center gap-2 rounded-[8px] border border-casca-borda bg-surface px-4 text-left hover:bg-casca-raia"
+                className="flex h-[54px] w-full items-center gap-2 rounded-[8px] border border-casca-borda bg-surface px-4 text-left hover:bg-casca-raia"
               >
-                <Icone size={16} aria-hidden className="text-casca-suave" />
-                <span className="flex-1 text-[13px] text-casca-texto">{t(ROTULO_DA_SECAO[s])}</span>
+                <span className="flex-1 text-[16px] font-semibold text-casca-texto">
+                  {t(ROTULO_DA_SECAO[s])}
+                </span>
                 {s === "atividades" && quadro ? <ContagemDeAtividades lead={quadro.lead} /> : null}
                 <ChevronRight size={14} aria-hidden className="text-casca-chevron" />
               </button>

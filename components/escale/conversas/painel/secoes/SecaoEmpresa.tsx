@@ -15,7 +15,7 @@ export function SecaoEmpresa({ aoVoltar }: { aoVoltar: () => void }) {
           type="button"
           disabled
           title={t("Em breve")}
-          className="flex h-9 w-full items-center rounded-casca-gatilho bg-casca-busca px-3 text-left text-[13px] text-casca-meta disabled:pointer-events-auto disabled:cursor-not-allowed"
+          className="flex h-9 w-full items-center rounded-casca-gatilho bg-casca-busca px-3 text-left text-[15px] text-casca-meta disabled:pointer-events-auto disabled:cursor-not-allowed"
         >
           {t("Clique aqui para adicionar")}
         </button>

@@ -49,7 +49,7 @@ export function JanelaNotaInterna({
         onChange={(e) => setTexto(e.target.value)}
         placeholder={t("Adicione aqui uma anotação do seu atendimento")}
         aria-label={t("Nota interna")}
-        className="mt-3 h-32 w-full resize-none rounded-casca-gatilho border border-casca-nota-borda bg-casca-nota p-3 text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta"
+        className="mt-3 h-32 w-full resize-none rounded-casca-gatilho border border-casca-nota-borda bg-casca-nota p-3 text-[15px] text-casca-texto outline-hidden placeholder:text-casca-meta"
       />
       <RodapeDaJanela>
         <BotaoDaJanela variante="cancelar" onClick={fechar}>

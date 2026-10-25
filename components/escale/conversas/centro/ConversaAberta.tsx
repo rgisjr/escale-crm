@@ -98,7 +98,7 @@ export function ConversaAberta({
           <input
             type="search"
             autoFocus
-            className="min-w-0 flex-1 bg-transparent py-1 text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta"
+            className="min-w-0 flex-1 bg-transparent py-1 text-[15px] text-casca-texto outline-hidden placeholder:text-casca-meta"
             aria-label={t("Buscar nesta conversa")}
             placeholder={t("Buscar nesta conversa")}
             value={busca.termo}

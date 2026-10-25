@@ -19,13 +19,13 @@ import { Check, ChevronDown, Search, UserX } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 const LINHA =
-  "flex h-9 w-full cursor-pointer items-center gap-2 px-3 text-left text-[12px] text-casca-texto hover:bg-casca-raia aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
+  "flex h-9 w-full cursor-pointer items-center gap-2 px-3 text-left text-[14px] text-casca-texto hover:bg-casca-raia aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
 
 function Inicial({ nome, tamanho = 24 }: { nome: string; tamanho?: number }) {
   return (
     <span
       aria-hidden
-      className="grid shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white"
+      className="grid shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white"
       style={{ width: tamanho, height: tamanho, background: corDoAvatar(nome) }}
     >
       {inicialDoNome(nome)}
@@ -110,7 +110,7 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
         <button
           type="button"
           disabled={ocupado}
-          className="flex h-8 max-w-[220px] items-center gap-2 rounded-casca-gatilho px-2 text-[12px] text-casca-texto hover:bg-casca-raia disabled:opacity-60"
+          className="flex h-8 max-w-[220px] items-center gap-2 rounded-casca-gatilho px-2 text-[14px] text-casca-texto hover:bg-casca-raia disabled:opacity-60"
           aria-label={`${t("Atendente")}: ${nomeAtual}`}
         >
           {atualId ? (
@@ -130,7 +130,7 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
             onChange={(e) => setBusca(e.target.value)}
             placeholder={t("Buscar por…")}
             aria-label={t("Buscar atendente")}
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-casca-texto outline-hidden placeholder:text-casca-meta"
+            className="min-w-0 flex-1 bg-transparent text-[14px] text-casca-texto outline-hidden placeholder:text-casca-meta"
           />
           <Search size={14} aria-hidden className="text-casca-suave" />
         </div>
@@ -171,7 +171,7 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
             </li>
           ))}
           {lista.length === 0 ? (
-            <li className="px-3 py-2 text-[12px] text-casca-suave">
+            <li className="px-3 py-2 text-[14px] text-casca-suave">
               {t("Nenhum atendente encontrado")}
             </li>
           ) : null}

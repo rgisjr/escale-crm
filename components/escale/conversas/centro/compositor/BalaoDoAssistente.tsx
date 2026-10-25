@@ -57,8 +57,8 @@ export function BalaoDoAssistente({
           <Sparkles size={16} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-casca-texto">{NOME_DO_ASSISTENTE}</div>
-          <div className="truncate text-[11px] text-casca-suave">{contato}</div>
+          <div className="text-[15px] font-semibold text-casca-texto">{NOME_DO_ASSISTENTE}</div>
+          <div className="truncate text-[12px] text-casca-suave">{contato}</div>
         </div>
         <button
           type="button"
@@ -69,7 +69,7 @@ export function BalaoDoAssistente({
           <X size={14} aria-hidden />
         </button>
       </div>
-      <div className="px-4 py-3 text-[12px] text-casca-suave">
+      <div className="px-4 py-3 text-[14px] text-casca-suave">
         <p className="mb-3">{`${NOME_DO_ASSISTENTE} ${t("agora lê esta conversa")}. ${t("Peça uma sugestão de resposta ou um resumo do atendimento.")}`}</p>
         <div className="flex flex-wrap gap-2">
           {CHIPS_DO_ASSISTENTE.map((c) => (
@@ -79,7 +79,7 @@ export function BalaoDoAssistente({
               disabled={!c.disponivel || sugerir.isPending}
               title={c.disponivel ? undefined : t("Em breve")}
               className={cn(
-                "h-7 rounded-full border border-casca-borda px-3 text-[12px] text-casca-texto hover:bg-casca-raia disabled:cursor-not-allowed disabled:opacity-50",
+                "h-7 rounded-full border border-casca-borda px-3 text-[14px] text-casca-texto hover:bg-casca-raia disabled:cursor-not-allowed disabled:opacity-50",
               )}
               onClick={c.chave === "sugerir" ? () => void aoSugerir() : undefined}
             >
@@ -95,7 +95,7 @@ export function BalaoDoAssistente({
           placeholder={t("Pergunte sobre esta conversa…")}
           disabled
           title={t("Em breve")}
-          className="min-w-0 flex-1 bg-transparent text-[12px] outline-hidden placeholder:text-casca-meta disabled:opacity-60"
+          className="min-w-0 flex-1 bg-transparent text-[14px] outline-hidden placeholder:text-casca-meta disabled:opacity-60"
         />
         <button
           type="button"

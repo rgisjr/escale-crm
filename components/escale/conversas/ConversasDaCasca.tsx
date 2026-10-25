@@ -58,7 +58,6 @@ import { PainelDeFiltrosDaFila } from "./filtros/PainelDeFiltrosDaFila";
 import { CentroDeAcoesEmMassa, type AcaoEscolhida } from "./massa/CentroDeAcoesEmMassa";
 import { JanelaDaAcaoEmMassa } from "./massa/JanelaDaAcaoEmMassa";
 import { PainelDoContato } from "./painel/PainelDoContato";
-import { TopoDasConversas } from "./TopoDasConversas";
 
 /** "Concluída" não quer dizer "tudo certo": conversa arquivada ou revisão em conflito contam como falha (B1-3). */
 function avisarFimDaAcao(total: number, falhas: number, t: (texto: string) => string): void {
@@ -288,14 +287,13 @@ export function ConversasDaCasca({
           Configurações pedem um TooltipProvider acima; a página não tem outro. */}
       <TooltipProvider delayDuration={150}>
         <div
-          className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] w-full flex-col"
+          className="flex h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] flex-col sm:-mx-6 sm:-mt-6 sm:h-[calc(100dvh-2.75rem-max(var(--space-6),var(--rodape-ocupado,0px)))]"
           data-realtime-status={fila.realtimeStatus}
         >
-          <TopoDasConversas aoNovaConversa={abrirNova} novaAberta={modoDoCentro === "nova"} />
           <div
             className={cn(
-              "grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]",
-              !configuracao && "xl:grid-cols-[320px_minmax(0,1fr)_384px]",
+              "grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[350px_minmax(0,1fr)]",
+              !configuracao && "xl:grid-cols-[350px_minmax(0,1fr)_425px]",
             )}
           >
             <div
@@ -338,6 +336,8 @@ export function ConversasDaCasca({
                   setPersonalizando(false);
                   setSelecao(SEM_SELECAO);
                 }}
+                aoNovaConversa={abrirNova}
+                novaAberta={modoDoCentro === "nova"}
               />
               <div className="min-h-0 flex-1 overflow-hidden">
                 <ListaDaFila
@@ -387,7 +387,7 @@ export function ConversasDaCasca({
                       cabecalho={<BalaoSalvarFiltro painel={painel} />}
                     />
                   ) : null}
-                  <div className="min-h-0 flex-1">
+                  <div className="min-h-0 flex-1 overflow-hidden md:m-3 md:rounded-xl md:border md:border-casca-borda">
                     {selecao ? (
                       <CentroDeAcoesEmMassa
                         selecionadas={totalSelecionado(selecao, total ?? itens.length)}
@@ -437,7 +437,10 @@ export function ConversasDaCasca({
                   </div>
                 ) : (
                   <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
-                    <SheetContent side="right" className="w-[min(24rem,90vw)] overflow-y-auto p-0">
+                    <SheetContent
+                      side="right"
+                      className="w-[min(26.5rem,90vw)] overflow-y-auto p-0"
+                    >
                       <SheetTitle className="sr-only">{t("Ficha do contato")}</SheetTitle>
                       <PainelDoContato
                         conversa={conversa}

@@ -55,7 +55,7 @@ export function PainelPersonalizarVisualizacao({
     const l = visualizacao.limites[qual];
     return (
       <div key={qual} className="flex h-9 items-center gap-2 pl-4">
-        <label htmlFor={`limite-${qual}`} className="w-[120px] text-[12px] text-casca-suave">
+        <label htmlFor={`limite-${qual}`} className="w-[120px] text-[14px] text-casca-suave">
           {rotulo}
         </label>
         <input
@@ -68,7 +68,7 @@ export function PainelPersonalizarVisualizacao({
             const n = Number(e.target.value);
             if (Number.isInteger(n) && n >= 1 && n <= 999) mudarLimite(qual, { ...l, valor: n });
           }}
-          className="h-8 w-12 rounded-casca-gatilho bg-casca-busca px-2 text-center text-[12px] text-casca-texto focus-visible:outline-2 focus-visible:outline-casca-marca"
+          className="h-8 w-12 rounded-casca-gatilho bg-casca-busca px-2 text-center text-[14px] text-casca-texto focus-visible:outline-2 focus-visible:outline-casca-marca"
         />
         <div className="w-[100px]">
           <SeletorDaCasca
@@ -91,7 +91,7 @@ export function PainelPersonalizarVisualizacao({
       className="absolute inset-y-0 left-0 z-20 flex w-[355px] flex-col border-r border-casca-borda bg-surface shadow-casca-painel"
     >
       <div className="flex h-12 shrink-0 items-center justify-between px-4">
-        <h2 className="text-[14px] font-medium text-casca-texto">
+        <h2 className="text-[16px] font-medium text-casca-texto">
           {t("Personalizar visualização")}
         </h2>
         <button
@@ -107,43 +107,43 @@ export function PainelPersonalizarVisualizacao({
         <div className="flex items-start gap-3">
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-casca-marca-media text-[15px] font-medium text-casca-marca"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-casca-marca-media text-[17px] font-medium text-casca-marca"
           >
             M
           </span>
           <span className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="flex items-center justify-between">
-              <span className="truncate text-[13px] font-medium text-casca-texto">Maria Silva</span>
-              <span className="text-[11px] text-casca-meta">21:05</span>
+              <span className="truncate text-[15px] font-medium text-casca-texto">Maria Silva</span>
+              <span className="text-[12px] text-casca-meta">21:05</span>
             </span>
             <span className="flex items-center justify-between gap-2">
-              <span className="truncate text-[12px] text-casca-suave">
+              <span className="truncate text-[14px] text-casca-suave">
                 {t("Oi! Ainda tenho interesse…")}
               </span>
               <span className="flex shrink-0 items-center gap-1.5">
                 {visualizacao.campos.atendente ? (
                   <span
                     aria-hidden
-                    className="grid size-5 place-items-center rounded-full bg-casca-marca text-[10px] font-semibold text-white"
+                    className="grid size-5 place-items-center rounded-full bg-casca-marca text-[11px] font-semibold text-white"
                   >
                     R
                   </span>
                 ) : null}
                 <span
                   aria-hidden
-                  className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-casca-novo px-1 text-[10px] font-semibold text-white"
+                  className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-casca-novo px-1 text-[11px] font-semibold text-white"
                 >
                   2
                 </span>
               </span>
             </span>
             {visualizacao.campos.tempoSemResposta || visualizacao.campos.tags ? (
-              <span className="flex items-center gap-1.5 pt-0.5 text-[11px]">
+              <span className="flex items-center gap-1.5 pt-0.5 text-[12px]">
                 {visualizacao.campos.tempoSemResposta ? (
                   <span className="text-casca-atencao">3h</span>
                 ) : null}
                 {visualizacao.campos.tags ? (
-                  <span className="rounded-sm bg-casca-marca-suave px-1.5 text-[10px] text-casca-marca">
+                  <span className="rounded-sm bg-casca-marca-suave px-1.5 text-[11px] text-casca-marca">
                     vip
                   </span>
                 ) : null}
@@ -166,7 +166,7 @@ export function PainelPersonalizarVisualizacao({
                   bloqueado && !ligado && "text-casca-meta",
                 )}
               >
-                <span className="text-[12px]">{t(ROTULO_DO_CAMPO_DA_LINHA[campo])}</span>
+                <span className="text-[14px]">{t(ROTULO_DO_CAMPO_DA_LINHA[campo])}</span>
                 <span className="flex items-center gap-2">
                   {campo === "tempoSemResposta" && ligado ? (
                     <button
@@ -203,7 +203,7 @@ export function PainelPersonalizarVisualizacao({
           );
         })}
       </ul>
-      <div className="flex h-12 shrink-0 items-center justify-between border-t border-casca-borda px-4 text-[12px]">
+      <div className="flex h-12 shrink-0 items-center justify-between border-t border-casca-borda px-4 text-[14px]">
         <span className="text-casca-suave">{`${ativos} ${t("de")} ${CAMPOS_ATIVOS_MAX} ${t("campos ativos")}`}</span>
         <button
           type="button"

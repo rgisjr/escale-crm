@@ -17,7 +17,7 @@ import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import type { Pipeline } from "@/lib/kanban/types";
 import { ChevronDown, ChevronUp, GripVertical, Search, X } from "@/lib/ui/icons-da-casca";
 
-const EYEBROW = "text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
+const EYEBROW = "text-[12px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
 
 /**
  * "PERSONALIZAR CAMPOS · Negócio" (02-005): busca, os disponíveis com
@@ -98,10 +98,10 @@ export function JanelaPersonalizarCampos({
       className="w-[min(950px,calc(100vw-2rem))] gap-0 p-0"
     >
       <div className="px-6 pt-6 pb-4">
-        <p className="text-[11px] font-semibold tracking-wide text-casca-marca uppercase">
+        <p className="text-[12px] font-semibold tracking-wide text-casca-marca uppercase">
           {t("Personalizar campos")}
         </p>
-        <h2 className="text-[18px] font-medium text-casca-texto">{t("Negócio")}</h2>
+        <h2 className="text-[20px] font-medium text-casca-texto">{t("Negócio")}</h2>
         <label className="relative mt-4 block">
           <input
             type="search"
@@ -109,7 +109,7 @@ export function JanelaPersonalizarCampos({
             onChange={(e) => setBusca(e.target.value)}
             placeholder={t("Buscar por nome do campo…")}
             aria-label={t("Buscar por nome do campo…")}
-            className="h-10 w-full rounded-casca-gatilho bg-casca-busca pr-9 pl-3 text-[13px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
+            className="h-10 w-full rounded-casca-gatilho bg-casca-busca pr-9 pl-3 text-[15px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
           />
           <Search
             size={16}
@@ -124,13 +124,13 @@ export function JanelaPersonalizarCampos({
           {grupo(t("Informações básicas"), basicos)}
           {grupo(t("Campos do CRM"), doCrm)}
           {filtrados.length === 0 ? (
-            <p className="pt-4 text-[13px] text-casca-suave">{t("Nenhum campo encontrado.")}</p>
+            <p className="pt-4 text-[15px] text-casca-suave">{t("Nenhum campo encontrado.")}</p>
           ) : null}
         </div>
         <div className="overflow-y-auto border-l border-casca-borda px-4 py-4">
           <div className="flex items-center justify-between">
             <p className={EYEBROW}>{t("Exibidos · arraste")}</p>
-            <span className="text-[12px] text-casca-suave">{`${lista.length} ${t("campos")}`}</span>
+            <span className="text-[14px] text-casca-suave">{`${lista.length} ${t("campos")}`}</span>
           </div>
           <ul className="mt-3 flex flex-col gap-2">
             {lista.map((chave, i) => (
@@ -143,7 +143,7 @@ export function JanelaPersonalizarCampos({
                   if (arrastando) mover(arrastando, i);
                   setArrastando(null);
                 }}
-                className="flex h-11 items-center gap-2 rounded-casca-gatilho border border-casca-borda bg-surface px-3 text-[13px] text-casca-texto"
+                className="flex h-11 items-center gap-2 rounded-casca-gatilho border border-casca-borda bg-surface px-3 text-[15px] text-casca-texto"
               >
                 <GripVertical size={14} aria-hidden className="text-casca-meta" />
                 <span className="flex-1 truncate">{rotuloDe(chave)}</span>
@@ -184,7 +184,7 @@ export function JanelaPersonalizarCampos({
         <button
           type="button"
           onClick={() => setLista([...CAMPOS_DO_CARTAO_PADRAO])}
-          className="mr-auto text-[13px] text-casca-marca hover:underline"
+          className="mr-auto text-[15px] text-casca-marca hover:underline"
         >
           {t("Restaurar padrão")}
         </button>

@@ -31,7 +31,7 @@ export function SecaoAberta({
         >
           <ChevronLeft size={16} aria-hidden />
         </button>
-        <h3 className="flex items-center gap-2 text-[14px] font-medium text-casca-texto">
+        <h3 className="flex items-center gap-2 text-[16px] font-medium text-casca-texto">
           {titulo}
           <Icone size={14} aria-hidden className="text-casca-marca" />
         </h3>

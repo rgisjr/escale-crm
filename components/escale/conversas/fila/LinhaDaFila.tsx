@@ -87,7 +87,7 @@ export function LinhaDaFila({
         data-fixada={fixada ? "" : undefined}
         className={cn(
           "group flex w-full items-start gap-3 border-b border-casca-borda px-3 text-left",
-          segundaLinha ? "min-h-24 py-3" : "h-[72px] py-3.5",
+          segundaLinha ? "min-h-[104px] py-3" : "h-20 py-3.5",
           selecionando && "pl-10",
           fixada ? "bg-casca-fixada" : selecionada ? "bg-casca-raia" : "hover:bg-casca-raia",
           selecionada && !fixada && "shadow-[inset_3px_0_0_var(--color-casca-marca)]",
@@ -96,15 +96,15 @@ export function LinhaDaFila({
         <FotoDaConversa conversa={conversa} />
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex items-center justify-between gap-2">
-            <span className="truncate text-[13px] font-medium text-casca-texto">{nome}</span>
+            <span className="truncate text-[16px] font-medium text-casca-texto">{nome}</span>
             {!fixada ? (
-              <span className="shrink-0 text-[11px] text-casca-meta">
+              <span className="shrink-0 text-[12px] text-casca-meta">
                 {horaDaLinha(conversa.last_message_at, agora, t)}
               </span>
             ) : null}
           </span>
           <span className="flex items-center justify-between gap-2">
-            <span className="flex min-w-0 items-center gap-1 text-[12px] text-casca-suave">
+            <span className="flex min-w-0 items-center gap-1 text-[14px] text-casca-suave">
               {ultimaFoiNossa(conversa) ? (
                 <CheckCheck size={14} aria-hidden data-testid="enviada" className="shrink-0" />
               ) : null}
@@ -116,7 +116,7 @@ export function LinhaDaFila({
                   atendente ? (
                     <span
                       title={`${t("Atendente:")} ${atendente}`}
-                      className="grid size-5 place-items-center rounded-full text-[10px] font-semibold text-white"
+                      className="grid size-5 place-items-center rounded-full text-[11px] font-semibold text-white"
                       style={{
                         backgroundColor: corDoAvatar(conversa.assigned_to_user_id ?? atendente),
                       }}
@@ -133,7 +133,7 @@ export function LinhaDaFila({
                   )
                 ) : null}
                 {naoLidas > 0 ? (
-                  <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-casca-novo px-1 text-[10px] font-semibold text-white tabular-nums">
+                  <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-casca-novo px-1 text-[11px] font-semibold text-white tabular-nums">
                     {naoLidas > 99 ? "99+" : naoLidas}
                   </span>
                 ) : null}
@@ -166,7 +166,7 @@ export function LinhaDaFila({
                 <span
                   data-cor={corDaEspera(espera, visualizacao)}
                   title={`${t("Aguardando resposta há")} ${textoDaEspera(espera, t)}`}
-                  className={cn("text-[11px]", COR_DA_ESPERA[corDaEspera(espera, visualizacao)])}
+                  className={cn("text-[12px]", COR_DA_ESPERA[corDaEspera(espera, visualizacao)])}
                 >
                   {textoDaEspera(espera, t)}
                 </span>
@@ -174,14 +174,14 @@ export function LinhaDaFila({
               {mostraAgendadas ? (
                 <span
                   title={`${agendadas} ${t("mensagens agendadas")}`}
-                  className="inline-flex items-center gap-0.5 text-[11px] text-casca-suave"
+                  className="inline-flex items-center gap-0.5 text-[12px] text-casca-suave"
                 >
                   <AlarmClock size={12} aria-hidden />
                   {agendadas}
                 </span>
               ) : null}
               {tags.map((tag) => (
-                <ChipDeEtiqueta key={tag} tag={tag} className="h-4 px-1.5 text-[10px]" />
+                <ChipDeEtiqueta key={tag} tag={tag} className="h-4 px-1.5 text-[11px]" />
               ))}
             </span>
           ) : null}

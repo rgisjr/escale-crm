@@ -164,7 +164,7 @@ export function CompositorDaCasca({
   if (bloqueio) {
     return (
       <div
-        className="border-t border-casca-borda px-4 py-3 text-[12px] text-casca-suave"
+        className="border-t border-casca-borda px-4 py-3 text-[14px] text-casca-suave"
         data-testid="compositor-bloqueado"
       >
         {bloqueio}
@@ -174,7 +174,7 @@ export function CompositorDaCasca({
   if (fechada) {
     return (
       <div
-        className="border-t border-casca-borda px-4 py-3 text-center text-[12px] text-casca-suave"
+        className="border-t border-casca-borda px-4 py-3 text-center text-[14px] text-casca-suave"
         data-testid="compositor-fechado"
       >
         {t("Reabra o atendimento para responder.")}
@@ -220,7 +220,7 @@ export function CompositorDaCasca({
     <div className="relative border-t border-casca-borda" data-testid="compositor-da-casca">
       <FaixaAtribuirAMim conversa={conversa} />
       {respondendo ? (
-        <div className="mx-4 mt-2 flex items-center gap-2 rounded-casca-gatilho border-l-2 border-casca-marca bg-casca-busca px-3 py-1.5 text-[12px]">
+        <div className="mx-4 mt-2 flex items-center gap-2 rounded-casca-gatilho border-l-2 border-casca-marca bg-casca-busca px-3 py-1.5 text-[14px]">
           <span className="min-w-0 flex-1 truncate text-casca-suave">
             {respondendo.body ?? t("Mídia")}
           </span>
@@ -243,7 +243,7 @@ export function CompositorDaCasca({
           placeholder={t("Mensagem")}
           aria-label={t("Mensagem")}
           rows={1}
-          className="min-h-[40px] w-full resize-none rounded-lg bg-casca-busca px-3 py-2.5 text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta"
+          className="min-h-[40px] w-full resize-none rounded-lg bg-casca-busca px-3 py-2.5 text-[15px] text-casca-texto outline-hidden placeholder:text-casca-meta"
         />
         <div className="mt-1 flex items-center">
           <BarraDeIcones

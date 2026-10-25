@@ -42,8 +42,8 @@ export function AvisoForaDaJanela({
     >
       <Clock size={16} aria-hidden className="shrink-0 text-casca-suave" />
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-medium text-casca-texto">{titulo}</div>
-        <div className="text-[12px] text-casca-suave">{texto}</div>
+        <div className="text-[15px] font-medium text-casca-texto">{titulo}</div>
+        <div className="text-[14px] text-casca-suave">{texto}</div>
       </div>
       {modo !== "aguardando_contato" ? (
         <>
@@ -76,7 +76,7 @@ export function AvisoForaDaJanela({
           </button>
           <button
             type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-casca-gatilho bg-casca-marca px-3 text-[12px] font-medium text-white hover:opacity-90"
+            className="inline-flex h-8 items-center gap-1.5 rounded-casca-gatilho bg-casca-marca px-3 text-[14px] font-medium text-white hover:opacity-90"
             onClick={aoAbrirModelos}
             aria-label={t("Enviar modelo de mensagem")}
           >

@@ -77,7 +77,7 @@ export function SecaoAnexos({
       disabled={!podeEnviar}
       title={podeEnviar ? undefined : t("Sem permissão")}
       onClick={() => setJanela(true)}
-      className="flex h-8 items-center justify-center gap-1 rounded-casca-gatilho border border-casca-borda px-3 text-[12px] text-casca-marca hover:bg-casca-raia disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex h-8 items-center justify-center gap-1 rounded-casca-gatilho border border-casca-borda px-3 text-[14px] text-casca-marca hover:bg-casca-raia disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-60"
     >
       <CloudUpload size={14} aria-hidden />
       {t("Novo arquivo")}
@@ -94,7 +94,7 @@ export function SecaoAnexos({
             onChange={(e) => setBusca(e.target.value)}
             placeholder={t("Pesquisar…")}
             aria-label={t("Pesquisar…")}
-            className="h-8 w-full rounded-casca-gatilho bg-casca-busca pr-8 pl-3 text-[12px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
+            className="h-8 w-full rounded-casca-gatilho bg-casca-busca pr-8 pl-3 text-[14px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
           />
           <Search
             size={14}
@@ -104,11 +104,11 @@ export function SecaoAnexos({
         </label>
         {botaoNovo}
       </div>
-      <p className="text-[11px] text-casca-suave">{`${gb(usado)} GB / ${COTA_GB.toFixed(2).replace(".", ",")} GB ${t("usados")}`}</p>
+      <p className="text-[12px] text-casca-suave">{`${gb(usado)} GB / ${COTA_GB.toFixed(2).replace(".", ",")} GB ${t("usados")}`}</p>
       {isLoading ? (
-        <p className="text-[12px] text-casca-suave">{t("Carregando…")}</p>
+        <p className="text-[14px] text-casca-suave">{t("Carregando…")}</p>
       ) : isError ? (
-        <p className="text-[12px] text-casca-suave">
+        <p className="text-[14px] text-casca-suave">
           {t("Não foi possível carregar os arquivos.")}
         </p>
       ) : lista.length === 0 ? (
@@ -131,10 +131,10 @@ export function SecaoAnexos({
                 >
                   <Icone size={16} aria-hidden className="shrink-0 text-casca-marca" />
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[12px] font-medium text-casca-texto">
+                    <span className="truncate text-[14px] font-medium text-casca-texto">
                       {a.nome}
                     </span>
-                    <span className="text-[11px] text-casca-suave">{`${formatarTamanho(a.tamanho)} · ${dataHoraBr(a.created_at)}`}</span>
+                    <span className="text-[12px] text-casca-suave">{`${formatarTamanho(a.tamanho)} · ${dataHoraBr(a.created_at)}`}</span>
                   </span>
                 </a>
               </li>
