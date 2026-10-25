@@ -28,6 +28,15 @@ const DUAS = [
 ];
 
 describe("EmpresasDaProspeccao (012; D10)", () => {
+  it("volta para uma página com linhas quando a lista encolhe (B9-5)", async () => {
+    const muitas = Array.from({ length: 25 }, (_, i) => empresa({ id: `m${i}` }));
+    const { rerender } = render(<EmpresasDaProspeccao detalhe={detalhe({ empresas: muitas })} />);
+    await userEvent.click(screen.getByRole("button", { name: "Próximo" }));
+    rerender(<EmpresasDaProspeccao detalhe={detalhe({ empresas: muitas.slice(0, 5) })} />);
+    expect(screen.queryByText("Nenhuma empresa neste filtro")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Clínica Bela")).toHaveLength(5);
+  });
+
   it("tabela: empresa, telefone, progresso, conversa; contagem", () => {
     render(<EmpresasDaProspeccao detalhe={detalhe({ empresas: DUAS })} />);
     expect(screen.getByText("2 empresas")).toBeInTheDocument();

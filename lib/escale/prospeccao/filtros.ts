@@ -8,8 +8,6 @@ import {
  * OS FILTROS DA LISTA DE PROSPECÇÕES (fork Escale, Fase 8D; D7): busca no nome
  * e situação. Ficam no estado da tela; vão ao servidor como `q` e `s`.
  */
-export const FILTROS_DA_PROSPECCAO_VAZIOS: FiltrosDaProspeccao = {};
-
 export const temFiltroDaProspeccao = (f: FiltrosDaProspeccao): boolean =>
   !!f.busca?.trim() || !!f.situacoes?.length;
 

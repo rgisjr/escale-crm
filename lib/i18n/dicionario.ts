@@ -11662,6 +11662,7 @@ export const DICIONARIO: Traducoes = {
   "INFORMAÇÕES DA PROSPECÇÃO": { es: "INFORMACIÓN DE LA PROSPECCIÓN" },
   "Carregando prospecção": { es: "Cargando prospección" },
   "Não foi possível carregar a prospecção.": { es: "No se pudo cargar la prospección." },
+  "Não foi possível atualizar a prospecção.": { es: "No se pudo actualizar la prospección." },
   "Prospecção não encontrada.": { es: "Prospección no encontrada." },
   "Empresas que a busca trouxe, sem as repetidas ou fechadas.": { es: "Empresas que trajo la búsqueda, sin las repetidas o cerradas." },
   "Empresas que receberam a primeira mensagem do agente.": { es: "Empresas que recibieron el primer mensaje del agente." },

@@ -105,7 +105,7 @@ export function ListaDeProspeccoes({ fuso }: { fuso?: string }) {
         </footer>
       ) : null}
       {aberta ? (
-        <DetalheDaProspeccao id={aberta} aoFechar={() => setAberta(null)} fuso={fuso} />
+        <DetalheDaProspeccao id={aberta} aoFechar={() => setAberta(null)} />
       ) : null}
     </div>
   );

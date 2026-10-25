@@ -47,7 +47,7 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
   const [busca, setBusca] = useState("");
   const [progressos, setProgressos] = useState<ProgressoDaEmpresa[]>([]);
   const [mostrarDesmarcadas, setMostrarDesmarcadas] = useState(false);
-  const [pagina, setPagina] = useState(1);
+  const [paginaPedida, setPaginaPedida] = useState(1);
   const [porPagina, setPorPagina] = useState<number>(POR_PAGINA_DAS_EMPRESAS[0]);
   const [confirmando, setConfirmando] = useState(false);
 
@@ -63,6 +63,8 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
   const nenhumaMarcada = elegiveis.every((e) => !e.selecionada);
   const desmarcadas = detalhe.empresas.filter((e) => !e.selecionada);
   const apagaveis = descartaveis(detalhe.empresas);
+  // A lista pode encolher (desmarcar, excluir, filtro, reconsulta): a página não passa da última.
+  const pagina = Math.min(paginaPedida, Math.max(1, Math.ceil(visiveis.length / porPagina)));
   const fatia = visiveis.slice((pagina - 1) * porPagina, pagina * porPagina);
   const opcoesDeProgresso: OpcaoDoFiltro<ProgressoDaEmpresa>[] = PROGRESSOS_DA_EMPRESA.map((p) => ({
     valor: p,
@@ -107,7 +109,7 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
             value={busca}
             onChange={(e) => {
               setBusca(e.target.value);
-              setPagina(1);
+              setPaginaPedida(1);
             }}
             placeholder={t("Buscar empresa")}
             className="h-8 w-full rounded-casca-gatilho bg-casca-busca pr-8 pl-3 text-[12px] text-casca-texto outline-hidden placeholder:text-casca-meta focus:bg-surface focus:ring-1 focus:ring-casca-marca"
@@ -126,7 +128,7 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
             opcoes={opcoesDeProgresso}
             aoMudar={(v) => {
               setProgressos(v);
-              setPagina(1);
+              setPaginaPedida(1);
             }}
           />
         </div>
@@ -280,10 +282,10 @@ export function EmpresasDaProspeccao({ detalhe }: { detalhe: DetalheDaProspeccao
           total={visiveis.length}
           porPagina={porPagina}
           opcoesPorPagina={POR_PAGINA_DAS_EMPRESAS}
-          aoMudarPagina={setPagina}
+          aoMudarPagina={setPaginaPedida}
           aoMudarPorPagina={(n) => {
             setPorPagina(n);
-            setPagina(1);
+            setPaginaPedida(1);
           }}
         />
       ) : null}
