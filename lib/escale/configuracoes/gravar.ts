@@ -41,7 +41,8 @@ export const patchDasConfiguracoesSchema = z
       .object({
         moeda: z.enum(MOEDAS_SERVIDAS).nullable(),
         tags_padrao: z.array(z.string().max(80)).max(20),
-        visualizacao: z.enum(VISUALIZACOES),
+        /** Ausente = não mexe na regra; `null` = volta a seguir a da organização; valor = fixa. */
+        visualizacao: z.enum(VISUALIZACOES).nullable().optional(),
       })
       .strict()
       .optional(),
@@ -124,11 +125,10 @@ export function aplicarConfiguracoes(
     if (new Set(pedidas).size > TAGS_PADRAO_MAX)
       return { ok: false, erro: "Uma origem tem no máximo 10 tags padrão." };
     const tags = normalizarTagsPadrao(patch.gerais.tags_padrao);
-    s = comChave(
-      comChave(comChave(s, CHAVE_DA_MOEDA, patch.gerais.moeda), CHAVE_DAS_TAGS, tags.length > 0 ? tags : null),
-      CHAVE_DA_VISUALIZACAO,
-      patch.gerais.visualizacao,
-    );
+    s = comChave(comChave(s, CHAVE_DA_MOEDA, patch.gerais.moeda), CHAVE_DAS_TAGS, tags.length > 0 ? tags : null);
+    if (patch.gerais.visualizacao !== undefined) {
+      s = comChave(s, CHAVE_DA_VISUALIZACAO, patch.gerais.visualizacao);
+    }
   }
   if (patch.motivos) {
     const v = gravarMotivos(s, patch.motivos.selecionados, patch.motivos.novos);

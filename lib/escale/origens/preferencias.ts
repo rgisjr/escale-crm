@@ -6,9 +6,9 @@
  * Moram em cookies httpOnly, como "recolher a barra lateral"
  * (`app/actions/shell/toggleSidebar.ts`): o servidor lê e manda como prop — o
  * primeiro render já sai certo, sem `useState` lendo o navegador (ver
- * `tests/unit/hidratacao-useState-nao-le-o-navegador.test.ts`). Quem grava é a
- * Server Action `app/actions/escale/origens.ts`, que passa TUDO por
- * `cookieDaPreferencia` antes.
+ * `tests/unit/hidratacao-useState-nao-le-o-navegador.test.ts`). Quem grava é o
+ * Route Handler `app/app/escale/preferencia-de-origens` (não Server Action, que
+ * re-renderiza a página), que passa TUDO por `cookieDaPreferencia` antes.
  */
 export const COOKIE_ULTIMO_FUNIL = "escale_ultimo_funil";
 export const COOKIE_PAINEL = "escale_origens_painel";

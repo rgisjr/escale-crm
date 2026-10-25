@@ -300,9 +300,12 @@ describe("PATCH /api/v1/pipelines/:id/configuracoes", () => {
     expect(res.status).toBe(422);
   });
 
-  it("gerais sem visualizacao é 422 (o campo é obrigatório no patch de gerais)", async () => {
-    banco();
-    expect((await PATCH(pedido("PATCH", { gerais: { moeda: null, tags_padrao: [] } }), ctx(PIPE))).status).toBe(422);
+  it("gerais sem visualizacao é aceito e não mexe na regra de quem vê (B4-4)", async () => {
+    const db = banco();
+    const res = await PATCH(pedido("PATCH", { gerais: { moeda: null, tags_padrao: [] } }), ctx(PIPE));
+    expect(res.status).toBe(200);
+    const escrita = db.escritas.find((e) => e.table === "crm_pipelines" && e.tipo === "update");
+    expect(escrita?.patch).toEqual({ settings: SETTINGS });
   });
 
   it("gerais: grava moeda e tags no settings, com a organização no filtro, e audita", async () => {

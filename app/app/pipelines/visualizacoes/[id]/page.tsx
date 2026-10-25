@@ -2,10 +2,9 @@ import { notFound, redirect } from "next/navigation";
 
 import { QuadroDaVisualizacao } from "@/components/escale/visualizacoes/QuadroDaVisualizacao";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { lerOrigens } from "@/lib/escale/origens/ler-origens";
-import { lerVisualizacoes } from "@/lib/escale/visualizacoes/ler-visualizacoes";
+import { origensDaRequisicao } from "@/lib/escale/origens/da-requisicao";
+import { visualizacoesDaRequisicao } from "@/lib/escale/visualizacoes/da-requisicao";
 import { origensVivasDaVisualizacao } from "@/lib/escale/visualizacoes/regras";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +22,9 @@ export default async function VisualizacaoPage({ params }: { params: Promise<{ i
   if (!activeOrg) redirect("/app");
 
   const { id } = await params;
-  const supabase = await createClient();
   const [visualizacoes, origens] = await Promise.all([
-    lerVisualizacoes(supabase, activeOrg.orgId),
-    lerOrigens(supabase, activeOrg.orgId),
+    visualizacoesDaRequisicao(activeOrg.orgId),
+    origensDaRequisicao(activeOrg.orgId),
   ]);
   const visualizacao = visualizacoes.find((v) => v.id === id);
   if (!visualizacao) notFound();

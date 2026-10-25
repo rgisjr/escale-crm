@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => caminho,
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
-vi.mock("@/app/actions/escale/origens", () => ({ guardarPreferenciaDeOrigens: vi.fn(async () => undefined) }));
+vi.mock("@/lib/escale/origens/guardar-preferencia", () => ({ guardarPreferenciaDeOrigens: vi.fn(async () => undefined) }));
 vi.mock("@/lib/api/client", () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));

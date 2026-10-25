@@ -3,24 +3,21 @@ import type { ReactNode } from "react";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
-import { lerOrigens } from "@/lib/escale/origens/ler-origens";
+import { origensDaRequisicao } from "@/lib/escale/origens/da-requisicao";
 import type { Origens } from "@/lib/escale/origens/regras";
-import { lerPreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
+import { COOKIE_ULTIMO_FUNIL, lerPreferenciasDoPainel, lerUuid } from "@/lib/escale/origens/preferencias";
 import { chaveDosRecentes } from "@/lib/escale/recentes/regras";
-import { lerVisualizacoes } from "@/lib/escale/visualizacoes/ler-visualizacoes";
+import { visualizacoesDaRequisicao } from "@/lib/escale/visualizacoes/da-requisicao";
 import type { Visualizacao } from "@/lib/escale/visualizacoes/regras";
 import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
-import { createClient } from "@/lib/supabase/server";
 
 import { CONTEUDO_AO_LADO_DO_PAINEL, ENVOLTORIO_DO_PAINEL } from "./estilos-do-painel";
 import { PainelOrigens } from "./PainelOrigens";
 
-type Supabase = Awaited<ReturnType<typeof createClient>>;
-
 /** Banco sem a 9003 (ou fora do ar): o painel abre com a seção Visualizações vazia. */
-async function visualizacoesOuNada(supabase: Supabase, orgId: string): Promise<Visualizacao[]> {
+async function visualizacoesOuNada(orgId: string): Promise<Visualizacao[]> {
   try {
-    return await lerVisualizacoes(supabase, orgId);
+    return await visualizacoesDaRequisicao(orgId);
   } catch (err) {
     console.error("[escale/visualizacoes] não consegui ler as visualizações; o painel abre sem elas", err);
     return [];
@@ -52,10 +49,14 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) return <>{children}</>;
 
-  const supabase = await createClient();
+  // As duas leituras são independentes: em paralelo. Origens com erro = quadro sem painel.
   let origens: Origens;
+  let visualizacoes: Visualizacao[];
   try {
-    origens = await lerOrigens(supabase, activeOrg.orgId);
+    [origens, visualizacoes] = await Promise.all([
+      origensDaRequisicao(activeOrg.orgId),
+      visualizacoesOuNada(activeOrg.orgId),
+    ]);
   } catch (err) {
     console.error("[escale/origens] não consegui ler os grupos de funis; o quadro abre sem o painel", err);
     return <>{children}</>;
@@ -65,10 +66,11 @@ export async function ComOrigens({ children }: { children: ReactNode }) {
     <div className={ENVOLTORIO_DO_PAINEL}>
       <PainelOrigens
         origens={origens}
-        visualizacoes={await visualizacoesOuNada(supabase, activeOrg.orgId)}
+        visualizacoes={visualizacoes}
         podeGerenciar={ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager}
         // Painel/lista recolhidos e grupos ocultos vêm de cookie: o primeiro render já sai certo.
         preferencias={lerPreferenciasDoPainel((nome) => store.get(nome)?.value)}
+        ultimoFunil={lerUuid(store.get(COOKIE_ULTIMO_FUNIL)?.value)}
         // Fase 1E: os Recentes moram no navegador, por organização e pessoa.
         chaveDeRecentes={chaveDosRecentes(activeOrg.orgId, user.id)}
       />

@@ -208,7 +208,7 @@ describe("rascunho da janela", () => {
       mudancaDaOrigem: { name: "Leads 2026" },
       distribuicao: null,
       patch: {
-        gerais: { moeda: "USD", tags_padrao: ["vip"], visualizacao: "own_and_unassigned" },
+        gerais: { moeda: "USD", tags_padrao: ["vip"] },
         motivos: { selecionados: ["Preço"], novos: [] },
       },
     });
@@ -216,6 +216,40 @@ describe("rascunho da janela", () => {
     expect(pedidoDoSalvar(r, CONFIG)).toMatchObject({
       patch: { motivos: { selecionados: ["Preço"], novos: [] } },
     });
+  });
+
+  it("B4-4: só a moeda ou só a tag não fixam a regra da organização (visualizacao ausente)", () => {
+    const r = rascunhoInicial(CONFIG);
+    r.gerais.tags = ["vip", "novo"];
+    expect(pedidoDoSalvar(r, CONFIG)).toMatchObject({ ok: true, patch: { gerais: { moeda: null, tags_padrao: ["vip", "novo"] } } });
+    const ok = pedidoDoSalvar(r, CONFIG);
+    expect(ok.ok && ok.patch?.gerais && "visualizacao" in ok.patch.gerais).toBe(false);
+    // Sem a chave no patch, a regra explícita que já estava na origem fica como está.
+    const antes = { ...SETTINGS, escale_visualizacao: "own" };
+    const depois = aplicarConfiguracoes(antes, { gerais: { moeda: null, tags_padrao: [] } }, ETAPAS);
+    expect(depois).toMatchObject({ ok: true, settings: { escale_visualizacao: "own" } });
+  });
+
+  it("B4-4: mudar a regra manda o valor; voltar à da organização manda null (segue a organização)", () => {
+    const r = rascunhoInicial(CONFIG);
+    r.gerais.visualizacao = "all";
+    expect(pedidoDoSalvar(r, CONFIG)).toMatchObject({ patch: { gerais: { visualizacao: "all" } } });
+    const comRegraPropria = montarConfiguracoes({
+      ...{ pipeline: { id: "p1", name: "Leads", group_id: "g1", is_default: false, settings: { ...SETTINGS, escale_visualizacao: "all" } } },
+      etapas: [],
+      catalogo: [],
+      moedaDaOrganizacao: "BRL",
+      visualizacaoDaOrganizacao: "own_and_unassigned",
+      grupo: null,
+      podeAdministrar: true,
+      distribuicao: [],
+      distribuicaoAtualizada: null,
+    });
+    const volta = rascunhoInicial(comRegraPropria);
+    volta.gerais.visualizacao = "own_and_unassigned";
+    expect(pedidoDoSalvar(volta, comRegraPropria)).toMatchObject({ patch: { gerais: { visualizacao: null } } });
+    const gravado = aplicarConfiguracoes({ ...SETTINGS, escale_visualizacao: "all" }, { gerais: { moeda: null, tags_padrao: [], visualizacao: null } }, ETAPAS);
+    expect(gravado.ok && "escale_visualizacao" in gravado.settings).toBe(false);
   });
 
   it("nome vazio e limite de alerta inválido barram o salvar, dizendo a seção", () => {

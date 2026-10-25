@@ -4,8 +4,8 @@ import { useContext } from "react";
 
 import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import { useT } from "@/hooks/i18n/useT";
-import { nivelDoPrazo, type NivelDoPrazo } from "@/lib/escale/configuracoes/alerta";
-import { lerConfiguracoesDoFork } from "@/lib/escale/configuracoes/tipos";
+import { lerAlerta, nivelDoPrazo, type NivelDoPrazo } from "@/lib/escale/configuracoes/alerta";
+import { CHAVE_DO_ALERTA, comoRecord } from "@/lib/escale/configuracoes/tipos";
 import type { BoardData } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 import { Clock } from "@/lib/ui/icons-da-casca";
@@ -65,7 +65,8 @@ export function PrazoDoCard({
   const nivel =
     quadro && etapa
       ? nivelDoPrazo({
-          alerta: lerConfiguracoesDoFork(quadro.pipeline.settings).alerta,
+          // Só o alerta: `lerConfiguracoesDoFork` leria as 11 configurações (com zod) por card.
+          alerta: lerAlerta(comoRecord(quadro.pipeline.settings)[CHAVE_DO_ALERTA]),
           etapa,
           horasNaEtapa,
         })

@@ -16,10 +16,12 @@ import type { RecusaDeCampos } from "@/hooks/kanban/useMoveCard";
 
 export type ModoDosPendentes = "mover" | "status" | "criar";
 
-/** "1.250,00", "R$ 1250" e "12,5" viram número; o que não for número vira NaN. */
+/** "1.250,00", "1.250", "R$ 1250" e "12,5" viram número; o que não for número vira NaN. */
 function numeroBr(texto: string): number {
   const limpo = texto.replace(/R\$|\s/g, "");
-  return Number(limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : limpo);
+  if (limpo.includes(",")) return Number(limpo.replace(/\./g, "").replace(",", "."));
+  // Sem vírgula, ponto em grupos de três é milhar brasileiro ("1.250" = 1250); ponto solto, decimal.
+  return Number(/^\d{1,3}(\.\d{3})+$/.test(limpo) ? limpo.replace(/\./g, "") : limpo);
 }
 
 /** dd/mm/aaaa → aaaa-mm-dd (como o dossiê grava data); inexistente (31/02) = null. */
@@ -146,13 +148,20 @@ function CorpoDosPendentes({
                   aria-label={nome}
                 />
               ) : (
-                <CampoDeTexto
-                  aria-label={nome}
-                  inputMode={c.tipo === "number" || c.tipo === "currency" ? "decimal" : undefined}
-                  placeholder={c.tipo === "date" ? "dd/mm/aaaa" : undefined}
-                  value={valores[c.chave] ?? ""}
-                  onChange={(e) => setValores((x) => ({ ...x, [c.chave]: e.target.value }))}
-                />
+                <>
+                  <CampoDeTexto
+                    aria-label={nome}
+                    inputMode={c.tipo === "number" || c.tipo === "currency" ? "decimal" : undefined}
+                    placeholder={c.tipo === "date" ? "dd/mm/aaaa" : undefined}
+                    value={valores[c.chave] ?? ""}
+                    onChange={(e) => setValores((x) => ({ ...x, [c.chave]: e.target.value }))}
+                  />
+                  {(valores[c.chave] ?? "").trim() !== "" && !preenchido(c.chave, c.tipo) && (
+                    <p role="alert" className="text-xs text-casca-alerta">
+                      {c.tipo === "date" ? t("Data inválida.") : t("Número inválido.")}
+                    </p>
+                  )}
+                </>
               )}
             </Campo>
           );

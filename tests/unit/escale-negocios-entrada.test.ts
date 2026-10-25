@@ -20,7 +20,7 @@ vi.mock("@/lib/escale/origens/ler-origens", () => ({ lerOrigens: vi.fn() }));
 
 import { resolveActiveOrg } from "@/lib/auth/server";
 import { lerOrigens } from "@/lib/escale/origens/ler-origens";
-import { guardarPreferenciaDeOrigens } from "@/app/actions/escale/origens";
+import { POST as guardar } from "@/app/app/escale/preferencia-de-origens/route";
 import { GET } from "@/app/app/escale/negocios/route";
 import { ITENS_DO_TOPO } from "@/lib/escale/menu-do-topo";
 
@@ -82,17 +82,16 @@ describe("GET /app/escale/negocios", () => {
   });
 });
 
-describe("guardarPreferenciaDeOrigens", () => {
+const gravar = (corpo: unknown) =>
+  guardar(new NextRequest("http://localhost/app/escale/preferencia-de-origens", { method: "POST", body: JSON.stringify(corpo) }));
+
+describe("preferencia-de-origens (Route Handler)", () => {
   it("grava só o que passa na validação, em cookie httpOnly", async () => {
-    await guardarPreferenciaDeOrigens({ nome: "ultimo_funil", valor: F_A });
-    expect(store.set).toHaveBeenCalledWith(
-      "escale_ultimo_funil",
-      F_A,
-      expect.objectContaining({ httpOnly: true, sameSite: "strict", path: "/" }),
-    );
-    store.set.mockClear();
-    await guardarPreferenciaDeOrigens({ nome: "ultimo_funil", valor: "../../x" } as never);
-    expect(store.set).not.toHaveBeenCalled();
+    const ok = await gravar({ nome: "ultimo_funil", valor: F_A });
+    expect(ok.cookies.get("escale_ultimo_funil")).toMatchObject({ value: F_A, httpOnly: true, sameSite: "strict", path: "/" });
+    const ruim = await gravar({ nome: "ultimo_funil", valor: "../../x" });
+    expect(ruim.status).toBe(400);
+    expect(ruim.cookies.get("escale_ultimo_funil")).toBeUndefined();
   });
 });
 

@@ -1,8 +1,8 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { guardarPreferenciaDeOrigens } from "@/app/actions/escale/origens";
+import { guardarPreferenciaDeOrigens } from "@/lib/escale/origens/guardar-preferencia";
 import {
   JanelasDaVisualizacao,
   type JanelaDaVisualizacao,
@@ -107,19 +107,22 @@ interface Selecao {
  * cada mutação devolve. Quando o servidor manda novidade, o ajuste acontece
  * durante o render (padrão de `app/app/kanban/_client.tsx`). As preferências
  * (painel, lista, visualizações, ocultos) também vêm do servidor, de cookie, e
- * cada mudança é gravada pela Server Action; nenhum `useState` lê o navegador.
+ * cada mudança é gravada por `fetch` num Route Handler (Server Action re-renderizaria a página); nenhum `useState` lê o navegador.
  */
 export function PainelOrigens({
   origens: doServidor,
   visualizacoes: visualizacoesDoServidor,
   podeGerenciar,
   preferencias,
+  ultimoFunil = null,
   chaveDeRecentes,
 }: {
   origens: Origens;
   visualizacoes: Visualizacao[];
   podeGerenciar: boolean;
   preferencias: PreferenciasDoPainel;
+  /** O funil que o cookie `escale_ultimo_funil` já guarda: igual ao aberto, não regrava. */
+  ultimoFunil?: string | null;
   /** Fase 1E: onde moram os Recentes desta pessoa nesta organização. Ausente = sem a seção. */
   chaveDeRecentes?: string;
 }) {
@@ -169,8 +172,12 @@ export function PainelOrigens({
   const atualizarVisualizacao = useAtualizarVisualizacao();
 
   // O "Negócios" do menu do topo abre o último funil aberto (`/app/escale/negocios`).
+  // Só grava quando muda: o valor do cookie veio do servidor (`ultimoFunil`).
+  const funilGravado = useRef(ultimoFunil);
   useEffect(() => {
-    if (ativo) void guardarPreferenciaDeOrigens({ nome: "ultimo_funil", valor: ativo });
+    if (!ativo || ativo === funilGravado.current) return;
+    funilGravado.current = ativo;
+    guardarPreferenciaDeOrigens({ nome: "ultimo_funil", valor: ativo });
   }, [ativo]);
 
   const arvore = useMemo(() => montarOrigens(origens), [origens]);
@@ -197,19 +204,19 @@ export function PainelOrigens({
   function alternarPainel() {
     const proximo = !painelAberto;
     setPainelAberto(proximo);
-    void guardarPreferenciaDeOrigens({ nome: "painel", valor: proximo ? "aberto" : "fechado" });
+    guardarPreferenciaDeOrigens({ nome: "painel", valor: proximo ? "aberto" : "fechado" });
   }
 
   function alternarLista() {
     const proximo = !listaAberta;
     setListaAberta(proximo);
-    void guardarPreferenciaDeOrigens({ nome: "lista", valor: proximo ? "aberta" : "fechada" });
+    guardarPreferenciaDeOrigens({ nome: "lista", valor: proximo ? "aberta" : "fechada" });
   }
 
   function alternarVisualizacoes() {
     const proximo = !visualizacoesAbertas;
     setVisualizacoesAbertas(proximo);
-    void guardarPreferenciaDeOrigens({
+    guardarPreferenciaDeOrigens({
       nome: "visualizacoes",
       valor: proximo ? "aberta" : "fechada",
     });
@@ -218,7 +225,7 @@ export function PainelOrigens({
   function alternarRecentes() {
     const proximo = !recentesAbertos;
     setRecentesAbertos(proximo);
-    void guardarPreferenciaDeOrigens({ nome: "recentes", valor: proximo ? "aberta" : "fechada" });
+    guardarPreferenciaDeOrigens({ nome: "recentes", valor: proximo ? "aberta" : "fechada" });
   }
 
   function alternarGrupo(id: string) {
@@ -246,7 +253,7 @@ export function PainelOrigens({
     if (acao === "ocultar") {
       const proximo = ocultos.includes(id) ? ocultos.filter((o) => o !== id) : [...ocultos, id];
       setOcultos(proximo);
-      void guardarPreferenciaDeOrigens({ nome: "ocultos", valor: proximo });
+      guardarPreferenciaDeOrigens({ nome: "ocultos", valor: proximo });
       return;
     }
     if (acao === "selecionar") {
@@ -321,6 +328,18 @@ export function PainelOrigens({
         >
           <ChevronRight size={12} aria-hidden />
         </button>
+        {/* A engrenagem do quadro abre a janela mesmo com o painel recolhido. */}
+        {podeGerenciar && (
+          <TooltipProvider delayDuration={300}>
+            <JanelasDeOrigens
+              janela={janela}
+              origens={origens}
+              onFechar={() => setJanela(null)}
+              onOrigens={setOrigens}
+              onAbrirOrigem={abrirOrigem}
+            />
+          </TooltipProvider>
+        )}
       </div>
     );
   }
