@@ -54,6 +54,9 @@ function descarregar(qc: QueryClient): void {
   agendadas.delete(qc);
   recarregarListasDasConversas(qc);
   void qc.invalidateQueries({ queryKey: ["conversation"] });
+  // O setor da linha (e "Em transferência para X") não mora sob "conversations": sem isto
+  // ficava velho quando outra pessoa assumia a conversa (B1-21 da revisão).
+  void qc.invalidateQueries({ queryKey: ["setores-das-conversas"] });
 }
 
 /**
@@ -86,9 +89,21 @@ interface FilaEmPaginas {
   pageParams: unknown[];
 }
 
+const ESPERAS_MAX_DA_BUSCA = 40;
+const esperar = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
+
 async function recarregarPrimeiraPagina(qc: QueryClient, q: Query): Promise<void> {
   try {
     const nova = await apiClient.get<unknown>(q.meta!.urlDaPrimeiraPagina as string);
+    // "Carregar mais" em voo regrava a lista inteira ao terminar, com a primeira página
+    // que ele tinha: espera ele acabar antes de trocar a primeira, senão a nova se perde.
+    for (let i = 0; q.state.fetchStatus === "fetching"; i += 1) {
+      if (i >= ESPERAS_MAX_DA_BUSCA) {
+        await qc.invalidateQueries({ queryKey: q.queryKey, exact: true });
+        return;
+      }
+      await esperar(JANELA_MS);
+    }
     qc.setQueryData<FilaEmPaginas>(q.queryKey, (antes) =>
       antes && antes.pages.length > 0
         ? { ...antes, pages: [nova, ...antes.pages.slice(1)] }

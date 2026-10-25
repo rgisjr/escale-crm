@@ -1,6 +1,7 @@
 "use client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { invalidarTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import type { Conversation } from "@/lib/types/messaging";
 
@@ -24,6 +25,7 @@ export function useReleaseConversation() {
     },
     onSuccess: (_data, args) => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
+      invalidarTotalDaFila(qc);
       qc.invalidateQueries({ queryKey: ["conversation", args.conversation_id] });
     },
   });

@@ -8,6 +8,7 @@ import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
+import { ErroDaLista } from "@/components/escale/ui/ErroDaLista";
 import { useMensagensAgendadas, useRemoverAgendada } from "@/hooks/escale/useMensagensAgendadas";
 import { CabecaDaConfiguracao } from "@/components/escale/conversas/configuracoes/CabecaDaConfiguracao";
 import { useT } from "@/hooks/i18n/useT";
@@ -79,7 +80,7 @@ export function TelaMensagensAgendadas() {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState<number>(AGENDADAS_POR_PAGINA[0]);
   const { data: dispositivos = [] } = useChannelSessions();
-  const { data, isLoading } = useMensagensAgendadas({
+  const { data, isLoading, isError, refetch } = useMensagensAgendadas({
     busca: busca.trim() || undefined,
     criacao_de: criacao.de,
     criacao_ate: criacao.ate,
@@ -144,7 +145,13 @@ export function TelaMensagensAgendadas() {
         {isLoading ? (
           <p className="py-10 text-center text-[12px] text-casca-suave">{t("Carregando…")}</p>
         ) : null}
-        {!isLoading && itens.length === 0 ? (
+        {isError && !data ? (
+          <ErroDaLista
+            mensagem={t("Não foi possível carregar as mensagens agendadas.")}
+            aoTentar={() => void refetch()}
+          />
+        ) : null}
+        {!isLoading && !isError && itens.length === 0 ? (
           <p className="py-10 text-center text-[12px] text-casca-suave">
             {t("Nenhuma mensagem agendada.")}
           </p>

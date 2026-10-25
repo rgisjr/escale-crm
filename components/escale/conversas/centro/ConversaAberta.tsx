@@ -28,12 +28,14 @@ export function ConversaAberta({
   conversa,
   rascunho,
   aoAbrirConversa,
+  aoIniciarConversa,
   aoAbrirFicha,
   aoMudarNaoLida,
 }: {
   conversa: ConversationWithContact;
   rascunho: AvisoDeRascunho | null;
   aoAbrirConversa: (id: string | null) => void;
+  aoIniciarConversa?: () => void;
   aoAbrirFicha?: () => void;
   /** FORK ESCALE · Fase 3B (N6): a casca para de chamar mark-read enquanto a conversa fica marcada como não lida. */
   aoMudarNaoLida?: (id: string | null) => void;
@@ -75,6 +77,7 @@ export function ConversaAberta({
       <CabecalhoDaConversa
         conversa={conversa}
         aoAbrirConversa={aoAbrirConversa}
+        aoIniciarConversa={aoIniciarConversa}
         aoBuscar={() =>
           buscaAberta ? setBusca(null) : setBusca({ conversaId: conversa.id, termo: "" })
         }

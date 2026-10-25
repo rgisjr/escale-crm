@@ -4,11 +4,14 @@ import { type NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
+import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
 import {
   dataNoPassado,
   listaDeAgendadasSchema,
   novaAgendadaSchema,
 } from "@/lib/escale/conversas/agendadas";
+import { fusoDaOrganizacao } from "@/lib/escale/contatos/lista";
+import { limiteDoDiaNoFuso } from "@/lib/escale/conversas/limite-do-dia";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -48,6 +51,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const f = parsed.data;
   const status = url.searchParams.get("status") === "falhou" ? "falhou" : "pendente";
   const supabase = await createClient();
+  const fuso = await fusoDaOrganizacao(supabase, authz.org.orgId, authz.org.timezone);
   let q = supabase
     .from("crm_mensagens_agendadas")
     // Com busca, o embed do contato vira `!inner`: sem isso o PostgREST filtra só o contato
@@ -61,11 +65,12 @@ export async function GET(req: NextRequest): Promise<Response> {
     .eq("organization_id", authz.org.orgId)
     .eq("status", status)
     .order("enviar_em", { ascending: true })
+    .order("id", { ascending: true })
     .range((f.pagina - 1) * f.por_pagina, f.pagina * f.por_pagina - 1);
-  if (f.criacao_de) q = q.gte("created_at", `${f.criacao_de}T00:00:00`);
-  if (f.criacao_ate) q = q.lte("created_at", `${f.criacao_ate}T23:59:59.999`);
-  if (f.envio_de) q = q.gte("enviar_em", `${f.envio_de}T00:00:00`);
-  if (f.envio_ate) q = q.lte("enviar_em", `${f.envio_ate}T23:59:59.999`);
+  if (f.criacao_de) q = q.gte("created_at", limiteDoDiaNoFuso(f.criacao_de, "inicio", fuso));
+  if (f.criacao_ate) q = q.lte("created_at", limiteDoDiaNoFuso(f.criacao_ate, "fim", fuso));
+  if (f.envio_de) q = q.gte("enviar_em", limiteDoDiaNoFuso(f.envio_de, "inicio", fuso));
+  if (f.envio_ate) q = q.lte("enviar_em", limiteDoDiaNoFuso(f.envio_ate, "fim", fuso));
   if (f.channel_session_id) q = q.eq("channel_session_id", f.channel_session_id);
   if (f.contact_id) q = q.eq("contact_id", f.contact_id);
   if (f.conversation_id) q = q.eq("conversation_id", f.conversation_id);
@@ -78,7 +83,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     );
   }
   const { data, error, count } = await q;
-  if (error) return fail("internal_error", error.message, 500, { requestId });
+  if (error) return falhaInesperadaDoQuadro(error, { rota: "mensagens-agendadas", operacao: "listar" }, t, requestId);
   return ok((data ?? []).map(agendadaLida), {
     requestId,
     meta: { total: count ?? 0, pagina: f.pagina, por_pagina: f.por_pagina },

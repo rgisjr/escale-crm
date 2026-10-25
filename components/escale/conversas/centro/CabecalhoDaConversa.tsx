@@ -29,6 +29,7 @@ const ITEM =
 export function CabecalhoDaConversa({
   conversa,
   aoAbrirConversa,
+  aoIniciarConversa,
   aoBuscar,
   buscaAberta,
   naoLidaManual,
@@ -36,6 +37,8 @@ export function CabecalhoDaConversa({
 }: {
   conversa: ConversationWithContact;
   aoAbrirConversa: (id: string | null) => void;
+  /** "Iniciar uma conversa": abre a tela de conversa nova (só fechar a atual deixava o centro vazio). */
+  aoIniciarConversa?: () => void;
   aoBuscar: () => void;
   buscaAberta: boolean;
   naoLidaManual: boolean;
@@ -97,7 +100,8 @@ export function CabecalhoDaConversa({
             className={ITEM}
             onClick={() => {
               setMenu(false);
-              aoAbrirConversa(null);
+              if (aoIniciarConversa) aoIniciarConversa();
+              else aoAbrirConversa(null);
             }}
           >
             <MessageSquare size={16} aria-hidden className="text-casca-suave" />

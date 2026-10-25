@@ -75,11 +75,15 @@ export function JanelaAgendarMensagem({
 
   const confirmar = async () => {
     if (!podeConfirmar) return;
-    await agendar.mutateAsync({
-      conversation_id: conversa.id,
-      enviar_em: quando.toISOString(),
-      mensagens,
-    });
+    try {
+      await agendar.mutateAsync({
+        conversation_id: conversa.id,
+        enviar_em: quando.toISOString(),
+        mensagens,
+      });
+    } catch {
+      return; // o aviso vem do hook; a janela fica aberta
+    }
     toast.success(t("Mensagem agendada."));
     aoFechar();
   };

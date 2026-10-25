@@ -6,6 +6,7 @@ import { requireRole, type RoleCheck } from "@/lib/auth/require-role";
 import type { TipoDeEvento } from "@/lib/escale/conversas/eventos";
 import { lerUuid } from "@/lib/escale/origens/preferencias";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ConversaVisivel {
@@ -51,7 +52,16 @@ export async function gravarEvento(
   const { error } = await supabase
     .from("crm_eventos_da_conversa")
     .insert({ organization_id: orgId, conversation_id: conversationId, tipo, user_id: userId });
-  if (error) throw error;
+  // A mudança já valeu: falhar o evento da thread não pode virar 500 com a conversa já alterada
+  // (a tela ficaria "aberta" e o próximo clique daria 409). Fica no log (B1-13 da revisão).
+  if (error) {
+    logger.error("[conversas-da-casca] evento da thread não gravado", {
+      conversationId,
+      tipo,
+      codigo: error.code ?? null,
+      erro: error.message,
+    });
+  }
 }
 
 type Ok = Extract<RoleCheck, { ok: true }>;

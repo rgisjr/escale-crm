@@ -79,12 +79,16 @@ export function JanelaDoSetor({
 
   const confirmar = async () => {
     if (!podeSalvar) return;
-    await salvar.mutateAsync({
-      ...(setor ? { id: setor.id } : {}),
-      nome: nome.trim(),
-      cor,
-      membros,
-    });
+    try {
+      await salvar.mutateAsync({
+        ...(setor ? { id: setor.id } : {}),
+        nome: nome.trim(),
+        cor,
+        membros,
+      });
+    } catch {
+      return; // o aviso vem do hook; a janela fica aberta
+    }
     toast.success(setor ? t("Setor atualizado.") : t("Setor criado."));
     aoFechar();
   };

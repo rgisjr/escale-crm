@@ -118,7 +118,8 @@ export function CompositorDaCasca({
       },
       {
         onSuccess: () => {
-          setTexto("");
+          // Só limpa se o campo ainda é o que foi enviado: o que se digitou depois do Enter fica.
+          setTexto((atual) => (atual.trim() === body ? "" : atual));
           aoCancelarResposta();
         },
       },

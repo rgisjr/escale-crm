@@ -399,6 +399,7 @@ export function ConversasDaCasca({
                         conversa={conversa}
                         rascunho={rascunho}
                         aoAbrirConversa={selecionar}
+                        aoIniciarConversa={abrirNova}
                         aoAbrirFicha={() => setFichaAberta(true)}
                         aoMudarNaoLida={setNaoLidaManual}
                       />

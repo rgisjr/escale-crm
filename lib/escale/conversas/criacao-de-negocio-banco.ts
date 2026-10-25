@@ -20,7 +20,9 @@ import { lerCriacao, primeiraRegraQueCasa, type RegraDeCriacao } from "./criacao
 export type DecisaoDoDispositivo =
   | { tipo: "padrao" }
   | { tipo: "nenhum"; motivo: "desligado" | "nao_e_a_primeira" | "sem_regra" }
-  | { tipo: "regra"; regra: RegraDeCriacao };
+  | { tipo: "regra"; regra: RegraDeCriacao }
+  /** Falha de leitura: não vira "padrao" (criaria o negócio com o dispositivo desligado) nem "nao_e_a_primeira". */
+  | { tipo: "erro"; detalhe: string };
 
 /**
  * Texto nulo = a primeira mensagem foi mídia sem legenda (áudio, foto, figurinha): só "Qualquer mensagem" casa.
@@ -34,24 +36,26 @@ export async function decisaoDoDispositivo(
     messageId: string | null;
   },
 ): Promise<DecisaoDoDispositivo> {
-  const { data: conversa } = await db
+  const { data: conversa, error: erroConversa } = await db
     .from("conversations")
     .select("id, channel_session_id")
     .eq("organization_id", q.organizationId)
     .eq("id", q.conversationId)
     .maybeSingle();
+  if (erroConversa) return { tipo: "erro", detalhe: erroConversa.message.slice(0, 120) };
   const canal = (conversa as { channel_session_id?: string } | null)?.channel_session_id;
   if (!canal) return { tipo: "padrao" };
-  const { data: linha } = await db
+  const { data: linha, error: erroConfig } = await db
     .from("crm_criacao_de_negocio")
     .select("ligado, regras")
     .eq("organization_id", q.organizationId)
     .eq("channel_session_id", canal)
     .maybeSingle();
+  if (erroConfig) return { tipo: "erro", detalhe: erroConfig.message.slice(0, 120) };
   if (!linha) return { tipo: "padrao" };
   const criacao = lerCriacao(linha);
   if (!criacao.ligado) return { tipo: "nenhum", motivo: "desligado" };
-  const { data: primeira } = await db
+  const { data: primeira, error: erroPrimeira } = await db
     .from("messages")
     .select("id")
     .eq("organization_id", q.organizationId)
@@ -61,6 +65,7 @@ export async function decisaoDoDispositivo(
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+  if (erroPrimeira) return { tipo: "erro", detalhe: erroPrimeira.message.slice(0, 120) };
   if (!primeira || (q.messageId && (primeira as { id: string }).id !== q.messageId))
     return { tipo: "nenhum", motivo: "nao_e_a_primeira" };
   const regra = primeiraRegraQueCasa(criacao.regras, q.texto ?? "");
@@ -85,6 +90,7 @@ export async function nascimentoPeloDispositivo(
     messageId: dados.messageId ?? null,
   });
   if (decisao.tipo === "padrao") return null;
+  if (decisao.tipo === "erro") return { criado: false, motivo: "erro", detalhe: decisao.detalhe };
   if (decisao.tipo === "nenhum")
     return { criado: false, motivo: "pelo_dispositivo", detalhe: decisao.motivo };
   const origem = dados.origem ?? ORIGEM_DO_WHATSAPP;

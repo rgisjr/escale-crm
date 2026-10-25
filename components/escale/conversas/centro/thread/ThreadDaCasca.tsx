@@ -103,10 +103,10 @@ export function ThreadDaCasca({
   const acoes = {
     aoResponder: (m: Message) => aoResponder?.(m),
     aoEditar: (m: Message, texto: string) =>
-      void alterar.editar.mutateAsync({ id: m.id, text: texto }),
-    aoApagarParaTodos: (m: Message) => void alterar.apagar.mutateAsync(m.id),
-    aoApagarParaMim: (m: Message) => void alterar.ocultar.mutateAsync(m.id),
-    aoRestaurar: (m: Message) => void alterar.restaurar.mutateAsync(m.id),
+      alterar.editar.mutate({ id: m.id, text: texto }),
+    aoApagarParaTodos: (m: Message) => alterar.apagar.mutate(m.id),
+    aoApagarParaMim: (m: Message) => alterar.ocultar.mutate(m.id),
+    aoRestaurar: (m: Message) => alterar.restaurar.mutate(m.id),
     aoReenviar: (m: Message) =>
       enviar.mutate({
         conversation_id: conversationId,

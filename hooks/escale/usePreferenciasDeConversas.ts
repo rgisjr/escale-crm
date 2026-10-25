@@ -1,6 +1,7 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { apiClient } from "@/lib/api/client";
 import { lerCamposDoCartao } from "@/lib/escale/conversas/campos-do-cartao";
 import {
@@ -42,8 +43,9 @@ export function useGravarPreferencia() {
       qc.setQueryData(CHAVE_DAS_PREFERENCIAS, aplicarGravacao(antes, g));
       return { antes };
     },
-    onError: (_e, _g, ctx) => {
+    onError: (erro, _g, ctx) => {
       if (ctx) qc.setQueryData(CHAVE_DAS_PREFERENCIAS, ctx.antes);
+      showApiError(erro);
     },
     onSuccess: (resposta) => {
       if (resposta?.data?.preferencias?.secoes)
