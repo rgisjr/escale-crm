@@ -24,6 +24,18 @@ export type DestinoDaImportacao = {
 const emAndamento = (lista: readonly ImportacaoLida[] | undefined) =>
   (lista ?? []).some((i) => STATUS_EM_ANDAMENTO.includes(i.status));
 
+/** `AbortSignal.any` falta em navegadores anteriores a Chrome 116, Firefox 124 e Safari 17.4. */
+function juntarSinais(chamador: AbortSignal | undefined, limite: AbortSignal): AbortSignal {
+  if (!chamador) return limite;
+  if (typeof AbortSignal.any === "function") return AbortSignal.any([chamador, limite]);
+  const junto = new AbortController();
+  const abortar = () => junto.abort();
+  if (chamador.aborted || limite.aborted) abortar();
+  chamador.addEventListener("abort", abortar, { once: true });
+  limite.addEventListener("abort", abortar, { once: true });
+  return junto.signal;
+}
+
 /** A lista: pergunta a cada 5 s enquanto há importação na fila ou rodando, ou quando `perguntarRapido` (30 s depois de criar). */
 export function useImportacoes(tipo: "todas" | "contato" | "negocio", pagina: number, perguntarRapido: boolean) {
   return useQuery({
@@ -77,7 +89,7 @@ export function useCriarImportacao() {
       let res: Response;
       let json: Resposta | null;
       try {
-        res = await fetch("/api/v1/importacoes", { method: "POST", body: form, signal: signal ? AbortSignal.any([signal, limite.signal]) : limite.signal });
+        res = await fetch("/api/v1/importacoes", { method: "POST", body: form, signal: juntarSinais(signal, limite.signal) });
         json = (await res.json().catch(() => null)) as Resposta | null;
       } catch (e) {
         if (estourou) throw new Error("O envio demorou demais. Confira a lista de importações e tente de novo.");

@@ -86,7 +86,8 @@ describe("candidatosDaCasca", () => {
   it("resolve o público no banco e devolve o modelo", async () => {
     const banco = bancoDeMentira({
       rpc: {
-        fn_escale_pagina_do_publico: () => ({ data: [{ contact_id: C1, total: 1 }], error: null }),
+        // G7-2 (9401): o público inteiro vem numa linha só, como um uuid[].
+        fn_escale_ids_do_publico: () => ({ data: [C1], error: null }),
       },
       tabelas: { contacts: [contato(C1, "Ana")], organizations: [{ timezone: "UTC" }] },
     });
