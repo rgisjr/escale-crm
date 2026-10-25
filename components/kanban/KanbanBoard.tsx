@@ -225,13 +225,19 @@ export function KanbanBoard({
     [selectedIds, internalSelected],
   );
 
-  const data = useExternal
-    ? {
-        pipeline: pipelineProp ?? ({} as Pipeline),
-        stages: stagesProp,
-        leads: leadsProp,
-      }
-    : queryResult.data;
+  // Q2b (G6-1): objeto estável; novo a cada render, refazia o `grouped` (e tudo que vem dele) à toa.
+  const dataExterno = useMemo(
+    () =>
+      useExternal
+        ? {
+            pipeline: pipelineProp ?? ({} as Pipeline),
+            stages: stagesProp,
+            leads: leadsProp,
+          }
+        : undefined,
+    [useExternal, pipelineProp, stagesProp, leadsProp],
+  );
+  const data = dataExterno ?? queryResult.data;
   const isLoading = useExternal ? false : queryResult.isLoading;
   const isError = useExternal ? false : queryResult.isError;
   const error = useExternal ? null : queryResult.error;

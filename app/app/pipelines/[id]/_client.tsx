@@ -134,7 +134,11 @@ export function PipelinePageClient({
     const settings = data?.pipeline.settings;
     return (motivo: string) => categoriaDoMotivo(motivo, settings);
   }, [data?.pipeline.settings]);
-  const filteredLeads = data ? applyFilters(data.leads, filters, { categoriaDo }) : [];
+  // Q2b (G6-1): em `useMemo` e pulado na casca nova (que usa o `recorte`): solto no corpo, rodava a cada tecla da busca.
+  const filteredLeads = useMemo(
+    () => (data && !cascaNova ? applyFilters(data.leads, filters, { categoriaDo }) : []),
+    [data, cascaNova, filters, categoriaDo],
+  );
   // FORK ESCALE · Fase 1D: com a casca nova, quem filtra é a barra nova. O
   // recorte esconde as colunas de ganho e de perda que o status não pede e
   // aplica os filtros; a ordenação vale em todas as colunas.

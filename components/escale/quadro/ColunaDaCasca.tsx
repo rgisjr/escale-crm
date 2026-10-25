@@ -1,6 +1,6 @@
 "use client";
 import { Droppable } from "@hello-pangea/dnd";
-import { useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import type { GestoDeSelecao } from "@/components/kanban/KanbanCard";
 import { useT } from "@/hooks/i18n/useT";
@@ -62,16 +62,22 @@ export function ColunaDaCasca({
   // A âncora do shift+clique, como no `StageColumn`: `useRef` para não remontar o Droppable.
   const ancora = useRef<string | null>(null);
 
-  const aoSelecionar = (leadId: string, gesto: GestoDeSelecao) => {
+  // Q2b (G2-4): `aoSelecionar` estável (lê o estado vivo por ref), para o card memoizado não refazer a cada render.
+  const vivo = useRef({ ids, selecionados, onSelectMany });
+  useEffect(() => {
+    vivo.current = { ids, selecionados, onSelectMany };
+  });
+  const aoSelecionar = useCallback((leadId: string, gesto: GestoDeSelecao) => {
+    const { ids: idsVivos, selecionados: marcados, onSelectMany: selecionarVarios } = vivo.current;
     if (gesto === "intervalo") {
-      const faixa = intervaloDaColuna(ids, ancora.current, leadId);
+      const faixa = intervaloDaColuna(idsVivos, ancora.current, leadId);
       ancora.current = leadId;
-      onSelectMany?.(faixa, true);
+      selecionarVarios?.(faixa, true);
       return;
     }
     ancora.current = leadId;
-    onSelectMany?.([leadId], !selecionados.has(leadId));
-  };
+    selecionarVarios?.([leadId], !marcados.has(leadId));
+  }, []);
 
   return (
     <section

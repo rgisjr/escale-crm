@@ -123,18 +123,20 @@ describe("os pontos de chamada — a regra só vale se quem a usa a chama", () =
   it("a rota do quadro anexa os marcadores do contato e os devolve", () => {
     const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
     expect(fonte, "withMarcadoresDoContato não é chamada na rota").toMatch(
-      /leadsComMarcadores\s*=\s*await withMarcadoresDoContato\(/,
+      /withMarcadoresDoContato\(leadsVisiveis,\s*linhas\.contatos\)/,
     );
     expect(fonte, "o resultado de withMarcadoresDoContato não chega à resposta").toMatch(
-      /leads:\s*leadsComMarcadores\.leads/,
+      /leads:\s*juntarEtapasPorLead\(/,
     );
   });
 
   it("a consulta de conversas do quadro traz as `tags` e as devolve no card", () => {
-    const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
-    expect(fonte, "withConversas não seleciona `tags` das conversas").toMatch(
-      /from\("conversations"\)\s*\.select\("[^"]*\btags\b[^"]*"\)/,
+    // Q2b: a leitura das conversas é uma só, em `lerContatosEConversas`.
+    const leitor = readFileSync("lib/escale/filtros/ler-dados-do-quadro.ts", "utf8");
+    expect(leitor, "a leitura de conversas não seleciona `tags`").toMatch(
+      /COLUNAS_DA_CONVERSA\s*=\s*\n?\s*"[^"]*\btags\b[^"]*"/,
     );
+    const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
     expect(fonte, "o card não recebe `conversation_tags`").toContain("conversation_tags:");
   });
 

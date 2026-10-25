@@ -249,20 +249,22 @@ describe("ContatoDoNegocio — as abas do dossiê", () => {
 describe("a fiação — quem usa a regra a chama", () => {
   it("⭐ a rota lê o dado do contato na MESMA consulta dos marcadores e o aplica nos leads", () => {
     const rota = fonte("app/api/v1/pipelines/[id]/board/route.ts");
-    const inicio = rota.indexOf("async function withMarcadoresDoContato");
+    const inicio = rota.indexOf("function withMarcadoresDoContato");
     const fim = rota.indexOf("async function withNextActions");
     expect(inicio, "a etapa dos marcadores sumiu da rota").toBeGreaterThan(-1);
     const etapa = rota.slice(inicio, fim);
 
-    expect(etapa, "a consulta não traz telefone, e-mail e custom_fields").toMatch(
-      /\.select\(\s*"id, tags, phone_number, email, custom_fields, is_anonymized"\s*\)/,
-    );
+    // Q2b: a leitura de `contacts` é uma só (`lerContatosEConversas`) e traz estas colunas.
+    expect(
+      fonte("lib/escale/filtros/ler-dados-do-quadro.ts"),
+      "a consulta não traz telefone, e-mail e custom_fields",
+    ).toMatch(/COLUNAS_DO_CONTATO\s*=\s*\n?\s*"[^"]*phone_number, email, custom_fields[^"]*"/);
     expect(etapa, "anexarDadosDoContato não é chamada na etapa").toMatch(
       /anexarDadosDoContato\(\s*leadsDoQuadro,\s*linhas\s*\)/,
     );
     // sem etapa nova na cadeia: `funil-filtro-de-tag-le-as-duas-caixas` e
     // `kanban-atalho-conversa` vigiam withConversas → withMarcadoresDoContato → resposta
-    expect(rota).toMatch(/leads:\s*leadsComMarcadores\.leads/);
+    expect(rota).toMatch(/leads:\s*juntarEtapasPorLead\(/);
   });
 
   it("o card e o dossiê renderizam os componentes novos", () => {
