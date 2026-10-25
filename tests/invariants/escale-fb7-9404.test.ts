@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { GOV_AGENT_A, GOV_CONTACT_1, GOV_ORG, GOV_SESSION, seedGov, sql } from "./gov-helpers";
+import { GOV_AGENT_A, GOV_CONTACT_1, GOV_ORG, seedGov, sql } from "./gov-helpers";
 
 /**
  * MIGRATION 9404 (Faixa B · FB7) — prova contra Postgres real: FK composta do
@@ -14,7 +14,9 @@ const CONV_VELHA = "e5ca1e00-9404-4000-8000-0000000000a1";
 const CONV_NOVA = "e5ca1e00-9404-4000-8000-0000000000a2";
 const REF = "e5ca1e00-9404-4000-8000-0000000000a3";
 const GRUPO_DE_DENTRO = "e5ca1e00-9404-4000-8000-0000000000e2";
-const DEFINICAO = `'{"key":"cp9404","label":"x","type":"text"}'`;
+const DEFINICAO = `'{"label":"x","type":"text"}'`;
+const SESSAO_2 = "e5ca1e00-9404-4000-8000-0000000000d2";
+const SESSAO_3 = "e5ca1e00-9404-4000-8000-0000000000d3";
 
 beforeAll(() => {
   seedGov();
@@ -81,9 +83,12 @@ describe("um aviso aberto por contato ambíguo (B2-14)", () => {
 describe("a conversa mais recente por contato (G3-11)", () => {
   it("devolve uma linha por contato, a de last_message_at mais novo", () => {
     sql(`
+      insert into public.channel_sessions (id, organization_id, waha_session_name, webhook_secret_encrypted)
+        values ('${SESSAO_2}', '${GOV_ORG}', '9404-s2', decode('00', 'hex')),
+               ('${SESSAO_3}', '${GOV_ORG}', '9404-s3', decode('00', 'hex')) on conflict do nothing;
       insert into public.conversations (id, organization_id, contact_id, channel_session_id, status, last_message_at)
-        values ('${CONV_VELHA}', '${GOV_ORG}', '${GOV_CONTACT_1}', '${GOV_SESSION}', 'open', now() - interval '2 days'),
-               ('${CONV_NOVA}', '${GOV_ORG}', '${GOV_CONTACT_1}', '${GOV_SESSION}', 'open', now() + interval '1 day');
+        values ('${CONV_VELHA}', '${GOV_ORG}', '${GOV_CONTACT_1}', '${SESSAO_2}', 'open', now() - interval '2 days'),
+               ('${CONV_NOVA}', '${GOV_ORG}', '${GOV_CONTACT_1}', '${SESSAO_3}', 'open', now() + interval '1 day');
     `);
     const linhas = sql(
       `select conversation_id from public.fn_escale_conversa_mais_recente_por_contato('${GOV_ORG}', array['${GOV_CONTACT_1}']::uuid[]);`,

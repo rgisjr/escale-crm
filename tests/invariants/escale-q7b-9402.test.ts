@@ -700,7 +700,8 @@ describe("migration 9402 — nada além do previsto mudou no catálogo", () => {
       expect(d.qual, `${chave} (using)`).toBe(g718 ? embrulhar(a.qual) : a.qual);
       expect(d.check, `${chave} (with check)`).toBe(g718 ? embrulhar(a.check) : a.check);
     }
-    expect(embrulhadas).toBe(35);
+    // 35 menos a de insert de crm_mensagens_agendadas, que a 9403 (FB0) já regravou com `(select auth.uid())`.
+    expect(embrulhadas).toBe(34);
     // o WITH CHECK da escrita do gerente nas origens e etapas não mudou
     for (const c of [
       "crm_pipelines.crm_pipelines_manager_write",

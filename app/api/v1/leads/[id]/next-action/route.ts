@@ -133,6 +133,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     .eq("organization_id", row.organization_id)
     .eq("contact_id", row.contact_id)
     .eq("next_action_seq", approved_seq)
+    .not("next_action", "is", null)
     .select("contact_id");
   if (limpaErr) return fail("internal_error", limpaErr.message, 500, { requestId });
   if (!limpas || limpas.length === 0) {
