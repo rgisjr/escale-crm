@@ -32,6 +32,12 @@ export function FiltroDeData({
   const t = useT();
   const aplicado = periodoDosFiltros(filtros);
   const [tipo, setTipo] = useState<PeriodoDoFiltro["tipo"]>(aplicado?.tipo ?? "criacao");
+  // Filtro salvo ou URL que chega depois de montar: a aba acompanha o tipo aplicado (B5-12).
+  const [tipoAplicadoVisto, setTipoAplicadoVisto] = useState(aplicado?.tipo);
+  if (aplicado?.tipo !== tipoAplicadoVisto) {
+    setTipoAplicadoVisto(aplicado?.tipo);
+    if (aplicado) setTipo(aplicado.tipo);
+  }
   const valor: PeriodoDoFiltro = aplicado && aplicado.tipo === tipo ? aplicado : { tipo };
 
   return (

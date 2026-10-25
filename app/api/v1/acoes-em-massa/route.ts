@@ -62,12 +62,14 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     if (acao === "criar_negocios") {
       const p = parametros as { pipeline_id: string; stage_id: string };
-      const { data: etapa } = await supabase
+      const { data: etapa, error: erroDaEtapa } = await supabase
         .from("crm_stages")
         .select("id, pipeline_id, is_archived")
         .eq("id", p.stage_id)
         .eq("organization_id", orgId)
         .maybeSingle();
+      // Falha de banco não pode virar "Escolha a origem e a etapa." (a pessoa trocaria de etapa sem resolver nada).
+      if (erroDaEtapa) throw erroDaEtapa;
       const e = etapa as { pipeline_id: string; is_archived: boolean } | null;
       if (!e || e.pipeline_id !== p.pipeline_id || e.is_archived)
         return recusa("Escolha a origem e a etapa.");
