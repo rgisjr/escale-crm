@@ -32,13 +32,19 @@ vi.mock("@/hooks/inbox/useAssignableMembers", () => ({
   }),
 }));
 const mensagens: Message[] = [];
+const busca = { isPending: false, isError: false, refetch: vi.fn() };
 vi.mock("@/hooks/inbox/useMessagesRealtime", () => ({
   useMessagesRealtime: () => ({
-    data: { pages: [{ data: mensagens, meta: { has_more: false, cursor: null } }] },
+    data: busca.isPending
+      ? undefined
+      : { pages: [{ data: mensagens, meta: { has_more: false, cursor: null } }] },
     hasNextPage: false,
     fetchNextPage: vi.fn(),
     isFetchingNextPage: false,
-    isLoading: false,
+    isLoading: busca.isPending,
+    isPending: busca.isPending,
+    isError: busca.isError,
+    refetch: busca.refetch,
   }),
 }));
 vi.mock("@/hooks/inbox/useConversationNotes", () => ({
@@ -123,6 +129,9 @@ beforeEach(() => {
   qc = new QueryClient();
   mensagens.length = 0;
   reenviar.mockClear();
+  busca.isPending = false;
+  busca.isError = false;
+  busca.refetch.mockClear();
 });
 
 describe("ThreadDaCasca", () => {
@@ -175,6 +184,23 @@ describe("ThreadDaCasca", () => {
     expect(ultimaMensagem([{ data: mensagens, meta: { has_more: false, cursor: null } }])?.id).toBe(
       "m2",
     );
+  });
+
+  it("sem as mensagens ainda, mostra 'Carregando…' e não os eventos sozinhos", () => {
+    busca.isPending = true;
+    wrap(<ThreadDaCasca conversationId="c1" conversa={{ status: "open" } as never} />);
+    expect(screen.getByText("Carregando…")).toBeInTheDocument();
+    expect(screen.queryByTestId("item-evento-e1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("item-note-n1")).not.toBeInTheDocument();
+  });
+
+  it("se a busca falhar, avisa e deixa tentar de novo", async () => {
+    busca.isError = true;
+    wrap(<ThreadDaCasca conversationId="c1" conversa={{ status: "open" } as never} />);
+    expect(screen.getByText("Não foi possível carregar as mensagens.")).toBeInTheDocument();
+    expect(screen.queryByTestId("item-evento-e1")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    expect(busca.refetch).toHaveBeenCalled();
   });
 });
 
