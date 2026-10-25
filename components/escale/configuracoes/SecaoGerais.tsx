@@ -15,6 +15,7 @@ import { normalizarTag, TAMANHO_MAXIMO_DA_TAG } from "@/lib/contacts/tag-normali
 import { VISUALIZACOES } from "@/lib/escale/acesso/regras";
 import { TAG_DO_SISTEMA, TAGS_PADRAO_MAX } from "@/lib/escale/configuracoes/tipos";
 import type { Origens } from "@/lib/escale/origens/regras";
+import { tagNovaDoTexto } from "@/lib/escale/tag-nova";
 import { CirclePlus, Plus, Settings, X } from "@/lib/ui/icons-da-casca";
 
 import { CabecaDaSecao } from "./CabecaDaSecao";
@@ -182,6 +183,9 @@ export function SecaoGerais({
             sugestoes={sugestoes}
             maxLength={TAMANHO_MAXIMO_DA_TAG}
             aoSalvar={adicionarTag}
+            tagParaCriar={(texto) =>
+              tagNovaDoTexto(texto, Array.isArray(vocabulario.data) ? vocabulario.data : [], g.tags)
+            }
             gatilho={
               <button
                 type="button"

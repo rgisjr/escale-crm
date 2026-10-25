@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 
+import { LinhaCriarTag } from "@/components/escale/ui/LinhaCriarTag";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { ChipDeEtiqueta } from "@/components/tags/ChipDeEtiqueta";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
@@ -9,6 +10,7 @@ import { useContactTagVocabulary } from "@/hooks/contacts/useContactTagVocabular
 import { useT } from "@/hooks/i18n/useT";
 import { normalizarTags } from "@/lib/contacts/tag-normalizada";
 import { TAGS_DA_CONDICAO_MAX } from "@/lib/escale/conversas/criacao-de-negocio";
+import { tagNovaDoTexto } from "@/lib/escale/tag-nova";
 import { Plus, X } from "@/lib/ui/icons-da-casca";
 
 /** "Adicionar tags ao contato" (16/10-01): a pílula "+ Adicionar tag" com o vocabulário e "criar" pelo texto. */
@@ -29,6 +31,7 @@ export function TagsDaCondicao({
   const opcoes = vocabulario
     .filter((x) => x.toLowerCase().includes(termo) && !valores.includes(x))
     .slice(0, 30);
+  const nova = tagNovaDoTexto(texto, vocabulario, valores);
   const incluir = (tag: string) => {
     const [limpa] = normalizarTags([tag]);
     if (limpa && !valores.includes(limpa) && valores.length < TAGS_DA_CONDICAO_MAX)
@@ -75,6 +78,7 @@ export function TagsDaCondicao({
               className="mb-2 h-8 w-full rounded-casca-gatilho bg-casca-busca px-2.5 text-[12px] outline-hidden placeholder:text-casca-meta"
             />
             <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto">
+              {nova ? <LinhaCriarTag tag={nova} aoCriar={incluir} /> : null}
               {opcoes.map((tag) => (
                 <button key={tag} type="button" onClick={() => incluir(tag)}>
                   <ChipDeEtiqueta tag={tag} className="h-5 px-1.5 text-[11px]" />

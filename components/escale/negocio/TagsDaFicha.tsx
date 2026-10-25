@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { LinhaCriarTag } from "@/components/escale/ui/LinhaCriarTag";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { ChipDeEtiqueta } from "@/components/tags/ChipDeEtiqueta";
 import {
@@ -30,7 +31,7 @@ import { Plus, Search, X } from "@/lib/ui/icons-da-casca";
  * AS TAGS DO CONTATO NO CABEÇALHO (fork Escale, Fase 1H; N6; print 01).
  *
  * Como na Clint: sem tags, "+ Adicionar tags"; com tags, os chips e só o "+".
- * O painel lista as tags do vocabulário que faltam e oferece "Criar «texto»"
+ * O painel oferece a linha "Criar" (com a etiqueta nova) no alto da lista
  * quando não há correspondência. O × do chip pede confirmação. As tags são do
  * CONTATO (`contacts.tags`, `text[]`), gravadas inteiras pelo PATCH do contato.
  *
@@ -171,6 +172,11 @@ export function TagsDoContato({
             aria-label={t("Adicione uma tag")}
             className="mt-2 max-h-[240px] overflow-y-auto"
           >
+            {podeCriar ? (
+              <li>
+                <LinhaCriarTag tag={termo} aoCriar={(tag) => void adicionar(tag)} />
+              </li>
+            ) : null}
             {faltam.map((tag) => (
               <li key={tag}>
                 <button
@@ -184,19 +190,6 @@ export function TagsDoContato({
                 </button>
               </li>
             ))}
-            {podeCriar ? (
-              <li>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={false}
-                  onClick={() => void adicionar(termo)}
-                  className="flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[11px] text-casca-marca hover:bg-casca-marca-suave"
-                >
-                  {`${t("Criar")} «${termo}»`}
-                </button>
-              </li>
-            ) : null}
             {faltam.length === 0 && !podeCriar ? (
               <li className="px-2 py-3 text-[11px] text-casca-suave">
                 {t("Nenhuma tag correspondente")}

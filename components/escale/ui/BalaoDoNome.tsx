@@ -2,6 +2,7 @@
 import { useState, type ReactElement } from "react";
 
 import { CampoDeTexto } from "@/components/escale/origens/JanelaDaCasca";
+import { LinhaCriarTag } from "@/components/escale/ui/LinhaCriarTag";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/hooks/i18n/useT";
@@ -20,6 +21,7 @@ export function BalaoDoNome({
   sugestoes = [],
   maxLength = 80,
   align = "start",
+  tagParaCriar,
 }: {
   gatilho: ReactElement;
   placeholder: string;
@@ -28,12 +30,15 @@ export function BalaoDoNome({
   sugestoes?: readonly string[];
   maxLength?: number;
   align?: "start" | "end";
+  /** Só o balão da tag: devolve a tag que o texto cria (null = não há o que criar) e liga a linha "Criar". */
+  tagParaCriar?: (texto: string) => string | null;
 }) {
   const t = useT();
   const [aberto, setAberto] = useState(false);
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const termo = texto.trim().toLowerCase();
+  const nova = tagParaCriar?.(texto) ?? null;
   const achadas = sugestoes.filter((s) => s.toLowerCase().includes(termo)).slice(0, 8);
 
   function mudarAberto(v: boolean) {
@@ -76,6 +81,11 @@ export function BalaoDoNome({
           maxLength={maxLength}
           className="h-9 text-[11px]"
         />
+        {nova ? (
+          <div className="mt-1">
+            <LinhaCriarTag tag={nova} aoCriar={salvar} />
+          </div>
+        ) : null}
         {achadas.length > 0 ? (
           <ul className="mt-1 max-h-40 overflow-y-auto">
             {achadas.map((s) => (
