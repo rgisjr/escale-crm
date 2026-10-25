@@ -11,7 +11,7 @@
 import type { HandlerCtx } from "@/lib/api/handlers/types";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
 
-import { gravarPlano, type DependenciasDaGravacao } from "./aplicar";
+import { gravarPlano, idsGravados, type DependenciasDaGravacao } from "./aplicar";
 import { classificar } from "./classificar";
 import {
   lerContextoDaRodada,
@@ -49,6 +49,11 @@ const ctxDe = (imp: Importacao): HandlerCtx => ({
   requestId: imp.id,
 });
 
+/** Só a importação de negócio acha o dono pelo texto da planilha: nas outras, não vale ir buscar cada membro na conta. */
+export async function membrosParaAImportacao(deps: Pick<Dependencias, "lerMembros">, imp: Pick<Importacao, "tipo" | "organization_id">): Promise<Membro[]> {
+  return imp.tipo === "negocio" ? deps.lerMembros(imp.organization_id) : [];
+}
+
 export async function contarImportacao(deps: Pick<Dependencias, "db">, id: string): Promise<string> {
   const { data, error } = await deps.db.rpc("fn_escale_contar_importacao", { p_importacao: id });
   if (error) throw new Error(error.message);
@@ -81,7 +86,17 @@ export async function processarLinhas(
           mensagem: null,
         };
       } catch (e) {
-        mudanca = { status: "erro", motivo: null, detalhe: desfecho.detalhe, com_aviso: false, mensagem: motivoDaFalha(e).slice(0, 500) };
+        const { contatoId, negocioId } = idsGravados(e);
+        mudanca = {
+          status: "erro",
+          motivo: null,
+          detalhe: desfecho.detalhe,
+          com_aviso: false,
+          mensagem: motivoDaFalha(e).slice(0, 500),
+          // O que já foi gravado antes da falha fica registrado (sem isso a linha parece não ter feito nada).
+          ...(contatoId ? { contato_id: contatoId } : {}),
+          ...(negocioId ? { negocio_id: negocioId } : {}),
+        };
       }
     } else {
       mudanca = {
@@ -123,7 +138,7 @@ export async function processarImportacao(row: EventRow, deps: Dependencias): Pr
       .eq("status", "processando");
     if (sobras.error) throw new Error(sobras.error.message);
 
-    const rodada = await lerContextoDaRodada(deps.db, { ...imp, status: "importando" }, await deps.lerMembros(imp.organization_id));
+    const rodada = await lerContextoDaRodada(deps.db, { ...imp, status: "importando" }, await membrosParaAImportacao(deps, imp));
     const inicio = deps.agora();
     while (deps.agora() - inicio < ORCAMENTO_MS) {
       const estado = await deps.db.from("crm_importacoes").select("status").eq("id", imp.id).maybeSingle();

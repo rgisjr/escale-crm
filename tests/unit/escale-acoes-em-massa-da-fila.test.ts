@@ -47,7 +47,7 @@ const row = {
  * vêm nas duas primeiras leituras (a do lote e a que os marca feitos) e depois
  * vêm vazios, como no banco de verdade com `feito = false`.
  */
-function deps(tabelas: Parameters<typeof bancoPorTabela>[0]) {
+function deps(tabelas: Parameters<typeof bancoPorTabela>[0], erros?: Record<string, { code: string; message: string }>) {
   const itens = tabelas.crm_acoes_em_massa_conversas_itens ?? [];
   let leituras = 0;
   const comItensUmaVez: typeof tabelas = { ...tabelas };
@@ -55,7 +55,7 @@ function deps(tabelas: Parameters<typeof bancoPorTabela>[0]) {
     enumerable: true,
     get: () => ((leituras += 1) <= 2 ? itens : []),
   });
-  const b = bancoPorTabela(comItensUmaVez, { rpc: () => ({ data: [{}], error: null }) });
+  const b = bancoPorTabela(comItensUmaVez, { rpc: () => ({ data: [{}], error: null }), erros });
   const d: DependenciasDaMassa = {
     db: b.db as never,
     agora: () => 0,
@@ -166,5 +166,22 @@ describe("processarAcaoDaFila (N14)", () => {
       ],
     });
     expect((await processarAcaoDaFila(row, d)).status).toBe("ok");
+  });
+  it("falha ao gravar 'processando' devolve erro, sem agir (Q5, B1-4)", async () => {
+    const { d } = deps(
+      { crm_acoes_em_massa_conversas: [linhaDaAcao("status", { status: "em_aberto" })] },
+      { crm_acoes_em_massa_conversas: { code: "XX000", message: "banco caiu" } },
+    );
+    const r = await processarAcaoDaFila(row, d);
+    expect(r.status).toBe("error");
+  });
+
+  it("falha ao gravar 'concluida' devolve erro (cai no retry), não ok (Q5, B1-4)", async () => {
+    const { d } = deps(
+      { crm_acoes_em_massa_conversas: [{ ...linhaDaAcao("status", { status: "em_aberto" }), status: "processando" }] },
+      { crm_acoes_em_massa_conversas: { code: "XX000", message: "banco caiu" } },
+    );
+    const r = await processarAcaoDaFila(row, d);
+    expect(r.status).toBe("error");
   });
 });

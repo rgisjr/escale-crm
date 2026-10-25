@@ -12,20 +12,27 @@ const USER = "bbbbbbbb-0000-4000-8000-000000000001";
 type Resposta = { data: unknown; error: { message: string } | null };
 
 /** Supabase de mentira: cada tabela tem uma fila de respostas (uma por leitura); toda escrita fica anotada. */
-function banco(filas: Record<string, Resposta[]>) {
+function banco(
+  filas: Record<string, Resposta[]>,
+  falhaNaEscrita: (tabela: string, corpo: unknown) => string | undefined = () => undefined,
+) {
   const anotado: Array<{ tabela: string; tipo: string; corpo?: unknown }> = [];
   const from = vi.fn((tabela: string) => {
     let escrita = false;
+    let corpoEscrito: unknown;
     const cadeia: Record<string, unknown> = {};
     for (const m of ["select", "eq", "gt", "lt", "in", "not", "order", "limit"])
       cadeia[m] = vi.fn(() => cadeia);
     const proxima = (): Resposta =>
-      escrita ? { data: null, error: null } : (filas[tabela]?.shift() ?? { data: [], error: null });
+      escrita
+        ? { data: null, error: falhaNaEscrita(tabela, corpoEscrito) ? { message: falhaNaEscrita(tabela, corpoEscrito) as string } : null }
+        : (filas[tabela]?.shift() ?? { data: [], error: null });
     cadeia.maybeSingle = vi.fn(async () => proxima());
     cadeia.then = (ok: (r: Resposta) => unknown) => Promise.resolve(proxima()).then(ok);
     for (const tipo of ["update", "insert", "delete"]) {
       cadeia[tipo] = vi.fn((corpo?: unknown) => {
         escrita = true;
+        corpoEscrito = corpo;
         anotado.push({ tabela, tipo, corpo });
         return cadeia;
       });
@@ -295,6 +302,53 @@ describe("processarAcaoEmMassa", () => {
       arquivo: caminho,
       feitos: 1,
     });
+  });
+});
+
+describe("processarAcaoEmMassa: gravações conferidas (Q5)", () => {
+  const corpoComStatus = (status: string) => (tabela: string, corpo: unknown) =>
+    tabela === "crm_acoes_em_massa" && (corpo as { status?: string } | undefined)?.status === status ? "banco caiu" : undefined;
+
+  it("B5-3: falha ao marcar 'processando' devolve erro (cai no retry) e não segue", async () => {
+    const { db } = banco({ crm_acoes_em_massa: [acao("incluir_tag", { tag: "vip" })] }, corpoComStatus("processando"));
+    const d = deps(db);
+    const r = await processarAcaoEmMassa(evento(), d);
+    expect(r.status).toBe("error");
+    expect(d.mudarContato).not.toHaveBeenCalled();
+  });
+
+  it("B5-3: falha ao gravar 'concluida' não devolve ok", async () => {
+    const { db } = banco(
+      {
+        crm_acoes_em_massa: [acao("incluir_tag", { tag: "vip" })],
+        crm_acoes_em_massa_itens: [{ data: [], error: null }],
+      },
+      corpoComStatus("concluida"),
+    );
+    expect((await processarAcaoEmMassa(evento(), deps(db))).status).toBe("error");
+  });
+
+  it("B5-3: exportação que não consegue gravar o arquivo/'concluida' não devolve ok", async () => {
+    const { db } = banco(
+      {
+        crm_acoes_em_massa: [acao("exportar"), { data: [], error: null }],
+        organizations: [{ data: { timezone: "America/Sao_Paulo" }, error: null }],
+        crm_acoes_em_massa_itens: [{ data: [], error: null }],
+      },
+      corpoComStatus("concluida"),
+    );
+    expect((await processarAcaoEmMassa(evento(), deps(db))).status).toBe("error");
+  });
+
+  it("B5-4: se a leitura dos contatos cai, o lote não fica marcado como feito", async () => {
+    const { db, anotado } = banco({
+      crm_acoes_em_massa: [acao("incluir_tag", { tag: "vip" })],
+      crm_acoes_em_massa_itens: [{ data: [{ contact_id: "c1" }], error: null }],
+      contacts: [{ data: null, error: { message: "leitura caiu" } }],
+    });
+    const r = await processarAcaoEmMassa(evento(), deps(db));
+    expect(r.status).toBe("error");
+    expect(anotado.some((a) => a.tabela === "crm_acoes_em_massa_itens")).toBe(false);
   });
 });
 

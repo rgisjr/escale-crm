@@ -26,13 +26,16 @@ export function usePedirAcaoEmMassa() {
  * aprovar. Quem usa diz se pergunta e de quanto em quanto tempo; com dois usos ao
  * mesmo tempo (o aviso de fim e o botão "Exportações"), vale o menor intervalo.
  */
-export function useAcoesEmMassa(ativo: boolean, intervalo: number | false = 3000) {
+export function useAcoesEmMassa(
+  ativo: boolean,
+  intervalo: number | false | ((dados: AcoesDaPessoa | undefined) => number | false) = 3000,
+) {
   return useQuery({
     queryKey: CHAVE_DAS_ACOES,
     queryFn: async () =>
       (await apiClient.get<{ data: AcoesDaPessoa }>("/api/v1/acoes-em-massa")).data,
     enabled: ativo,
-    refetchInterval: ativo ? intervalo : false,
+    refetchInterval: !ativo ? false : typeof intervalo === "function" ? (q) => intervalo(q.state.data) : intervalo,
   });
 }
 

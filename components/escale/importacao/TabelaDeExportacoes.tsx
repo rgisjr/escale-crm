@@ -1,4 +1,5 @@
 "use client";
+import { rodando } from "@/components/escale/contatos/massa/textosDasAcoes";
 import { useAcoesEmMassa } from "@/hooks/escale/useAcoesEmMassa";
 import { useT } from "@/hooks/i18n/useT";
 import { useIdioma } from "@/lib/i18n/IdiomaProvider";
@@ -17,11 +18,17 @@ const ROTULO: Record<StatusVisivel, string> = {
   expirada: "Expirada",
 };
 
+const INTERVALO_MS = 5000;
+
+/** Só pergunta de novo enquanto há exportação sendo gerada; parada, a tela não consulta. */
+const intervaloDasExportacoes = (dados: { minhas: Array<{ acao: string; status: StatusVisivel }> } | undefined) =>
+  dados?.minhas.some((a) => a.acao === "exportar" && rodando(a.status)) ? INTERVALO_MS : false;
+
 /** A superfície "Exportações" da página Importações (N15): as minhas exportações da 2B, com o download. */
 export function TabelaDeExportacoes() {
   const t = useT();
   const idioma = useIdioma();
-  const acoes = useAcoesEmMassa(true, 5000);
+  const acoes = useAcoesEmMassa(true, intervaloDasExportacoes);
   const exportacoes = (acoes.data?.minhas ?? []).filter((a) => a.acao === "exportar");
   const COLUNA = "px-4 py-2 text-left text-[11px] font-semibold tracking-[0.08em] text-[#86858F] uppercase";
   return (
@@ -38,7 +45,24 @@ export function TabelaDeExportacoes() {
           </tr>
         </thead>
         <tbody>
-          {exportacoes.length === 0 ? (
+          {acoes.isLoading ? (
+            <tr>
+              <td colSpan={4} className="py-10 text-center text-[13px] text-[#5A5964]">
+                {t("Carregando…")}
+              </td>
+            </tr>
+          ) : acoes.isError && !acoes.data ? (
+            <tr>
+              <td colSpan={4} className="py-10">
+                <div role="alert" className="mx-auto flex max-w-[360px] flex-col items-center gap-2 text-center">
+                  <p className="text-[14px] font-semibold text-casca-texto">{t("Não foi possível carregar as exportações.")}</p>
+                  <button type="button" onClick={() => void acoes.refetch()} className="text-[13px] font-semibold text-casca-marca hover:underline">
+                    {t("Tentar de novo")}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ) : exportacoes.length === 0 ? (
             <tr>
               <td colSpan={4} className="py-10">
                 <div className="mx-auto flex max-w-[360px] flex-col items-center gap-2 text-center">

@@ -11,6 +11,8 @@ import {
 
 const ROTA = "/api/v1/acoes-em-massa-conversas";
 const INTERVALO_MS = 3000;
+/** Depois de tantas falhas seguidas na consulta (ação sumida, sem acesso), para de perguntar a cada 3 s. */
+const ERROS_PARA_PARAR = 5;
 
 export function useExecutarAcaoDaFila() {
   return useMutation({
@@ -35,7 +37,9 @@ export function useAcaoDaFila(id: string | null) {
     queryKey: ["acao-em-massa-da-fila", id],
     enabled: !!id,
     queryFn: async () => (await apiClient.get<{ data: ResumoDaAcaoDaFila }>(`${ROTA}/${id}`)).data,
-    refetchInterval: (q) =>
-      q.state.data && !acaoRodando(q.state.data.status) ? false : INTERVALO_MS,
+    refetchInterval: (q) => {
+      if (q.state.errorUpdateCount >= ERROS_PARA_PARAR) return false;
+      return q.state.data && !acaoRodando(q.state.data.status) ? false : INTERVALO_MS;
+    },
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { avisoDoFim, rodando, terminou } from "@/components/escale/contatos/massa/textosDasAcoes";
@@ -12,6 +12,8 @@ import { useAcoesEmMassa } from "./useAcoesEmMassa";
 const CHAVE = "escale:contatos:acoes";
 const INTERVALO_RODANDO_MS = 3000;
 const INTERVALO_ESPERANDO_MS = 30_000;
+/** Respostas seguidas sem o id (ação apagada, outra organização, aba antiga) antes de desistir de acompanhá-lo. */
+const AUSENCIAS_PARA_DESISTIR = 3;
 type Acompanhada = { id: string; acao: AcaoEmMassa };
 
 function ler(): Acompanhada[] {
@@ -46,10 +48,23 @@ export function useAcompanharAcoes() {
 
   const [intervalo, setIntervalo] = useState(INTERVALO_RODANDO_MS);
   const consulta = useAcoesEmMassa(lista.length > 0, intervalo);
+  const ausencias = useRef(new Map<string, number>());
 
   useEffect(() => {
     const minhas = consulta.data?.minhas ?? [];
+    // Id que não aparece em `minhas` não pode contar como "rodando" para sempre: depois de algumas respostas sem ele, sai da lista.
+    const sumidas = new Set<string>();
+    for (const x of lista) {
+      if (minhas.some((m) => m.id === x.id)) {
+        ausencias.current.delete(x.id);
+        continue;
+      }
+      const vezes = (ausencias.current.get(x.id) ?? 0) + (consulta.data ? 1 : 0);
+      ausencias.current.set(x.id, vezes);
+      if (vezes >= AUSENCIAS_PARA_DESISTIR) sumidas.add(x.id);
+    }
     const algumaRodando = lista.some((x) => {
+      if (sumidas.has(x.id)) return false;
       const a = minhas.find((m) => m.id === x.id);
       return !a || rodando(a.status);
     });
@@ -57,7 +72,7 @@ export function useAcompanharAcoes() {
     setIntervalo(algumaRodando ? INTERVALO_RODANDO_MS : INTERVALO_ESPERANDO_MS);
 
     const terminadas = minhas.filter((a) => lista.some((x) => x.id === a.id) && terminou(a.status));
-    if (terminadas.length === 0) return;
+    if (terminadas.length === 0 && sumidas.size === 0) return;
     for (const a of terminadas) {
       const { ok, texto } = avisoDoFim(t, a);
       if (!ok) {
@@ -79,12 +94,13 @@ export function useAcompanharAcoes() {
       if (a.falhas > 0)
         toast.warning(t("{n} contatos não foram alterados.").replace("{n}", String(a.falhas)));
     }
-    void qc.invalidateQueries({ queryKey: ["contacts"] });
-    const resto = lista.filter((x) => !terminadas.some((a) => a.id === x.id));
+    if (terminadas.length > 0) void qc.invalidateQueries({ queryKey: ["contacts"] });
+    for (const id of sumidas) ausencias.current.delete(id);
+    const resto = lista.filter((x) => !sumidas.has(x.id) && !terminadas.some((a) => a.id === x.id));
     setLista(resto);
     gravar(resto);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só a resposta nova dispara
-  }, [consulta.data]);
+  }, [consulta.dataUpdatedAt]);
 
   return {
     acompanhar: (id: string, acao: AcaoEmMassa) => {
