@@ -14,6 +14,7 @@ import {
 } from "@/lib/escale/conversas/acoes-em-massa-da-fila";
 import { X } from "@/lib/ui/icons-da-casca";
 
+import { CampoDeTagComCriar } from "./CampoDeTagComCriar";
 import type { AcaoEscolhida } from "./CentroDeAcoesEmMassa";
 
 const SEM = "__sem_atendente__";
@@ -94,15 +95,23 @@ export function JanelaDaAcaoEmMassa({
       </div>
       <div className="flex flex-col gap-1.5 px-6 py-5">
         <span className="text-[13px] text-casca-texto">{t(CAMPO[acao])}</span>
-        <SeletorDaCasca
-          aparencia="janela"
-          valor={valor}
-          opcoes={opcoes}
-          aoMudar={setValor}
-          vazio={t("Selecione...")}
-          vazioSoNoGatilho
-          aria-label={t(CAMPO[acao])}
-        />
+        {acao === "incluir_tag" ? (
+          <CampoDeTagComCriar
+            vocabulario={vocabulario.data ?? []}
+            valor={valor}
+            aoMudar={setValor}
+          />
+        ) : (
+          <SeletorDaCasca
+            aparencia="janela"
+            valor={valor}
+            opcoes={opcoes}
+            aoMudar={setValor}
+            vazio={t("Selecione...")}
+            vazioSoNoGatilho
+            aria-label={t(CAMPO[acao])}
+          />
+        )}
       </div>
       <div className="flex h-16 items-center justify-end border-t border-casca-borda px-6">
         <button

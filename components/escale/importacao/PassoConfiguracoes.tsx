@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from "react";
 
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
+import { LinhaCriarTag } from "@/components/escale/ui/LinhaCriarTag";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
@@ -10,9 +11,9 @@ import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useContactTagVocabulary } from "@/hooks/contacts/useContactTagVocabulary";
 import { useT } from "@/hooks/i18n/useT";
 import type { DestinoDaImportacao } from "@/hooks/escale/useImportacoes";
-import { normalizarTags } from "@/lib/contacts/tag-normalizada";
 import type { TipoDeImportacao } from "@/lib/escale/importacao/regras";
 import type { Configuracao } from "@/lib/escale/importacao/tipos";
+import { tagNovaDoTexto } from "@/lib/escale/tag-nova";
 import { CheckCircle2, CircleMinus, CircleX, Plus, X } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,7 @@ function EscolhaDeTags({ escolhidas, aoMudar }: { escolhidas: readonly string[];
   const { activeOrg } = useAuth();
   const vocabulario = useContactTagVocabulary(activeOrg?.orgId ?? null).data ?? [];
   const [busca, setBusca] = useState("");
-  const nova = normalizarTags([busca])[0] ?? "";
+  const nova = tagNovaDoTexto(busca, vocabulario, escolhidas);
   const lista = vocabulario.filter((tag) => tag.includes(busca.trim().toLowerCase()));
   const alternar = (tag: string, marcada: boolean) => aoMudar(marcada ? [...escolhidas, tag] : escolhidas.filter((x) => x !== tag));
   return (
@@ -67,6 +68,15 @@ function EscolhaDeTags({ escolhidas, aoMudar }: { escolhidas: readonly string[];
             aria-label={t("Buscar tag")}
             className="mb-2 h-8 w-full rounded-[6px] bg-casca-busca px-2 text-[12px] outline-hidden"
           />
+          {nova ? (
+            <LinhaCriarTag
+              tag={nova}
+              aoCriar={(tag) => {
+                aoMudar([...escolhidas, tag]);
+                setBusca("");
+              }}
+            />
+          ) : null}
           <ul className="max-h-60 space-y-2 overflow-y-auto p-1">
             {lista.map((tag) => (
               <li key={tag}>
@@ -74,18 +84,6 @@ function EscolhaDeTags({ escolhidas, aoMudar }: { escolhidas: readonly string[];
               </li>
             ))}
           </ul>
-          {nova && !vocabulario.includes(nova) && !escolhidas.includes(nova) ? (
-            <button
-              type="button"
-              onClick={() => {
-                aoMudar([...escolhidas, nova]);
-                setBusca("");
-              }}
-              className="mt-1 w-full rounded-[6px] px-2 py-1.5 text-left text-[12px] text-casca-marca hover:bg-casca-raia"
-            >
-              {t("Criar a tag")} &quot;{nova}&quot;
-            </button>
-          ) : null}
         </PainelSuspenso>
       </Popover>
       {escolhidas.map((tag) => (

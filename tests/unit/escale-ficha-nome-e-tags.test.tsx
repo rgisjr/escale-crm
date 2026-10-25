@@ -153,7 +153,7 @@ describe("as tags (N6)", () => {
       await screen.findByRole("searchbox", { name: "Adicione uma tag" }),
       "  Morno ",
     );
-    await userEvent.click(screen.getByRole("option", { name: "Criar «morno»" }));
+    await userEvent.click(screen.getByRole("option", { name: "Criar morno" }));
     expect(gravar.enviado).toHaveBeenCalledWith({ tags: ["vip", "morno"] });
   });
 

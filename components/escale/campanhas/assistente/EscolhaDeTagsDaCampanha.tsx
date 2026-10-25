@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ChipDaTag } from "@/components/escale/quadro/PecasDoCard";
+import { LinhaCriarTag } from "@/components/escale/ui/LinhaCriarTag";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/auth/AuthProvider";
@@ -10,6 +11,7 @@ import { useContactTagVocabulary } from "@/hooks/contacts/useContactTagVocabular
 import { useT } from "@/hooks/i18n/useT";
 import { normalizarTags } from "@/lib/contacts/tag-normalizada";
 import { TAGS_DO_POS_ENVIO_MAX } from "@/lib/escale/campanhas/assistente";
+import { tagNovaDoTexto } from "@/lib/escale/tag-nova";
 import { Plus, X } from "@/lib/ui/icons-da-casca";
 
 import { CAMPO } from "../molde/estilos";
@@ -17,7 +19,7 @@ import { CAMPO } from "../molde/estilos";
 /**
  * "ADICIONAR TAG PARA CONTATOS" (fork Escale, Fase 8B; 09-040): a pílula "+
  * Adicionar tag" abre "Nome" com a busca e as etiquetas do vocabulário do
- * contato; Enter cria uma nova. Até 20, normalizadas como o banco guarda.
+ * contato; digitar um nome novo oferece a linha "Criar" (ou Enter). Até 20, normalizadas como o banco guarda.
  */
 export function EscolhaDeTagsDaCampanha({
   tags,
@@ -33,6 +35,7 @@ export function EscolhaDeTagsDaCampanha({
   const [busca, setBusca] = useState("");
   const termo = busca.trim().toLowerCase();
   const opcoes = vocabulario.filter((v) => !tags.includes(v) && (!termo || v.includes(termo)));
+  const nova = tagNovaDoTexto(busca, vocabulario, tags);
   const incluir = (tag: string) => {
     const novas = normalizarTags([...tags, tag]).slice(0, TAGS_DO_POS_ENVIO_MAX);
     aoMudar(novas);
@@ -84,6 +87,7 @@ export function EscolhaDeTagsDaCampanha({
               />
             </label>
             <div role="listbox" aria-label={t("Tags")} className="max-h-64 overflow-y-auto">
+              {nova ? <LinhaCriarTag tag={nova} aoCriar={incluir} /> : null}
               {opcoes.map((tag) => (
                 <button
                   key={tag}
