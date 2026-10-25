@@ -84,6 +84,8 @@ export function useMesclar() {
     mutationFn: async (pedido: { principal_id: string; secundarios: string[]; escolhas: Escolhas }) =>
       (await apiClient.post<{ data: ResultadoDaMescla }>("/api/v1/mesclas", pedido)).data,
     onSuccess: () => invalidarDepoisDeMesclar(qc),
+    // Se a resposta se perde depois de a mescla gravar, a tela precisa reler (B9-7).
+    onError: () => invalidarDepoisDeMesclar(qc),
   });
 }
 

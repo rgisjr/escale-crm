@@ -138,7 +138,8 @@ export function JanelaNovoContato({
           toast.error(t("O contato foi criado, mas o negócio não."));
         }
       }
-      await qc.invalidateQueries({ queryKey: ["contacts"] });
+      // Sem esperar: a janela não pode ficar em "gravando" até as listas refazerem.
+      void qc.invalidateQueries({ queryKey: ["contacts"] });
       toast.success(t("Contato criado com sucesso!"), {
         description: negocioId ? (
           <Link href={`/app/leads/${negocioId}`} className="font-medium underline">
@@ -148,6 +149,9 @@ export function JanelaNovoContato({
       });
       aoCriar?.({ id: contatoId, nome: nomeLimpo });
       fechar();
+    } catch {
+      // A checagem de e-mail falhou (rede, 500): sem isto o botão voltava e nada aparecia.
+      setErro(t("Não foi possível criar o contato."));
     } finally {
       setGravando(false);
     }

@@ -32,12 +32,22 @@ export function PassoContatoDaEmpresa({
   useEffect(() => {
     if (valor.modo !== "existente") return;
     const termo = busca.trim();
+    // Cancela a busca anterior: a resposta de um termo velho não pode chegar por último.
+    const cancelar = new AbortController();
     const timer = setTimeout(async () => {
-      const r = await fetch(`/api/v1/lista-de-contatos?n=10${termo.length >= 2 ? `&q=${encodeURIComponent(termo)}` : ""}`);
-      const corpo = await r.json().catch(() => null);
-      setAchados(((corpo?.data?.linhas ?? []) as Achado[]).map((l) => ({ id: l.id, nome: l.nome, telefone: l.telefone, email: l.email, empresa: l.empresa ?? null })));
+      try {
+        const r = await fetch(`/api/v1/lista-de-contatos?n=10${termo.length >= 2 ? `&q=${encodeURIComponent(termo)}` : ""}`, { signal: cancelar.signal });
+        if (!r.ok) return;
+        const corpo = await r.json();
+        setAchados(((corpo?.data?.linhas ?? []) as Achado[]).map((l) => ({ id: l.id, nome: l.nome, telefone: l.telefone, email: l.email, empresa: l.empresa ?? null })));
+      } catch {
+        // Busca cancelada ou sem rede: fica a lista anterior em vez de uma rejeição solta.
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      cancelar.abort();
+    };
   }, [busca, valor.modo]);
 
   return (

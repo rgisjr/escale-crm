@@ -55,7 +55,7 @@ export function JanelaNovoNegocio({
         contact_id: contato.id,
         source: "manual",
       });
-      await qc.invalidateQueries({ queryKey: ["contacts"] });
+      void qc.invalidateQueries({ queryKey: ["contacts"] });
       toast.success(t("Negócio criado."), {
         description: (
           <Link href={`/app/leads/${negocio.data.id}`} className="font-medium underline">
