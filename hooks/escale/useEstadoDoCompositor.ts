@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
-import { useMessagesRealtime } from "@/hooks/inbox/useMessagesRealtime";
+import { useMensagensEmCache } from "@/hooks/inbox/useMessagesRealtime";
 import { estadoDaJanela } from "@/lib/channels/janela";
 import { modoDoCompositor } from "@/lib/escale/conversas/janela";
 import { motivoDoContato } from "@/lib/inbox/motivo-do-envio-bloqueado";
@@ -15,7 +15,7 @@ export function useEstadoDoCompositor(conversa: ConversationWithContact) {
   const t = useT();
   const { user } = useAuth();
   const supportReadonly = user.support?.access_mode === "support_readonly";
-  const mensagens = useMessagesRealtime(conversa.id);
+  const mensagens = useMensagensEmCache(conversa.id);
   const [agora, setAgora] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setAgora(new Date()), 30_000);

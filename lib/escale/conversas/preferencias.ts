@@ -81,16 +81,22 @@ export async function gravarPreferenciaDaPessoa(
 ): Promise<{ error: ErroDoBanco | null }> {
   const { data: existente, error: erroDaLeitura } = await supabase
     .from("crm_preferencias_de_conversas")
-    .select("id")
+    .select("id, valor")
     .eq("organization_id", orgId)
     .eq("user_id", userId)
     .eq("chave", gravacao.chave)
     .maybeSingle();
   if (erroDaLeitura) return { error: erroDaLeitura };
   if (existente) {
+    const salvo = (existente as { valor: unknown }).valor;
+    // As seções chegam uma por vez: sem mesclar, gravar uma apagaria as outras.
+    const valor =
+      gravacao.chave === "secoes" && salvo && typeof salvo === "object" && !Array.isArray(salvo)
+        ? { ...salvo, ...gravacao.valor }
+        : gravacao.valor;
     const { error } = await supabase
       .from("crm_preferencias_de_conversas")
-      .update({ valor: gravacao.valor })
+      .update({ valor })
       .eq("id", (existente as { id: string }).id)
       .eq("organization_id", orgId);
     return { error };

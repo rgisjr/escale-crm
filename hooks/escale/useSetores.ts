@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { recarregarListasDasConversas } from "@/hooks/inbox/recargaDasConversas";
 import { apiClient } from "@/lib/api/client";
 import { lerEmLotes } from "@/lib/escale/conversas/lotes";
 import type { SetorDaConversa } from "@/lib/escale/conversas/setores-banco";
@@ -75,12 +76,14 @@ export function useSetoresDasConversas(
     enabled: ids.length > 0,
     // Em lotes: depois do "Carregar mais" a fila passa do limite de ids das rotas.
     queryFn: async () =>
-      lerEmLotes(ids, async (lote) =>
-        (
-          await apiClient.get<{ data: Record<string, SetorDaConversa> }>(
-            `/api/v1/setores/das-conversas?ids=${encodeURIComponent(lote.join(","))}`,
-          )
-        ).data,
+      lerEmLotes(
+        ids,
+        async (lote) =>
+          (
+            await apiClient.get<{ data: Record<string, SetorDaConversa> }>(
+              `/api/v1/setores/das-conversas?ids=${encodeURIComponent(lote.join(","))}`,
+            )
+          ).data,
       ),
     staleTime: 30_000,
   });
@@ -91,9 +94,9 @@ function useInvalidarConversa(conversationId: string) {
   const qc = useQueryClient();
   const invalidar = useInvalidarSetores();
   return async () => {
+    recarregarListasDasConversas(qc);
     await Promise.all([
       invalidar(),
-      qc.invalidateQueries({ queryKey: ["conversations"] }),
       qc.invalidateQueries({ queryKey: ["conversation", conversationId] }),
       qc.invalidateQueries({ queryKey: ["eventos-da-conversa", conversationId] }),
     ]);
@@ -124,10 +127,8 @@ export function useLiberarDeOutro() {
     mutationFn: async (conversationId: string) =>
       apiClient.post(`/api/v1/conversas-da-casca/${conversationId}/liberar`, {}),
     onSuccess: async (_d, conversationId) => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["conversations"] }),
-        qc.invalidateQueries({ queryKey: ["conversation", conversationId] }),
-      ]);
+      recarregarListasDasConversas(qc);
+      await qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
     },
   });
 }

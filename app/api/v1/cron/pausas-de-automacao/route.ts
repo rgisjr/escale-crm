@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
 import { autorizaCron } from "@/lib/auth/cron-auth";
-import { retomaEnrollment } from "@/lib/followup/intervencao";
+import { retomarEnrollmentsDaPausa } from "@/lib/escale/conversas/retomar-pausa";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -37,20 +37,39 @@ async function handle(req: NextRequest): Promise<Response> {
     enrollments: string[];
   }>) {
     const deps = { supabase: admin, admin, orgId: p.organization_id, userId: p.user_id, requestId };
-    for (const id of p.enrollments ?? []) {
-      const r = await retomaEnrollment(deps, id);
-      if (!r.ok)
-        logger.warn("cron pausas: follow-up não retomado", {
-          enrollment: id,
+    const pendentes = await retomarEnrollmentsDaPausa(deps, p.enrollments ?? [], {
+      origem: "cron pausas",
+      conversationId: p.conversation_id,
+    });
+    if (pendentes.length > 0) {
+      // A linha é o único registro do que retomar: fica só com os que falharam, para o próximo tick.
+      const { error: erroAoGuardar } = await admin
+        .from("crm_pausas_de_automacao")
+        .update({ enrollments: pendentes })
+        .eq("organization_id", p.organization_id)
+        .eq("conversation_id", p.conversation_id)
+        .lte("ate", agora);
+      if (erroAoGuardar)
+        logger.warn("cron pausas: não guardou os follow-ups pendentes", {
           conversation_id: p.conversation_id,
+          error: erroAoGuardar.message,
         });
+      continue;
     }
     // Só a pausa vencida sai: uma pausa nova gravada no meio da rodada fica.
-    await admin
+    const { error: erroAoApagar } = await admin
       .from("crm_pausas_de_automacao")
       .delete()
+      .eq("organization_id", p.organization_id)
       .eq("conversation_id", p.conversation_id)
       .lte("ate", agora);
+    if (erroAoApagar) {
+      logger.warn("cron pausas: não apagou a pausa; tenta no próximo tick", {
+        conversation_id: p.conversation_id,
+        error: erroAoApagar.message,
+      });
+      continue;
+    }
     retomadas++;
   }
   return ok({ retomadas }, { requestId });

@@ -14,10 +14,12 @@ import { useFilaDeConversas } from "@/hooks/escale/useFilaDeConversas";
 import { useModoEspiao } from "@/hooks/escale/useModoEspiao";
 import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
 import { usePreferenciasDeConversas } from "@/hooks/escale/usePreferenciasDeConversas";
+import { useValorComAtraso } from "@/hooks/escale/useValorComAtraso";
 import { useTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { useT } from "@/hooks/i18n/useT";
 import { isNotFound, useConversation } from "@/hooks/inbox/useConversation";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { recarregarListasDasConversas } from "@/hooks/inbox/recargaDasConversas";
 import { useMarkAsRead } from "@/hooks/inbox/useMarkAsRead";
 import { OpenConversationProvider } from "@/hooks/notifications/OpenConversationContext";
 import { ORDEM_PADRAO, PARAM_ORDEM, ordemDaUrl, type Ordem } from "@/lib/escale/conversas/ordem";
@@ -40,6 +42,7 @@ import type { AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
 import type { OrigemParaCriar } from "@/components/escale/contatos/CamposDaOportunidade";
 import { ehVisualizacaoPadrao } from "@/lib/escale/conversas/visualizacao";
 import { buscaValeConsulta } from "@/lib/inbox/termo-de-busca";
+import { useTelaExtraGrande } from "@/lib/escale/usa-tela-grande";
 import { cn } from "@/lib/utils";
 
 import { CentroVazio } from "./centro/CentroVazio";
@@ -55,6 +58,27 @@ import { CentroDeAcoesEmMassa, type AcaoEscolhida } from "./massa/CentroDeAcoesE
 import { JanelaDaAcaoEmMassa } from "./massa/JanelaDaAcaoEmMassa";
 import { PainelDoContato } from "./painel/PainelDoContato";
 import { TopoDasConversas } from "./TopoDasConversas";
+
+/** "Concluída" não quer dizer "tudo certo": conversa arquivada ou revisão em conflito contam como falha (B1-3). */
+function avisarFimDaAcao(total: number, falhas: number, t: (texto: string) => string): void {
+  if (falhas <= 0) {
+    toast.success(t("A ação em massa foi realizada com sucesso!"));
+    return;
+  }
+  toast.warning(
+    t("A ação em massa terminou, mas {n} de {total} conversas não foram alteradas.")
+      .replace("{n}", String(falhas))
+      .replace("{total}", String(total)),
+  );
+}
+
+/** A recarga do tempo real troca só a 1ª página: uma conversa que subiu pode ainda estar numa página velha. */
+function itensSemRepeticao(linhas: unknown[]): ConversationWithContact[] {
+  const vistos = new Set<string>();
+  return (linhas as ConversationWithContact[]).filter(
+    (c) => !vistos.has(c.id) && !!vistos.add(c.id),
+  );
+}
 
 export type ModoDoCentro = "conversa" | "vazio" | "nova";
 
@@ -83,6 +107,7 @@ export function ConversasDaCasca({
   configuracao?: ReactNode;
 }) {
   const t = useT();
+  const telaXl = useTelaExtraGrande();
   const { activeOrg } = useAuth();
   const orgId = activeOrg?.orgId ?? null;
   const router = useRouter();
@@ -136,9 +161,14 @@ export function ConversasDaCasca({
     [mudarNaUrl],
   );
 
+  const buscaAtrasada = useValorComAtraso(busca);
   const consulta = useMemo(
-    () => ({ painel, ordem, ...(buscaValeConsulta(busca) ? { busca } : {}) }),
-    [painel, ordem, busca],
+    () => ({
+      painel,
+      ordem,
+      ...(buscaValeConsulta(buscaAtrasada) ? { busca: buscaAtrasada } : {}),
+    }),
+    [painel, ordem, buscaAtrasada],
   );
   const fila = useFilaDeConversas(consulta, orgId);
   const temGrupos =
@@ -158,8 +188,9 @@ export function ConversasDaCasca({
     const a = acompanhada.data;
     if (!a || acaoRodando(a.status)) return;
     setAcaoAcompanhada(null);
-    void qc.invalidateQueries({ queryKey: ["conversations"] });
-    if (a.status === "concluida") toast.success(t("A ação em massa foi realizada com sucesso!"));
+    recarregarListasDasConversas(qc);
+    void qc.invalidateQueries({ queryKey: ["fila-total"] });
+    if (a.status === "concluida") avisarFimDaAcao(a.total, a.falhas, t);
     else toast.error(t("Ocorreu um erro ao executar a ação em massa!"));
   }, [acompanhada.data, qc, t]);
 
@@ -177,9 +208,10 @@ export function ConversasDaCasca({
     } as PedidoDaFila;
     executar.mutate(pedido, {
       onSuccess: (r) => {
-        void qc.invalidateQueries({ queryKey: ["conversations"] });
+        recarregarListasDasConversas(qc);
+        void qc.invalidateQueries({ queryKey: ["fila-total"] });
         if (r.status === "concluida") {
-          toast.success(t("A ação em massa foi realizada com sucesso!"));
+          avisarFimDaAcao(r.total, r.falhas ?? 0, t);
         } else {
           toast.info(
             t(
@@ -197,7 +229,7 @@ export function ConversasDaCasca({
     });
   }
   const itens = useMemo(
-    () => (fila.data?.pages.flatMap((p) => p.data) ?? []) as ConversationWithContact[],
+    () => itensSemRepeticao(fila.data?.pages.flatMap((p) => p.data) ?? []),
     [fila.data],
   );
   const naLista = useMemo(
@@ -393,23 +425,27 @@ export function ConversasDaCasca({
                   executando={executar.isPending}
                 />
 
-                <div className="hidden h-full min-h-0 border-l border-casca-borda xl:block">
-                  <PainelDoContato
-                    conversa={conversa}
-                    aoAbrirConversa={selecionar}
-                    origens={origens}
-                  />
-                </div>
-                <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
-                  <SheetContent side="right" className="w-[min(24rem,90vw)] overflow-y-auto p-0">
-                    <SheetTitle className="sr-only">{t("Ficha do contato")}</SheetTitle>
+                {/* Uma instância só da ficha: montar a coluna E o Sheet (G1-4) dobrava as consultas abaixo de 1280 px. */}
+                {telaXl ? (
+                  <div className="h-full min-h-0 border-l border-casca-borda">
                     <PainelDoContato
                       conversa={conversa}
                       aoAbrirConversa={selecionar}
                       origens={origens}
                     />
-                  </SheetContent>
-                </Sheet>
+                  </div>
+                ) : (
+                  <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
+                    <SheetContent side="right" className="w-[min(24rem,90vw)] overflow-y-auto p-0">
+                      <SheetTitle className="sr-only">{t("Ficha do contato")}</SheetTitle>
+                      <PainelDoContato
+                        conversa={conversa}
+                        aoAbrirConversa={selecionar}
+                        origens={origens}
+                      />
+                    </SheetContent>
+                  </Sheet>
+                )}
               </>
             )}
           </div>

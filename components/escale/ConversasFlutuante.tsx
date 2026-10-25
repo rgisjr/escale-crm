@@ -11,6 +11,7 @@ import { MenuDePresets } from "@/components/escale/conversas/fila/MenuDePresets"
 import { ContadorDaFilaDaCasca } from "@/components/escale/menu/ContadorDaFilaDaCasca";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useFilaDeConversas } from "@/hooks/escale/useFilaDeConversas";
+import { useValorComAtraso } from "@/hooks/escale/useValorComAtraso";
 import { usePreferenciasDeConversas } from "@/hooks/escale/usePreferenciasDeConversas";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
@@ -126,9 +127,14 @@ export function PainelDeConversas() {
   const [ordem, setOrdem] = useState<Ordem>("interacao");
   const [aberta, setAberta] = useState<ConversationWithContact | null>(null);
   const preferencias = usePreferenciasDeConversas();
+  const buscaAtrasada = useValorComAtraso(busca);
   const consulta = useMemo(
-    () => ({ painel, ordem, ...(buscaValeConsulta(busca) ? { busca } : {}) }),
-    [painel, ordem, busca],
+    () => ({
+      painel,
+      ordem,
+      ...(buscaValeConsulta(buscaAtrasada) ? { busca: buscaAtrasada } : {}),
+    }),
+    [painel, ordem, buscaAtrasada],
   );
   const fila = useFilaDeConversas(consulta, activeOrg?.orgId ?? null);
   const itens = (fila.data?.pages.flatMap((p) => p.data) ?? []) as ConversationWithContact[];

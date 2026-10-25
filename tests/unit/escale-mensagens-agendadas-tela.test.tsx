@@ -23,6 +23,13 @@ vi.mock("@/hooks/escale/useModelosDeMensagem", () => ({
   useModelosDeMensagem: () => ({
     modelos: [
       { name: "boas_vindas", language: "pt_BR", status: "APPROVED", slots: [], components: [] },
+      {
+        name: "com_valores",
+        language: "pt_BR",
+        status: "APPROVED",
+        slots: [{ key: "1" }],
+        components: [],
+      },
     ],
     carregando: false,
     recarregar: vi.fn(),
@@ -131,6 +138,25 @@ describe("JanelaAgendarMensagem (c08)", () => {
       .setup({ pointerEventsCheck: 0 })
       .click(screen.getByRole("combobox", { name: "Modelo de mensagem" }));
     expect(screen.getByRole("option", { name: "boas_vindas" })).toBeInTheDocument();
+  });
+});
+
+describe("JanelaAgendarMensagem: modelo sem valores (B1-9)", () => {
+  it("o modelo que exige valores e não tem savedValues mostra o aviso e mantém Confirmar desligado", async () => {
+    wrap(
+      <JanelaAgendarMensagem
+        aberta
+        aoFechar={vi.fn()}
+        conversa={conversa}
+        textoInicial=""
+        modo="so_modelo"
+      />,
+    );
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("combobox", { name: "Modelo de mensagem" }));
+    await user.click(screen.getByRole("option", { name: "com_valores" }));
+    expect(screen.getByText(/exige valores/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar" })).toBeDisabled();
   });
 });
 
