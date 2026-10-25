@@ -21,7 +21,9 @@ import type { NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { autorizaCron } from "@/lib/auth/cron-auth";
+import { resgatarPreparacoesParadas } from "@/lib/campanhas/resgate";
 import { rodarUmaRodadaDeCampanha } from "@/lib/campanhas/rodada";
+import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +35,17 @@ async function handle(req: NextRequest): Promise<Response> {
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   }
 
-  const r = await rodarUmaRodadaDeCampanha(createAdminClient());
+  const admin = createAdminClient();
+  // Campanha presa em `preparing` por queda do processo volta a rascunho (B8-1). Falhar aqui não pode parar o envio.
+  const resgatadas = await resgatarPreparacoesParadas(admin, new Date()).catch((err: unknown) => {
+    logger.warn("campaign-worker: não consegui resgatar preparações paradas", {
+      detail: err instanceof Error ? err.message : String(err),
+    });
+    return 0;
+  });
+  const r = await rodarUmaRodadaDeCampanha(admin);
 
-  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0) {
+  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0 || resgatadas > 0) {
     void audit({
       action: "cron.campaign_worker",
       requestId,
@@ -45,12 +55,13 @@ async function handle(req: NextRequest): Promise<Response> {
         pulados: r.pulados,
         concluidas: r.concluidas,
         promovidas: r.promovidas,
+        resgatadas,
         detalhe: r.detalhe,
       },
     });
   }
 
-  return ok(r, { requestId });
+  return ok({ ...r, resgatadas }, { requestId });
 }
 
 export async function GET(req: NextRequest): Promise<Response> {
