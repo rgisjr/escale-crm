@@ -1,4 +1,4 @@
--- manifest: **Faixa B · FB7: o banco da Faixa B da revisão de 24/10.** (1) B7-5: `grupo_id` do catálogo de campos do contato/empresa e do negócio passa a ter FK composta `(organization_id, grupo_id)` com `unique (organization_id, id)` no grupo e `on delete set null (grupo_id)`, de modo que um admin não grava grupo de outra organização nem apagar o grupo de uma zera o campo de outra; o dado já errado é curado antes (`grupo_id` volta a nulo). (2) B7-6: o playbook ao entrar na etapa isola cada atividade num sub-bloco (uma falha não desfaz as demais; conflito único vira "já existe"). (3) B7-7: `fn_escale_empresa_da_importacao` trata a corrida pelo CNPJ (`unique_violation` volta a vincular à empresa recém-criada). (4) B7-8: o negócio nasce na moeda da origem também quando chega com o DEFAULT `BRL` numa organização que não é BRL. (5) G7-8: `fn_escale_contar_importacao` conta as linhas numa varredura só. (6) G7-9: índice da busca de empresa por nome na importação. (7) G7-11: os itens das ações em massa são apagados quando a ação termina (gatilho) e os de ações já terminadas saem agora. (8) B2-14: índice único do aviso `next_action_ambiguous` aberto (e cura dos duplicados). (9) G3-11: `fn_escale_conversa_mais_recente_por_contato`, uma conversa por contato (invoker, a RLS vale). Fica de fora, com motivo no PR: B7-4 (o lock advisory no gatilho BEFORE não evita o deadlock, o lock de linha vem antes), G7-13 e G7-20 (refatoram gatilhos quentes só por desempenho).
+-- manifest: **Faixa B · FB7: o banco da Faixa B da revisão de 24/10.** (1) B7-5: `grupo_id` do catálogo de campos do contato/empresa e do negócio passa a ter FK composta `(organization_id, grupo_id)` com `unique (organization_id, id)` no grupo e `on delete set null (grupo_id)`, de modo que um admin não grava grupo de outra organização nem apagar o grupo de uma zera o campo de outra; o dado já errado é curado antes (`grupo_id` volta a nulo). (2) B7-6: o playbook ao entrar na etapa isola cada atividade num sub-bloco (uma falha não desfaz as demais; conflito único vira "já existe"). (3) B7-7: `fn_escale_empresa_da_importacao` trata a corrida pelo CNPJ (`unique_violation` volta a vincular à empresa recém-criada). (4) B7-8 fica de fora: tratar o `BRL` do DEFAULT como omissão trocaria a moeda de um negócio clonado ou transferido de propósito em BRL. (5) G7-8: `fn_escale_contar_importacao` conta as linhas numa varredura só. (6) G7-9: índice da busca de empresa por nome na importação. (7) G7-11: os itens das ações em massa são apagados quando a ação termina (gatilho) e os de ações já terminadas saem agora. (8) B2-14: índice único do aviso `next_action_ambiguous` aberto (e cura dos duplicados). (9) G3-11: `fn_escale_conversa_mais_recente_por_contato`, uma conversa por contato (invoker, a RLS vale). Fica de fora, com motivo no PR: B7-4 (o lock advisory no gatilho BEFORE não evita o deadlock, o lock de linha vem antes), G7-13 e G7-20 (refatoram gatilhos quentes só por desempenho).
 -- ---- FORK ESCALE · Faixa B FB7: banco da Faixa B (migration 9404) ----
 
 -- 1. Grupo do campo só da própria organização (B7-5) ---------------------------
@@ -170,39 +170,6 @@ grant execute on function public.fn_escale_empresa_da_importacao(uuid, uuid, uui
 create index if not exists idx_companies_org_nome_lower
   on public.companies (organization_id, (lower(btrim(coalesce(trade_name, legal_name, '')))));
 
--- 4. Moeda da origem numa organização que não é BRL (B7-8) ----------------------
-create or replace function public.fn_escale_lead_nasce_na_moeda_da_origem()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $fn$
-declare
-  v_moeda text;
-  v_da_organizacao text;
-begin
-  select p.settings ->> 'escale_moeda' into v_moeda
-    from public.crm_pipelines p
-   where p.id = new.pipeline_id
-     and p.organization_id = new.organization_id;
-  if v_moeda is null or v_moeda !~ '^[A-Z]{3}$' then
-    return new;
-  end if;
-
-  select o.currency into v_da_organizacao
-    from public.organizations o
-   where o.id = new.organization_id;
-
-  -- 'BRL' é o DEFAULT da coluna: chega assim quando a moeda foi omitida, mesmo numa organização que não é BRL.
-  if new.currency is null or new.currency in ('BRL', coalesce(v_da_organizacao, 'BRL')) then
-    new.currency := v_moeda;
-  end if;
-  return new;
-end
-$fn$;
-
-revoke all on function public.fn_escale_lead_nasce_na_moeda_da_origem() from public, anon, authenticated;
-
 -- 5. Contar a importação numa varredura só (G7-8) ----------------------------------
 create or replace function public.fn_escale_contar_importacao(p_importacao uuid)
 returns text
@@ -290,7 +257,7 @@ delete from public.crm_acoes_em_massa_conversas_itens i
 
 -- 7. Um aviso aberto por contato ambíguo (B2-14) ------------------------------------
 update public.agent_inbox_items x
-   set status = 'resolved'
+   set status = 'resolved', resolved_at = now()
   from (
     select id,
            row_number() over (partition by organization_id, ref_id order by created_at, id) as n

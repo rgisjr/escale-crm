@@ -60850,39 +60850,6 @@ grant execute on function public.fn_escale_empresa_da_importacao(uuid, uuid, uui
 create index if not exists idx_companies_org_nome_lower
   on public.companies (organization_id, (lower(btrim(coalesce(trade_name, legal_name, '')))));
 
--- 4. Moeda da origem numa organização que não é BRL (B7-8) ----------------------
-create or replace function public.fn_escale_lead_nasce_na_moeda_da_origem()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $fn$
-declare
-  v_moeda text;
-  v_da_organizacao text;
-begin
-  select p.settings ->> 'escale_moeda' into v_moeda
-    from public.crm_pipelines p
-   where p.id = new.pipeline_id
-     and p.organization_id = new.organization_id;
-  if v_moeda is null or v_moeda !~ '^[A-Z]{3}$' then
-    return new;
-  end if;
-
-  select o.currency into v_da_organizacao
-    from public.organizations o
-   where o.id = new.organization_id;
-
-  -- 'BRL' é o DEFAULT da coluna: chega assim quando a moeda foi omitida, mesmo numa organização que não é BRL.
-  if new.currency is null or new.currency in ('BRL', coalesce(v_da_organizacao, 'BRL')) then
-    new.currency := v_moeda;
-  end if;
-  return new;
-end
-$fn$;
-
-revoke all on function public.fn_escale_lead_nasce_na_moeda_da_origem() from public, anon, authenticated;
-
 -- 5. Contar a importação numa varredura só (G7-8) ----------------------------------
 create or replace function public.fn_escale_contar_importacao(p_importacao uuid)
 returns text
@@ -60970,7 +60937,7 @@ delete from public.crm_acoes_em_massa_conversas_itens i
 
 -- 7. Um aviso aberto por contato ambíguo (B2-14) ------------------------------------
 update public.agent_inbox_items x
-   set status = 'resolved'
+   set status = 'resolved', resolved_at = now()
   from (
     select id,
            row_number() over (partition by organization_id, ref_id order by created_at, id) as n

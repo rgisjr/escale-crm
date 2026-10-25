@@ -186,7 +186,7 @@ export async function tirarDaListaAcao(
       .select("id");
     // Sem conferir, o filtro já mudou e os destinatários seguiam elegíveis, recebendo a mensagem ao iniciar.
     // Tirar de novo é idempotente: a pessoa repete e fecha o que faltou.
-    if (error) return recusa("internal_error", error.message, 500);
+    if (error) return recusa("internal_error", "Não consegui completar essa ação. Tente de novo.", 500);
     tirados += (data ?? []).length;
   }
 

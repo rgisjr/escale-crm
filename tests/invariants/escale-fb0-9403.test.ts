@@ -32,7 +32,7 @@ beforeAll(() => {
     insert into public.contacts (id, organization_id, display_name)
       values ('${CONTATO_DE_FORA}', '${OUTRA_ORG}', '9403 contato de fora') on conflict do nothing;
     insert into public.channel_sessions (id, organization_id, waha_session_name, webhook_secret_encrypted)
-      values ('${SESSAO_DE_FORA}', '${OUTRA_ORG}', '9403-fora', '\x00'::bytea) on conflict do nothing;
+      values ('${SESSAO_DE_FORA}', '${OUTRA_ORG}', '9403-fora', decode('00', 'hex')) on conflict do nothing;
   `);
 });
 
