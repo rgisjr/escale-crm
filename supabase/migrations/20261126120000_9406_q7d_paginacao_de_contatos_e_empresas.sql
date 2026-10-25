@@ -1,11 +1,12 @@
--- manifest: **Revisão Q7d: paginação de Contatos e Empresas sem refazer a busca a cada página (fork Escale, G7-12).** A página deixa de carregar `count(*) over ()` (que materializava o conjunto filtrado inteiro a cada troca de página) e passa a ler direto da tabela, na ordem da lista, parando em `offset + limite` linhas: `fn_escale_contato_do_filtro_passa` e `fn_escale_empresa_do_filtro_passa` (o predicado por linha, invoker) no lugar da função de tabela que o planejador não enxergava; `fn_escale_contatos_do_filtro` mantém assinatura e resultado (massa 9103, público 9302, "Selecionar N") só que sobre o predicado; `fn_escale_lista_de_contatos` e `fn_escale_lista_de_empresas` perdem a coluna `total`; o total vira `fn_escale_total_de_contatos` e `fn_escale_total_de_empresas`, pedidos uma vez por filtro. Índices `idx_contacts_org_atividade` e `idx_companies_org_atualizada` na ordem exata das listas. Mesma sequência de linhas e mesmo total de antes (gate de equivalência contra as definições da 9102/9105). Nenhum dado muda.
+-- manifest: **Revisão Q7d: paginação de Contatos e Empresas sem refazer a busca a cada página (fork Escale, G7-12).** A página deixa de carregar `count(*) over ()` (que materializava o conjunto filtrado inteiro a cada troca de página) e passa a ler direto da tabela, na ordem da lista, parando em `offset + limite` linhas: `fn_escale_contato_do_filtro_passa` e `fn_escale_empresa_do_filtro_passa` (o predicado por linha, invoker) no lugar da função de tabela que o planejador não enxergava; `fn_escale_contatos_do_filtro` (massa 9103, público 9302, "Selecionar N") fica como na 9105 e é o que conta o total de contatos; `fn_escale_lista_de_contatos` e `fn_escale_lista_de_empresas` perdem a coluna `total`; o total vira `fn_escale_total_de_contatos` e `fn_escale_total_de_empresas`, pedidos uma vez por filtro. Índices `idx_contacts_org_atividade` e `idx_companies_org_atualizada` na ordem exata das listas. Mesma sequência de linhas e mesmo total de antes (gate de equivalência contra as definições da 9102/9105). Nenhum dado muda.
 -- ---- FORK ESCALE · revisão Q7d: paginação de contatos e empresas (migration 9406) ----
 -- 9406: revisão de qualidade Q7d (fork Escale, G7-12). Só funções e índices; nenhum dado muda.
 
 -- Antes: `count(*) over ()` dentro da página obrigava o banco a materializar o conjunto
 -- filtrado inteiro (e o SET search_path impede o inline da função de tabela), então toda
 -- troca de página refazia a busca e contava tudo. Agora a página lê da tabela, na ordem da
--- lista, e para em offset + limite; o total sai numa função própria, pedida uma vez por filtro.
+-- lista, e para em offset + limite; o total sai numa função própria, pedida uma vez por filtro
+-- (e conta com a consulta inteira, não com o predicado por contato: a contagem não tem LIMIT).
 
 -- ── 1. Os índices, na ordem exata das listas ─────────────────────────────────
 create index if not exists idx_contacts_org_atividade
@@ -100,30 +101,7 @@ as $$
             end))
 $$;
 
--- ── 3. Os contatos do filtro: mesma assinatura, agora sobre o predicado ──────
-create or replace function public.fn_escale_contatos_do_filtro(
-  p_org uuid,
-  p_visao text,
-  p_padrao text,
-  p_digitos text[],
-  p_cpf_hash text,
-  p_filtros jsonb
-)
-returns table (contact_id uuid, last_activity_at timestamptz)
-language sql
-stable
-security invoker
-set search_path = public, pg_temp
-as $$
-  select c.id, c.last_activity_at
-    from public.contacts c
-   where c.organization_id = p_org
-     and c.kind = 'person'
-     and c.is_merged_into is null
-     and public.fn_escale_contato_do_filtro_passa(c, p_visao, p_padrao, p_digitos, p_cpf_hash, p_filtros)
-$$;
-
--- ── 4. A página de contatos (sem o total) e o total ──────────────────────────
+-- ── 3. A página de contatos (sem o total) e o total ──────────────────────────
 drop function if exists public.fn_escale_lista_de_contatos(uuid, text, text, text[], text, integer, integer, jsonb);
 
 create or replace function public.fn_escale_lista_de_contatos(
@@ -187,15 +165,12 @@ stable
 security invoker
 set search_path = public, pg_temp
 as $$
-  select count(*)
-    from public.contacts c
-   where c.organization_id = p_org
-     and c.kind = 'person'
-     and c.is_merged_into is null
-     and public.fn_escale_contato_do_filtro_passa(c, p_visao, p_padrao, p_digitos, p_cpf_hash, p_filtros)
+  -- o filtro da 9105 como está: uma consulta só, que o planejador resolve com semi-join;
+  -- chamar o predicado por contato (como a página faz, para parar cedo) não escala numa contagem inteira
+  select count(*) from public.fn_escale_contatos_do_filtro(p_org, p_visao, p_padrao, p_digitos, p_cpf_hash, p_filtros)
 $$;
 
--- ── 5. O predicado de uma empresa, por linha ─────────────────────────────────
+-- ── 4. O predicado de uma empresa, por linha ─────────────────────────────────
 create or replace function public.fn_escale_empresa_do_filtro_passa(
   co public.companies,
   p_escopo text,
@@ -224,7 +199,7 @@ as $$
               end))
 $$;
 
--- ── 6. A página de empresas (sem o total) e o total ──────────────────────────
+-- ── 5. A página de empresas (sem o total) e o total ──────────────────────────
 drop function if exists public.fn_escale_lista_de_empresas(uuid, text, text, text, jsonb, integer, integer);
 
 create or replace function public.fn_escale_lista_de_empresas(
@@ -295,10 +270,22 @@ as $$
   select count(*)
     from public.companies co
    where co.organization_id = p_org
-     and public.fn_escale_empresa_do_filtro_passa(co, p_escopo, p_padrao, p_digitos, p_filtros)
+     and
+       (case p_escopo
+              when 'com_nome' then coalesce(nullif(btrim(co.trade_name), ''), nullif(btrim(co.legal_name), '')) is not null
+              when 'sem_nome' then coalesce(nullif(btrim(co.trade_name), ''), nullif(btrim(co.legal_name), '')) is null
+              else true end)
+       and ((p_padrao is null and p_digitos is null)
+            or (p_padrao is not null and (co.trade_name ~* p_padrao or co.legal_name ~* p_padrao))
+            or (p_digitos is not null and co.normalized_cnpj like '%' || p_digitos || '%'))
+       and (p_filtros -> 'campos' is null or (
+              case when coalesce(p_filtros #>> '{campos,combinar}', 'ou') = 'ou'
+                then exists (select 1 from jsonb_array_elements(p_filtros #> '{campos,grupos}') g where public.fn_escale_grupo_da_empresa_passa(co, g))
+                else not exists (select 1 from jsonb_array_elements(p_filtros #> '{campos,grupos}') g where not public.fn_escale_grupo_da_empresa_passa(co, g))
+              end))
 $$;
 
--- ── 7. Portas: invoker, fechadas ao anon ─────────────────────────────────────
+-- ── 6. Portas: invoker, fechadas ao anon ─────────────────────────────────────
 revoke all on function public.fn_escale_contato_do_filtro_passa(public.contacts, text, text, text[], text, jsonb) from public, anon;
 revoke all on function public.fn_escale_lista_de_contatos(uuid, text, text, text[], text, integer, integer, jsonb) from public, anon;
 revoke all on function public.fn_escale_total_de_contatos(uuid, text, text, text[], text, jsonb) from public, anon;

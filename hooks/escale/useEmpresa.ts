@@ -61,6 +61,7 @@ export function useMudarEmpresa(idOuNulo: string | null) {
   const depois = () => {
     void qc.invalidateQueries({ queryKey: ["companies", id] });
     void qc.invalidateQueries({ queryKey: ["companies", "lista-da-casca"] });
+    void qc.invalidateQueries({ queryKey: ["companies", "total-da-casca"] });
     void qc.invalidateQueries({ queryKey: ["contacts"] });
     void qc.invalidateQueries({ queryKey: ["empresa-do-contato"] });
   };

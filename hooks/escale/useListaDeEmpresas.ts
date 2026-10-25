@@ -1,6 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import type { PaginaDeEmpresas } from "@/lib/escale/empresas/banco";
 import type { EscopoDeEmpresas } from "@/lib/escale/empresas/regras";
@@ -19,7 +20,8 @@ export type ListaDeEmpresasDaTela = PaginaDeEmpresas & { total: number };
 
 export function useListaDeEmpresas(consulta: ConsultaDaTelaDeEmpresas) {
   const qs = new URLSearchParams(Object.entries(consulta).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)]));
-  const { q, e, f } = consulta;
+  const { e, f } = consulta;
+  const q = consulta.q?.trim() || undefined;
   const qsTotal = new URLSearchParams(Object.entries({ q, e, f }).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)]));
   const pagina = useQuery({
     queryKey: ["companies", "lista-da-casca", consulta],
@@ -33,8 +35,10 @@ export function useListaDeEmpresas(consulta: ConsultaDaTelaDeEmpresas) {
     placeholderData: keepPreviousData,
     staleTime: 15_000,
   });
-  const data: ListaDeEmpresasDaTela | undefined =
-    pagina.data !== undefined && total.data !== undefined ? { ...pagina.data, total: total.data } : undefined;
+  const data = useMemo<ListaDeEmpresasDaTela | undefined>(
+    () => (pagina.data !== undefined && total.data !== undefined ? { ...pagina.data, total: total.data } : undefined),
+    [pagina.data, total.data],
+  );
   return {
     data,
     isLoading: pagina.isLoading || total.isLoading,

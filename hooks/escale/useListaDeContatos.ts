@@ -1,5 +1,6 @@
 "use client";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { apiClient } from "@/lib/api/client";
 import type { PaginaDeContatos } from "@/lib/escale/contatos/lista";
@@ -27,7 +28,8 @@ function paramsDaBusca(consulta: Pick<ConsultaDaTela, "q" | "v" | "f">): URLSear
  * antes sai daqui (`data.total`); `data` só existe quando as duas já chegaram.
  */
 export function useListaDeContatos(consulta: ConsultaDaTela) {
-  const { q, v, f } = consulta;
+  const { v, f } = consulta;
+  const q = consulta.q?.trim() || undefined;
   const pagina = useQuery({
     queryKey: ["contacts", "lista-da-casca", consulta],
     queryFn: async () => {
@@ -53,10 +55,13 @@ export function useListaDeContatos(consulta: ConsultaDaTela) {
     placeholderData: keepPreviousData,
     staleTime: 15_000,
   });
-  const data: ListaDeContatosDaTela | undefined =
-    pagina.data !== undefined && total.data !== undefined
-      ? { ...pagina.data, total: total.data }
-      : undefined;
+  const data = useMemo<ListaDeContatosDaTela | undefined>(
+    () =>
+      pagina.data !== undefined && total.data !== undefined
+        ? { ...pagina.data, total: total.data }
+        : undefined,
+    [pagina.data, total.data],
+  );
   return {
     data,
     isLoading: pagina.isLoading || total.isLoading,

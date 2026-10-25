@@ -27,7 +27,7 @@ describe("migration 9406 (paginação de contatos e empresas, Q7d)", () => {
   it("nenhuma função é definer e todas fixam o search_path", () => {
     expect(MIGRATION).not.toMatch(/security definer/i);
     const criadas = MIGRATION.match(/create or replace function/g)?.length ?? 0;
-    expect(criadas).toBe(7);
+    expect(criadas).toBe(6);
     expect(MIGRATION.match(/security invoker/g)?.length).toBe(criadas);
     expect(MIGRATION.match(/set search_path = public, pg_temp/g)?.length).toBe(criadas);
   });
