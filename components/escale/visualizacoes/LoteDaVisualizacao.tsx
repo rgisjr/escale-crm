@@ -37,7 +37,8 @@ export function LoteDaVisualizacao({
   if (quadro) {
     return (
       <BulkActionBar
-        selectedIds={selecionados}
+        // Só os que ainda estão no quadro dessa origem: id velho derrubaria o lote inteiro (B4-8).
+        selectedIds={selecionados.filter((id) => origemDe.get(id) === quadro.pipeline.id)}
         stages={quadro.stages}
         pipelineId={quadro.pipeline.id}
         vocabulary={quadro.pipeline.vocabulary ?? null}

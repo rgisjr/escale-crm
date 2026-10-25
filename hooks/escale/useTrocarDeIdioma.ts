@@ -27,7 +27,12 @@ export function useTrocarDeIdioma(): { idioma: Idioma; salvando: boolean; escolh
     const anterior = idioma;
     aplicar(novo);
     startTransition(async () => {
-      const resultado = await trocarIdioma(novo);
+      let resultado: Awaited<ReturnType<typeof trocarIdioma>>;
+      try {
+        resultado = await trocarIdioma(novo);
+      } catch {
+        resultado = { ok: false } as Awaited<ReturnType<typeof trocarIdioma>>;
+      }
       if (!resultado.ok) {
         aplicar(anterior);
         toast.error(t("Não foi possível trocar o idioma. Tente de novo."));

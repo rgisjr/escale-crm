@@ -92,10 +92,14 @@ export function montarGravacao(
   origens: Origens,
   visualizacoes: readonly Visualizacao[],
   ignorarId: string | null,
+  /** `false`: as origens são as que a visualização já tem (PATCH sem `origens`); só renomear/trocar "Quem vê" não pode exigir origem viva. */
+  conferirOrigens = true,
 ): { ok: true; gravacao: GravacaoDeVisualizacao } | { ok: false; erro: string } {
   const nome = validarNomeDeVisualizacao(pedido.name, visualizacoes, ignorarId);
   if (!nome.ok) return nome;
-  const escolhidas = validarOrigensDaVisualizacao(pedido.origens, origens);
+  const escolhidas = conferirOrigens
+    ? validarOrigensDaVisualizacao(pedido.origens, origens)
+    : { ok: true as const, ids: [...new Set(pedido.origens)] };
   if (!escolhidas.ok) return escolhidas;
   // Acesso "todos" não guarda lista: uma lista esquecida voltaria a valer se
   // alguém trocasse para "escolhidos" sem olhar.

@@ -80,16 +80,25 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   const atual = visualizacoes.visualizacoes.find((v) => v.id === id);
   if (!atual) return fail("not_found", t("Visualização não encontrada."), 404, { requestId });
 
+  // Sem `origens` no corpo, valem as vivas dela (a arquivada sai ao renomear). Se TODAS foram
+  // arquivadas, mantém a lista como está: renomear ou trocar "Quem vê" não pode falhar por isso (B4-12).
+  const vivas = origensVivasDaVisualizacao(atual, origens.origens).map((f) => f.id);
+  const semNenhumaViva = parsed.data.origens === undefined && vivas.length === 0;
   const veredito = montarGravacao(
     {
       name: parsed.data.name ?? atual.name,
       acesso: parsed.data.acesso ?? atual.acesso,
-      origens: parsed.data.origens ?? origensVivasDaVisualizacao(atual, origens.origens).map((f) => f.id),
+      origens:
+        parsed.data.origens ??
+        (semNenhumaViva
+          ? atual.origens.filter((oid) => !origensQueASessaoNaoVe({ origens: [oid] }, origens.origens).length)
+          : vivas),
       pessoas: parsed.data.pessoas ?? atual.pessoas,
     },
     origens.origens,
     visualizacoes.visualizacoes,
     id,
+    !semNenhumaViva,
   );
   if (!veredito.ok) return fail("unprocessable_entity", t(veredito.erro), 422, { requestId });
   const { gravacao } = veredito;

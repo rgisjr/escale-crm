@@ -8,6 +8,7 @@ import {
   JanelaDaCasca,
 } from "@/components/escale/origens/JanelaDaCasca";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { ErroDaLista } from "@/components/escale/ui/ErroDaLista";
 import { PaginacaoDaCasca } from "@/components/escale/ui/PaginacaoDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import {
@@ -135,6 +136,11 @@ export function HistoricoDeDistribuicoes({
         </div>
         {consulta.isPending ? (
           <p className="py-6 text-[13px] text-casca-suave">{t("Carregando…")}</p>
+        ) : consulta.isError && !consulta.data ? (
+          <ErroDaLista
+            mensagem={t("Não foi possível carregar o histórico de distribuições.")}
+            aoTentar={() => void consulta.refetch()}
+          />
         ) : itens.length === 0 ? (
           <div className="grid place-items-center gap-2 py-10 text-casca-suave">
             <SearchX size={24} aria-hidden />

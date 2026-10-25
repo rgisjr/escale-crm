@@ -1,4 +1,5 @@
 "use client";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
@@ -141,6 +142,8 @@ export function FormExcluirOrigem({ origens, onFechar, onOrigens, id }: PropsDaJ
   const t = useT();
   const excluir = useExcluirOrigem();
   const arquivar = useArquivarOrigem();
+  const router = useRouter();
+  const caminho = usePathname();
   const [erro, setErro] = useState<string | null>(null);
   const funil = origens.funis.find((f) => f.id === id);
   if (!funil) return <OrigemSumiu onFechar={onFechar} />;
@@ -151,6 +154,14 @@ export function FormExcluirOrigem({ origens, onFechar, onOrigens, id }: PropsDaJ
       onFechar();
     },
     onError: (err: unknown) => setErro(textoDoErro(err, t)),
+  };
+  // Excluída a origem que está aberta no quadro, a tela ficaria num funil que não existe mais.
+  const aoExcluir = {
+    ...aoTerminar,
+    onSuccess: (r: Parameters<PropsDaJanela["onOrigens"]>[0]) => {
+      aoTerminar.onSuccess(r);
+      if (caminho?.includes(`/pipelines/${id}`)) router.replace("/app/escale/negocios");
+    },
   };
 
   return (
@@ -175,7 +186,7 @@ export function FormExcluirOrigem({ origens, onFechar, onOrigens, id }: PropsDaJ
             {t("Arquivar")}
           </BotaoDaJanela>
         )}
-        <BotaoDaJanela variante="perigo" onClick={() => excluir.mutate(id, aoTerminar)} disabled={excluir.isPending}>
+        <BotaoDaJanela variante="perigo" onClick={() => excluir.mutate(id, aoExcluir)} disabled={excluir.isPending}>
           {t("Excluir de vez")}
         </BotaoDaJanela>
       </RodapeDaJanela>

@@ -48,6 +48,8 @@ export async function PUT(req: NextRequest): Promise<Response> {
   if (error) {
     if (error.code === "23503")
       return fail("not_found", t("Dispositivo ou setor não encontrado."), 404, { requestId });
+    if (error.code === "42501")
+      return fail("forbidden", t("Você não pode editar setores."), 403, { requestId });
     return falhaInesperadaDoQuadro(error, { rota: "setores/do-dispositivo", operacao: "gravar" }, t, requestId);
   }
   void audit({
