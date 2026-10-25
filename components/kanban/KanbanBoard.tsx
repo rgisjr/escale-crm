@@ -2,6 +2,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
 import { useT } from "@/hooks/i18n/useT";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -345,7 +347,8 @@ export function KanbanBoard({
       );
 
       if (Number.isNaN(newPosition)) {
-        // Collision — Wave 8 will handle global rebalance. For now, abort silently.
+        // Posições empatadas: sem ponto médio. Cancelar mudo deixava a pessoa repetindo o gesto sem resultado.
+        toast.error(t("Não foi possível mover o card. Recarregue a página e tente de novo."));
         return;
       }
 
