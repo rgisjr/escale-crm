@@ -13,6 +13,34 @@ interface MessagesResponse {
   meta?: { cursor?: string | null; has_more?: boolean };
 }
 
+/**
+ * A ÚNICA busca das mensagens de uma conversa. Todo observador da chave
+ * ["messages", id] usa esta: quem monta por último deixa a sua função na
+ * query, e a recarga sem observador (tempo real, rede de segurança) roda
+ * essa. Uma função vazia em qualquer leitor zerava a conversa aberta.
+ */
+function buscarMensagens(conversationId: string | null) {
+  return async ({ pageParam }: { pageParam: string | undefined }): Promise<MessagesResponse> => {
+    if (!conversationId) {
+      return { data: [], meta: { has_more: false, cursor: null } };
+    }
+    const qs = new URLSearchParams();
+    if (pageParam) qs.set("cursor", pageParam);
+    qs.set("limit", "50");
+    try {
+      return await apiClient.get<MessagesResponse>(
+        `/api/v1/conversations/${conversationId}/messages?${qs.toString()}`,
+      );
+    } catch (err) {
+      showApiError(err);
+      throw err;
+    }
+  };
+}
+
+const proximaPagina = (last: MessagesResponse) =>
+  last.meta?.has_more && last.meta.cursor ? last.meta.cursor : undefined;
+
 export function useMessagesRealtime(conversationId: string | null) {
   const qc = useQueryClient();
   const queryKey = useMemo(() => ["messages", conversationId] as const, [conversationId]);
@@ -21,24 +49,8 @@ export function useMessagesRealtime(conversationId: string | null) {
     queryKey,
     enabled: !!conversationId,
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => {
-      if (!conversationId) {
-        return { data: [], meta: { has_more: false, cursor: null } } as MessagesResponse;
-      }
-      const qs = new URLSearchParams();
-      if (pageParam) qs.set("cursor", pageParam);
-      qs.set("limit", "50");
-      try {
-        return await apiClient.get<MessagesResponse>(
-          `/api/v1/conversations/${conversationId}/messages?${qs.toString()}`,
-        );
-      } catch (err) {
-        showApiError(err);
-        throw err;
-      }
-    },
-    getNextPageParam: (last) =>
-      last.meta?.has_more && last.meta.cursor ? last.meta.cursor : undefined,
+    queryFn: buscarMensagens(conversationId),
+    getNextPageParam: proximaPagina,
     /**
      * Voltar para a aba RESSINCRONIZA — aqui, e não no padrão global.
      *
@@ -102,14 +114,14 @@ export function useMessagesRealtime(conversationId: string | null) {
  * Lê as mensagens que a thread já carregou (mesma chave), SEM buscar e SEM abrir canal
  * de tempo real. Quem precisa só do que está na tela (o compositor) usa esta; o canal
  * fica com `useMessagesRealtime`, uma vez por conversa aberta (Q1, G1-1).
+ * A função de busca é a real (`buscarMensagens`), nunca uma vazia.
  */
 export function useMensagensEmCache(conversationId: string | null) {
   return useInfiniteQuery({
     queryKey: ["messages", conversationId] as const,
     enabled: false,
     initialPageParam: undefined as string | undefined,
-    queryFn: async (): Promise<MessagesResponse> => ({ data: [] }),
-    getNextPageParam: (last) =>
-      last.meta?.has_more && last.meta.cursor ? last.meta.cursor : undefined,
+    queryFn: buscarMensagens(conversationId),
+    getNextPageParam: proximaPagina,
   });
 }
