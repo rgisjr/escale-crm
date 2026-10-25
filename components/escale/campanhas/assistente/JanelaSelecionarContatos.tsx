@@ -18,10 +18,12 @@ import {
   useMudarFiltroDaLista,
 } from "@/hooks/escale/useFiltrosDaLista";
 import { useListaDeContatos } from "@/hooks/escale/useListaDeContatos";
+import { useValorComAtraso } from "@/hooks/escale/useValorComAtraso";
 import { useT } from "@/hooks/i18n/useT";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { SelecaoDoPublico } from "@/lib/escale/campanhas/assistente";
 import { numeroBr } from "@/lib/escale/campanhas/apresentacao";
+import { ESPERA_DA_BUSCA_MS } from "@/lib/escale/campanhas/filtros";
 import {
   filtrosDaUrl,
   filtrosParaUrl,
@@ -104,8 +106,10 @@ export function JanelaSelecionarContatos({
   const excluirFiltro = useExcluirFiltroDaLista("contatos");
 
   const f = filtrosParaUrl(filtros);
+  // Uma consulta por pausa na digitação, não por tecla (G8-1).
+  const buscaAtrasada = useValorComAtraso(busca, ESPERA_DA_BUSCA_MS);
   const lista = useListaDeContatos({
-    q: busca.trim() || undefined,
+    q: buscaAtrasada.trim() || undefined,
     v: visao,
     p: pagina,
     n: porPagina,

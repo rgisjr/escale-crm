@@ -97,14 +97,28 @@ describe("useCampanhasAoVivo", () => {
     renderHook(() => useCampanhasAoVivo("org-1"), { wrapper: envolver(qc) });
     const opcoes = realtime.mock.calls.at(-1)![0] as {
       postgresChanges: { table: string; filter: string };
-      onChange: () => void;
+      onChange: (payload?: unknown) => void;
     };
     expect(opcoes.postgresChanges).toMatchObject({
       table: "campaigns",
       filter: "organization_id=eq.org-1",
     });
-    act(() => opcoes.onChange());
-    expect(invalidar).toHaveBeenCalledWith({ queryKey: [CHAVE_DAS_CAMPANHAS] });
+    act(() => opcoes.onChange({ new: { id: "c-7" } }));
+    // G8-12: lista, resumo e o detalhe SÓ da campanha do evento; nunca a chave raiz.
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: [CHAVE_DAS_CAMPANHAS, "lista"] });
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: [CHAVE_DAS_CAMPANHAS, "resumo"] });
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: [CHAVE_DAS_CAMPANHAS, "detalhe", "c-7"] });
+    expect(invalidar).not.toHaveBeenCalledWith({ queryKey: [CHAVE_DAS_CAMPANHAS] });
+  });
+
+  it("evento sem id invalida os detalhes em bloco, ainda sem a raiz", () => {
+    const qc = novoQc();
+    const invalidar = vi.spyOn(qc, "invalidateQueries");
+    renderHook(() => useCampanhasAoVivo("org-1"), { wrapper: envolver(qc) });
+    const opcoes = realtime.mock.calls.at(-1)![0] as { onChange: (p?: unknown) => void };
+    act(() => opcoes.onChange(undefined));
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: [CHAVE_DAS_CAMPANHAS, "detalhe"] });
+    expect(invalidar).not.toHaveBeenCalledWith({ queryKey: [CHAVE_DAS_CAMPANHAS] });
   });
 });
 

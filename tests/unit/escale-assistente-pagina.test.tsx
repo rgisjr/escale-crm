@@ -184,6 +184,53 @@ describe("AssistenteDeCampanha", () => {
   });
 });
 
+describe("AssistenteDeCampanha: voltar e carregar (Q8)", () => {
+  const rascunho = () =>
+    salvo.mockReturnValue({
+      data: { campanhaId: "c-1", status: "draft", assistente: PRONTO, publicoAntigo: false },
+      isLoading: false,
+    });
+
+  it("'Voltar' do passo 4 devolve a rascunho mesmo sem resumo (preparo que falhou) (B8-2)", async () => {
+    rascunho();
+    acao.mockImplementation(async ({ acao: a }: { acao: string }) => {
+      if (a === "preparar") throw new Error("demorou");
+      return { status: "draft" };
+    });
+    montar("c-1");
+    await screen.findByDisplayValue("Reativação de junho");
+    for (let i = 0; i < 3; i++)
+      await userEvent.click(screen.getByRole("button", { name: "Próximo" }));
+    await screen.findByText("demorou");
+    await userEvent.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(acao).toHaveBeenCalledWith({ id: "c-1", acao: "rascunho" });
+    expect(screen.getByRole("heading", { name: "Configurações opcionais" })).toBeInTheDocument();
+  });
+
+  it("'Voltar' fica desabilitado enquanto prepara (B8-9)", async () => {
+    rascunho();
+    acao.mockImplementation(({ acao: a }: { acao: string }) =>
+      a === "preparar" ? new Promise(() => undefined) : Promise.resolve({ status: "draft" }),
+    );
+    montar("c-1");
+    await screen.findByDisplayValue("Reativação de junho");
+    for (let i = 0; i < 3; i++)
+      await userEvent.click(screen.getByRole("button", { name: "Próximo" }));
+    await waitFor(() => expect(acao).toHaveBeenCalledWith({ id: "c-1", acao: "preparar" }));
+    expect(screen.getByRole("button", { name: "Voltar" })).toBeDisabled();
+  });
+
+  it("GET do rascunho falhou: tela de erro com 'Tentar novamente', sem o formulário vazio (B8-4)", async () => {
+    const refetch = vi.fn();
+    salvo.mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch });
+    montar("c-1");
+    expect(await screen.findByText("Não foi possível carregar a campanha.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Próximo" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(refetch).toHaveBeenCalled();
+  });
+});
+
 describe("o encaixe em /app/campaigns/new", () => {
   it("com a casca, devolve o assistente", async () => {
     const el = (await NovaCampanhaPage()) as {

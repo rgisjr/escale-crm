@@ -32,7 +32,8 @@ export async function GET(
   if (!ehIdDeCampanha(id)) return naoAchou();
   try {
     const supabase = await createClient();
-    const fuso = await fusoDaOrganizacao(supabase, authz.org.orgId);
+    // O fuso e a campanha são lidos juntos com as RPCs dentro de `lerDetalheDaCampanha`.
+    const fuso = fusoDaOrganizacao(supabase, authz.org.orgId, authz.org.timezone);
     const dados = await lerDetalheDaCampanha(
       supabase,
       createAdminClient(),

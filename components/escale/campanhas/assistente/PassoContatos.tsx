@@ -47,7 +47,7 @@ export function PassoContatos({
   const t = useT();
   const publico = estado.dados.publico;
   const [janela, setJanela] = useState<Janela>(null);
-  const [importacaoId, setImportacaoId] = useState<string | null>(null);
+  const importacaoId = estado.importacaoId;
   const importacao = useAcompanharImportacao(importacaoId);
   const total = usePaginaDoPublico(publico, 1, 10, !publicoVazio(publico)).data?.total ?? 0;
   const erros = estado.tentou
@@ -63,7 +63,7 @@ export function PassoContatos({
     if (!importacaoId || !status) return;
     if (status === "concluida") {
       const id = importacaoId;
-      setImportacaoId(null);
+      despachar({ tipo: "importacao", id: null });
       contatosDaImportacao(id)
         .then((ids) => {
           despachar({ tipo: "mudarPublico", publico: comAvulsos(publicoAtual.current, ids) });
@@ -71,7 +71,7 @@ export function PassoContatos({
         })
         .catch(() => toast.error(t("Não foi possível ler os contatos importados. Tente de novo.")));
     } else if (status === "cancelada" || status === "falhou") {
-      setImportacaoId(null);
+      despachar({ tipo: "importacao", id: null });
       toast.error(t("A importação não terminou. Veja o relatório em Importações."));
     }
   }, [importacao.data?.status, importacaoId, despachar, t]);
@@ -223,7 +223,7 @@ export function PassoContatos({
         />
       )}
       {janela === "csv" && (
-        <JanelaImportarCsv aberta aoFechar={() => setJanela(null)} aoImportar={setImportacaoId} />
+        <JanelaImportarCsv aberta aoFechar={() => setJanela(null)} aoImportar={(id) => despachar({ tipo: "importacao", id })} />
       )}
     </div>
   );

@@ -72,6 +72,8 @@ export async function voltarAoRascunhoAcao(
   admin: SupabaseClient,
   c: CampanhaCarregada,
 ): Promise<Desfecho> {
+  // Já é rascunho: o resultado pedido já vale (o "Voltar" do assistente chama sempre, B8-2).
+  if (c.status === "draft") return { ok: true };
   const r = podeTransitar(c.status, "draft");
   if (!r.pode)
     return { ok: false, codigo: "campanha_estado_invalido", mensagem: r.motivo, status: 409 };

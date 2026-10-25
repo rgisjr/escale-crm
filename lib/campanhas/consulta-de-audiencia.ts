@@ -17,6 +17,7 @@ import { CAMPANHAS_VIVAS, limiteDeSilencio, usaNegocio, type FiltroDeAudiencia }
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { recusouMarketing, type CandidatoDaAudiencia } from "./elegibilidade";
 import { camposUsadosNoTexto, type CamposPersonalizados } from "./renderizador";
+import { lerEmPaginas } from "@/lib/escale/quadro/ler-em-paginas";
 import { buscaEmLotes } from "@/lib/supabase/em-lotes";
 
 /**
@@ -429,13 +430,19 @@ export async function contatosJaEmCampanha(
   const ids = (campanhas ?? []).map((c) => (c as { id: string }).id);
   if (ids.length === 0) return new Set();
 
-  const { data, error: erroDest } = await admin
-    .from("campaign_recipients")
-    .select("contact_id")
-    .eq("organization_id", organizationId)
-    .in("campaign_id", ids);
+  // Em páginas: uma leitura só é cortada em 1.000 linhas pelo PostgREST e deixava
+  // quem já está em outra campanha viva receber de novo.
+  const { data, error: erroDest } = await lerEmPaginas<{ contact_id: string }>((de, ate) =>
+    admin
+      .from("campaign_recipients")
+      .select("contact_id")
+      .eq("organization_id", organizationId)
+      .in("campaign_id", ids)
+      .order("id")
+      .range(de, ate),
+  );
   if (erroDest) throw new Error(`audiência: comprometidos — ${erroDest.message}`);
-  return new Set((data ?? []).map((r) => (r as { contact_id: string }).contact_id));
+  return new Set((data ?? []).map((r) => r.contact_id));
 }
 
 function ordinal(a: string, b: string): number {

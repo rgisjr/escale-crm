@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { carregarCampanha, duplicarAcao } from "@/lib/campanhas/acoes";
+import { carregarCampanha } from "@/lib/campanhas/acoes";
+import { duplicarDoAssistente } from "@/lib/escale/campanhas/acoes-do-assistente";
 import { FILTRO_VAZIO } from "@/lib/campanhas/audiencia";
 import {
   audienciaDosContatos,
@@ -8,7 +9,8 @@ import {
   tirarDaListaAcao,
 } from "@/lib/escale/campanhas/detalhe/acoes";
 
-vi.mock("@/lib/campanhas/acoes", () => ({ carregarCampanha: vi.fn(), duplicarAcao: vi.fn() }));
+vi.mock("@/lib/campanhas/acoes", () => ({ carregarCampanha: vi.fn() }));
+vi.mock("@/lib/escale/campanhas/acoes-do-assistente", () => ({ duplicarDoAssistente: vi.fn() }));
 
 const ORG = "org-1";
 const ID = "c1";
@@ -46,7 +48,7 @@ const carregada = (status: string, filtro: Record<string, unknown> = FILTRO_VAZI
 
 beforeEach(() => {
   vi.mocked(carregarCampanha).mockReset();
-  vi.mocked(duplicarAcao).mockReset();
+  vi.mocked(duplicarDoAssistente).mockReset();
 });
 
 describe("audienciaDosContatos", () => {
@@ -62,17 +64,22 @@ describe("audienciaDosContatos", () => {
 describe("novaCampanhaComContatosAcao (Criar campanha)", () => {
   it("duplica pelo original e grava os contatos no rascunho novo", async () => {
     vi.mocked(carregarCampanha).mockResolvedValue(carregada("completed"));
-    vi.mocked(duplicarAcao).mockResolvedValue({ ok: true, id: "novo" });
+    vi.mocked(duplicarDoAssistente).mockResolvedValue({ ok: true, id: "novo" });
     const { db, updates } = dbFalso({ campaigns: [{ error: null }] });
     const r = await novaCampanhaComContatosAcao(db as never, ORG, ID, ["k1", "k2"], "u1");
     expect(r).toEqual({ ok: true, id: "novo" });
-    expect(vi.mocked(duplicarAcao)).toHaveBeenCalledWith(
+    expect(vi.mocked(duplicarDoAssistente)).toHaveBeenCalledWith(
       db,
       expect.objectContaining({ id: ID }),
       "u1",
     );
     expect(updates("campaigns")[0]).toEqual({
       audience_filter: { ...FILTRO_VAZIO, incluir_contatos: ["k1", "k2"], limite: 2 },
+      escale_publico: {
+        selecao: { tipo: "ids", ids: ["k1", "k2"] },
+        avulsos: [],
+        removidos: [],
+      },
       updated_by: "u1",
     });
   });

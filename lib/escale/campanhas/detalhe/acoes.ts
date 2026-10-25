@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { carregarCampanha, duplicarAcao, type Desfecho } from "@/lib/campanhas/acoes";
+import { carregarCampanha, type Desfecho } from "@/lib/campanhas/acoes";
 import { FILTRO_VAZIO } from "@/lib/campanhas/audiencia";
 import { publicoSchema } from "@/lib/escale/campanhas/assistente";
+import { duplicarDoAssistente } from "@/lib/escale/campanhas/acoes-do-assistente";
 import { semContato } from "@/lib/escale/campanhas/publico";
 
 import { podeTirarDaLista } from "./apresentacao";
@@ -13,9 +14,9 @@ import { podeTirarDaLista } from "./apresentacao";
  * `campaigns`); toda escrita filtra `organization_id` e prende o status
  * conferido (compare-and-set).
  *
- * - "Criar campanha": duplica pela ação do original (a 8B a deixa completa:
- *   funil, etapa, agente, números, modelo) e troca o público pelos contatos
- *   marcados (`incluir_contatos`, o teto da API: 5.000).
+ * - "Criar campanha": duplica pela cópia do assistente (leva a mensagem, o
+ *   pós-envio, o quando, o funil, o agente e o rodízio) e troca o público pelos
+ *   contatos marcados, no `escale_publico` e no `audience_filter` (`incluir_contatos`, o teto da API: 5.000).
  * - "Excluir selecionados": só antes de qualquer envio. O contato entra em
  *   `excluir_contatos` (vale na próxima preparação, com o motivo
  *   `excluido_manualmente`) e a lista já preparada marca o mesmo motivo agora.
@@ -67,11 +68,15 @@ export async function novaCampanhaComContatosAcao(
   }
   const carregada = await carregarCampanha(admin, orgId, campanhaId);
   if (!carregada.ok) return carregada;
-  const copia = await duplicarAcao(admin, carregada.campanha, autorId);
+  const copia = await duplicarDoAssistente(admin, carregada.campanha, autorId);
   if (!copia.ok) return copia;
   const { error } = await admin
     .from("campaigns")
-    .update({ audience_filter: audienciaDosContatos(unicos), updated_by: autorId })
+    .update({
+      audience_filter: audienciaDosContatos(unicos),
+      escale_publico: { selecao: { tipo: "ids", ids: unicos }, avulsos: [], removidos: [] },
+      updated_by: autorId,
+    })
     .eq("organization_id", orgId)
     .eq("id", copia.id)
     .eq("status", "draft");

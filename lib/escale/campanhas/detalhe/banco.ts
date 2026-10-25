@@ -21,10 +21,14 @@ import type {
  * funções da 9310 (invoker) contam com a sessão de quem olha; aqui só se dá
  * nome às colunas. `bigint` e `numeric` chegam como texto pelo PostgREST.
  *
- * A campanha é lida com `select("*")` de propósito: a 8B guarda o modelo da Meta
- * do modelo da Meta, e `modeloDaCampanha` as lê sem quebrar quando ainda não
- * existem (lista fechada de colunas viraria erro de coluna desconhecida).
+ * A campanha é lida só com as colunas que `infoDaLinha` e `modeloDaCampanha`
+ * leem: `select("*")` trazia `audience_filter` e `escale_publico` (listas de
+ * até 5.000 ids) a cada reconsulta de 10 s, sem a tela usar (G8-7).
  */
+export const COLUNAS_DO_DETALHE =
+  "id, name, status, channel_session_id, message_body, escale_mensagem, base_legal, lia_ref, " +
+  "intervalo_segundos, teto_diario, teto_horario, janela_inicio_hora, janela_fim_hora, " +
+  "started_at, scheduled_at, created_at";
 type Numero = number | string | null | undefined;
 
 const numero = (v: Numero): number => Number(v ?? 0);
@@ -103,24 +107,25 @@ export async function lerDetalheDaCampanha(
   admin: SupabaseClient,
   orgId: string,
   id: string,
-  fuso: string,
+  fuso: string | Promise<string>,
 ): Promise<DadosDoDetalhe | null> {
-  const { data: linha, error } = await supabase
-    .from("campaigns")
-    .select("*")
-    .eq("organization_id", orgId)
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!linha) return null;
-
   const base = { p_org: orgId, p_campanha: id };
-  const [sumario, ritmo, motivos, resultado, extras] = await Promise.all([
+  // A linha da campanha, o fuso e as 5 leituras saem juntos, não em série (G8-8).
+  // Campanha que não existe só desperdiça as leituras (todas por invoker/organização).
+  const [lida, sumario, ritmo, motivos, resultado, extras] = await Promise.all([
+    supabase
+      .from("campaigns")
+      .select(COLUNAS_DO_DETALHE)
+      .eq("organization_id", orgId)
+      .eq("id", id)
+      .maybeSingle(),
     chamar<LinhaDoSumario>(supabase, "fn_escale_sumario_da_campanha", base),
-    chamar<{ hora: string; envios: Numero }>(supabase, "fn_escale_ritmo_da_campanha", {
-      ...base,
-      p_fuso: fuso,
-    }),
+    Promise.resolve(fuso).then((p_fuso) =>
+      chamar<{ hora: string; envios: Numero }>(supabase, "fn_escale_ritmo_da_campanha", {
+        ...base,
+        p_fuso,
+      }),
+    ),
     chamar<{ codigo: string | null; quantidade: Numero }>(
       supabase,
       "fn_escale_motivos_do_erro",
@@ -129,10 +134,13 @@ export async function lerDetalheDaCampanha(
     chamar<LinhaDoResultado>(supabase, "fn_escale_resultado_da_campanha", base),
     lerPoolExtra(admin, orgId, id),
   ]);
+  if (lida.error) throw new Error(lida.error.message);
+  const linha = lida.data;
+  if (!linha) return null;
   const s = sumario[0];
   const r = resultado[0];
   return {
-    campanha: infoDaLinha(linha as Record<string, unknown>, extras),
+    campanha: infoDaLinha(linha as unknown as Record<string, unknown>, extras),
     sumario: {
       adicionados: numero(s?.adicionados),
       enviados: numero(s?.enviados),
@@ -155,7 +163,7 @@ export async function lerDetalheDaCampanha(
       benchmark: numeroOuNulo(r?.benchmark),
       taxaDaCampanha: numeroOuNulo(r?.taxa_da_campanha),
     },
-    fuso,
+    fuso: await fuso,
   };
 }
 
