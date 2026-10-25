@@ -25,6 +25,7 @@ import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
+import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
@@ -83,12 +84,16 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   }
 
   const supabase = await createClient();
-  const { data: lead } = await supabase
+  const { data: lead, error: erroDoNegocio } = await supabase
     .from("crm_leads")
     .select("id, contact_id")
     .eq("organization_id", authz.org.orgId)
     .eq("id", id)
     .maybeSingle();
+  if (erroDoNegocio) {
+    logger.error("notas.ler_negocio", { requestId, error: erroDoNegocio.message });
+    return fail("internal_error", t("Ocorreu um erro ao salvar a nota!"), 500, { requestId });
+  }
   if (!lead)
     return fail("not_found", t("Esse negócio não existe ou foi removido"), 404, { requestId });
 
@@ -115,8 +120,8 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   }
 
   const criada = nota as Nota;
-  // Fire-and-forget, como todo emissor da linha do tempo: a nota já está gravada.
-  void emitLeadActivity(supabase, {
+  // A nota já está gravada: a falha da linha do tempo não a desfaz, mas é contada (não some).
+  const atividade = await emitLeadActivity(supabase, {
     organizationId: authz.org.orgId,
     leadId: id,
     contactId: lead.contact_id ?? null,
@@ -127,6 +132,16 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     reason: "Nova nota",
     payload: { nota_id: criada.id },
   });
+  if (!atividade.ok) {
+    await registraFalhaDeAtividade(supabase, {
+      organizationId: authz.org.orgId,
+      leadId: id,
+      tipo: "note",
+      origem: "leads/[id]/notas",
+      erro: atividade.error,
+      requestId,
+    });
+  }
   void audit({
     action: "lead.note_added",
     actorUserId: authz.user.id,

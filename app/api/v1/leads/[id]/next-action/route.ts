@@ -122,6 +122,28 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     );
   }
 
+  // Decidida é decidida: a proposta sai de cena nos dois casos, senão o card
+  // continuaria pedindo a mesma decisão que a pessoa acabou de tomar. O que
+  // fica registrado é a DECISÃO, na timeline. A limpeza vem ANTES e confere a
+  // identidade (`next_action_seq`): uma proposta nova gravada pela IA depois da
+  // checagem acima não é apagada, e dois cliques simultâneos não decidem duas vezes.
+  const { data: limpas, error: limpaErr } = await admin
+    .from("lead_state")
+    .update({ next_action: null })
+    .eq("organization_id", row.organization_id)
+    .eq("contact_id", row.contact_id)
+    .eq("next_action_seq", approved_seq)
+    .select("contact_id");
+  if (limpaErr) return fail("internal_error", limpaErr.message, 500, { requestId });
+  if (!limpas || limpas.length === 0) {
+    return fail(
+      "next_action_changed",
+      t("A proposta mudou desde que você a leu. Confira a nova antes de decidir."),
+      409,
+      { requestId },
+    );
+  }
+
   const atividade = await emitLeadActivity(supabase, {
     organizationId: row.organization_id,
     leadId: row.id,
@@ -134,20 +156,18 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     payload: { next_action: atual, decision },
   });
   if (!atividade.ok) {
+    // A decisão não ficou registrada: devolve a proposta para a pessoa decidir de novo.
+    await admin
+      .from("lead_state")
+      .update({ next_action: atual })
+      .eq("organization_id", row.organization_id)
+      .eq("contact_id", row.contact_id)
+      .eq("next_action_seq", approved_seq)
+      .is("next_action", null);
     return fail("internal_error", atividade.error ?? "activity insert failed", 500, {
       requestId,
     });
   }
-
-  // Decidida é decidida: a proposta sai de cena nos dois casos, senão o card
-  // continuaria pedindo a mesma decisão que a pessoa acabou de tomar. O que
-  // ficou registrado foi a DECISÃO, na timeline.
-  const { error: limpaErr } = await admin
-    .from("lead_state")
-    .update({ next_action: null })
-    .eq("organization_id", row.organization_id)
-    .eq("contact_id", row.contact_id);
-  if (limpaErr) return fail("internal_error", limpaErr.message, 500, { requestId });
 
   return ok({ lead_id: row.id, decision, next_action: atual }, { requestId });
 }

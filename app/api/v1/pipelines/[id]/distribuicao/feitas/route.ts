@@ -61,6 +61,8 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     .eq("organization_id", authz.org.orgId)
     .eq("pipeline_id", id)
     .order("distribuido_em", { ascending: false })
+    // Distribuições em lote empatam no instante: sem desempate a página 2 repete ou pula linhas.
+    .order("id", { ascending: false })
     .range(de, de + POR_PAGINA_DAS_DISTRIBUICOES - 1);
   if (usuario) q = q.eq("user_id", usuario);
   if (periodo)

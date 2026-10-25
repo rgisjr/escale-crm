@@ -28,7 +28,8 @@ export interface ColunaDoFunilNaCascaProps {
   onSelectMany?: (leadIds: string[], marcar: boolean) => void;
   onOpen?: (leadId: string) => void;
   podeRenomear?: boolean;
-  onRenomear?: (nome: string) => void;
+  /** `aoFalhar` devolve o campo ao nome gravado quando o servidor recusa. */
+  onRenomear?: (nome: string, aoFalhar: () => void) => void;
   aoAdicionar?: (stageId: string) => void;
   /** Fase 1E: o ⋮ da etapa ("Selecione N"); ausente = sem ⋮. */
   aoSelecionarNaEtapa?: (ids: string[], n: number) => void;
@@ -168,7 +169,7 @@ function NomeDaEtapaNaCasca({
   onConfirmar,
 }: {
   nome: string;
-  onConfirmar: (nome: string) => void;
+  onConfirmar: (nome: string, aoFalhar: () => void) => void;
 }) {
   const t = useT();
   const [rascunho, setRascunho] = useState(nome);
@@ -181,7 +182,7 @@ function NomeDaEtapaNaCasca({
       setRascunho(nome);
       return;
     }
-    onConfirmar(limpo);
+    onConfirmar(limpo, () => setRascunho(nome));
   }
 
   return (

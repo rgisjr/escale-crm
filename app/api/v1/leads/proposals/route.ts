@@ -32,6 +32,8 @@ import { requireAuth } from "@/lib/auth/server";
 import { orgAtivaDaApi } from "@/lib/auth/require-role";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { lerEmPaginas } from "@/lib/escale/quadro/ler-em-paginas";
+import { buscaEmLotes } from "@/lib/supabase/em-lotes";
 
 export const dynamic = "force-dynamic";
 
@@ -74,21 +76,32 @@ export async function GET(req: NextRequest): Promise<Response> {
   const supabase = await createClient();
 
   // ── PENDENTES ────────────────────────────────────────────────────────────
+  // Páginas de 1000 e ordem estável: a resposta do PostgREST é cortada sem erro, e organizações
+  // maiores perdiam propostas ou as mandavam para o negócio errado (B2-15 da revisão).
+  const admin = createAdminClient();
   const [{ data: estados, error: estadosErr }, { data: candidatos, error: candErr }] =
     await Promise.all([
       // `lead_state` é server-only na VPS: lido pelo serviço, filtrado pela org.
-      createAdminClient()
-        .from("lead_state")
-        .select("contact_id, next_action, next_action_seq, updated_at")
-        .eq("organization_id", orgId)
-        .not("next_action", "is", null),
-      supabase
-        .from("crm_leads")
-        .select(
-          "id, organization_id, pipeline_id, status, last_activity_at, created_at, contact_id",
-        )
-        .eq("organization_id", orgId)
-        .eq("status", "open"),
+      lerEmPaginas((de, ate) =>
+        admin
+          .from("lead_state")
+          .select("contact_id, next_action, next_action_seq, updated_at")
+          .eq("organization_id", orgId)
+          .not("next_action", "is", null)
+          .order("contact_id", { ascending: true })
+          .range(de, ate),
+      ),
+      lerEmPaginas((de, ate) =>
+        supabase
+          .from("crm_leads")
+          .select(
+            "id, organization_id, pipeline_id, status, last_activity_at, created_at, contact_id",
+          )
+          .eq("organization_id", orgId)
+          .eq("status", "open")
+          .order("id", { ascending: true })
+          .range(de, ate),
+      ),
     ]);
   if (estadosErr) return fail("internal", estadosErr.message, 500, { requestId });
   if (candErr) return fail("internal", candErr.message, 500, { requestId });
@@ -106,11 +119,13 @@ export async function GET(req: NextRequest): Promise<Response> {
   const pendentes: PropostaPendente[] = [];
 
   if (leadIds.length > 0) {
-    const { data: leads, error: leadsErr } = await supabase
-      .from("crm_leads")
-      .select("id, title, contact_id, crm_stages!crm_leads_stage_id_fkey(name), contacts(name, display_name)")
-      .eq("organization_id", orgId)
-      .in("id", leadIds);
+    const { data: leads, error: leadsErr } = await buscaEmLotes(leadIds, (lote) =>
+      supabase
+        .from("crm_leads")
+        .select("id, title, contact_id, crm_stages!crm_leads_stage_id_fkey(name), contacts(name, display_name)")
+        .eq("organization_id", orgId)
+        .in("id", lote),
+    );
     if (leadsErr) return fail("internal", leadsErr.message, 500, { requestId });
 
     for (const l of (leads ?? []) as unknown as Array<{

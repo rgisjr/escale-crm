@@ -35,6 +35,7 @@ import {
   type ConversaDoQuadro,
 } from "@/lib/escale/filtros/ler-dados-do-quadro";
 import { juntarEtapasPorLead } from "@/lib/escale/quadro/juntar-etapas";
+import { logger } from "@/lib/logger";
 import { buscaEmLotes } from "@/lib/supabase/em-lotes";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -156,7 +157,7 @@ async function avisaAmbiguas(
 ): Promise<void> {
   if (ambiguas.length === 0) return;
 
-  const { data: jaAbertos } = await buscaEmLotes(
+  const { data: jaAbertos, error: erroDaLeitura } = await buscaEmLotes(
     ambiguas.map((a) => a.contact_id),
     (lote) =>
       admin
@@ -167,6 +168,11 @@ async function avisaAmbiguas(
         .eq("status", "open")
         .in("ref_id", lote),
   );
+  if (erroDaLeitura) {
+    // Sem saber o que já está aberto, não grava: gravaria o aviso em dobro a cada leitura do quadro.
+    logger.error("board.avisa_ambiguas.ler", { organizationId, erro: erroDaLeitura.message });
+    return;
+  }
   const abertos = new Set(
     ((jaAbertos ?? []) as Array<{ ref_id: string }>).map((r) => r.ref_id),
   );
@@ -185,7 +191,20 @@ async function avisaAmbiguas(
     }));
   if (novos.length === 0) return;
 
-  await admin.from("agent_inbox_items").insert(novos);
+  const { error: erroDoInsert } = await admin.from("agent_inbox_items").insert(novos);
+  if (!erroDoInsert) return;
+  if (erroDoInsert.code === "23505") {
+    // Outra leitura do quadro avisou entre a checagem e a gravação (índice único do aviso aberto):
+    // grava um a um e deixa passar só o que já existe.
+    for (const aviso of novos) {
+      const { error } = await admin.from("agent_inbox_items").insert(aviso);
+      if (error && error.code !== "23505") {
+        logger.error("board.avisa_ambiguas.gravar", { organizationId, erro: error.message });
+      }
+    }
+    return;
+  }
+  logger.error("board.avisa_ambiguas.gravar", { organizationId, erro: erroDoInsert.message });
 }
 
 /**
