@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   SELECIONAR_TODOS,
@@ -8,7 +8,9 @@ import {
   estadoDaPagina,
   linhaMarcada,
   marcarPagina,
+  selecaoDeIds,
   selecionarQuantidade,
+  IDS_MAX,
   todosMarcados,
   totalSelecionado,
   type Selecao,
@@ -23,13 +25,23 @@ export function useSelecaoDaLista({
   total,
   primeiro,
   chaveDaConsulta,
+  resolverPrimeiros,
+  aoFalharAoResolver,
 }: {
   linhas: ReadonlyArray<{ id: string }>;
   total: number;
   primeiro: number;
   chaveDaConsulta: string;
+  /** Os ids dos N primeiros da consulta de agora (até `IDS_MAX`): congelam o "Selecionar [N]". */
+  resolverPrimeiros?: (n: number) => Promise<string[]>;
+  aoFalharAoResolver?: () => void;
 }) {
   const [selecao, setSelecao] = useState<Selecao>(SEM_SELECAO);
+  // A consulta que valia no clique: se mudou até a resposta chegar, a resposta é de outra lista.
+  const consultaAtual = useRef(chaveDaConsulta);
+  useEffect(() => {
+    consultaAtual.current = chaveDaConsulta;
+  }, [chaveDaConsulta]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- a seleção é da consulta: outra busca, outro conjunto
   useEffect(() => setSelecao(SEM_SELECAO), [chaveDaConsulta]);
@@ -51,7 +63,20 @@ export function useSelecaoDaLista({
       setSelecao((s) => alternarLinha(s, id, primeiro + i, marcar)),
     marcarPagina: (marcar: boolean) => setSelecao((s) => marcarPagina(s, linhas, primeiro, marcar)),
     selecionarTodos: () => setSelecao(SELECIONAR_TODOS),
-    selecionarQuantidade: (n: number) => setSelecao(selecionarQuantidade(n, total)),
+    selecionarQuantidade: (n: number) => {
+      const porQuantidade = selecionarQuantidade(n, total);
+      const quantos = porQuantidade.tipo === "todos" ? porQuantidade.quantidade : null;
+      // Só congela o que cabe numa seleção por ids; o resto segue por quantidade.
+      if (resolverPrimeiros === undefined || quantos === null || quantos > IDS_MAX)
+        return setSelecao(porQuantidade);
+      const chave = chaveDaConsulta;
+      resolverPrimeiros(quantos)
+        .then((ids) => {
+          if (consultaAtual.current !== chave) return;
+          setSelecao(selecaoDeIds(ids));
+        })
+        .catch(() => aoFalharAoResolver?.());
+    },
     limpar: () => setSelecao(SEM_SELECAO),
   };
 }
