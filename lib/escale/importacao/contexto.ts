@@ -168,11 +168,13 @@ export async function lerContextoDoLote(
   for (const c of [...porIdLidos, ...porEmailLidos, ...porTelefoneLidos]) todos.set(c.id, c);
   const ids = [...todos.keys()];
 
+  // As quatro leituras abaixo não dependem uma da outra (só companies espera company_people): vão juntas.
   // A empresa de cada contato: o vínculo principal, senão o mais antigo (2D N4).
   const pessoas = unicos([...todos.values()].map((c) => c.person_id));
   const empresaDaPessoa = new Map<string, string>();
   const nomeDaEmpresa = new Map<string, string | null>();
-  if (pessoas.length > 0) {
+  const lerEmpresas = async () => {
+    if (pessoas.length === 0) return;
     const v = await db
       .from("company_people")
       .select("company_id, person_id, is_primary, created_at")
@@ -185,17 +187,17 @@ export async function lerContextoDoLote(
       if (!empresaDaPessoa.has(l.person_id)) empresaDaPessoa.set(l.person_id, l.company_id);
     }
     const empresas = unicos([...empresaDaPessoa.values()]);
-    if (empresas.length > 0) {
-      const e = await db.from("companies").select("id, trade_name, legal_name").eq("organization_id", org).in("id", empresas);
-      if (e.error) throw new Error(e.error.message);
-      for (const c of (e.data ?? []) as Array<{ id: string; trade_name: string | null; legal_name: string | null }>) {
-        nomeDaEmpresa.set(c.id, c.trade_name ?? c.legal_name ?? null);
-      }
+    if (empresas.length === 0) return;
+    const e = await db.from("companies").select("id, trade_name, legal_name").eq("organization_id", org).in("id", empresas);
+    if (e.error) throw new Error(e.error.message);
+    for (const c of (e.data ?? []) as Array<{ id: string; trade_name: string | null; legal_name: string | null }>) {
+      nomeDaEmpresa.set(c.id, c.trade_name ?? c.legal_name ?? null);
     }
-  }
+  };
 
   const comWhatsapp = new Set<string>();
-  if (ids.length > 0) {
+  const lerWhatsapp = async () => {
+    if (ids.length === 0) return;
     const w = await db
       .from("conversations")
       .select("contact_id")
@@ -205,7 +207,34 @@ export async function lerContextoDoLote(
       .in("contact_id", ids);
     if (w.error) throw new Error(w.error.message);
     for (const c of (w.data ?? []) as Array<{ contact_id: string }>) comWhatsapp.add(c.contact_id);
-  }
+  };
+
+  const idsDeNegocio = imp.tipo === "negocio" ? unicos(dados.map((d) => d.negocio?.id ?? null)) : [];
+  const negociosPorId = new Map<string, NegocioExistente>();
+  const lerNegociosPorId = async () => {
+    if (idsDeNegocio.length === 0) return;
+    const n = await db.from("crm_leads").select("id, title, pipeline_id, custom_fields").eq("organization_id", org).in("id", idsDeNegocio);
+    if (n.error) throw new Error(n.error.message);
+    for (const l of (n.data ?? []) as Array<{ id: string; title: string; pipeline_id: string; custom_fields: Record<string, unknown> | null }>) {
+      negociosPorId.set(l.id, { id: l.id, titulo: l.title, origemId: l.pipeline_id, campos: l.custom_fields ?? {} });
+    }
+  };
+  const abertos: Array<NegocioExistente & { contatoId: string }> = [];
+  const lerAbertos = async () => {
+    if (imp.tipo !== "negocio" || ids.length === 0) return;
+    const a = await db
+      .from("crm_leads")
+      .select("id, title, pipeline_id, contact_id, custom_fields")
+      .eq("organization_id", org)
+      .eq("status", "open")
+      .in("contact_id", ids)
+      .order("created_at", { ascending: true });
+    if (a.error) throw new Error(a.error.message);
+    for (const l of (a.data ?? []) as Array<{ id: string; title: string; pipeline_id: string; contact_id: string; custom_fields: Record<string, unknown> | null }>) {
+      abertos.push({ id: l.id, titulo: l.title, origemId: l.pipeline_id, contatoId: l.contact_id, campos: l.custom_fields ?? {} });
+    }
+  };
+  await Promise.all([lerEmpresas(), lerWhatsapp(), lerNegociosPorId(), lerAbertos()]);
 
   const existente = (c: ContatoLido | undefined): ContatoExistente | null => {
     if (!c) return null;
@@ -230,29 +259,6 @@ export async function lerContextoDoLote(
 
   let negocio: ((l: LinhaParaProcessar) => ContextoDoNegocio) | null = null;
   if (imp.tipo === "negocio") {
-    const idsDeNegocio = unicos(dados.map((d) => d.negocio?.id ?? null));
-    const negociosPorId = new Map<string, NegocioExistente>();
-    if (idsDeNegocio.length > 0) {
-      const n = await db.from("crm_leads").select("id, title, pipeline_id, custom_fields").eq("organization_id", org).in("id", idsDeNegocio);
-      if (n.error) throw new Error(n.error.message);
-      for (const l of (n.data ?? []) as Array<{ id: string; title: string; pipeline_id: string; custom_fields: Record<string, unknown> | null }>) {
-        negociosPorId.set(l.id, { id: l.id, titulo: l.title, origemId: l.pipeline_id, campos: l.custom_fields ?? {} });
-      }
-    }
-    const abertos: Array<NegocioExistente & { contatoId: string }> = [];
-    if (ids.length > 0) {
-      const a = await db
-        .from("crm_leads")
-        .select("id, title, pipeline_id, contact_id, custom_fields")
-        .eq("organization_id", org)
-        .eq("status", "open")
-        .in("contact_id", ids)
-        .order("created_at", { ascending: true });
-      if (a.error) throw new Error(a.error.message);
-      for (const l of (a.data ?? []) as Array<{ id: string; title: string; pipeline_id: string; contact_id: string; custom_fields: Record<string, unknown> | null }>) {
-        abertos.push({ id: l.id, titulo: l.title, origemId: l.pipeline_id, contatoId: l.contact_id, campos: l.custom_fields ?? {} });
-      }
-    }
     const cfg = imp.configuracao;
     const padrao = {
       origemId: cfg.origemId ?? "",

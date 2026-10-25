@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { useImportacao, useLinhasDaImportacao } from "@/hooks/escale/useImportacoes";
 import { useT } from "@/hooks/i18n/useT";
+import { ApiError } from "@/lib/api/types";
 import {
   LINHAS_DO_RELATORIO_MAX,
   ROTULO_DA_CHAVE,
@@ -112,14 +113,29 @@ function TabelaDeLinhas({ linhas, cinza }: { linhas: readonly LinhaLida[]; cinza
   );
 }
 
+function ErroDeCarga({ mensagem, aoTentar }: { mensagem: string; aoTentar: () => void }) {
+  const t = useT();
+  return (
+    <div role="alert" className="flex flex-col items-center gap-3 p-8">
+      <p className="text-[13px] text-[#5A5964]">{mensagem}</p>
+      <BotaoDaCasca type="button" variante="marca" onClick={aoTentar}>
+        {t("Tentar de novo")}
+      </BotaoDaCasca>
+    </div>
+  );
+}
+
 export function RelatorioDaImportacao({ id }: { id: string }) {
   const t = useT();
   const router = useRouter();
   const importacao = useImportacao(id);
   const lidas = useLinhasDaImportacao(id, "relatorio");
   const i = importacao.data;
-  if (importacao.isLoading || !i) {
-    return <p className="p-6 text-[13px] text-[#5A5964]">{importacao.isLoading ? t("Carregando…") : t("Importação não encontrada.")}</p>;
+  if (importacao.isLoading) return <p className="p-6 text-[13px] text-[#5A5964]">{t("Carregando…")}</p>;
+  if (!i) {
+    const naoAchada = importacao.error instanceof ApiError && importacao.error.status === 404;
+    if (!importacao.isError || naoAchada) return <p className="p-6 text-[13px] text-[#5A5964]">{t("Importação não encontrada.")}</p>;
+    return <ErroDeCarga mensagem={t("Não foi possível carregar a importação.")} aoTentar={() => void importacao.refetch()} />;
   }
   const todas = lidas.data ?? [];
   const cortou = todas.length > LINHAS_DO_RELATORIO_MAX;
@@ -189,6 +205,8 @@ export function RelatorioDaImportacao({ id }: { id: string }) {
           </p>
         ) : lidas.isLoading ? (
           <p className="p-8 text-center text-[13px] text-[#5A5964]">{t("Carregando…")}</p>
+        ) : lidas.isError ? (
+          <ErroDeCarga mensagem={t("Não foi possível carregar as linhas da importação.")} aoTentar={() => void lidas.refetch()} />
         ) : (
           <>
             {cortou ? (

@@ -135,7 +135,8 @@ export async function POST(req: NextRequest): Promise<Response> {
         "acoes-em-massa-conversas: o caminho imediato não terminou; entregando ao consumidor",
         { organization_id: orgId, acao_id: linha.acao_id, detail: fim.detail ?? fim.status },
       );
-      await createAdminClient().rpc("emit_event", {
+      const admin = createAdminClient();
+      const evento = await admin.rpc("emit_event", {
         p_event_type: "conversas.acao_em_massa_requested",
         p_entity_kind: "crm_acao_em_massa_conversas",
         p_entity_id: linha.acao_id,
@@ -143,6 +144,20 @@ export async function POST(req: NextRequest): Promise<Response> {
         p_metadata: {},
         p_organization_id: orgId,
       });
+      if (evento.error) {
+        // Sem o evento ninguém vai terminar a ação: marca como falhou em vez de deixá-la "processando" para sempre.
+        logger.error("acoes-em-massa-conversas: não foi possível entregar o evento ao consumidor", {
+          organization_id: orgId,
+          acao_id: linha.acao_id,
+          detail: evento.error.message,
+        });
+        await admin
+          .from("crm_acoes_em_massa_conversas")
+          .update({ status: "falhou", erros: [{ conversa: null, motivo: evento.error.message }] })
+          .eq("organization_id", orgId)
+          .eq("id", linha.acao_id);
+        return fail("internal_error", t("Não foi possível concluir a operação."), 500, { requestId });
+      }
       return ok(
         { id: linha.acao_id, total: linha.quantidade, status: "processando" },
         { status: 201, requestId },

@@ -68,6 +68,7 @@ function JanelaAberta({ aoFechar, tipoInicial, travarTipo = false, origemInicial
   const [decisoes, setDecisoes] = useState<Decisoes>(() => decisoesDoNivel("conservador"));
   const [erroDoEnvio, setErroDoEnvio] = useState<string | null>(null);
   const escolhaAtual = useRef(0);
+  const envioAtual = useRef<AbortController | null>(null);
   const criar = useCriarImportacao();
 
   const contato = useCatalogoDeCampos("contato").catalogo ?? CATALOGO_VAZIO;
@@ -122,11 +123,20 @@ function JanelaAberta({ aoFechar, tipoInicial, travarTipo = false, origemInicial
     if (cabecalho) setMapa(sugerirMapeamento(cabecalho, novo, opcoesDoMapeamento(novo, { contato, empresa, negocio })));
   }
 
+  /** Fecha a janela; se o arquivo ainda está subindo, desiste do envio em vez de prender a tela. */
+  function fechar() {
+    envioAtual.current?.abort();
+    aoFechar();
+  }
+
   async function confirmar() {
     if (!arquivo) return;
     setErroDoEnvio(null);
+    const envio = new AbortController();
+    envioAtual.current = envio;
     try {
       const criada = await criar.mutateAsync({
+        signal: envio.signal,
         arquivo,
         pedido: { tipo, nivel: nivelDasDecisoes(decisoes, tipo, mapa), decisoes, mapeamento: mapa, configuracao: config },
       });
@@ -137,6 +147,7 @@ function JanelaAberta({ aoFechar, tipoInicial, travarTipo = false, origemInicial
       aoImportar?.(criada.id);
       aoFechar();
     } catch (e) {
+      if (envio.signal.aborted) return;
       setErroDoEnvio(t(e instanceof Error ? e.message : "Não foi possível iniciar a importação."));
     }
   }
@@ -182,7 +193,7 @@ function JanelaAberta({ aoFechar, tipoInicial, travarTipo = false, origemInicial
     <DialogPrimitive.Root
       open
       onOpenChange={(aberta) => {
-        if (!aberta && !criar.isPending) aoFechar();
+        if (!aberta) fechar();
       }}
     >
       <DialogPortal>
@@ -198,11 +209,10 @@ function JanelaAberta({ aoFechar, tipoInicial, travarTipo = false, origemInicial
             <div className="flex h-16 shrink-0 items-center justify-between border-t border-[#F1F0F5] px-6">
               <button
                 type="button"
-                disabled={criar.isPending}
-                onClick={() => (passo === 0 ? aoFechar() : setPasso(passo - 1))}
+                onClick={() => (passo === 0 || criar.isPending ? fechar() : setPasso(passo - 1))}
                 className={BOTAO_DE_CONTORNO}
               >
-                {passo === 0 ? t("Cancelar") : t("Voltar")}
+                {passo === 0 || criar.isPending ? t("Cancelar") : t("Voltar")}
               </button>
               <div className="flex items-center gap-3">
                 {erroDoEnvio ? (

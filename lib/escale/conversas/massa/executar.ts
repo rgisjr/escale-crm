@@ -214,10 +214,12 @@ async function emLotes(acao: Acao, deps: DependenciasDaMassa): Promise<HandlerRe
     if (error) throw new Error(error.message);
     const ids = ((data ?? []) as Array<{ conversation_id: string }>).map((i) => i.conversation_id);
     if (ids.length === 0) {
-      await deps.db
+      const fim = await deps.db
         .from("crm_acoes_em_massa_conversas")
         .update({ status: "concluida", feitos, falhas, erros })
         .eq("id", acao.id);
+      // Sem conferir, a ação ficava "processando" para sempre e a tela esperava sem fim.
+      if (fim.error) throw new Error(fim.error.message);
       return resultado("ok");
     }
     const marcado = await deps.db
@@ -274,10 +276,11 @@ export async function processarAcaoDaFila(
   if (acao.status !== "na_fila" && acao.status !== "processando")
     return resultado("skipped", "fora_da_fila");
   if (acao.status !== "processando") {
-    await deps.db
+    const inicio = await deps.db
       .from("crm_acoes_em_massa_conversas")
       .update({ status: "processando" })
       .eq("id", acao.id);
+    if (inicio.error) return resultado("error", inicio.error.message);
   }
   try {
     return await emLotes(acao, deps);

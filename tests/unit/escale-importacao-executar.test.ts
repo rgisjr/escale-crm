@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 
-import { ErroDaLinha, gravarPlano, type DependenciasDaGravacao } from "@/lib/escale/importacao/aplicar";
+import { ErroDaLinha, gravarPlano, idsGravados, type DependenciasDaGravacao } from "@/lib/escale/importacao/aplicar";
 import type { Plano } from "@/lib/escale/importacao/classificar";
 import type { ContextoDaRodada, LinhaParaProcessar } from "@/lib/escale/importacao/contexto";
 import { processarLinhas, type Dependencias } from "@/lib/escale/importacao/executar";
@@ -135,6 +135,39 @@ describe("gravar o plano (Fase 2F)", () => {
       via_planilha: true,
     }));
     expect(d.encerrar).toHaveBeenCalledWith(ctx, { leadId: "neg-1", desfecho: "lost", motivo: "other" });
+  });
+});
+
+describe("falha no meio da linha guarda o que já foi gravado (Q5, B5-5)", () => {
+  const negocioPerdido: Plano["negocio"] = {
+    tipo: "criar", origemId: "o", etapaId: "e", titulo: "A", valorCentavos: 100, donoId: null, campos: {}, status: "lost", motivoDePerda: "other", ganhoEm: null,
+  };
+
+  it("encerrar falha depois de criar o negócio: o erro leva o contato e o negócio", async () => {
+    const { db } = bancoFalso();
+    const d = deps(db);
+    d.encerrar = vi.fn(async () => {
+      throw new Error("não deu para encerrar");
+    });
+    const erro = await gravarPlano(d, ctx, imp, criar({ negocio: negocioPerdido })).catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(ErroDaLinha);
+    expect((erro as Error).message).toBe("não deu para encerrar");
+    expect(idsGravados(erro)).toEqual({ contatoId: "novo-1", negocioId: "neg-1" });
+  });
+
+  it("criar o negócio falha: só o contato já estava gravado", async () => {
+    const { db } = bancoFalso();
+    const d = deps(db);
+    d.criarNegocio = vi.fn(async () => {
+      throw new Error("sem etapa");
+    });
+    const erro = await gravarPlano(d, ctx, imp, criar({ negocio: negocioPerdido })).catch((e: unknown) => e);
+    expect(idsGravados(erro)).toEqual({ contatoId: "novo-1" });
+  });
+
+  it("falha antes de gravar o contato não carrega id nenhum", () => {
+    expect(idsGravados(new ErroDaLinha("x"))).toEqual({});
+    expect(idsGravados(new Error("x"))).toEqual({});
   });
 });
 

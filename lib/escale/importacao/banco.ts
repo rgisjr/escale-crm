@@ -13,7 +13,7 @@ import { acaoValida, type Acao, type Motivo } from "./regras";
 import { LINHAS_DO_RELATORIO_MAX } from "./relatorio";
 import type { Resolucao } from "./classificar";
 import { lerContextoDaRodada, type Importacao, type LinhaParaProcessar } from "./contexto";
-import { contarImportacao, processarLinhas, type Dependencias } from "./executar";
+import { contarImportacao, membrosParaAImportacao, processarLinhas, type Dependencias } from "./executar";
 import type { StatusDaLinha } from "./textos";
 import { PAGINA_DA_LISTA, type ImportacaoLida, type LinhaLida, type PedidoDeImportacao } from "./tipos";
 
@@ -261,7 +261,7 @@ export async function resolverLinha(
   const linhas = (tomada.data ?? []) as LinhaParaProcessar[];
   if (linhas.length === 0) throw new ErroDaImportacao("estado", "Esta linha já foi resolvida.");
 
-  const rodada = await lerContextoDaRodada(deps.db, importacao, await deps.lerMembros(orgId));
+  const rodada = await lerContextoDaRodada(deps.db, importacao, await membrosParaAImportacao(deps, importacao));
   await processarLinhas(deps, rodada, linhas);
   const statusDaImportacao = await contarImportacao(deps, importacaoId);
   const depois = await deps.db.from("crm_importacoes_linhas").select("status, motivo").eq("id", linhaId).maybeSingle();

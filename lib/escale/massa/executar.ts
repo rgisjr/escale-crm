@@ -184,19 +184,22 @@ async function emLotes(acao: Acao, ctx: Ctx, deps: Dependencias): Promise<Handle
     if (error) throw new Error(error.message);
     const ids = ((data ?? []) as Array<{ contact_id: string }>).map((i) => i.contact_id);
     if (ids.length === 0) {
-      await deps.db
+      const fim = await deps.db
         .from("crm_acoes_em_massa")
         .update({ status: "concluida", feitos, falhas, erros })
         .eq("id", acao.id);
+      // Sem isso a ação ficava "processando" para sempre e a tela esperava sem fim.
+      if (fim.error) throw new Error(fim.error.message);
       return resultado("ok");
     }
+    // Lê antes de marcar: se a leitura cair, o lote continua pendente e a nova tentativa o refaz.
+    const contatos = await lerContatos(deps.db, acao.organization_id, ids);
     const marcado = await deps.db
       .from("crm_acoes_em_massa_itens")
       .update({ feito: true })
       .eq("acao_id", acao.id)
       .in("contact_id", ids);
     if (marcado.error) throw new Error(marcado.error.message);
-    const contatos = await lerContatos(deps.db, acao.organization_id, ids);
     for (const id of ids) {
       try {
         await agir(acao, ctx, deps, id, contatos.get(id));
@@ -273,7 +276,7 @@ async function exportar(acao: Acao, deps: Dependencias): Promise<HandlerResult> 
       contentType: "text/csv; charset=utf-8",
     });
   if (subida.error) throw new Error(subida.error.message);
-  await deps.db
+  const fim = await deps.db
     .from("crm_acoes_em_massa")
     .update({
       status: "concluida",
@@ -283,6 +286,7 @@ async function exportar(acao: Acao, deps: Dependencias): Promise<HandlerResult> 
       expira_em: new Date(deps.agora() + VALIDADE_DO_ARQUIVO_MS).toISOString(),
     })
     .eq("id", acao.id);
+  if (fim.error) throw new Error(fim.error.message);
   return resultado("ok");
 }
 
@@ -306,7 +310,11 @@ export async function processarAcaoEmMassa(
   if (acao.status !== "na_fila" && acao.status !== "processando")
     return resultado("skipped", "fora_da_fila");
   if (acao.status !== "processando") {
-    await deps.db.from("crm_acoes_em_massa").update({ status: "processando" }).eq("id", acao.id);
+    const inicio = await deps.db
+      .from("crm_acoes_em_massa")
+      .update({ status: "processando" })
+      .eq("id", acao.id);
+    if (inicio.error) return resultado("error", inicio.error.message);
   }
   const ctx: Ctx = {
     organization_id: acao.organization_id,

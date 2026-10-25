@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/types";
 import { STATUS_EM_ANDAMENTO } from "@/lib/escale/importacao/textos";
 import type { ImportacaoLida } from "@/lib/escale/importacao/tipos";
 
@@ -42,16 +43,18 @@ export function AcompanharImportacoes() {
   const t = useT();
   const router = useRouter();
   useEffect(() => {
-    const id = setInterval(async () => {
-      const acompanhadas = ler();
-      if (acompanhadas.length === 0) return;
-      const ainda: string[] = [];
+    // Uma rodada por vez: com a API lenta a rodada nova começava antes da velha acabar e os avisos saíam em dobro.
+    let rodando = false;
+
+    /** Pergunta por cada importação e devolve as que não precisam mais ser acompanhadas. */
+    async function perguntar(acompanhadas: string[]): Promise<Set<string>> {
+      const terminadas = new Set<string>();
       for (const imp of acompanhadas) {
         try {
           const i = (await apiClient.get<{ data: ImportacaoLida }>(`/api/v1/importacoes/${imp}`)).data;
-          if (STATUS_EM_ANDAMENTO.includes(i.status)) {
-            ainda.push(imp);
-          } else if (i.status === "aguardando_revisao") {
+          if (STATUS_EM_ANDAMENTO.includes(i.status)) continue;
+          terminadas.add(imp);
+          if (i.status === "aguardando_revisao") {
             toast(t("{n} linhas precisam de revisão").replace("{n}", String(i.revisar)), {
               action: { label: t("Revisar"), onClick: () => router.push(`/app/imports/${imp}?revisar=1`) },
             });
@@ -62,11 +65,26 @@ export function AcompanharImportacoes() {
           } else if (i.status === "falhou") {
             toast.error(t("A importação falhou. Tente novamente ou fale com o suporte."));
           }
-        } catch {
-          ainda.push(imp);
+        } catch (e) {
+          // Importação que não existe mais (outra organização, apagada): sai da lista em vez de ser perguntada para sempre.
+          if (e instanceof ApiError && e.status === 404) terminadas.add(imp);
         }
       }
-      gravar(ainda);
+      return terminadas;
+    }
+
+    const id = setInterval(async () => {
+      if (rodando) return;
+      const acompanhadas = ler();
+      if (acompanhadas.length === 0) return;
+      rodando = true;
+      try {
+        const terminadas = await perguntar(acompanhadas);
+        // Relê antes de gravar: uma importação criada durante a rodada não pode se perder.
+        gravar(ler().filter((x) => !terminadas.has(x)));
+      } finally {
+        rodando = false;
+      }
     }, INTERVALO_MS);
     return () => clearInterval(id);
   }, [router, t]);

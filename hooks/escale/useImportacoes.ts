@@ -10,6 +10,8 @@ import type { ImportacaoLida, LinhaLida, PedidoDeImportacao } from "@/lib/escale
 /** Ler e mexer nas importações (fork Escale, Fase 2F). */
 export const CHAVE_DAS_IMPORTACOES = ["importacoes"] as const;
 const INTERVALO_MS = 5000;
+/** O envio do arquivo (até 25 MB) e a gravação dos lotes podem demorar, mas não para sempre. */
+export const TEMPO_LIMITE_DO_ENVIO_MS = 180_000;
 
 export type DestinoDaImportacao = {
   id: string;
@@ -60,12 +62,29 @@ export function useDestinosDaImportacao(ativo: boolean) {
 export function useCriarImportacao() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ arquivo, pedido }: { arquivo: File; pedido: PedidoDeImportacao }) => {
+    mutationFn: async ({ arquivo, pedido, signal }: { arquivo: File; pedido: PedidoDeImportacao; signal?: AbortSignal }) => {
       const form = new FormData();
       form.append("arquivo", arquivo);
       form.append("pedido", JSON.stringify(pedido));
-      const res = await fetch("/api/v1/importacoes", { method: "POST", body: form });
-      const json = (await res.json().catch(() => null)) as { data?: { id: string; total: number }; error?: { message?: string } } | null;
+      // Tempo limite + cancelamento de quem fechou a janela: sem isso uma conexão pendurada trava a tela.
+      const limite = new AbortController();
+      let estourou = false;
+      const relogio = setTimeout(() => {
+        estourou = true;
+        limite.abort();
+      }, TEMPO_LIMITE_DO_ENVIO_MS);
+      type Resposta = { data?: { id: string; total: number }; error?: { message?: string } };
+      let res: Response;
+      let json: Resposta | null;
+      try {
+        res = await fetch("/api/v1/importacoes", { method: "POST", body: form, signal: signal ? AbortSignal.any([signal, limite.signal]) : limite.signal });
+        json = (await res.json().catch(() => null)) as Resposta | null;
+      } catch (e) {
+        if (estourou) throw new Error("O envio demorou demais. Confira a lista de importações e tente de novo.");
+        throw e;
+      } finally {
+        clearTimeout(relogio);
+      }
       if (res.status === 413) throw new Error("O arquivo passa de 25 MB.");
       if (!res.ok || !json?.data) throw new Error(json?.error?.message ?? "Não foi possível iniciar a importação.");
       return json.data;

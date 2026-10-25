@@ -34,7 +34,7 @@ const nomeDaLinha = (l: LinhaLida) => {
 export function RevisarPendencias({ id }: { id: string }) {
   const t = useT();
   const router = useRouter();
-  useImportacao(id);
+  const importacao = useImportacao(id);
   const lidas = useLinhasDaImportacao(id, "revisar");
   const resolver = useResolverLinha(id);
   const emLote = useResolverEmLote(id);
@@ -66,6 +66,21 @@ export function RevisarPendencias({ id }: { id: string }) {
   const visiveis = filtro ? linhas.filter((l) => l.motivo === filtro) : linhas;
   const atual = visiveis.find((l) => l.id === escolhida) ?? visiveis[0] ?? null;
   const resolvidas = Math.max(0, maior - linhas.length);
+
+  // A revisão traz no máximo 500 linhas: esvaziou a lista local mas a importação ainda tem pendências, busca as próximas.
+  const faltam = importacao.data?.revisar ?? 0;
+  const [buscouComFaltando, setBuscouComFaltando] = useState(-1);
+  const [buscandoMais, setBuscandoMais] = useState(false);
+  const esvaziou = maior > 0 || lidas.data?.length === 0;
+  const precisaBuscar = linhas.length === 0 && esvaziou && !!lidas.data && !lidas.isError && faltam > 0 && buscouComFaltando !== faltam;
+  const { refetch: buscarDeNovo } = lidas;
+  useEffect(() => {
+    if (!precisaBuscar || lidas.isFetching) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marca que a busca saiu, para a tela esperar em vez de dizer "Tudo revisado!"
+    setBuscouComFaltando(faltam);
+    setBuscandoMais(true);
+    void Promise.resolve(buscarDeNovo()).finally(() => setBuscandoMais(false));
+  }, [precisaBuscar, lidas.isFetching, faltam, buscarDeNovo]);
 
   async function resolverAtual(acao: Acao, dados?: Resolucao["dados"]) {
     if (!atual) return;
@@ -121,8 +136,15 @@ export function RevisarPendencias({ id }: { id: string }) {
         ) : null}
       </header>
 
-      {lidas.isLoading ? (
+      {lidas.isLoading || precisaBuscar || buscandoMais || (linhas.length === 0 && esvaziou && lidas.isFetching) ? (
         <p className="p-10 text-center text-[13px] text-[#5A5964]">{t("Carregando…")}</p>
+      ) : lidas.isError && linhas.length === 0 ? (
+        <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 p-10">
+          <p className="font-semibold text-casca-texto">{t("Não foi possível carregar as pendências.")}</p>
+          <BotaoDaCasca type="button" variante="marca" onClick={() => void lidas.refetch()}>
+            {t("Tentar de novo")}
+          </BotaoDaCasca>
+        </div>
       ) : linhas.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10">
           <CheckCircle2 size={40} aria-hidden className="text-[#1F9D55]" />

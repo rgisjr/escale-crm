@@ -12,7 +12,26 @@ import { ORIGEM_DA_PLANILHA } from "@/lib/leads/planilha";
 
 import type { Plano, PlanoDaEmpresa, PlanoDoContato, PlanoDoNegocio } from "./classificar";
 
-export class ErroDaLinha extends Error {}
+/** O que já foi gravado quando a linha falhou no meio (contato primeiro; empresa e negócio depois). */
+export interface IdsParciais {
+  contatoId?: string;
+  negocioId?: string;
+}
+
+export class ErroDaLinha extends Error {
+  constructor(
+    mensagem: string,
+    readonly ids: IdsParciais = {},
+  ) {
+    super(mensagem);
+  }
+}
+
+/** Os ids já gravados que a falha carrega, para a linha com erro apontar para eles (e a reimportação não duplicar). */
+export const idsGravados = (e: unknown): IdsParciais => (e instanceof ErroDaLinha ? e.ids : {});
+
+const comIds = (e: unknown, ids: IdsParciais) =>
+  new ErroDaLinha(e instanceof Error ? e.message : String(e), { ...idsGravados(e), ...ids });
 
 export interface DependenciasDaGravacao {
   db: SupabaseClient;
@@ -176,11 +195,16 @@ async function gravarNegocio(
     via_planilha: true,
   });
   const id = String(criado.id);
-  if (n.status !== "open") {
-    await deps.encerrar(ctx, { leadId: id, desfecho: n.status, motivo: n.status === "lost" ? n.motivoDePerda : null });
-  }
-  if (n.status === "won" && n.ganhoEm) {
-    await deps.db.from("crm_leads").update({ closed_at: `${n.ganhoEm}T12:00:00Z` }).eq("organization_id", org).eq("id", id);
+  try {
+    if (n.status !== "open") {
+      await deps.encerrar(ctx, { leadId: id, desfecho: n.status, motivo: n.status === "lost" ? n.motivoDePerda : null });
+    }
+    if (n.status === "won" && n.ganhoEm) {
+      await deps.db.from("crm_leads").update({ closed_at: `${n.ganhoEm}T12:00:00Z` }).eq("organization_id", org).eq("id", id);
+    }
+  } catch (e) {
+    // O negócio já existe (aberto): a linha com erro guarda o id para o relatório e a reimportação não o duplicar.
+    throw comIds(e, { negocioId: id });
   }
   return id;
 }
@@ -195,7 +219,12 @@ export async function gravarPlano(
     throw new ErroDaLinha("Só administrador importa negócio ganho.");
   }
   const contatoId = await gravarContato(deps, ctx, imp, plano.contato);
-  if (plano.empresa) await gravarEmpresa(deps, imp, contatoId, plano.empresa);
-  const negocioId = plano.negocio ? await gravarNegocio(deps, ctx, imp, contatoId, plano.negocio) : null;
-  return { contatoId, negocioId };
+  try {
+    if (plano.empresa) await gravarEmpresa(deps, imp, contatoId, plano.empresa);
+    const negocioId = plano.negocio ? await gravarNegocio(deps, ctx, imp, contatoId, plano.negocio) : null;
+    return { contatoId, negocioId };
+  } catch (e) {
+    // O contato já foi gravado: a linha com erro aponta para ele.
+    throw comIds(e, { contatoId });
+  }
 }

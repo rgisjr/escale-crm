@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/v1/acoes-em-massa-conversas/route";
+import { processarAcaoDaFila } from "@/lib/escale/conversas/massa/executar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { ORG_ID, authOk } from "@/tests/helpers/stages-db-double";
@@ -97,5 +98,19 @@ describe("POST /api/v1/acoes-em-massa-conversas — atendente em lote", () => {
     expect(r.status).toBe(201);
     const { data } = (await r.json()) as { data: Record<string, unknown> };
     expect(data).toMatchObject({ status: "concluida", feitos: 3, falhas: 2 });
+  });
+  it("emit_event que falha marca a ação como 'falhou' e devolve 500 (B1-4/B6-7)", async () => {
+    usar({ CHAT_BULK_ACTIONS: true, CHAT_CHANGE_ATTENDANT_ALL: true });
+    vi.mocked(processarAcaoDaFila).mockResolvedValueOnce({ status: "retry" } as never);
+    const admin = bancoPorTabela(
+      { user_organizations: [{ role: "agent" }], crm_acoes_em_massa_conversas: [] },
+      { rpc: () => ({ data: null, error: { message: "evento caiu" } }) },
+    );
+    vi.mocked(createAdminClient).mockReturnValue(admin.db as never);
+    const r = await POST(pedido({ acao: "atendente", alvo: ids, parametros: { user_id: DESTINO } }));
+    expect(r.status).toBe(500);
+    expect(admin.escritas).toContainEqual(
+      expect.objectContaining({ tabela: "crm_acoes_em_massa_conversas", op: "update", valores: expect.objectContaining({ status: "falhou" }) }),
+    );
   });
 });
