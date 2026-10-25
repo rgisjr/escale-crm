@@ -226,6 +226,8 @@ export async function listarContatos(
       .in("person_id", pessoas)
       .order("is_primary", { ascending: false })
       .order("created_at");
+    // A coluna Empresa vazia por falha de leitura parecia dado real.
+    if (vinculos.error) throw vinculos.error;
     const escolhido = new Map<string, string>();
     for (const v of (vinculos.data ?? []) as Array<{ person_id: string; company_id: string }>) {
       if (!escolhido.has(v.person_id)) escolhido.set(v.person_id, v.company_id);
@@ -236,6 +238,7 @@ export async function listarContatos(
         .select("id, trade_name, legal_name")
         .eq("organization_id", orgId)
         .in("id", [...new Set(escolhido.values())]);
+      if (empresas.error) throw empresas.error;
       const nomePorEmpresa = new Map(
         ((empresas.data ?? []) as Array<{ id: string; trade_name: string | null; legal_name: string | null }>).map(
           (e) => [e.id, nomeDaEmpresa(e)],

@@ -43,6 +43,7 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
   if (!authz.ok) return authz.response;
   const t = (s: string) => traduzir(s, authz.user.idioma);
   const { id } = await ctx.params;
+  if (!UUID.test(id)) return fail("not_found", t("Empresa não encontrada"), 404, { requestId });
   const corpo = await lerJson(req);
   if (!corpo.ok) return fail("invalid_request", t("Corpo não é JSON válido."), 400, { requestId });
   const lido = corpoSchema.safeParse(corpo.json);

@@ -1,6 +1,6 @@
 "use client";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import {
@@ -72,28 +72,38 @@ export function JanelaDeMescla({
       return novo;
     });
 
+  // Fechar a janela no meio de "Mesclando" não pode deixar a resposta atrasada gravar a etapa
+  // ("concluída"/"erro") para a próxima vez que ela abrir.
+  const geracao = useRef(0);
   const rodarUnica = (p: PedidoDaComparacao) => {
     setEtapa({ tipo: "mesclando" });
+    const minha = geracao.current;
     mesclar.mutate(
       { principal_id: p.principal.id, secundarios: p.secundarios, escolhas: p.escolhas },
       {
         onSuccess: (r) => {
           aoMesclar(r);
+          if (minha !== geracao.current) return;
           setEscolhida(null);
           setEtapa({ tipo: "concluida", contatos: r.contatos_mesclados.length + 1, falhas: [], vencedor: r.contato_id });
         },
-        onError: (e) => setEtapa({ tipo: "erro", mensagem: e.message, repetir: () => rodarUnica(p) }),
+        onError: (e) => {
+          if (minha !== geracao.current) return;
+          setEtapa({ tipo: "erro", mensagem: e.message, repetir: () => rodarUnica(p) });
+        },
       },
     );
   };
   const rodarEmMassa = () => {
     const grupos = selecionadas.map((s) => s.contatos.map((c) => c.id));
     setEtapa({ tipo: "mesclando" });
+    const minha = geracao.current;
     emMassa.mutate(
       { grupos, prioridade },
       {
         onSuccess: (r) => {
           r.mesclados.forEach(aoMesclar);
+          if (minha !== geracao.current) return;
           setMarcadas(new Set());
           setEtapa({
             tipo: "concluida",
@@ -102,12 +112,16 @@ export function JanelaDeMescla({
             vencedor: null,
           });
         },
-        onError: (e) => setEtapa({ tipo: "erro", mensagem: e.message, repetir: rodarEmMassa }),
+        onError: (e) => {
+          if (minha !== geracao.current) return;
+          setEtapa({ tipo: "erro", mensagem: e.message, repetir: rodarEmMassa });
+        },
       },
     );
   };
 
   const fechar = () => {
+    geracao.current += 1;
     setEtapa({ tipo: "lista" });
     setEscolhida(null);
     setMarcadas(new Set());

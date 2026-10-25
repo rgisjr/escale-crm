@@ -27,12 +27,13 @@ export async function negociosDoContato(
   orgId: string,
   contatoId: string,
 ): Promise<FichaDeNegociosDoContato | null> {
-  const { data: contato } = await sb
+  const { data: contato, error: erroDoContato } = await sb
     .from("contacts")
     .select("id")
     .eq("organization_id", orgId)
     .eq("id", contatoId)
     .maybeSingle();
+  if (erroDoContato) throw erroDoContato;
   if (!contato) return null;
 
   const { data, error } = await sb

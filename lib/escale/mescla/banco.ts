@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
+import { logger } from "@/lib/logger";
 import { instagramDoLink } from "@/lib/escale/contatos/regras";
 import { trocarEmpresaDoContato } from "@/lib/escale/empresas/banco";
 import {
@@ -68,11 +69,16 @@ export function statusDoErroDaMescla(codigo: CodigoDoErroDaMescla): number {
 
 function erroDoBanco(mensagem: string | undefined): ErroDaMescla {
   const bruto = mensagem ?? "";
-  const previsto = (Object.keys(TEXTO_DO_ERRO_DA_MESCLA) as CodigoDoErroDaMescla[]).find((c) => bruto.includes(c));
+  const previsto = (Object.keys(TEXTO_DO_ERRO_DA_MESCLA) as CodigoDoErroDaMescla[]).find((c) =>
+    bruto.includes(c),
+  );
   return new ErroDaMescla(previsto ?? "falhou");
 }
 
-async function emLotes<T>(ids: readonly string[], ler: (lote: string[]) => Promise<T[]>): Promise<T[]> {
+async function emLotes<T>(
+  ids: readonly string[],
+  ler: (lote: string[]) => Promise<T[]>,
+): Promise<T[]> {
   const saida: T[] = [];
   for (let i = 0; i < ids.length; i += LOTE) saida.push(...(await ler(ids.slice(i, i + LOTE))));
   return saida;
@@ -119,32 +125,37 @@ async function empresasDasPessoas(sb: SB, orgId: string, pessoas: string[]) {
   return porPessoa;
 }
 
-export async function contatosDaMescla(sb: SB, orgId: string, ids: readonly string[]): Promise<Map<string, ContatoDaMescla>> {
+export async function contatosDaMescla(
+  sb: SB,
+  orgId: string,
+  ids: readonly string[],
+): Promise<Map<string, ContatoDaMescla>> {
   const unicos = [...new Set(ids)];
-  const linhas = await emLotes(unicos, async (lote) => {
-    const { data, error } = await sb
-      .from("contacts")
-      .select("id, name, display_name, phone_number, email, wa_lid, custom_fields, tags, person_id, created_at, updated_at")
-      .eq("organization_id", orgId)
-      .is("is_merged_into", null)
-      .in("id", lote);
-    if (error) throw error;
-    return (data ?? []) as LinhaDoContato[];
-  });
-  const ativos = new Set(
-    (
-      await emLotes(unicos, async (lote) => {
-        const { data, error } = await sb
-          .from("conversations")
-          .select("contact_id")
-          .eq("organization_id", orgId)
-          .in("status", [...ATENDIMENTO_ATIVO])
-          .in("contact_id", lote);
-        if (error) throw error;
-        return (data ?? []) as Array<{ contact_id: string }>;
-      })
-    ).map((c) => c.contact_id),
-  );
+  const [linhas, comAtendimento] = await Promise.all([
+    emLotes(unicos, async (lote) => {
+      const { data, error } = await sb
+        .from("contacts")
+        .select(
+          "id, name, display_name, phone_number, email, wa_lid, custom_fields, tags, person_id, created_at, updated_at",
+        )
+        .eq("organization_id", orgId)
+        .is("is_merged_into", null)
+        .in("id", lote);
+      if (error) throw error;
+      return (data ?? []) as LinhaDoContato[];
+    }),
+    emLotes(unicos, async (lote) => {
+      const { data, error } = await sb
+        .from("conversations")
+        .select("contact_id")
+        .eq("organization_id", orgId)
+        .in("status", [...ATENDIMENTO_ATIVO])
+        .in("contact_id", lote);
+      if (error) throw error;
+      return (data ?? []) as Array<{ contact_id: string }>;
+    }),
+  ]);
+  const ativos = new Set(comAtendimento.map((c) => c.contact_id));
   const empresas = await empresasDasPessoas(
     sb,
     orgId,
@@ -152,7 +163,8 @@ export async function contatosDaMescla(sb: SB, orgId: string, ids: readonly stri
   );
   return new Map(
     linhas.map((l) => {
-      const link = typeof l.custom_fields?.link_instagram === "string" ? l.custom_fields.link_instagram : null;
+      const link =
+        typeof l.custom_fields?.link_instagram === "string" ? l.custom_fields.link_instagram : null;
       const contato: ContatoDaMescla = {
         id: l.id,
         nome: nomeDoContato(l),
@@ -177,7 +189,8 @@ const TOTAIS_GUARDADOS_MAX = 200;
 const totaisGuardados = new Map<string, { total: number; vence: number }>();
 
 function esquecerTotais(orgId: string) {
-  for (const chave of totaisGuardados.keys()) if (chave.startsWith(`${orgId}|`)) totaisGuardados.delete(chave);
+  for (const chave of totaisGuardados.keys())
+    if (chave.startsWith(`${orgId}|`)) totaisGuardados.delete(chave);
 }
 
 export async function lerSugestoes(
@@ -195,12 +208,24 @@ export async function lerSugestoes(
   if (error) throw error;
   const todasAsChaves = (data ?? []) as ChaveDeMescla[];
   // Com `contato`, só o grupo dele interessa: não carrega os duplicados da organização inteira.
-  const chaves = consulta.contato ? chavesDoGrupoDe(todasAsChaves, consulta.contato) : todasAsChaves;
-  const contatos = await contatosDaMescla(sb, orgId, chaves.map((c) => c.contato_id));
-  const todas = ordenarSugestoes(filtrarSugestoes(montarSugestoes(chaves, contatos), consulta), consulta.ordem);
+  const chaves = consulta.contato
+    ? chavesDoGrupoDe(todasAsChaves, consulta.contato)
+    : todasAsChaves;
+  const contatos = await contatosDaMescla(
+    sb,
+    orgId,
+    chaves.map((c) => c.contato_id),
+  );
+  const todas = ordenarSugestoes(
+    filtrarSugestoes(montarSugestoes(chaves, contatos), consulta),
+    consulta.ordem,
+  );
   if (soOTotal) {
     if (totaisGuardados.size >= TOTAIS_GUARDADOS_MAX) totaisGuardados.clear();
-    totaisGuardados.set(chaveDoTotal, { total: todas.length, vence: Date.now() + VALIDADE_DO_TOTAL_MS });
+    totaisGuardados.set(chaveDoTotal, {
+      total: todas.length,
+      vence: Date.now() + VALIDADE_DO_TOTAL_MS,
+    });
   }
   const inicio = (consulta.p - 1) * consulta.n;
   return { data: todas.slice(inicio, inicio + consulta.n), total: todas.length };
@@ -209,6 +234,8 @@ export async function lerSugestoes(
 export interface ResultadoDaMescla {
   contato_id: string;
   contatos_mesclados: string[];
+  /** A mescla valeu, mas a empresa escolhida não foi aplicada ao contato principal. */
+  empresa_nao_trocada?: boolean;
 }
 
 /** Os valores escolhidos, lidos do banco (a tela manda ids, N11). */
@@ -245,11 +272,29 @@ export async function mesclarGrupo(
   if (error) throw erroDoBanco(error.message);
   esquecerTotais(orgId);
 
+  let empresaNaoTrocada = false;
   const empresaEscolhida = escolhas.empresa ? contatos.get(escolhas.empresa)?.empresa : undefined;
   const empresaAtual = contatos.get(principal)?.empresa;
   if (empresaEscolhida && empresaEscolhida.id !== empresaAtual?.id) {
-    await trocarEmpresaDoContato(sb, admin, orgId, autor, principal, { empresa_id: empresaEscolhida.id });
+    // A mescla já foi gravada: falhar a troca de empresa não pode virar erro (a tela ficaria com os
+    // contatos "separados" e tentar de novo daria grupo_mudou). Fica no log e a resposta avisa.
+    try {
+      await trocarEmpresaDoContato(sb, admin, orgId, autor, principal, {
+        empresa_id: empresaEscolhida.id,
+      });
+    } catch (e) {
+      logger.error("mescla.trocar_empresa", {
+        orgId,
+        principal,
+        erro: e instanceof Error ? e.message : String(e),
+      });
+      empresaNaoTrocada = true;
+    }
   }
   const resultado = data as { contato_id: string; contatos_mesclados: string[] };
-  return { contato_id: resultado.contato_id, contatos_mesclados: resultado.contatos_mesclados };
+  return {
+    contato_id: resultado.contato_id,
+    contatos_mesclados: resultado.contatos_mesclados,
+    ...(empresaNaoTrocada ? { empresa_nao_trocada: true } : {}),
+  };
 }

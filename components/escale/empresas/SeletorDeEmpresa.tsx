@@ -35,18 +35,32 @@ export function SeletorDeEmpresa({
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
   const [achadas, setAchadas] = useState<Achada[]>([]);
+  const [falhou, setFalhou] = useState(false);
 
   useEffect(() => {
     if (!aberto) return;
     const termo = busca.trim();
+    // Cancela a busca do termo anterior: a resposta velha não pode chegar por último e valer.
+    const cancelar = new AbortController();
     const id = window.setTimeout(async () => {
-      const r = await fetch(
-        `/api/v1/empresas?e=com_nome&n=10${termo ? `&q=${encodeURIComponent(termo)}` : ""}`,
-      );
-      const corpo = await r.json().catch(() => null);
-      setAchadas(((corpo?.data?.linhas ?? []) as Achada[]).map((l) => ({ id: l.id, nome: l.nome })));
+      try {
+        const r = await fetch(
+          `/api/v1/empresas?e=com_nome&n=10${termo ? `&q=${encodeURIComponent(termo)}` : ""}`,
+          { signal: cancelar.signal },
+        );
+        if (!r.ok) throw new Error(String(r.status));
+        const corpo = await r.json();
+        setAchadas(((corpo?.data?.linhas ?? []) as Achada[]).map((l) => ({ id: l.id, nome: l.nome })));
+        setFalhou(false);
+      } catch {
+        // Falha de rede não pode virar "nenhuma encontrada" (ofereceria criar uma empresa duplicada).
+        if (!cancelar.signal.aborted) setFalhou(true);
+      }
     }, 300);
-    return () => window.clearTimeout(id);
+    return () => {
+      window.clearTimeout(id);
+      cancelar.abort();
+    };
   }, [busca, aberto]);
 
   const termo = busca.trim();
@@ -97,7 +111,12 @@ export function SeletorDeEmpresa({
               <span className="truncate">{a.nome}</span>
             </li>
           ))}
-          {termo && !exata ? (
+          {falhou ? (
+            <li role="alert" className="px-2 py-1.5 text-[12px] text-casca-suave">
+              {t("Não foi possível buscar as empresas.")}
+            </li>
+          ) : null}
+          {termo && !exata && !falhou ? (
             <li
               role="option"
               aria-selected={false}

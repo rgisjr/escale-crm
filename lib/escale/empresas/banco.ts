@@ -144,6 +144,9 @@ export async function listarEmpresas(sb: SB, orgId: string, consulta: ConsultaDa
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (empresas.error) throw empresas.error;
+  // Sem estas duas conferências a falha virava "Contato principal —" como se fosse dado real.
+  if (contatos.error) throw contatos.error;
+  if (conversas.error) throw conversas.error;
   const porId = new Map(((empresas.data ?? []) as Array<Record<string, unknown>>).map((e) => [String(e.id), e]));
   const contatoPorId = new Map(((contatos.data ?? []) as Array<Record<string, unknown>>).map((c) => [String(c.id), c]));
   const conversaPorContato = new Map<string, string>();
@@ -314,6 +317,7 @@ async function lerContatosELeadsDaEmpresa(sb: SB, orgId: string, id: string): Pr
   ]);
   // Sem esta conferência o valor em aberto sairia zerado em silêncio.
   if (leads.error) throw leads.error;
+  if (conversas.error) throw conversas.error;
   const negociosPorContato = new Map<string, string[]>();
   const leadsLidos = (leads.data ?? []) as unknown as LeadDoContato[];
   for (const l of leadsLidos) {
@@ -372,10 +376,12 @@ export async function negociosDaEmpresa(sb: SB, orgId: string, id: string): Prom
 }
 
 export async function empresaDoContato(sb: SB, orgId: string, contatoId: string): Promise<EmpresaDoContato | null> {
-  const { data: c } = await sb.from("contacts").select("person_id").eq("organization_id", orgId).eq("id", contatoId).maybeSingle();
+  // Erro do banco sobe: virar `null` fazia "tirar da empresa" valer como no-op e "Nova empresa" criar sem copiar nada.
+  const { data: c, error: erroDoContato } = await sb.from("contacts").select("person_id").eq("organization_id", orgId).eq("id", contatoId).maybeSingle();
+  if (erroDoContato) throw erroDoContato;
   const pessoa = (c as { person_id: string | null } | null)?.person_id;
   if (!pessoa) return null;
-  const { data: vinculos } = await sb
+  const { data: vinculos, error: erroDoVinculo } = await sb
     .from("company_people")
     .select("company_id, is_primary, created_at")
     .eq("organization_id", orgId)
@@ -383,9 +389,11 @@ export async function empresaDoContato(sb: SB, orgId: string, contatoId: string)
     .order("is_primary", { ascending: false })
     .order("created_at")
     .limit(1);
+  if (erroDoVinculo) throw erroDoVinculo;
   const v = ((vinculos ?? []) as Array<{ company_id: string; is_primary: boolean }>)[0];
   if (!v) return null;
-  const { data: e } = await sb.from("companies").select(COLUNAS_DA_EMPRESA).eq("organization_id", orgId).eq("id", v.company_id).maybeSingle();
+  const { data: e, error: erroDaEmpresa } = await sb.from("companies").select(COLUNAS_DA_EMPRESA).eq("organization_id", orgId).eq("id", v.company_id).maybeSingle();
+  if (erroDaEmpresa) throw erroDaEmpresa;
   if (!e) return null;
   return {
     id: String(e.id),
