@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET as GET_COLUNAS, PUT as PUT_COLUNAS } from "@/app/api/v1/colunas-das-listas/route";
 import { GET as GET_LISTA } from "@/app/api/v1/lista-de-contatos/route";
+import { GET as GET_TOTAL } from "@/app/api/v1/lista-de-contatos/total/route";
 import { requireRole } from "@/lib/auth/require-role";
 import { parametrosDaBusca } from "@/lib/escale/contatos/lista";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -78,8 +79,8 @@ describe("GET /api/v1/lista-de-contatos", () => {
     const { rpc } = banco({
       rpc: {
         data: [
-          { contact_id: "c2", total: 12, negocios: 1, negocio_unico: "l9" },
-          { contact_id: "c1", total: 12, negocios: 0, negocio_unico: null },
+          { contact_id: "c2", negocios: 1, negocio_unico: "l9" },
+          { contact_id: "c1", negocios: 0, negocio_unico: null },
         ],
         error: null,
       },
@@ -142,9 +143,10 @@ describe("GET /api/v1/lista-de-contatos", () => {
       p_filtros: {},
     });
     const corpo = (await res.json()) as {
-      data: { total: number; linhas: Array<Record<string, unknown>> };
+      data: { linhas: Array<Record<string, unknown>> };
     };
-    expect(corpo.data.total).toBe(12);
+    // Q7d: a página não carrega o total (ele vem de /total, uma vez por filtro)
+    expect(corpo.data).not.toHaveProperty("total");
     expect(corpo.data.linhas.map((l) => l.id)).toEqual(["c2", "c1"]);
     expect(corpo.data.linhas[0]).toMatchObject({
       negocio_unico: "l9",
@@ -171,8 +173,8 @@ describe("GET /api/v1/lista-de-contatos", () => {
     const { rpc } = banco({});
     const res = await GET_LISTA(pedido("/api/v1/lista-de-contatos?q=a"));
     expect(rpc).not.toHaveBeenCalled();
-    const corpo = (await res.json()) as { data: { total: number } };
-    expect(corpo.data.total).toBe(0);
+    const corpo = (await res.json()) as { data: { linhas: unknown[] } };
+    expect(corpo.data.linhas).toEqual([]);
   });
 
   it("erro do banco é 500 sem a mensagem crua", async () => {
@@ -275,5 +277,45 @@ describe("/api/v1/colunas-das-listas", () => {
       }),
     );
     expect(barrado.status).toBe(403);
+  });
+});
+
+describe("GET /api/v1/lista-de-contatos/total (Q7d)", () => {
+  it("chama a função do total com a visão, a busca e o filtro — sem página — e devolve o número", async () => {
+    const { rpc } = banco({ rpc: { data: 12, error: null } });
+    const res = await GET_TOTAL(pedido("/api/v1/lista-de-contatos/total?v=com_negocio&p=3&n=50"));
+    expect(res.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("fn_escale_total_de_contatos", {
+      p_org: ORG_ID,
+      p_visao: "com_negocio",
+      p_padrao: null,
+      p_digitos: [],
+      p_cpf_hash: null,
+      p_filtros: {},
+    });
+    const corpo = (await res.json()) as { data: { total: number } };
+    expect(corpo.data.total).toBe(12);
+    expect(vi.mocked(requireRole).mock.calls.at(-1)?.[0]).toBe("viewer");
+  });
+
+  it("busca curta demais é 0 sem chamar o banco", async () => {
+    const { rpc } = banco({});
+    const res = await GET_TOTAL(pedido("/api/v1/lista-de-contatos/total?q=a"));
+    expect(rpc).not.toHaveBeenCalled();
+    expect(((await res.json()) as { data: { total: number } }).data.total).toBe(0);
+  });
+
+  it("filtro que não vale e consulta inválida são 422", async () => {
+    const { rpc } = banco({});
+    expect((await GET_TOTAL(pedido("/api/v1/lista-de-contatos/total?f=isto-nao-e-json"))).status).toBe(422);
+    expect((await GET_TOTAL(pedido("/api/v1/lista-de-contatos/total?v=xyz"))).status).toBe(422);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("erro do banco é 500 sem a mensagem crua", async () => {
+    banco({ rpc: { data: null, error: { code: "XX000", message: "falha em fn_escale_total_de_contatos" } } });
+    const res = await GET_TOTAL(pedido("/api/v1/lista-de-contatos/total"));
+    expect(res.status).toBe(500);
+    expect(JSON.stringify(await res.json())).not.toContain("fn_escale_total_de_contatos");
   });
 });

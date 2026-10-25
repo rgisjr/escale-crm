@@ -14,14 +14,35 @@ async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
   return corpo.data as T;
 }
 
+/** A página mais o total da consulta (Q7d): o total é uma chamada à parte, sem página nem tamanho na chave. */
+export type ListaDeEmpresasDaTela = PaginaDeEmpresas & { total: number };
+
 export function useListaDeEmpresas(consulta: ConsultaDaTelaDeEmpresas) {
   const qs = new URLSearchParams(Object.entries(consulta).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)]));
-  return useQuery({
+  const { q, e, f } = consulta;
+  const qsTotal = new URLSearchParams(Object.entries({ q, e, f }).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)]));
+  const pagina = useQuery({
     queryKey: ["companies", "lista-da-casca", consulta],
     queryFn: () => pedir<PaginaDeEmpresas>(`/api/v1/empresas?${qs}`),
     placeholderData: keepPreviousData,
     staleTime: 15_000,
   });
+  const total = useQuery({
+    queryKey: ["companies", "total-da-casca", { q, e, f }],
+    queryFn: async () => (await pedir<{ total: number }>(`/api/v1/empresas/total?${qsTotal}`)).total,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+  const data: ListaDeEmpresasDaTela | undefined =
+    pagina.data !== undefined && total.data !== undefined ? { ...pagina.data, total: total.data } : undefined;
+  return {
+    data,
+    isLoading: pagina.isLoading || total.isLoading,
+    isError: pagina.isError || total.isError,
+    error: pagina.error ?? total.error,
+    isFetching: pagina.isFetching || total.isFetching,
+    refetch: () => Promise.all([pagina.refetch(), total.refetch()]),
+  };
 }
 
 export function useExcluirEmpresa() {

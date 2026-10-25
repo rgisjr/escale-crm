@@ -77,9 +77,9 @@ export interface LinhaDeEmpresa {
   principal: PrincipalDaEmpresa | null;
 }
 
+/** A página não carrega o total: ele sai de `totalDeEmpresas`, pedido uma vez por filtro (Q7d). */
 export interface PaginaDeEmpresas {
   linhas: LinhaDeEmpresa[];
-  total: number;
   pagina: number;
   porPagina: number;
   moeda: string;
@@ -106,7 +106,6 @@ export function parametrosDaBuscaDeEmpresas(q: string | undefined): { padrao: st
 
 interface LinhaDaFuncao {
   company_id: string;
-  total: number;
   contatos: number;
   negocios: number;
   negocio_unico: string | null;
@@ -130,7 +129,7 @@ export async function listarEmpresas(sb: SB, orgId: string, consulta: ConsultaDa
   });
   if (error) throw error;
   const pagina = (data ?? []) as LinhaDaFuncao[];
-  if (pagina.length === 0) return { linhas: [], total: 0, pagina: consulta.p, porPagina: consulta.n, moeda };
+  if (pagina.length === 0) return { linhas: [], pagina: consulta.p, porPagina: consulta.n, moeda };
 
   const ids = pagina.map((l) => l.company_id);
   const principais = pagina.map((l) => l.principal).filter((x): x is string => Boolean(x));
@@ -177,7 +176,27 @@ export async function listarEmpresas(sb: SB, orgId: string, consulta: ConsultaDa
         : null,
     };
   });
-  return { linhas, total: Number(pagina[0]?.total ?? 0), pagina: consulta.p, porPagina: consulta.n, moeda };
+  return { linhas, pagina: consulta.p, porPagina: consulta.n, moeda };
+}
+
+/** Quantas empresas a consulta devolve (Q7d): o mesmo escopo, busca e filtro da página, sem página. */
+export async function totalDeEmpresas(
+  sb: SB,
+  orgId: string,
+  consulta: Pick<ConsultaDaListaDeEmpresas, "q" | "e" | "f">,
+): Promise<number> {
+  const { padrao, digitos } = parametrosDaBuscaDeEmpresas(consulta.q);
+  const filtro = filtrosDaConsulta({ f: consulta.f });
+  const fuso = filtro ? await fusoDaOrganizacao(sb, orgId) : "America/Sao_Paulo";
+  const { data, error } = await sb.rpc("fn_escale_total_de_empresas", {
+    p_org: orgId,
+    p_escopo: consulta.e,
+    p_padrao: padrao,
+    p_digitos: digitos,
+    p_filtros: filtro ? compilarFiltros(filtro, fuso) : {},
+  });
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 export async function criarEmpresa(admin: SB, orgId: string, autor: string, entrada: NovaEmpresa): Promise<string> {

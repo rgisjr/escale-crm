@@ -119,16 +119,15 @@ export type LinhaDeContato = {
   campos: Record<string, unknown>;
 };
 
+/** A página não carrega o total: ele sai de `totalDeContatos`, pedido uma vez por filtro (Q7d). */
 export type PaginaDeContatos = {
   linhas: LinhaDeContato[];
-  total: number;
   pagina: number;
   porPagina: number;
 };
 
 type LinhaDaFuncao = {
   contact_id: string;
-  total: number | string;
   negocios: number;
   negocio_unico: string | null;
 };
@@ -170,7 +169,6 @@ export async function listarContatos(
 ): Promise<PaginaDeContatos> {
   const vazio: PaginaDeContatos = {
     linhas: [],
-    total: 0,
     pagina: consulta.p,
     porPagina: consulta.n,
   };
@@ -189,8 +187,7 @@ export async function listarContatos(
   });
   if (error) throw error;
   const ordem = (pagina ?? []) as LinhaDaFuncao[];
-  const primeira = ordem[0];
-  if (!primeira) return vazio;
+  if (ordem.length === 0) return vazio;
   const ids = ordem.map((l) => l.contact_id);
 
   const [contatos, conversas] = await Promise.all([
@@ -278,5 +275,26 @@ export async function listarContatos(
       campos: Object.fromEntries(Object.entries(c.custom_fields ?? {}).filter(([k]) => !k.startsWith("link_"))),
     });
   }
-  return { linhas, total: Number(primeira.total), pagina: consulta.p, porPagina: consulta.n };
+  return { linhas, pagina: consulta.p, porPagina: consulta.n };
+}
+
+/** Quantos contatos a consulta devolve (Q7d): a mesma busca, visão e filtro da página, sem página. */
+export async function totalDeContatos(
+  supabase: SupabaseClient,
+  orgId: string,
+  consulta: Pick<ConsultaDaLista, "q" | "v">,
+  filtro?: FiltroCompilado,
+): Promise<number> {
+  const busca = parametrosDaBusca(consulta.q);
+  if (busca.vazia) return 0;
+  const { data, error } = await supabase.rpc("fn_escale_total_de_contatos", {
+    p_org: orgId,
+    p_visao: consulta.v,
+    p_padrao: busca.padrao,
+    p_digitos: busca.digitos,
+    p_cpf_hash: busca.cpfHash,
+    p_filtros: filtro ?? {},
+  });
+  if (error) throw error;
+  return Number(data ?? 0);
 }
