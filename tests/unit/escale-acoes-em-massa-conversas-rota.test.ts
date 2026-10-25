@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/v1/acoes-em-massa-conversas/route";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { authOk } from "@/tests/helpers/stages-db-double";
+import { ORG_ID, authOk } from "@/tests/helpers/stages-db-double";
 import { bancoPorTabela } from "@/tests/helpers/supabase-por-tabela";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
@@ -27,7 +27,7 @@ const ACAO = "aaaaaaaa-0000-4000-8000-000000000001";
 const pedido = (corpo: unknown) =>
   new NextRequest("http://x", { method: "POST", body: JSON.stringify(corpo) } as never);
 
-function usar(permissoes: Record<string, boolean>) {
+function usar(permissoes: Record<string, boolean>, acaoGravada: Record<string, unknown>[] = []) {
   const b = bancoPorTabela(
     {},
     {
@@ -40,7 +40,10 @@ function usar(permissoes: Record<string, boolean>) {
   );
   vi.mocked(createClient).mockResolvedValue(b.db as never);
   vi.mocked(createAdminClient).mockReturnValue(
-    bancoPorTabela({ user_organizations: [{ role: "agent" }] }).db as never,
+    bancoPorTabela({
+      user_organizations: [{ role: "agent" }],
+      crm_acoes_em_massa_conversas: acaoGravada,
+    }).db as never,
   );
   return b;
 }
@@ -82,5 +85,17 @@ describe("POST /api/v1/acoes-em-massa-conversas — atendente em lote", () => {
     usar({ CHAT_BULK_ACTIONS: true });
     const r = await POST(pedido({ acao: "espera", alvo: ids, parametros: {} }));
     expect(r.status).not.toBe(403);
+  });
+
+  it("devolve feitos e falhas da ação imediata, para a tela avisar quando houve falha (B1-3)", async () => {
+    usar({ CHAT_BULK_ACTIONS: true, CHAT_CHANGE_ATTENDANT_ALL: true }, [
+      { id: ACAO, organization_id: ORG_ID, feitos: 3, falhas: 2 },
+    ]);
+    const r = await POST(
+      pedido({ acao: "atendente", alvo: ids, parametros: { user_id: DESTINO } }),
+    );
+    expect(r.status).toBe(201);
+    const { data } = (await r.json()) as { data: Record<string, unknown> };
+    expect(data).toMatchObject({ status: "concluida", feitos: 3, falhas: 2 });
   });
 });

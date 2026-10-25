@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { recarregarListasDasConversas } from "@/hooks/inbox/recargaDasConversas";
 import { apiClient } from "@/lib/api/client";
 import type { EventoDaConversa } from "@/lib/escale/conversas/eventos";
 
@@ -25,8 +26,8 @@ export function useConversaDaCasca(conversationId: string | null) {
   const base = `/api/v1/conversas-da-casca/${conversationId}`;
   const invalidarConversa = async () => {
     if (!conversationId) return;
+    recarregarListasDasConversas(qc);
     await Promise.all([
-      qc.invalidateQueries({ queryKey: ["conversations"] }),
       qc.invalidateQueries({ queryKey: ["conversation", conversationId] }),
       qc.invalidateQueries({ queryKey: CHAVE_DOS_EVENTOS(conversationId) }),
     ]);

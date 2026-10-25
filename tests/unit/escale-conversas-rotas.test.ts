@@ -74,6 +74,15 @@ describe("/api/v1/preferencias-de-conversas", () => {
     expect(vi.mocked(requireRole).mock.calls.at(-1)?.[0]).toBe("viewer");
   });
 
+  it("PUT de uma seção só mescla com o que já estava salvo (B1-5)", async () => {
+    const db = banco();
+    expect((await gravar({ chave: "secoes", valor: { notas: false } })).status).toBe(200);
+    expect((await gravar({ chave: "secoes", valor: { anexos: false } })).status).toBe(200);
+    const minhas = linhasDe(db).filter((l) => l.user_id === USER_ID);
+    expect(minhas).toHaveLength(1);
+    expect(minhas[0]).toMatchObject({ valor: { notas: false, anexos: false } });
+  });
+
   it("PUT grava uma chave por vez, uma linha por pessoa e chave, audita, e recusa fora da forma", async () => {
     const db = banco();
     expect((await gravar({ chave: "secoes", valor: { notas: false } })).status).toBe(200);

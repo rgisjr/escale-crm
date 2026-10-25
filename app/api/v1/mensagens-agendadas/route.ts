@@ -50,7 +50,14 @@ export async function GET(req: NextRequest): Promise<Response> {
   const supabase = await createClient();
   let q = supabase
     .from("crm_mensagens_agendadas")
-    .select(COLUNAS_DA_AGENDADA, { count: "exact" })
+    // Com busca, o embed do contato vira `!inner`: sem isso o PostgREST filtra só o contato
+    // embutido e devolve TODAS as linhas (B1-8), com o total errado.
+    .select(
+      f.busca
+        ? COLUNAS_DA_AGENDADA.replace("contacts:contact_id (", "contacts:contact_id!inner (")
+        : COLUNAS_DA_AGENDADA,
+      { count: "exact" },
+    )
     .eq("organization_id", authz.org.orgId)
     .eq("status", status)
     .order("enviar_em", { ascending: true })

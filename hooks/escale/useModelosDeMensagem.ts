@@ -46,7 +46,7 @@ function lerRecentes(orgId: string): string[] {
  * que a `JanelaFechadaAviso` do original usa (`rotaDeTemplates(fonte)`), mais
  * os "usados recentemente" (c63), guardados no navegador por organização.
  */
-export function useModelosDeMensagem(provider: string | null | undefined) {
+export function useModelosDeMensagem(provider: string | null | undefined, ativo = true) {
   const { activeOrg } = useAuth();
   const orgId = activeOrg?.orgId ?? "sem-org";
   const qc = useQueryClient();
@@ -54,7 +54,7 @@ export function useModelosDeMensagem(provider: string | null | undefined) {
   const rota = fonte ? rotaDeTemplates(fonte) : null;
   const q = useQuery({
     queryKey: ["modelos-de-mensagem", rota],
-    enabled: rota !== null,
+    enabled: ativo && rota !== null,
     queryFn: async () => apiClient.get<{ data: { templates: ModeloAprovado[] } }>(rota!),
     select: (r) => r.data.templates.filter((m) => m.status?.toUpperCase() === "APPROVED"),
     staleTime: 60_000,

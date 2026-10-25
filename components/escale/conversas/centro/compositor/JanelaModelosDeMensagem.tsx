@@ -36,7 +36,7 @@ export function JanelaModelosDeMensagem({
   contato: TemplateContact;
 }) {
   const t = useT();
-  const { modelos, carregando, recarregar, recentes, marcarUsado } = useModelosDeMensagem(provider);
+  const { modelos, carregando, recarregar, recentes, marcarUsado } = useModelosDeMensagem(provider, aberta);
   const enviar = useSendMessage();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState("todas");

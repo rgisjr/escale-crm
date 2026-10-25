@@ -1,4 +1,6 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { Query, QueryClient } from "@tanstack/react-query";
+
+import { apiClient } from "@/lib/api/client";
 
 /**
  * A RECARGA QUE O REALTIME PEDE, AGRUPADA — e sem cancelar a busca em voo.
@@ -33,17 +35,67 @@ const agendadas = new WeakMap<QueryClient, ReturnType<typeof setTimeout>>();
 
 export function agendarRecargaDasConversas(qc: QueryClient): void {
   if (agendadas.has(qc)) return;
-  agendadas.set(qc, setTimeout(() => descarregar(qc), JANELA_MS));
+  agendadas.set(
+    qc,
+    setTimeout(() => descarregar(qc), JANELA_MS),
+  );
 }
 
 function descarregar(qc: QueryClient): void {
   // ponytail: espera por polling na janela; sem teto — uma busca que nunca
   // termina adia a recarga até ela falhar, que é o que o cancelamento fazia pior.
   if (qc.isFetching({ queryKey: ["conversations"] }) > 0) {
-    agendadas.set(qc, setTimeout(() => descarregar(qc), JANELA_MS));
+    agendadas.set(
+      qc,
+      setTimeout(() => descarregar(qc), JANELA_MS),
+    );
     return;
   }
   agendadas.delete(qc);
-  void qc.invalidateQueries({ queryKey: ["conversations"] });
+  recarregarListasDasConversas(qc);
   void qc.invalidateQueries({ queryKey: ["conversation"] });
+}
+
+/**
+ * FORK ESCALE · Q1 (B1-19): a fila da casca (lista paginada que declara
+ * `meta.urlDaPrimeiraPagina`) refaz só a PRIMEIRA página; invalidar tudo refazia
+ * todas as páginas já carregadas, uma depois da outra. As demais listas de
+ * `["conversations"]` seguem como antes. A fila sem ninguém olhando só é marcada
+ * velha (refaz ao voltar). O total da fila ("fila-total") não fica sob este prefixo.
+ */
+const ehFilaDaCasca = (q: Query): boolean => typeof q.meta?.urlDaPrimeiraPagina === "string";
+
+export function recarregarListasDasConversas(qc: QueryClient): void {
+  void qc.invalidateQueries({
+    queryKey: ["conversations"],
+    predicate: (q) => !ehFilaDaCasca(q),
+  });
+  for (const q of qc
+    .getQueryCache()
+    .findAll({ queryKey: ["conversations"], predicate: ehFilaDaCasca })) {
+    if (q.getObserversCount() === 0) {
+      void qc.invalidateQueries({ queryKey: q.queryKey, exact: true });
+      continue;
+    }
+    void recarregarPrimeiraPagina(qc, q);
+  }
+}
+
+interface FilaEmPaginas {
+  pages: unknown[];
+  pageParams: unknown[];
+}
+
+async function recarregarPrimeiraPagina(qc: QueryClient, q: Query): Promise<void> {
+  try {
+    const nova = await apiClient.get<unknown>(q.meta!.urlDaPrimeiraPagina as string);
+    qc.setQueryData<FilaEmPaginas>(q.queryKey, (antes) =>
+      antes && antes.pages.length > 0
+        ? { ...antes, pages: [nova, ...antes.pages.slice(1)] }
+        : antes,
+    );
+  } catch {
+    // Sem a primeira página nova, refaz do jeito antigo em vez de deixar a fila velha.
+    await qc.invalidateQueries({ queryKey: q.queryKey, exact: true });
+  }
 }

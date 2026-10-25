@@ -148,8 +148,19 @@ export async function POST(req: NextRequest): Promise<Response> {
         { status: 201, requestId },
       );
     }
+    // "Concluída" com falhas é possível (revisão em conflito, conversa arquivada): a tela avisa.
+    const { data: placar } = await createAdminClient()
+      .from("crm_acoes_em_massa_conversas")
+      .select("feitos, falhas")
+      .eq("organization_id", orgId)
+      .eq("id", linha.acao_id)
+      .maybeSingle();
+    const { feitos, falhas } = (placar as { feitos: number; falhas: number } | null) ?? {
+      feitos: linha.quantidade,
+      falhas: 0,
+    };
     return ok(
-      { id: linha.acao_id, total: linha.quantidade, status: "concluida" },
+      { id: linha.acao_id, total: linha.quantidade, status: "concluida", feitos, falhas },
       { status: 201, requestId },
     );
   } catch (err) {

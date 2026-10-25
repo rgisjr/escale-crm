@@ -55,7 +55,9 @@ describe("useConversaDaCasca", () => {
       await result.current.entrarEmEspera.mutateAsync();
     });
     expect(apiClient.post).toHaveBeenCalledWith(`/api/v1/conversas-da-casca/${CV}/espera`, {});
-    expect(invalidar).toHaveBeenCalledWith({ queryKey: ["conversations"] });
+    expect(invalidar).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["conversations"] }),
+    );
     expect(invalidar).toHaveBeenCalledWith({ queryKey: ["eventos-da-conversa", CV] });
   });
 });
@@ -100,5 +102,12 @@ describe("useModelosDeMensagem", () => {
     expect(JSON.parse(window.localStorage.getItem("escale_modelos_recentes:o1") ?? "[]")).toEqual([
       "oi",
     ]);
+  });
+
+  it("com a janela fechada (ativo=false) não busca os modelos (G1-3)", async () => {
+    vi.mocked(apiClient.get).mockClear();
+    renderHook(() => useModelosDeMensagem("meta_cloud", false), { wrapper });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(apiClient.get).not.toHaveBeenCalled();
   });
 });

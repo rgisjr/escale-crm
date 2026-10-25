@@ -80,20 +80,31 @@ describe("compilarPublico", () => {
 });
 
 describe("idsDoPublico e paginaDoPublico", () => {
-  it("lê em páginas até o total, mesmo quando a página volta curta", async () => {
-    let chamada = 0;
+  it("lê o público inteiro numa chamada só, na ordem do banco (G7-2)", async () => {
+    const compilado = { selecao: null, avulsos: [C2, C1], removidos: [] };
     const { db, rpcs } = bancoDeMentira({
-      rpc: {
-        fn_escale_pagina_do_publico: () => (chamada++ === 0 ? pagina([C1], 2) : pagina([C2], 2)),
-      },
+      rpc: { fn_escale_ids_do_publico: () => ({ data: [C2, C1], error: null }) },
     });
-    const ids = await idsDoPublico(db as never, ORG_ID, {
-      selecao: null,
-      avulsos: [C1, C2],
-      removidos: [],
+    const ids = await idsDoPublico(db as never, ORG_ID, compilado);
+    expect(ids).toEqual([C2, C1]);
+    expect(rpcs).toEqual([
+      { nome: "fn_escale_ids_do_publico", args: { p_org: ORG_ID, p_publico: compilado } },
+    ]);
+  });
+
+  it("público vazio (nulo do banco) vira lista vazia; erro do banco sobe", async () => {
+    const vazio = bancoDeMentira({
+      rpc: { fn_escale_ids_do_publico: () => ({ data: null, error: null }) },
     });
-    expect(ids).toEqual([C1, C2]);
-    expect(rpcs.map((r) => r.args.p_deslocamento)).toEqual([0, 1]);
+    expect(
+      await idsDoPublico(vazio.db as never, ORG_ID, { selecao: null, avulsos: [], removidos: [] }),
+    ).toEqual([]);
+    const falha = bancoDeMentira({
+      rpc: { fn_escale_ids_do_publico: () => ({ data: null, error: { message: "caiu" } }) },
+    });
+    await expect(
+      idsDoPublico(falha.db as never, ORG_ID, { selecao: null, avulsos: [], removidos: [] }),
+    ).rejects.toThrow(/público: caiu/);
   });
 
   it("a página vem hidratada e na ordem do banco", async () => {

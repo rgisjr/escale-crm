@@ -23,6 +23,8 @@ import { useSyncExternalStore } from "react";
  * reportaria um erro de hidratação.
  */
 const CONSULTA_TELA_GRANDE = "(min-width: 768px)";
+/** `xl` do Tailwind: onde a ficha do contato cabe ao lado da conversa (Q1, G1-4). */
+const CONSULTA_TELA_EXTRA_GRANDE = "(min-width: 1280px)";
 
 /**
  * Sem `matchMedia` (jsdom dos testes que montam o `AppShell` de verdade, como
@@ -33,23 +35,29 @@ function temMatchMedia(): boolean {
   return typeof window.matchMedia === "function";
 }
 
-function inscrever(ouvinte: () => void): () => void {
-  if (!temMatchMedia()) return () => {};
-  const mediaQuery = window.matchMedia(CONSULTA_TELA_GRANDE);
-  mediaQuery.addEventListener("change", ouvinte);
-  return () => mediaQuery.removeEventListener("change", ouvinte);
-}
-
-function lerSnapshotDoCliente(): boolean {
-  if (!temMatchMedia()) return false;
-  return window.matchMedia(CONSULTA_TELA_GRANDE).matches;
-}
-
 function lerSnapshotDoServidor(): boolean {
   return false;
 }
 
+function useConsultaDeTela(consulta: string): boolean {
+  return useSyncExternalStore(
+    (ouvinte) => {
+      if (!temMatchMedia()) return () => {};
+      const mediaQuery = window.matchMedia(consulta);
+      mediaQuery.addEventListener("change", ouvinte);
+      return () => mediaQuery.removeEventListener("change", ouvinte);
+    },
+    () => (temMatchMedia() ? window.matchMedia(consulta).matches : false),
+    lerSnapshotDoServidor,
+  );
+}
+
 /** `true` a partir de 768px (`md` do Tailwind). No servidor, sempre `false`. */
 export function useTelaGrande(): boolean {
-  return useSyncExternalStore(inscrever, lerSnapshotDoCliente, lerSnapshotDoServidor);
+  return useConsultaDeTela(CONSULTA_TELA_GRANDE);
+}
+
+/** `true` a partir de 1280px (`xl` do Tailwind). No servidor, sempre `false`. */
+export function useTelaExtraGrande(): boolean {
+  return useConsultaDeTela(CONSULTA_TELA_EXTRA_GRANDE);
 }
