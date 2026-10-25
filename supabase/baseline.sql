@@ -60930,7 +60930,7 @@ end;
 $$;
 
 -- 6. Os itens das ações em massa saem quando a ação termina (G7-11) ---------------
-create or replace function public.fn_escale_apagar_itens_da_massa()
+create or replace function public.fn_escale_descartar_itens_da_massa()
 returns trigger
 language plpgsql
 security definer
@@ -60945,21 +60945,21 @@ begin
   return null;
 end
 $$;
-revoke all on function public.fn_escale_apagar_itens_da_massa() from public, anon, authenticated;
+revoke all on function public.fn_escale_descartar_itens_da_massa() from public, anon, authenticated;
 
-drop trigger if exists trg_escale_apagar_itens_da_massa on public.crm_acoes_em_massa;
-create trigger trg_escale_apagar_itens_da_massa
+drop trigger if exists trg_escale_descartar_itens_da_massa on public.crm_acoes_em_massa;
+create trigger trg_escale_descartar_itens_da_massa
   after update of status on public.crm_acoes_em_massa
   for each row
   when (new.status in ('concluida', 'falhou', 'recusada') and old.status is distinct from new.status)
-  execute function public.fn_escale_apagar_itens_da_massa();
+  execute function public.fn_escale_descartar_itens_da_massa();
 
-drop trigger if exists trg_escale_apagar_itens_da_massa on public.crm_acoes_em_massa_conversas;
-create trigger trg_escale_apagar_itens_da_massa
+drop trigger if exists trg_escale_descartar_itens_da_massa on public.crm_acoes_em_massa_conversas;
+create trigger trg_escale_descartar_itens_da_massa
   after update of status on public.crm_acoes_em_massa_conversas
   for each row
   when (new.status in ('concluida', 'falhou') and old.status is distinct from new.status)
-  execute function public.fn_escale_apagar_itens_da_massa();
+  execute function public.fn_escale_descartar_itens_da_massa();
 
 delete from public.crm_acoes_em_massa_itens i
  using public.crm_acoes_em_massa a
