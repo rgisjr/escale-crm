@@ -80,7 +80,11 @@ export async function novaCampanhaComContatosAcao(
     .eq("organization_id", orgId)
     .eq("id", copia.id)
     .eq("status", "draft");
-  if (error) return recusa("internal_error", error.message, 500);
+  if (error) {
+    // A cópia ficaria órfã, com o público inteiro da original: desfaz o que acabou de criar (B8-14).
+    await admin.from("campaigns").delete().eq("organization_id", orgId).eq("id", copia.id).eq("status", "draft");
+    return recusa("internal_error", error.message, 500);
+  }
   return { ok: true, id: copia.id };
 }
 
@@ -167,7 +171,7 @@ export async function tirarDaListaAcao(
   let tirados = 0;
   const ids = alvos.map((a) => a.destinatarioId);
   for (let i = 0; i < ids.length; i += LOTE) {
-    const { data } = await admin
+    const { data, error } = await admin
       .from("campaign_recipients")
       .update({
         status: "skipped",
@@ -180,6 +184,9 @@ export async function tirarDaListaAcao(
       .is("sent_at", null)
       .in("id", ids.slice(i, i + LOTE))
       .select("id");
+    // Sem conferir, o filtro já mudou e os destinatários seguiam elegíveis, recebendo a mensagem ao iniciar.
+    // Tirar de novo é idempotente: a pessoa repete e fecha o que faltou.
+    if (error) return recusa("internal_error", error.message, 500);
     tirados += (data ?? []).length;
   }
 
