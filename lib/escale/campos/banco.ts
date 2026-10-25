@@ -34,7 +34,9 @@ export class ErroDoCatalogo extends Error {
 
 const tabelaDe = (objeto: ObjetoDeCampo) => (objeto === "negocio" ? "crm_campos_do_negocio" : "crm_campos_do_crm");
 
-const COLUNAS = "id, chave, definicao, grupo_id, papel_minimo, posicao, padrao";
+// Só `crm_campos_do_crm` (9104) tem `padrao`; o catálogo do negócio (9006) não tem campo padrão.
+const colunasDe = (objeto: ObjetoDeCampo): string =>
+  objeto === "negocio" ? "id, chave, definicao, grupo_id, papel_minimo, posicao" : "id, chave, definicao, grupo_id, papel_minimo, posicao, padrao";
 
 function linhaParaCampo(objeto: ObjetoDeCampo, l: Record<string, unknown>): CampoDoCatalogo {
   return {
@@ -51,7 +53,7 @@ function linhaParaCampo(objeto: ObjetoDeCampo, l: Record<string, unknown>): Camp
 
 export async function lerCatalogo(sb: SB, orgId: string, objeto: ObjetoDeCampo): Promise<Catalogo> {
   // Grupos e campos não dependem um do outro: lidos ao mesmo tempo.
-  let consulta = sb.from(tabelaDe(objeto)).select(COLUNAS).eq("organization_id", orgId);
+  let consulta = sb.from(tabelaDe(objeto)).select(colunasDe(objeto)).eq("organization_id", orgId);
   if (objeto !== "negocio") consulta = consulta.eq("objeto", objeto);
   const [grupos, campos] = await Promise.all([
     sb
@@ -68,7 +70,7 @@ export async function lerCatalogo(sb: SB, orgId: string, objeto: ObjetoDeCampo):
 
   return {
     grupos: (grupos.data ?? []) as GrupoDeCampos[],
-    campos: ((campos.data ?? []) as Record<string, unknown>[]).map((l) => linhaParaCampo(objeto, l)),
+    campos: ((campos.data ?? []) as unknown as Record<string, unknown>[]).map((l) => linhaParaCampo(objeto, l)),
   };
 }
 
@@ -156,16 +158,16 @@ export async function criarCampo(sb: SB, orgId: string, entrada: NovoCampo): Pro
     grupo_id: entrada.grupo_id,
     posicao,
   };
-  const { data, error } = await sb.from(tabelaDe(entrada.objeto)).insert(linha).select(COLUNAS).single();
+  const { data, error } = await sb.from(tabelaDe(entrada.objeto)).insert(linha).select(colunasDe(entrada.objeto)).single();
   if (error) throw error;
-  return linhaParaCampo(entrada.objeto, (data ?? { ...linha, id: "" }) as Record<string, unknown>);
+  return linhaParaCampo(entrada.objeto, (data ?? { ...linha, id: "" }) as unknown as Record<string, unknown>);
 }
 
 async function campoPorId(sb: SB, orgId: string, objeto: ObjetoDeCampo, id: string): Promise<CampoDoCatalogo> {
-  const { data, error } = await sb.from(tabelaDe(objeto)).select(COLUNAS).eq("organization_id", orgId).eq("id", id).maybeSingle();
+  const { data, error } = await sb.from(tabelaDe(objeto)).select(colunasDe(objeto)).eq("organization_id", orgId).eq("id", id).maybeSingle();
   if (error) throw error;
   if (!data) throw new ErroDoCatalogo("nao_encontrado");
-  return linhaParaCampo(objeto, data as Record<string, unknown>);
+  return linhaParaCampo(objeto, data as unknown as Record<string, unknown>);
 }
 
 export async function mudarCampo(sb: SB, orgId: string, objeto: ObjetoDeCampo, id: string, patch: PatchDoCampo): Promise<CampoDoCatalogo> {
@@ -189,9 +191,9 @@ export async function mudarCampo(sb: SB, orgId: string, objeto: ObjetoDeCampo, i
   }
   if (patch.grupo_id !== undefined) mudanca.grupo_id = patch.grupo_id;
   if (patch.papel_minimo !== undefined) mudanca.papel_minimo = patch.papel_minimo;
-  const { data, error } = await sb.from(tabelaDe(objeto)).update(mudanca).eq("organization_id", orgId).eq("id", id).select(COLUNAS).single();
+  const { data, error } = await sb.from(tabelaDe(objeto)).update(mudanca).eq("organization_id", orgId).eq("id", id).select(colunasDe(objeto)).single();
   if (error) throw error;
-  return linhaParaCampo(objeto, (data ?? { ...campo, ...mudanca }) as Record<string, unknown>);
+  return linhaParaCampo(objeto, (data ?? { ...campo, ...mudanca }) as unknown as Record<string, unknown>);
 }
 
 export async function excluirCampo(sb: SB, orgId: string, objeto: ObjetoDeCampo, id: string): Promise<void> {
