@@ -10990,6 +10990,7 @@ export const DICIONARIO: Traducoes = {
   "Criação": { es: "Creación" },
   "Envio": { es: "Envío" },
   "Nenhuma mensagem agendada.": { es: "Ningún mensaje programado." },
+  "Não foi possível carregar o histórico de distribuições.": { es: "No se pudo cargar el historial de distribuciones." },
   "Não foi possível buscar as empresas.": { es: "No se pudieron buscar las empresas." },
   "Não foi possível carregar a atribuição do ganho.": { es: "No se pudo cargar la atribución de la venta." },
   "Não foi possível carregar as mensagens agendadas.": { es: "No se pudieron cargar los mensajes programados." },

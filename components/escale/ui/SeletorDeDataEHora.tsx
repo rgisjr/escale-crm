@@ -37,6 +37,13 @@ export function SeletorDeDataEHora({
   const [aberto, setAberto] = useState(false);
   const [mes, setMes] = useState({ ano: valor.getFullYear(), mes0: valor.getMonth() });
   const [hora, setHora] = useState(horaDe(valor));
+  // Se o pai troca o valor por fora, o campo acompanha (antes ficava com a hora velha).
+  const horaDoValor = horaDe(valor);
+  const [horaVista, setHoraVista] = useState(horaDoValor);
+  if (horaVista !== horaDoValor) {
+    setHoraVista(horaDoValor);
+    setHora(horaDoValor);
+  }
   const escolhido = isoDaData(valor);
   const dias = diasDoMes(mes.ano, mes.mes0);
   const titulo = new Date(mes.ano, mes.mes0, 1).toLocaleDateString(idioma, {
@@ -145,6 +152,8 @@ export function SeletorDeDataEHora({
         maxLength={5}
         placeholder="00:00"
         onChange={(e) => digitarHora(e.target.value)}
+        // Hora pela metade ("14:3") não vale: ao sair, o campo volta à hora que o valor realmente tem.
+        onBlur={() => setHora(horaDe(valor))}
         className="h-[52px] w-[74px] rounded-[4px] border-0 bg-casca-raia px-3 text-center text-[14px] text-casca-texto outline-hidden focus:ring-2 focus:ring-casca-marca"
       />
     </div>

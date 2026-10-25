@@ -199,6 +199,15 @@ describe("PATCH /api/v1/pipeline-views/:id", () => {
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "pipeline_view.updated", resourceId: V_TIME }));
   });
 
+  it("renomear com TODAS as origens arquivadas funciona e mantém a lista (B4-12)", async () => {
+    const db = banco();
+    for (const p of (db.tabelas as unknown as Record<string, Array<{ id: string; is_archived: boolean }>>).crm_pipelines!)
+      p.is_archived = true;
+    const res = await mudar(V_TIME, { name: "Só arquivadas" });
+    expect(res.status).toBe(200);
+    expect((db.rpcs[0]!.args as { p_origens: string[] }).p_origens).toEqual([F_NAYARA, F_MORTO, F_LEADS]);
+  });
+
   it("mantém as origens que a RLS esconde desta sessão ao renomear (B4-3)", async () => {
     const db = banco();
     const F_ESCONDIDA = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb9";

@@ -16,12 +16,14 @@ export function useOcultosDaOrigem(pipeline: { id: string; settings: unknown } |
     queryKey: ["ocultos-da-origem", pipeline?.id ?? null],
     queryFn: async (): Promise<CamposOcultos> => {
       const r = await fetch(`/api/v1/pipelines/${pipeline?.id}/campos-ocultos`);
-      if (!r.ok) return daOrigem;
+      // Falha não vira sucesso em cache: o campo que o grupo esconde reapareceria por 60 s sem aviso.
+      if (!r.ok) throw new Error(`campos-ocultos ${r.status}`);
       const corpo = (await r.json().catch(() => null)) as { data?: unknown } | null;
       return corpo?.data ? lerOcultos({ escale_campos_ocultos: corpo.data }) : daOrigem;
     },
     enabled: !!pipeline && daOrigem.usar_do_grupo,
     staleTime: 60_000,
+    retry: 1,
   });
   return daOrigem.usar_do_grupo ? (q.data ?? daOrigem) : (daOrigem ?? OCULTOS_VAZIOS);
 }
