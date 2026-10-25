@@ -198,7 +198,7 @@ export async function prepararAcao(
       };
     }
 
-    const { error: erroAoFicarPronta } = await admin
+    const { data: ficouPronta, error: erroAoFicarPronta } = await admin
       .from("campaigns")
       .update({
         status: "ready",
@@ -209,9 +209,13 @@ export async function prepararAcao(
         audience_version: c.audience_version + 1,
       })
       .eq("id", c.id)
-      .eq("status", "preparing");
+      .eq("status", "preparing")
+      .select("id");
     // Sem isto a campanha ficava em `preparing` para sempre e a rota dizia "ok".
     if (erroAoFicarPronta) throw new Error(erroAoFicarPronta.message);
+    // Nenhuma linha: o resgate (ou outro pedido) tirou a campanha de `preparing` no meio.
+    if ((ficouPronta ?? []).length === 0)
+      throw new Error("A preparação foi interrompida antes de terminar. Prepare de novo.");
 
     return { ok: true, resumo };
   } catch (err) {
