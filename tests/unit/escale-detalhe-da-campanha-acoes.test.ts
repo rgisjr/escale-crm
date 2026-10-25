@@ -21,7 +21,7 @@ function dbFalso(respostas: Record<string, unknown[]>) {
   const db = {
     from: vi.fn((tabela: string) => {
       const c: Record<string, unknown> = {};
-      for (const m of ["select", "update", "eq", "in", "is", "not"]) {
+      for (const m of ["select", "update", "delete", "eq", "in", "is", "not"]) {
         c[m] = vi.fn((...args: unknown[]) => {
           chamadas.push({ tabela, metodo: m, args });
           return c;
@@ -37,7 +37,7 @@ function dbFalso(respostas: Record<string, unknown[]>) {
   };
   const updates = (tabela: string) =>
     chamadas.filter((c) => c.tabela === tabela && c.metodo === "update").map((c) => c.args[0]);
-  return { db, updates };
+  return { db, updates, chamadas };
 }
 
 const carregada = (status: string, filtro: Record<string, unknown> = FILTRO_VAZIO) =>
@@ -82,6 +82,15 @@ describe("novaCampanhaComContatosAcao (Criar campanha)", () => {
       },
       updated_by: "u1",
     });
+  });
+
+  it("se gravar o público da cópia falha, desfaz a cópia e responde 500 (B8-14)", async () => {
+    vi.mocked(carregarCampanha).mockResolvedValue(carregada("completed"));
+    vi.mocked(duplicarDoAssistente).mockResolvedValue({ ok: true, id: "novo" });
+    const { db, chamadas } = dbFalso({ campaigns: [{ error: { message: "caiu" } }, { error: null }] });
+    const r = await novaCampanhaComContatosAcao(db as never, ORG, ID, ["k1"], "u1");
+    expect(r).toMatchObject({ ok: false, status: 500 });
+    expect(chamadas.some((c) => c.tabela === "campaigns" && c.metodo === "delete")).toBe(true);
   });
 
   it("recusa vazio e acima de 5.000", async () => {
@@ -173,6 +182,16 @@ describe("tirarDaListaAcao (Excluir selecionados)", () => {
       avulsos: [],
       removidos: ["00000000-0000-4000-8000-000000000000", "00000000-0000-4000-8000-000000000001"],
     });
+  });
+
+  it("erro ao tirar os destinatários não vira '0 tirados' (B8-14)", async () => {
+    vi.mocked(carregarCampanha).mockResolvedValue(carregada("ready"));
+    const { db } = dbFalso({
+      campaign_recipients: [{ count: 0 }, { data: null, error: { message: "caiu" } }],
+      campaigns: [{ data: [{ id: ID }], error: null }],
+    });
+    const r = await tirarDaListaAcao(db as never, ORG, ID, alvos, "u1");
+    expect(r).toMatchObject({ ok: false, status: 500 });
   });
 
   it("depois de qualquer envio, ou com a campanha andando, recusa", async () => {

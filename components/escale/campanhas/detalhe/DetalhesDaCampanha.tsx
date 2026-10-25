@@ -121,6 +121,13 @@ export function DetalhesDaCampanha({
     chaveDaConsulta,
   });
 
+  // Página além do fim (tirou da lista na última página, ou o filtro encolheu na reconsulta): volta uma,
+  // em vez de mostrar "0 contatos" com a tabela vazia (B8-11).
+  const pageVazia = !!consulta.data && !consulta.isFetching && consulta.data.linhas.length === 0;
+  useEffect(() => {
+    if (pageVazia && pagina > 1) setPagina(pagina - 1);
+  }, [pageVazia, pagina]);
+
   // A busca espera a pessoa parar de digitar (8A: 500 ms) e volta à página 1.
   useEffect(() => {
     const termo = busca.trim();
@@ -194,6 +201,7 @@ export function DetalhesDaCampanha({
         const situacoes = (filtros.situacoes ?? []).filter((x) => x !== s);
         const { situacoes: _s, ...resto } = filtros;
         aoMudarFiltros(situacoes.length ? { ...resto, situacoes } : resto);
+        setPagina(1);
       },
     })),
     ...(filtros.motivos ?? []).map((m) => ({
@@ -203,6 +211,7 @@ export function DetalhesDaCampanha({
         const restantes = (filtros.motivos ?? []).filter((x) => x !== m);
         const { motivos: _m, ...resto } = filtros;
         aoMudarFiltros(restantes.length ? { ...resto, motivos: restantes } : resto);
+        setPagina(1);
       },
     })),
   ];

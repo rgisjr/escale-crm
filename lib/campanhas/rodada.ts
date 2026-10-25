@@ -248,7 +248,7 @@ async function rodarUmaCampanha(
   campanha: CampanhaRow,
   agora: Date,
 ): Promise<{ enviadas: number; pulados: number; concluidas: number; detalhe: string }> {
-  const { data: fila } = await admin
+  const { data: fila, error: erroDaFila } = await admin
     .from("campaign_recipients")
     .select(
       "id, contact_id, recipient_address, rendered_body, variables, " +
@@ -259,17 +259,19 @@ async function rodarUmaCampanha(
     .or(`next_attempt_at.is.null,next_attempt_at.lte.${agora.toISOString()}`)
     .order("created_at", { ascending: true })
     .limit(1);
+  // Falha de leitura não é "fila vazia": concluiria a campanha com destinatários ainda pendentes (B8-12).
+  if (erroDaFila) return { enviadas: 0, pulados: 0, concluidas: 0, detalhe: "aguardando" };
   const alvo = (fila ?? [])[0] as DestinatarioRow | undefined;
 
   if (!alvo) {
     // Nada pendente AGORA não é o mesmo que nada pendente: pode haver gente
     // esperando `next_attempt_at`. Só conclui quem não tem mais nenhum em voo.
-    const { count } = await admin
+    const { count, error: erroDaContagem } = await admin
       .from("campaign_recipients")
       .select("id", { count: "exact", head: true })
       .eq("campaign_id", campanha.id)
       .in("status", ["pending", "queued", "sending"]);
-    if ((count ?? 0) > 0) return { enviadas: 0, pulados: 0, concluidas: 0, detalhe: "aguardando" };
+    if (erroDaContagem || (count ?? 0) > 0) return { enviadas: 0, pulados: 0, concluidas: 0, detalhe: "aguardando" };
 
     const { data } = await admin
       .from("campaigns")

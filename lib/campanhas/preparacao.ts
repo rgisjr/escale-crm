@@ -108,20 +108,19 @@ async function classificar(
   },
 ): Promise<{ linhas: ReturnType<typeof classificarAudiencia>; truncado: boolean }> {
   // FORK ESCALE · Fase 8B: com o público da casca, os candidatos já vêm do banco.
-  const { candidatos, truncado } = entrada.candidatos
-    ? { candidatos: [...entrada.candidatos], truncado: false }
-    : await buscarCandidatos(admin, {
-        organizationId: entrada.organizationId,
-        filtro: entrada.filtro,
-        agora: entrada.agora,
-        corpo: entrada.corpo,
-      });
-  const jaEmCampanha = await contatosJaEmCampanha(
-    admin,
-    entrada.organizationId,
-    entrada.campanhaId,
-  );
-  const suprimidos = await hashesExcluidos(admin, entrada.organizationId);
+  // As três leituras são independentes: em paralelo, não uma atrás da outra (G8-5).
+  const [{ candidatos, truncado }, jaEmCampanha, suprimidos] = await Promise.all([
+    entrada.candidatos
+      ? Promise.resolve({ candidatos: [...entrada.candidatos], truncado: false })
+      : buscarCandidatos(admin, {
+          organizationId: entrada.organizationId,
+          filtro: entrada.filtro,
+          agora: entrada.agora,
+          corpo: entrada.corpo,
+        }),
+    contatosJaEmCampanha(admin, entrada.organizationId, entrada.campanhaId),
+    hashesExcluidos(admin, entrada.organizationId),
+  ]);
   return {
     linhas: classificarAudiencia(candidatos, {
       excluidosAMao: new Set(entrada.filtro.excluir_contatos),
