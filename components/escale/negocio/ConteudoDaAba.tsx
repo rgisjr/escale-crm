@@ -1,4 +1,6 @@
 "use client";
+import { useMemo } from "react";
+
 import type { FichaCarregada } from "@/hooks/escale/useFichaDoNegocio";
 import type { AbaDoNegocio } from "@/lib/escale/negocio/regras";
 
@@ -11,6 +13,11 @@ import { AbaContato, AbaEmpresa, AbaNegocio } from "./abas/AbasDeCampos";
 
 /** FORK ESCALE · Fase 1G (C2): o conteúdo de cada aba da ficha. */
 export function ConteudoDaAba({ aba, ficha }: { aba: AbaDoNegocio; ficha: FichaCarregada }) {
+  // Q2a (G2-5): objeto estável, senão o `useMemo` de `visiveis` do Histórico refaz a cada render da ficha.
+  const nomesDasEtapas = useMemo(
+    () => Object.fromEntries(ficha.stages.map((s) => [s.id, s.name])),
+    [ficha.stages],
+  );
   switch (aba) {
     case "atividades":
       return <AbaAtividades lead={ficha.lead} stages={ficha.stages} pipeline={ficha.pipeline} />;
@@ -28,7 +35,7 @@ export function ConteudoDaAba({ aba, ficha }: { aba: AbaDoNegocio; ficha: FichaC
       return (
         <AbaHistorico
           alvo={{ tipo: "negocio", id: ficha.lead.id }}
-          nomesDasEtapas={Object.fromEntries(ficha.stages.map((s) => [s.id, s.name]))}
+          nomesDasEtapas={nomesDasEtapas}
         />
       );
   }

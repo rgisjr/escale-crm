@@ -317,7 +317,12 @@ function Cartao({
         <div>
           <p className={EYEBROW}>{t("Dono")}</p>
           <div className="mt-1 flex items-center gap-2">
-            <DonoDaFicha key={`dono-${lead.id}`} lead={lead} pipelineId={pipeline.id} />
+            <DonoDaFicha
+              key={`dono-${lead.id}`}
+              lead={lead}
+              pipelineId={pipeline.id}
+              settings={pipeline.settings}
+            />
             <span className="truncate text-[12px] text-casca-texto">
               {dono.name ?? t("Sem responsável")}
             </span>

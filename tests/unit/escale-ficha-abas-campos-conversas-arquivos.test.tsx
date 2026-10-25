@@ -354,6 +354,15 @@ describe("aba Contato (print 02, C10)", () => {
     expect(screen.getByText("Para apagar o e-mail, use a ficha do contato.")).toBeInTheDocument();
   });
 
+  it("apagar o nome não mostra 'Salvo' sem gravar: explica que não dá para apagar (Q2a, B2-10)", async () => {
+    render(<AbaContato lead={LEAD} pipeline={PIPELINE} />);
+    await userEvent.clear(screen.getByRole("textbox", { name: "Nome" }));
+    await userEvent.keyboard("{Enter}");
+    expect(gravar.enviado).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Salvo")).toBeNull();
+    expect(screen.getByText("Não é possível apagar o nome do contato.")).toBeInTheDocument();
+  });
+
   it("negócio sem contato: a moldura só leitura com o aviso", () => {
     render(<AbaContato lead={{ ...LEAD, contact_id: null } as Lead} pipeline={PIPELINE} />);
     expect(screen.getByText("Este negócio não tem contato.")).toBeInTheDocument();

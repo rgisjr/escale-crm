@@ -127,8 +127,14 @@ export function FichaDoNegocio({
               lead={ficha.lead}
               stages={ficha.stages}
               pipelineId={origem.id}
+              settings={ficha.pipeline.settings}
             />
-            <DonoDaFicha key={`dono-${ficha.lead.id}`} lead={ficha.lead} pipelineId={origem.id} />
+            <DonoDaFicha
+              key={`dono-${ficha.lead.id}`}
+              lead={ficha.lead}
+              pipelineId={origem.id}
+              settings={ficha.pipeline.settings}
+            />
             <MenuDaFicha
               lead={ficha.lead}
               pipelineId={origem.id}

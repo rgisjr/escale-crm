@@ -111,52 +111,6 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     .maybeSingle();
   const contactId = (lead as { contact_id: string | null } | null)?.contact_id ?? null;
 
-  // ── O ENVIO, pelo caminho que JÁ EXISTE ─────────────────────────────────
-  //
-  // `cron_jobs` + `followup_turn` é como toda mensagem agendada sai deste
-  // produto. Criar um segundo caminho seria o mesmo erro de ter duas definições
-  // de "esfriando": funcionaria hoje e divergiria no primeiro ajuste de
-  // anti-banimento, janela de envio ou throttle — e a divergência apareceria
-  // como "algumas mensagens ignoram o horário permitido".
-  //
-  // ⚠️ NÃO agenda se o contato JÁ tem um follow-up pendente. A guarda existe no
-  // agendador do agente com a razão escrita lá — "evita bombardear o lead com
-  // confirmações repetidas" — e vale igual aqui. Na prática é raro (lead com
-  // follow-up agendado está `em_voo`, não `em_risco`, e não recebe proposta),
-  // mas o raro acontece quando o agente agenda ENTRE a proposta e o clique.
-  let envioAgendado = false;
-  if (decision === "accept" && contactId) {
-    const { data: pendente } = await admin
-      .from("cron_jobs")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("contact_id", contactId)
-      .eq("kind", "at")
-      .eq("job_kind", "followup_turn")
-      .eq("enabled", true)
-      .gt("next_run_at", new Date().toISOString())
-      .maybeSingle();
-    if (!pendente) {
-      const { error: cronErr } = await admin.from("cron_jobs").insert({
-        organization_id: orgId,
-        contact_id: contactId,
-        kind: "at",
-        job_kind: "followup_turn",
-        // Agora: a pessoa acabou de autorizar. Adiar seria transformar uma
-        // decisão em promessa, que é o que a wave inteira combate.
-        next_run_at: new Date().toISOString(),
-        payload: {
-          reason: "Retomada de contato autorizada por um humano",
-          promise: null,
-          promised_at: null,
-          source: "reactivation",
-          proposal_id,
-        },
-      });
-      envioAgendado = !cronErr;
-    }
-  }
-
   const atividade = await emitLeadActivity(supabase, {
     organizationId: orgId,
     leadId,
@@ -192,6 +146,55 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
       500,
       { requestId },
     );
+  }
+
+  // ── O ENVIO, pelo caminho que JÁ EXISTE ─────────────────────────────────
+  //
+  // `cron_jobs` + `followup_turn` é como toda mensagem agendada sai deste
+  // produto. Criar um segundo caminho seria o mesmo erro de ter duas definições
+  // de "esfriando": funcionaria hoje e divergiria no primeiro ajuste de
+  // anti-banimento, janela de envio ou throttle — e a divergência apareceria
+  // como "algumas mensagens ignoram o horário permitido".
+  //
+  // ⚠️ NÃO agenda se o contato JÁ tem um follow-up pendente. A guarda existe no
+  // agendador do agente com a razão escrita lá — "evita bombardear o lead com
+  // confirmações repetidas" — e vale igual aqui. Na prática é raro (lead com
+  // follow-up agendado está `em_voo`, não `em_risco`, e não recebe proposta),
+  // mas o raro acontece quando o agente agenda ENTRE a proposta e o clique.
+  //
+  // Q2a (B2-7): isto roda DEPOIS de gravar a atividade da decisão. Agendar antes
+  // e a atividade falhar respondia "nada foi enviado" com a mensagem já saindo.
+  let envioAgendado = false;
+  if (decision === "accept" && contactId) {
+    const { data: pendente } = await admin
+      .from("cron_jobs")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("contact_id", contactId)
+      .eq("kind", "at")
+      .eq("job_kind", "followup_turn")
+      .eq("enabled", true)
+      .gt("next_run_at", new Date().toISOString())
+      .maybeSingle();
+    if (!pendente) {
+      const { error: cronErr } = await admin.from("cron_jobs").insert({
+        organization_id: orgId,
+        contact_id: contactId,
+        kind: "at",
+        job_kind: "followup_turn",
+        // Agora: a pessoa acabou de autorizar. Adiar seria transformar uma
+        // decisão em promessa, que é o que a wave inteira combate.
+        next_run_at: new Date().toISOString(),
+        payload: {
+          reason: "Retomada de contato autorizada por um humano",
+          promise: null,
+          promised_at: null,
+          source: "reactivation",
+          proposal_id,
+        },
+      });
+      envioAgendado = !cronErr;
+    }
   }
 
   return ok(

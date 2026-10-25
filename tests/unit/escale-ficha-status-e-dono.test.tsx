@@ -4,14 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 const permissao = vi.hoisted(() => ({ pode: true }));
-const org = vi.hoisted(() => ({ role: "agent" as string, visibility_mode: "own_and_unassigned" as string }));
+const org = vi.hoisted(() => ({
+  role: "agent" as string,
+  visibility_mode: "own_and_unassigned" as string,
+}));
 vi.mock("@/hooks/auth/AuthProvider", () => ({
   usePermission: () => permissao.pode,
   useActiveOrg: () => ({ orgId: "o1", role: org.role, visibility_mode: org.visibility_mode }),
 }));
 const quadro = vi.hoisted(() => ({ settings: {} as Record<string, unknown> }));
+// Q2a (G2-24): status e dono leem `settings` pela prop; assinar o quadro (tempo real) aqui seria o defeito.
 vi.mock("@/hooks/kanban/useBoard", () => ({
-  useBoard: () => ({ data: { pipeline: { settings: quadro.settings } } }),
+  useBoard: () => {
+    throw new Error("StatusDaFicha/DonoDaFicha não podem assinar o quadro");
+  },
 }));
 const captura = vi.hoisted(() => ({ onRetomada: (_r: unknown) => {} }));
 const motivosDoFunil = vi.hoisted(() => ({ lista: ["Preço", "Sem retorno"] as string[] }));
@@ -86,7 +92,9 @@ beforeEach(() => {
 
 describe("status (C4)", () => {
   it("o menu da Clint: Aberto (atual), Ganho e Perdido; Ganho grava o ganho", async () => {
-    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
       "Aberto",
@@ -100,19 +108,25 @@ describe("status (C4)", () => {
   it("com 'só o administrador marca ganho' (1K, N21), quem não é admin não vê 'Ganho'; o admin vê", async () => {
     quadro.settings = { escale_so_admin_ganha: true };
     org.role = "agent";
-    const { unmount } = render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    const { unmount } = render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     expect(screen.queryByRole("menuitem", { name: "Ganho" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "Perdido" })).toBeInTheDocument();
     unmount();
     org.role = "admin";
-    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     expect(screen.getByRole("menuitem", { name: "Ganho" })).toBeInTheDocument();
   });
 
   it("Perdido pede o motivo ao lado e só grava ao escolher", async () => {
-    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Perdido" }));
     expect(grava.perder).not.toHaveBeenCalled();
@@ -126,7 +140,9 @@ describe("status (C4)", () => {
 
   it("perdido: mostra 'Perdido' e o motivo (desligado, Q4); Aberto reabre na primeira etapa aberta", async () => {
     const perdido = { ...ABERTO, status: "lost", lost_reason: "Preço" } as Lead;
-    render(<StatusDaFicha lead={perdido} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={perdido} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     expect(screen.getByRole("button", { name: /^Status do negócio/ })).toHaveTextContent("Perdido");
     expect(screen.getByRole("combobox", { name: "Selecione o motivo da perda" })).toHaveTextContent(
       "Preço",
@@ -143,7 +159,12 @@ describe("status (C4)", () => {
 
   it("ganho reabre na última etapa aberta (Q3)", async () => {
     render(
-      <StatusDaFicha lead={{ ...ABERTO, status: "won" } as Lead} stages={ETAPAS} pipelineId="o1" />,
+      <StatusDaFicha
+        lead={{ ...ABERTO, status: "won" } as Lead}
+        stages={ETAPAS}
+        pipelineId="o1"
+        settings={quadro.settings}
+      />,
     );
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Aberto" }));
@@ -152,7 +173,9 @@ describe("status (C4)", () => {
 
   it("origem sem motivos cadastrados: oferece os canônicos e grava o escolhido", async () => {
     motivosDoFunil.lista = [];
-    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Perdido" }));
     await userEvent.click(screen.getByRole("combobox", { name: "Selecione o motivo da perda" }));
@@ -168,7 +191,9 @@ describe("status (C4)", () => {
   it("perdido com motivo canônico: mostra o rótulo, desligado e com a dica de reabrir", () => {
     motivosDoFunil.lista = [];
     const perdido = { ...ABERTO, status: "lost", lost_reason: "moved_to_another_pipeline" } as Lead;
-    render(<StatusDaFicha lead={perdido} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={perdido} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     const seletor = screen.getByRole("combobox", { name: "Selecione o motivo da perda" });
     expect(seletor).toHaveTextContent("Levado para outro funil");
     expect(seletor).toBeDisabled();
@@ -176,7 +201,9 @@ describe("status (C4)", () => {
   });
 
   it("escolher o status atual não grava nada", async () => {
-    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /^Status do negócio/ }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Aberto" }));
     expect(grava.ganhar).not.toHaveBeenCalled();
@@ -185,7 +212,9 @@ describe("status (C4)", () => {
   });
 
   it("a recusa de retomada do motor abre a janela 'Retomar como novo negócio'", () => {
-    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     expect(screen.queryByTestId("retomada")).toBeNull();
     act(() => captura.onRetomada({ leadId: "n1", stageId: "e2" }));
     expect(screen.getByTestId("retomada")).toHaveTextContent("n1|e2");
@@ -193,7 +222,9 @@ describe("status (C4)", () => {
 
   it("sem permissão: desligado, com o texto da Clint", () => {
     permissao.pode = false;
-    render(<StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" />);
+    render(
+      <StatusDaFicha lead={ABERTO} stages={ETAPAS} pipelineId="o1" settings={quadro.settings} />,
+    );
     const gatilho = screen.getByRole("button", { name: /^Status do negócio/ });
     expect(gatilho).toBeDisabled();
     expect(gatilho).toHaveAttribute(
@@ -207,33 +238,38 @@ describe("dono (C5, print 10)", () => {
   it("sob 'só os seus' da origem, quem não é gerente não troca o dono: desligado com o texto da Clint (1J)", () => {
     quadro.settings = { escale_visualizacao: "own" };
     org.role = "agent";
-    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" settings={quadro.settings} />);
     const botao = screen.getByRole("button", { name: "Alterar usuário" });
     expect(botao).toBeDisabled();
-    expect(botao).toHaveAttribute("title", "As permissões de usuários não permitem você trocar de dono");
+    expect(botao).toHaveAttribute(
+      "title",
+      "As permissões de usuários não permitem você trocar de dono",
+    );
   });
 
   it("gerente troca sob qualquer regra; agente troca sob 'todos' (1J)", () => {
     quadro.settings = { escale_visualizacao: "own" };
     org.role = "manager";
-    const { unmount } = render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    const { unmount } = render(
+      <DonoDaFicha lead={ABERTO} pipelineId="o1" settings={quadro.settings} />,
+    );
     expect(screen.getByRole("button", { name: "Alterar usuário" })).toBeEnabled();
     unmount();
     org.role = "agent";
     quadro.settings = { escale_visualizacao: "all" };
-    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" settings={quadro.settings} />);
     expect(screen.getByRole("button", { name: "Alterar usuário" })).toBeEnabled();
   });
 
   it("sem regra na origem vale a da organização (1J)", () => {
     org.visibility_mode = "own";
     org.role = "agent";
-    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" settings={quadro.settings} />);
     expect(screen.getByRole("button", { name: "Alterar usuário" })).toBeDisabled();
   });
 
   const abrir = async (lead: Lead = ABERTO) => {
-    render(<DonoDaFicha lead={lead} pipelineId="o1" />);
+    render(<DonoDaFicha lead={lead} pipelineId="o1" settings={quadro.settings} />);
     await userEvent.click(screen.getByRole("button", { name: "Alterar usuário" }));
     await userEvent.click(screen.getByRole("combobox", { name: "Selecione um usuário" }));
   };
@@ -265,7 +301,7 @@ describe("dono (C5, print 10)", () => {
 
   it("sem permissão: o círculo desligado com o texto da Clint", () => {
     permissao.pode = false;
-    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" />);
+    render(<DonoDaFicha lead={ABERTO} pipelineId="o1" settings={quadro.settings} />);
     const gatilho = screen.getByRole("button", { name: "Alterar usuário" });
     expect(gatilho).toBeDisabled();
     expect(gatilho).toHaveAttribute(

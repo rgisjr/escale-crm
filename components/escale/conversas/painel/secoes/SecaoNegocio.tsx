@@ -122,7 +122,12 @@ export function SecaoNegocio({
       case "dono":
         return (
           <div className="flex h-9 items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3 text-[13px] text-casca-texto">
-            <DonoDaFicha key={`dono-${lead.id}`} lead={lead} pipelineId={pipeline.id} />
+            <DonoDaFicha
+              key={`dono-${lead.id}`}
+              lead={lead}
+              pipelineId={pipeline.id}
+              settings={pipeline.settings}
+            />
             <span className="truncate">{dono.name ?? t("Sem responsável")}</span>
           </div>
         );
