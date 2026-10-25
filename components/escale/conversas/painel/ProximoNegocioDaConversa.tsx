@@ -56,7 +56,7 @@ export function ProximoNegocioDaConversa({
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-between">
-      <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
+      <span className="flex items-center gap-1.5 text-[12px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
         {t("Próximo negócio")}
         <Popover open={aberto} onOpenChange={setAberto}>
           <PopoverTrigger asChild>

@@ -19,7 +19,7 @@ import { ChevronDown, CirclePause, Clock, Play } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 const ITEM =
-  "flex h-9 w-full items-center justify-between px-3 text-left text-[12px] text-casca-texto hover:bg-casca-raia";
+  "flex h-9 w-full items-center justify-between px-3 text-left text-[14px] text-casca-texto hover:bg-casca-raia";
 
 /**
  * "PAUSAR AUTOMAÇÃO" (c06, c07, c73, c74; D4; N9): o cartão de 44px entre o
@@ -70,11 +70,11 @@ export function CartaoPausarAutomacao({ conversationId }: { conversationId: stri
           aria-hidden
           className={vigente ? "text-casca-pausa-texto" : "text-casca-suave"}
         />
-        <span className="flex-1 text-[13px] font-medium text-casca-texto">
+        <span className="flex-1 text-[15px] font-medium text-casca-texto">
           {t("Pausar automação")}
         </span>
         {vigente && !aberto ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-casca-pausa-texto">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] font-medium text-casca-pausa-texto">
             <Clock size={12} aria-hidden />
             {seloDaPausa(vigente, agora, t)}
           </span>
@@ -90,14 +90,14 @@ export function CartaoPausarAutomacao({ conversationId }: { conversationId: stri
           {vigente ? (
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-medium text-casca-texto">
+                <div className="text-[14px] font-medium text-casca-texto">
                   {t("Pausa de todas")}
                 </div>
-                <div className="mt-0.5 inline-flex items-center gap-1 text-[12px] text-casca-pausa-texto">
+                <div className="mt-0.5 inline-flex items-center gap-1 text-[14px] text-casca-pausa-texto">
                   <Clock size={12} aria-hidden />
                   <span>{seloDaPausa(vigente, agora, t)}</span>
                 </div>
-                <div className="text-[11px] text-casca-suave">
+                <div className="text-[12px] text-casca-suave">
                   {t("Por")} {quem}
                 </div>
               </div>
@@ -114,14 +114,14 @@ export function CartaoPausarAutomacao({ conversationId }: { conversationId: stri
           ) : (
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-medium text-casca-texto">
+                <div className="text-[14px] font-medium text-casca-texto">
                   {ativos === 0
                     ? t("Nenhuma automação ativa")
                     : ativos === 1
                       ? t("1 automação ativa")
                       : `${ativos} ${t("automações ativas")}`}
                 </div>
-                <div className="text-[11px] text-casca-suave">{t("Nesta conversa")}</div>
+                <div className="text-[12px] text-casca-suave">{t("Nesta conversa")}</div>
               </div>
               <Popover.Root
                 open={menu}
@@ -143,7 +143,7 @@ export function CartaoPausarAutomacao({ conversationId }: { conversationId: stri
                 <PainelSuspenso align="end" className="w-[240px] py-1">
                   {!escolhendo ? (
                     <>
-                      <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
+                      <div className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
                         {t("Pausar todas por")}
                       </div>
                       {PRAZOS_DA_PAUSA.map((p) => (
@@ -154,7 +154,7 @@ export function CartaoPausarAutomacao({ conversationId }: { conversationId: stri
                           onClick={() => pausarAte(fimDoPrazo(p.chave, new Date()).toISOString())}
                         >
                           <span>{t(p.rotulo)}</span>
-                          <span className="text-[11px] text-casca-suave">
+                          <span className="text-[12px] text-casca-suave">
                             {textoDoFim(
                               fimDoPrazo(p.chave, new Date()).toISOString(),
                               new Date(),

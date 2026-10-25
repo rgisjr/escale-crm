@@ -57,7 +57,7 @@ export function BarraDeStatus({
       {selo ? (
         <span
           className={cn(
-            "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium",
+            "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[14px] font-medium",
             TOM[selo.tom],
           )}
         >

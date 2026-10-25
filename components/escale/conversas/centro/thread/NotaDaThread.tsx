@@ -14,13 +14,13 @@ export function NotaDaThread({ nota }: { nota: Note }) {
   return (
     <div className="my-1 flex justify-end" data-testid={`item-note-${nota.id}`}>
       <div className="max-w-[65%] rounded-lg rounded-tr-none border border-casca-nota-borda bg-casca-nota px-3 py-2">
-        <div className="mb-1 flex items-center gap-1 text-[11px] font-medium text-casca-pausa-texto">
+        <div className="mb-1 flex items-center gap-1 text-[12px] font-medium text-casca-pausa-texto">
           <PenLine size={12} aria-hidden />
           {t("Nota interna")}
           {nota.created_by_name ? ` · ${nota.created_by_name}` : ""}
         </div>
-        <p className="text-[13px] whitespace-pre-wrap text-casca-texto">{nota.body}</p>
-        <div className="mt-1 text-right text-[11px] text-casca-meta">{hora(nota.created_at)}</div>
+        <p className="text-[15px] whitespace-pre-wrap text-casca-texto">{nota.body}</p>
+        <div className="mt-1 text-right text-[12px] text-casca-meta">{hora(nota.created_at)}</div>
       </div>
     </div>
   );

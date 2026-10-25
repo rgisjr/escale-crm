@@ -48,11 +48,11 @@ export function CabecalhoDoContato({
       <div className="flex items-start gap-3">
         <FotoDaConversa conversa={conversa} tamanho="topo" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 className="truncate text-[13px] font-medium text-casca-texto">{nome}</h2>
+          <h2 className="truncate text-[15px] font-medium text-casca-texto">{nome}</h2>
           {lead && pipelineId ? (
             <TagsDaFicha key={`tags-${lead.id}`} lead={lead} pipelineId={pipelineId} />
           ) : (
-            <span className="text-[12px] text-casca-meta">{(contato?.tags ?? []).join(" · ")}</span>
+            <span className="text-[14px] text-casca-meta">{(contato?.tags ?? []).join(" · ")}</span>
           )}
         </div>
       </div>
@@ -90,7 +90,7 @@ export function CabecalhoDoContato({
             <AlarmClock size={16} aria-hidden />
           </BotaoDaCasca>
           {quantasAgendadas > 0 ? (
-            <span className="pointer-events-none absolute -top-0.5 -right-0.5 grid size-3.5 place-items-center rounded-full bg-casca-marca text-[9px] font-semibold text-white">
+            <span className="pointer-events-none absolute -top-0.5 -right-0.5 grid size-3.5 place-items-center rounded-full bg-casca-marca text-[10px] font-semibold text-white">
               {quantasAgendadas}
             </span>
           ) : null}

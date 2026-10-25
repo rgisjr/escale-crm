@@ -119,6 +119,36 @@ export function ThreadDaCasca({
   };
 
   const dataDeAgora = new Date(agora);
+  // Sem a primeira página, eventos e notas sozinhos parecem uma conversa
+  // vazia; a thread espera as mensagens ou mostra o erro com o "tentar".
+  if (q.isPending || (q.isError && mensagens.length === 0)) {
+    return (
+      <div
+        className={cn(
+          "flex h-full flex-col items-center justify-center gap-2 bg-casca-painel-chat",
+          compacto ? "px-3 py-2" : "px-6 py-4",
+        )}
+        data-testid="thread-da-casca"
+      >
+        {q.isError ? (
+          <>
+            <p className="text-[14px] text-casca-suave">
+              {t("Não foi possível carregar as mensagens.")}
+            </p>
+            <button
+              type="button"
+              className="text-[14px] font-medium text-casca-marca"
+              onClick={() => q.refetch()}
+            >
+              {t("Tentar de novo")}
+            </button>
+          </>
+        ) : (
+          <p className="text-[14px] text-casca-suave">{t("Carregando…")}</p>
+        )}
+      </div>
+    );
+  }
   return (
     <div
       className={cn(
@@ -131,7 +161,7 @@ export function ThreadDaCasca({
         <div className="mb-2 text-center">
           <button
             type="button"
-            className="text-[12px] font-medium text-casca-marca disabled:opacity-50"
+            className="text-[14px] font-medium text-casca-marca disabled:opacity-50"
             disabled={q.isFetchingNextPage}
             onClick={() => q.fetchNextPage()}
           >
@@ -181,7 +211,7 @@ export function ThreadDaCasca({
         );
       })}
       {itens.length === 0 && !q.isLoading ? (
-        <p className="py-8 text-center text-[12px] text-casca-suave">
+        <p className="py-8 text-center text-[14px] text-casca-suave">
           {t("Nenhuma mensagem ainda.")}
         </p>
       ) : null}

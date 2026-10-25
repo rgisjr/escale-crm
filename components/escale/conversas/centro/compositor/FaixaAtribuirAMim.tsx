@@ -23,7 +23,7 @@ export function FaixaAtribuirAMim({ conversa }: { conversa: ConversationWithCont
   const semDono = !conversa.assigned_to_user_id;
   return (
     <div
-      className="flex items-center gap-3 border-t border-casca-borda bg-casca-busca px-4 py-2 text-[12px] text-casca-suave"
+      className="flex items-center gap-3 border-t border-casca-borda bg-casca-busca px-4 py-2 text-[14px] text-casca-suave"
       data-testid="faixa-atribuir-a-mim"
     >
       <span className="flex-1">{t("Você só pode responder em conversas atribuídas a você.")}</span>

@@ -37,9 +37,9 @@ import {
 } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
-const EYEBROW = "text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
+const EYEBROW = "text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
 const BOTAO_DE_STATUS =
-  "flex h-7 flex-1 items-center justify-center gap-1 rounded-casca-gatilho border text-[12px] disabled:pointer-events-auto disabled:cursor-not-allowed";
+  "flex h-7 flex-1 items-center justify-center gap-1 rounded-casca-gatilho border text-[14px] disabled:pointer-events-auto disabled:cursor-not-allowed";
 
 /**
  * "NEGÓCIOS" E O CARTÃO (fork Escale, Fase 3A; D3; c02, c48, 003). As mesmas
@@ -74,7 +74,7 @@ export function CartaoDoNegocio({
         <span className={cn(EYEBROW, "flex items-center gap-2")}>
           {t("Negócios")}
           {negocios.length > 0 ? (
-            <span className="grid size-4 place-items-center rounded-full bg-casca-marca text-[10px] font-semibold text-white normal-case">
+            <span className="grid size-4 place-items-center rounded-full bg-casca-marca text-[11px] font-semibold text-white normal-case">
               {abertos}
             </span>
           ) : null}
@@ -85,7 +85,7 @@ export function CartaoDoNegocio({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex h-6 items-center gap-1 rounded-casca-gatilho px-2 text-[11px] text-casca-marca hover:bg-casca-raia"
+                  className="flex h-6 items-center gap-1 rounded-casca-gatilho px-2 text-[12px] text-casca-marca hover:bg-casca-raia"
                 >
                   {t("Selecionar negócio")}
                   <ChevronDown size={12} aria-hidden />
@@ -102,7 +102,7 @@ export function CartaoDoNegocio({
                           setEscolhendo(false);
                         }}
                         className={cn(
-                          "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-[12px]",
+                          "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-[14px]",
                           n.id === lead?.id
                             ? "bg-casca-raia text-casca-marca"
                             : "text-casca-texto hover:bg-casca-raia",
@@ -148,7 +148,7 @@ export function CartaoDoNegocio({
           disabled={!contato}
           title={contato ? undefined : t("Sem contato")}
           onClick={() => setNovo(true)}
-          className="flex h-8 w-full items-center justify-center gap-2 rounded-casca-gatilho border border-casca-borda text-[12px] text-casca-marca hover:bg-casca-raia disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex h-8 w-full items-center justify-center gap-2 rounded-casca-gatilho border border-casca-borda text-[14px] text-casca-marca hover:bg-casca-raia disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-60"
         >
           {t("Adicionar negócio")}
           <UserRoundPlus size={14} aria-hidden />
@@ -226,7 +226,7 @@ function Cartao({
 
   return (
     <div className="rounded-[8px] border border-casca-borda p-4">
-      <div className="flex items-center justify-between gap-2 text-[12px] text-casca-suave">
+      <div className="flex items-center justify-between gap-2 text-[14px] text-casca-suave">
         <span className="flex min-w-0 items-center gap-1">
           {negocio?.origem.grupo ? (
             <>
@@ -270,7 +270,7 @@ function Cartao({
                   ? t("Reabra o negócio para mudar a etapa.")
                   : undefined)
               }
-              className="flex items-center gap-1 text-[12px] font-medium text-casca-texto disabled:cursor-not-allowed"
+              className="flex items-center gap-1 text-[14px] font-medium text-casca-texto disabled:cursor-not-allowed"
             >
               {etapa?.name ?? t("Sem etapa")}
               <ChevronDown size={14} aria-hidden className="text-casca-chevron" />
@@ -293,7 +293,7 @@ function Cartao({
                         });
                     }}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-[12px]",
+                      "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-[14px]",
                       s.id === lead.stage_id
                         ? "bg-casca-raia text-casca-marca"
                         : "text-casca-texto hover:bg-casca-raia",
@@ -307,12 +307,12 @@ function Cartao({
             </ul>
           </PainelSuspenso>
         </Popover>
-        <span className="text-[11px] text-casca-suave">{`${indice + 1}/${abertas.length}`}</span>
+        <span className="text-[12px] text-casca-suave">{`${indice + 1}/${abertas.length}`}</span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
           <p className={EYEBROW}>{t("Valor")}</p>
-          <p className="mt-1 text-[13px] font-semibold text-casca-texto">{`R$ ${textoDeReais((lead.value_cents ?? 0) / 100)}`}</p>
+          <p className="mt-1 text-[15px] font-semibold text-casca-texto">{`R$ ${textoDeReais((lead.value_cents ?? 0) / 100)}`}</p>
         </div>
         <div>
           <p className={EYEBROW}>{t("Dono")}</p>
@@ -323,7 +323,7 @@ function Cartao({
               pipelineId={pipeline.id}
               settings={pipeline.settings}
             />
-            <span className="truncate text-[12px] text-casca-texto">
+            <span className="truncate text-[14px] text-casca-texto">
               {dono.name ?? t("Sem responsável")}
             </span>
           </div>

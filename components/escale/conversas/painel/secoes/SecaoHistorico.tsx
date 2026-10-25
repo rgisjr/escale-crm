@@ -55,19 +55,19 @@ export function SecaoHistorico({
         aoMudar={(v) => setGrupo((v || "todos") as ChaveDoGrupo)}
       />
       {!quadro ? (
-        <p className="text-[12px] text-casca-suave">
+        <p className="text-[14px] text-casca-suave">
           {t("O histórico fica no negócio. Adicione um negócio para vê-lo aqui.")}
         </p>
       ) : historico.isLoading ? (
-        <p className="text-[12px] text-casca-suave">{t("Carregando…")}</p>
+        <p className="text-[14px] text-casca-suave">{t("Carregando…")}</p>
       ) : historico.isError ? (
-        <p className="text-[12px] text-casca-suave">{t("Não consegui carregar o histórico.")}</p>
+        <p className="text-[14px] text-casca-suave">{t("Não consegui carregar o histórico.")}</p>
       ) : secoes.length === 0 ? (
-        <p className="text-[12px] text-casca-suave">{t("Os resultados não foram encontrados.")}</p>
+        <p className="text-[14px] text-casca-suave">{t("Os resultados não foram encontrados.")}</p>
       ) : (
         secoes.map((s) => (
           <section key={s.chave}>
-            <h4 className="flex items-center gap-2 text-[11px] font-semibold text-casca-texto uppercase">
+            <h4 className="flex items-center gap-2 text-[12px] font-semibold text-casca-texto uppercase">
               <span>{t(s.rotulo)}</span>
               <span className="font-normal text-casca-meta normal-case">{s.data}</span>
               <span aria-hidden className="h-px flex-1 bg-casca-borda" />

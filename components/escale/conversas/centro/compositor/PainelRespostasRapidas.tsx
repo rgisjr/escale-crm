@@ -58,7 +58,7 @@ export function PainelRespostasRapidas({
   const grupo = (titulo: string, itens: RespostaLida[]) =>
     itens.length === 0 ? null : (
       <div>
-        <div className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
+        <div className="px-4 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
           {titulo}
         </div>
         {itens.map((r) => (
@@ -68,11 +68,11 @@ export function PainelRespostasRapidas({
             className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-casca-raia"
             onClick={() => aoEscolher(interpolateTemplate(r.corpo, contato))}
           >
-            <span className="shrink-0 rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 font-mono text-[11px] text-casca-suave">
+            <span className="shrink-0 rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 font-mono text-[12px] text-casca-suave">
               {comBarra(r.atalho)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[12px] text-casca-texto">{r.corpo}</span>
+              <span className="block truncate text-[14px] text-casca-texto">{r.corpo}</span>
             </span>
           </button>
         ))}
@@ -84,7 +84,7 @@ export function PainelRespostasRapidas({
       data-testid="respostas-rapidas"
     >
       <div className="flex h-12 items-center gap-2 border-b border-casca-borda px-4">
-        <span className="flex-1 text-[13px] font-medium text-casca-texto">
+        <span className="flex-1 text-[15px] font-medium text-casca-texto">
           {t("Respostas rápidas")}
         </span>
         <Link
@@ -115,7 +115,7 @@ export function PainelRespostasRapidas({
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder={t("Buscar")}
-            className="min-w-0 flex-1 bg-transparent text-[12px] outline-hidden placeholder:text-casca-meta"
+            className="min-w-0 flex-1 bg-transparent text-[14px] outline-hidden placeholder:text-casca-meta"
           />
         </div>
         <SeletorDaCasca
@@ -143,7 +143,7 @@ export function PainelRespostasRapidas({
         {grupo(t("Gerais"), grupos.gerais)}
         {grupo(t("Minhas"), grupos.minhas)}
         {grupos.gerais.length + grupos.minhas.length === 0 ? (
-          <p className="px-4 py-6 text-center text-[12px] text-casca-suave">
+          <p className="px-4 py-6 text-center text-[14px] text-casca-suave">
             {t("Nenhuma resposta encontrada")}
           </p>
         ) : null}

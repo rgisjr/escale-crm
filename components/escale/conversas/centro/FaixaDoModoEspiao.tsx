@@ -8,7 +8,7 @@ export function FaixaDoModoEspiao({ aoDesativar }: { aoDesativar: () => void }) 
   return (
     <div
       role="status"
-      className="flex h-10 shrink-0 items-center gap-2 bg-casca-espiao px-4 text-[12px] text-casca-espiao-texto"
+      className="flex h-10 shrink-0 items-center gap-2 bg-casca-espiao px-4 text-[14px] text-casca-espiao-texto"
     >
       <Glasses size={16} aria-hidden />
       <span className="font-semibold">{t("Modo espião ativo")}</span>

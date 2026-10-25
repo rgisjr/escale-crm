@@ -42,21 +42,21 @@ export function MenuMaisDaFila({
           <MenuPrimitive.Item
             disabled={!podeSelecionar}
             title={podeSelecionar ? undefined : t("Sem permissão para ações em massa.")}
-            className={cn(ITEM_DO_MENU, "h-9 text-[12px]")}
+            className={cn(ITEM_DO_MENU, "h-9 text-[14px]")}
             onSelect={aoSelecionar}
           >
             <ListChecks size={16} aria-hidden />
             {t("Selecionar")}
           </MenuPrimitive.Item>
           <MenuPrimitive.Item
-            className={cn(ITEM_DO_MENU, "h-9 text-[12px]")}
+            className={cn(ITEM_DO_MENU, "h-9 text-[14px]")}
             onSelect={() => aoMudarEspiao(!espiao)}
           >
             <Glasses size={16} aria-hidden />
             {espiao ? t("Desativar modo espião") : t("Ativar modo espião")}
           </MenuPrimitive.Item>
           <MenuPrimitive.Item
-            className={cn(ITEM_DO_MENU, "h-9 text-[12px]")}
+            className={cn(ITEM_DO_MENU, "h-9 text-[14px]")}
             onSelect={aoPersonalizar}
           >
             <SlidersHorizontal size={16} aria-hidden />

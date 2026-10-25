@@ -33,7 +33,7 @@ export function SecaoNotas({
         disabled={!quadro}
         title={quadro ? undefined : t("Sem negócio")}
         onClick={() => setNova(true)}
-        className="flex h-8 w-full items-center justify-center gap-1 rounded-casca-gatilho border border-casca-borda text-[12px] text-casca-marca hover:bg-casca-raia disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex h-8 w-full items-center justify-center gap-1 rounded-casca-gatilho border border-casca-borda text-[14px] text-casca-marca hover:bg-casca-raia disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Plus size={14} aria-hidden />
         {t("Adicionar nota")}
@@ -49,10 +49,10 @@ export function SecaoNotas({
                 onClick={() => setEditando({ id: n.id, texto: n.texto })}
                 className="w-full rounded-[8px] border border-casca-borda p-3 text-left hover:bg-casca-raia"
               >
-                <p className="line-clamp-4 text-[12px] whitespace-pre-wrap text-casca-texto">
+                <p className="line-clamp-4 text-[14px] whitespace-pre-wrap text-casca-texto">
                   {n.texto}
                 </p>
-                <p className="mt-1 text-[11px] text-casca-suave">{`${dataHoraBr(n.created_at)}${n.user_nome ? ` ${t("por")} ${n.user_nome}` : ""}`}</p>
+                <p className="mt-1 text-[12px] text-casca-suave">{`${dataHoraBr(n.created_at)}${n.user_nome ? ` ${t("por")} ${n.user_nome}` : ""}`}</p>
               </button>
             </li>
           ))}

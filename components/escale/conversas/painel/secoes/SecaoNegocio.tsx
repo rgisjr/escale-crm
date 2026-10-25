@@ -95,7 +95,7 @@ export function SecaoNegocio({
             readOnly
             value={pipeline.name}
             aria-label={t("Origem")}
-            className="h-9 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[13px] text-casca-texto"
+            className="h-9 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[15px] text-casca-texto"
           />
         );
       case "etapa":
@@ -121,7 +121,7 @@ export function SecaoNegocio({
         );
       case "dono":
         return (
-          <div className="flex h-9 items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3 text-[13px] text-casca-texto">
+          <div className="flex h-9 items-center gap-2 rounded-casca-gatilho bg-casca-busca px-3 text-[15px] text-casca-texto">
             <DonoDaFicha
               key={`dono-${lead.id}`}
               lead={lead}
@@ -212,7 +212,7 @@ export function SecaoNegocio({
         );
       })}
       {campos.length === 0 ? (
-        <p className="text-[12px] text-casca-suave">
+        <p className="text-[14px] text-casca-suave">
           {t(
             "Todos os campos estão ocultos. Use o botão de personalizar para exibi-los novamente.",
           )}
@@ -220,7 +220,7 @@ export function SecaoNegocio({
       ) : null}
       <Link
         href={rotaDoNegocio(lead.id, "", {})}
-        className="flex items-center gap-1 pt-1 text-[12px] text-casca-marca hover:underline"
+        className="flex items-center gap-1 pt-1 text-[14px] text-casca-marca hover:underline"
       >
         {t("Ir para negócio")}
         <ExternalLink size={12} aria-hidden />

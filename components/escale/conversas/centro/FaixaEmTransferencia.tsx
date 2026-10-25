@@ -12,7 +12,7 @@ export function FaixaEmTransferencia({ conversa }: { conversa: ConversationWithC
   if (!doSetor?.em_transferencia || !doSetor.setor) return null;
   return (
     <div
-      className="flex h-10 shrink-0 items-center gap-2 border-t border-casca-borda bg-casca-pausa px-4 text-[12px] text-casca-pausa-texto"
+      className="flex h-10 shrink-0 items-center gap-2 border-t border-casca-borda bg-casca-pausa px-4 text-[14px] text-casca-pausa-texto"
       data-testid="faixa-em-transferencia"
     >
       <ArrowRightLeft size={14} aria-hidden />
