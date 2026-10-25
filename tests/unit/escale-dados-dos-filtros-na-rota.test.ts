@@ -109,15 +109,14 @@ describe("comDadosDosFiltros", () => {
 describe("a fiação na rota do quadro", () => {
   const rota = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
 
-  it("chama comDadosDosFiltros com o resultado das tarefas e entrega o dela às conversas", () => {
-    expect(rota).toMatch(/leadsComFiltros\s*=\s*await comDadosDosFiltros\(\s*supabase,[\s\S]*?leadsComTarefas\.leads/);
-    expect(rota).toMatch(/if \(leadsComFiltros\.error\)/);
-    expect(rota).toMatch(/withConversas\(\s*supabase,[\s\S]*?leadsComFiltros\.leads/);
+  it("chama comDadosDosFiltros com as linhas de contato e conversa já lidas (Q2b)", () => {
+    expect(rota).toMatch(/comDadosDosFiltros\(supabase,\s*organizationId,\s*leadsVisiveis,\s*lidas\.linhas\)/);
+    expect(rota).toMatch(/lerContatosEConversas\(supabase,\s*organizationId,\s*leadsVisiveis\)/);
   });
 
-  it("a cadeia que as cercas do quadro vigiam continua: conversas → marcadores → resposta", () => {
-    expect(rota).toMatch(/leadsComConversa\s*=\s*await withConversas/);
-    expect(rota).toMatch(/withMarcadoresDoContato\(\s*supabase,[\s\S]*?leadsComConversa\.leads/);
-    expect(rota).toMatch(/leads:\s*leadsComMarcadores\.leads/);
+  it("as etapas correm juntas e a resposta sai da junta delas (conversas e marcadores incluídos)", () => {
+    expect(rota).toMatch(/withConversas\(leadsVisiveis,\s*linhas\.conversas\)/);
+    expect(rota).toMatch(/withMarcadoresDoContato\(leadsVisiveis,\s*linhas\.contatos\)/);
+    expect(rota).toMatch(/leads:\s*juntarEtapasPorLead\(\s*leadsVisiveis,\s*etapas\.map/);
   });
 });

@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useChaveDosRecentes, useNegociosRecentes } from "@/hooks/escale/useNegociosRecentes";
 import { usePrefsDoCard } from "@/hooks/escale/usePrefsDoCard";
@@ -7,7 +7,7 @@ import { useT } from "@/hooks/i18n/useT";
 import { PREFS_PADRAO, type CampoDaCapa } from "@/lib/escale/capa/tipos";
 import { totalDaColuna } from "@/lib/escale/quadro/aparencia";
 import { recenteDoLead } from "@/lib/escale/recentes/regras";
-import { buildCardInput } from "@/lib/kanban/card-state";
+import { buildCardInput, type CardInput } from "@/lib/kanban/card-state";
 import type { Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 
@@ -83,6 +83,30 @@ export function ColunaDoFunilNaCasca({
         )}`;
   const aberta = !stage.is_won && !stage.is_lost;
 
+  // Q2b (G2-4): o `card` de cada negócio só é refeito quando muda o que ele lê, e o `onOpen`
+  // é um só (lê o estado vivo por ref): sem isso o `CardDaCasca` memoizado refazia a cada render.
+  const cards = useMemo(
+    () =>
+      new Map(
+        leads.map((lead) => [
+          lead.id,
+          buildCardInput(lead, { stageName: stage.name, ownerNames, coolingIds, reactivations, canonicalTags }),
+        ]),
+      ),
+    [leads, stage.name, ownerNames, coolingIds, reactivations, canonicalTags],
+  );
+  const vivo = useRef({ leads, onOpen, registrar, nomeDaOrigem });
+  useEffect(() => {
+    vivo.current = { leads, onOpen, registrar, nomeDaOrigem };
+  });
+  const abrir = useCallback((id: string) => {
+    const atual = vivo.current;
+    atual.onOpen?.(id);
+    // Fase 1E: o negócio aberto entra nos Recentes do painel.
+    const lead = atual.leads.find((l) => l.id === id);
+    if (lead) atual.registrar(recenteDoLead(lead, atual.nomeDaOrigem ?? ""));
+  }, []);
+
   return (
     <ColunaDaCasca
       idDaColuna={stage.id}
@@ -115,13 +139,7 @@ export function ColunaDoFunilNaCasca({
       renderCard={(lead, indice, aoSelecionar) => (
         <CardDaCasca
           key={lead.id}
-          card={buildCardInput(lead, {
-            stageName: stage.name,
-            ownerNames,
-            coolingIds,
-            reactivations,
-            canonicalTags,
-          })}
+          card={cards.get(lead.id) as CardInput}
           lead={lead}
           index={indice}
           pipelineId={pipelineId}
@@ -129,11 +147,7 @@ export function ColunaDoFunilNaCasca({
           isSelecting={selecionados.size > 0}
           pulseCount={pulses?.get(lead.id) ?? 0}
           onSelect={aoSelecionar}
-          onOpen={(id) => {
-            onOpen?.(id);
-            // Fase 1E: o negócio aberto entra nos Recentes do painel.
-            registrar(recenteDoLead(lead, nomeDaOrigem ?? ""));
-          }}
+          onOpen={abrir}
           nomes={ownerNames}
           prefs={prefs}
           camposDoCard={camposDoCard}

@@ -1,6 +1,6 @@
 "use client";
 import { Draggable } from "@hello-pangea/dnd";
-import type { MouseEvent } from "react";
+import { memo, type MouseEvent } from "react";
 
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import type { GestoDeSelecao } from "@/components/kanban/KanbanCard";
@@ -52,7 +52,7 @@ const parar = (e: MouseEvent) => e.stopPropagation();
  * ações, o pulso do tempo real e a linha do agente (só quando tem o que dizer,
  * D9). A caixinha de seleção aparece no lugar da foto no hover (D10).
  */
-export function CardDaCasca({
+function CardDaCascaBase({
   card,
   lead,
   index,
@@ -198,3 +198,10 @@ export function CardDaCasca({
     </Draggable>
   );
 }
+
+/**
+ * Q2b (G2-4): memoizado. Selecionar um card ou chegar um pulso redesenhava todos os cards da
+ * coluna (Draggable, menus, tooltips); agora só muda quem teve prop diferente. A coluna entrega
+ * `card` e `onOpen` estáveis (veja `ColunaDoFunilNaCasca`).
+ */
+export const CardDaCasca = memo(CardDaCascaBase);

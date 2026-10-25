@@ -120,7 +120,7 @@ describe("o elo que some sem barulho", () => {
     const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
     expect(fonte, "falta withConversas").toContain("withConversas");
     expect(fonte, "withConversas não foi chamada").toMatch(
-      /leadsComConversa\s*=\s*await withConversas/,
+      /withConversas\(leadsVisiveis,\s*linhas\.conversas\)/,
     );
     // Chamar e não USAR o resultado é o defeito de verdade: a função roda, o
     // custo se paga, e a resposta sai sem a conversa. A primeira versão deste
@@ -131,14 +131,11 @@ describe("o elo que some sem barulho", () => {
     // `leads: leadsComConversa.leads` reprovava quem acrescentava uma etapa
     // CERTA depois dela; o que importa é o resultado dela alimentar a próxima,
     // e a resposta sair da última.
+    // Q2b: as etapas correm juntas sobre os mesmos negócios e a resposta sai da junta.
     expect(
       fonte,
-      "o resultado de withConversas não alimenta withMarcadoresDoContato (cadeia: withConversas → withMarcadoresDoContato → resposta)",
-    ).toMatch(/withMarcadoresDoContato\(\s*supabase,[\s\S]*?leadsComConversa\.leads/);
-    expect(
-      fonte,
-      "a resposta não sai da última etapa (cadeia: withConversas → withMarcadoresDoContato → resposta)",
-    ).toMatch(/leads:\s*leadsComMarcadores\.leads/);
+      "a resposta não sai da junta das etapas (juntarEtapasPorLead)",
+    ).toMatch(/leads:\s*juntarEtapasPorLead\(/);
   });
 
   it("contato SEM conversa sai como `null`, não ausente — senão \"Abrir conversa\" nunca aparece (#1993)", () => {
@@ -148,7 +145,7 @@ describe("o elo que some sem barulho", () => {
     // ela fazia `...(conversa ? { conversa } : {})` e o campo saía AUSENTE. O
     // componente estava certo e o botão nunca aparecia no quadro de verdade.
     const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
-    const corpo = fonte.slice(fonte.indexOf("async function withConversas"));
+    const corpo = fonte.slice(fonte.indexOf("function withConversas"));
     const daFuncao = corpo.slice(0, corpo.indexOf("\n}\n"));
     // Lead sem contato continua sem o campo: ele sai antes, e é ausência legítima.
     expect(daFuncao).toMatch(/if \(!lead\.contact_id\) return lead;/);
@@ -161,8 +158,8 @@ describe("o elo que some sem barulho", () => {
   });
 
   it("a mais RECENTE por contato — não a primeira que o banco devolver", () => {
-    const fonte = readFileSync("app/api/v1/pipelines/[id]/board/route.ts", "utf8");
-    expect(fonte).toMatch(/order\("last_message_at",\s*\{\s*ascending:\s*false/);
+    const leitor = readFileSync("lib/escale/filtros/ler-dados-do-quadro.ts", "utf8");
+    expect(leitor).toMatch(/order\("last_message_at",\s*\{\s*ascending:\s*false/);
   });
 
   it("o card renderiza o slot", () => {

@@ -24,11 +24,17 @@ import {
   type PropostaAmbigua,
 } from "@/lib/leads/next-action";
 import type { LeadCandidate } from "@/lib/leads/active-lead";
-import { anexarDadosDoContato, type LinhaDoContatoNoQuadro } from "@/lib/kanban/dados-do-contato";
+import { anexarDadosDoContato } from "@/lib/kanban/dados-do-contato";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { anexarTarefasAosNegocios, type LinhaDaTarefaNoQuadro } from "@/lib/kanban/tarefas-no-quadro";
 // FORK ESCALE · Fase 1D: o que os filtros e a ordenação do quadro leem.
-import { comDadosDosFiltros } from "@/lib/escale/filtros/ler-dados-do-quadro";
+import {
+  comDadosDosFiltros,
+  lerContatosEConversas,
+  type ContatoDoQuadro,
+  type ConversaDoQuadro,
+} from "@/lib/escale/filtros/ler-dados-do-quadro";
+import { juntarEtapasPorLead } from "@/lib/escale/quadro/juntar-etapas";
 import { buscaEmLotes } from "@/lib/supabase/em-lotes";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -265,37 +271,12 @@ async function withScores(
  * uma coluna a mais custa bytes; outra consulta com a mesma lista de ids na URL
  * custaria outra ida ao banco por quadro aberto.
  */
-async function withConversas(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  organizationId: string,
-  leads: Lead[],
-): Promise<{ leads: Lead[]; error: string | null }> {
-  const contactIds = [...new Set(leads.map((l) => l.contact_id).filter((c): c is string => !!c))];
-  if (contactIds.length === 0) return { leads, error: null };
-
-  // Em lotes, e a ordem continua valendo para o que importa: as conversas de um
-  // contato caem todas no mesmo lote, e é DENTRO do contato que "a primeira vista
-  // vence" lê a ordem.
-  const { data, error } = await buscaEmLotes(contactIds, (lote) =>
-    supabase
-      .from("conversations")
-      .select("id, contact_id, last_message_preview, last_message_at, unread_count_for_assignee, tags")
-      .eq("organization_id", organizationId)
-      .in("contact_id", lote)
-      .order("last_message_at", { ascending: false, nullsFirst: false }),
-  );
-  if (error) return { leads, error: error.message };
-
+function withConversas(leads: Lead[], conversas: ConversaDoQuadro[]): Lead[] {
+  // As conversas vêm de `lerContatosEConversas` (uma leitura para o quadro todo), da mais
+  // recente para a mais antiga; é a ordem DENTRO do contato que "a primeira vista vence" lê.
   const porContato = new Map<string, NonNullable<Lead["conversa"]>>();
   const marcadoresPorContato = new Map<string, Set<string>>();
-  for (const row of (data ?? []) as Array<{
-    id: string;
-    contact_id: string;
-    last_message_preview: string | null;
-    last_message_at: string | null;
-    unread_count_for_assignee: number | null;
-    tags: string[] | null;
-  }>) {
+  for (const row of conversas) {
     // Os marcadores somam TODAS as conversas; a linha do card é só a mais recente.
     for (const tag of row.tags ?? []) {
       const doContato = marcadoresPorContato.get(row.contact_id) ?? new Set<string>();
@@ -312,23 +293,20 @@ async function withConversas(
     });
   }
 
-  return {
-    leads: leads.map((lead) => {
-      if (!lead.contact_id) return lead;
-      const conversa = porContato.get(lead.contact_id);
-      const marcadores = marcadoresPorContato.get(lead.contact_id);
-      return {
-        ...lead,
-        // `null`, nunca ausente: contato sem conversa é "não há conversa", e é
-        // assim que o card e o dossiê sabem mostrar "Abrir conversa" (#1993).
-        // Ausente (`undefined`) fica para o lead SEM contato, que sai acima.
-        conversa: conversa ?? null,
-        // Vazio não vira campo, como `contact_tags`: o payload não engorda.
-        ...(marcadores && marcadores.size > 0 ? { conversation_tags: [...marcadores] } : {}),
-      };
-    }),
-    error: null,
-  };
+  return leads.map((lead) => {
+    if (!lead.contact_id) return lead;
+    const conversa = porContato.get(lead.contact_id);
+    const marcadores = marcadoresPorContato.get(lead.contact_id);
+    return {
+      ...lead,
+      // `null`, nunca ausente: contato sem conversa é "não há conversa", e é
+      // assim que o card e o dossiê sabem mostrar "Abrir conversa" (#1993).
+      // Ausente (`undefined`) fica para o lead SEM contato, que sai acima.
+      conversa: conversa ?? null,
+      // Vazio não vira campo, como `contact_tags`: o payload não engorda.
+      ...(marcadores && marcadores.size > 0 ? { conversation_tags: [...marcadores] } : {}),
+    };
+  });
 }
 
 /**
@@ -346,28 +324,11 @@ async function withConversas(
  * etiqueta, para o payload do quadro não engordar com array vazio em todo card.
  *
  * A MESMA leitura de `contacts` também alimenta telefone, e-mail e links do card
- * (`anexarDadosDoContato`): uma consulta por quadro, não duas.
+ * (`anexarDadosDoContato`): uma consulta por quadro, não duas. Desde a Q2b ela é
+ * feita uma vez só para o quadro inteiro (`lerContatosEConversas`), junto com a
+ * dos filtros e a da capa.
  */
-async function withMarcadoresDoContato(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  organizationId: string,
-  leadsDoQuadro: Lead[],
-): Promise<{ leads: Lead[]; error: string | null }> {
-  const contactIds = [
-    ...new Set(leadsDoQuadro.map((l) => l.contact_id).filter((c): c is string => !!c)),
-  ];
-  if (contactIds.length === 0) return { leads: leadsDoQuadro, error: null };
-
-  const { data, error } = await buscaEmLotes(contactIds, (lote) =>
-    supabase
-      .from("contacts")
-      .select("id, tags, phone_number, email, custom_fields, is_anonymized")
-      .eq("organization_id", organizationId)
-      .in("id", lote),
-  );
-  if (error) return { leads: leadsDoQuadro, error: error.message };
-
-  const linhas = (data ?? []) as Array<{ id: string; tags: string[] | null } & LinhaDoContatoNoQuadro>;
+function withMarcadoresDoContato(leadsDoQuadro: Lead[], linhas: ContatoDoQuadro[]): Lead[] {
   const leads = anexarDadosDoContato(leadsDoQuadro, linhas);
 
   const porContato = new Map<string, string[]>();
@@ -375,15 +336,12 @@ async function withMarcadoresDoContato(
     const tags = row.tags ?? [];
     if (tags.length > 0) porContato.set(row.id, tags);
   }
-  if (porContato.size === 0) return { leads, error: null };
+  if (porContato.size === 0) return leads;
 
-  return {
-    leads: leads.map((lead) => {
-      const contact_tags = lead.contact_id ? porContato.get(lead.contact_id) : undefined;
-      return contact_tags ? { ...lead, contact_tags } : lead;
-    }),
-    error: null,
-  };
+  return leads.map((lead) => {
+    const contact_tags = lead.contact_id ? porContato.get(lead.contact_id) : undefined;
+    return contact_tags ? { ...lead, contact_tags } : lead;
+  });
 }
 
 /**
@@ -536,103 +494,68 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
 
   // Contato pessoal some do board mas a linha continua no banco (spec 21, etapa
   // 8, decisão 2 — critério 4): o card não é listado e volta ao desmarcar, com
-  // o histórico intacto. Filtro em memória sobre a lista já lida: o board não
-  // pagina, então nada se perde por filtrar depois de ler. NUNCA `delete`.
-  const pessoais = await idsDeContatosPessoais(
-    supabase,
-    (pipeline as Pipeline).organization_id,
-  );
+  // o histórico intacto. Filtro em memória sobre a lista já lida: a leitura dos
+  // negócios já foi feita em páginas, então nada se perde por filtrar depois.
+  // NUNCA `delete`.
+  const organizationId = (pipeline as Pipeline).organization_id;
+  const [pessoais, { data: pipelinePadrao }] = await Promise.all([
+    idsDeContatosPessoais(supabase, organizationId),
+    supabase
+      .from("crm_pipelines")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("is_default", true)
+      .maybeSingle(),
+  ]);
+  const ehPessoal = new Set(pessoais);
   const leadsVisiveis =
-    pessoais.length > 0
-      ? ((leads ?? []) as Lead[]).filter(
-          (l) => l.contact_id === null || !pessoais.includes(l.contact_id),
-        )
+    ehPessoal.size > 0
+      ? ((leads ?? []) as Lead[]).filter((l) => l.contact_id === null || !ehPessoal.has(l.contact_id))
       : ((leads ?? []) as Lead[]);
 
-  const leadsWithOwner = await withOwnerAgents(
-    supabase,
-    (pipeline as Pipeline).organization_id,
-    leadsVisiveis,
-  );
-  if (leadsWithOwner.error) {
-    return fail("internal_error", leadsWithOwner.error, 500, { requestId });
-  }
-
-  const { data: pipelinePadrao } = await supabase
-    .from("crm_pipelines")
-    .select("id")
-    .eq("organization_id", (pipeline as Pipeline).organization_id)
-    .eq("is_default", true)
-    .maybeSingle();
-
-  const leadsComAcao = await withNextActions(
-    createAdminClient(),
-    (pipeline as Pipeline).organization_id,
-    leadsWithOwner.leads,
-    (pipelinePadrao as { id: string } | null)?.id ?? null,
-  );
-  if (leadsComAcao.error) {
-    return fail("internal_error", leadsComAcao.error, 500, { requestId });
-  }
-
-  const leadsComScore = await withScores(
-    supabase,
-    (pipeline as Pipeline).organization_id,
-    leadsComAcao.leads,
-  );
-  if (leadsComScore.error) {
-    return fail("internal_error", leadsComScore.error, 500, { requestId });
-  }
-
-  // As tarefas entram NO MEIO da cadeia, e não no fim: a resposta continua
-  // saindo de `withMarcadoresDoContato`, a última etapa que as cercas do quadro
-  // vigiam (`kanban-atalho-conversa`, `funil-mostra-dados-do-cliente`,
-  // `funil-filtro-de-tag-le-as-duas-caixas`). A ordem não muda o resultado: cada
-  // etapa só acrescenta o próprio campo ao lead.
-  const leadsComTarefas = await withTarefas(
-    supabase,
-    (pipeline as Pipeline).organization_id,
-    leadsComScore.leads,
-  );
-  if (leadsComTarefas.error) {
-    return fail("internal_error", leadsComTarefas.error, 500, { requestId });
-  }
-
-  // FORK ESCALE · Fase 1D: atividades concluídas, nome do contato e a conversa
-  // da capa para os filtros e a ordenação do quadro. No MEIO da cadeia, como as
-  // tarefas: as cercas vigiam withConversas → withMarcadoresDoContato → resposta,
-  // e cada etapa só acrescenta o próprio campo ao lead.
-  const leadsComFiltros = await comDadosDosFiltros(
-    supabase,
-    (pipeline as Pipeline).organization_id,
-    leadsComTarefas.leads,
-  );
-  if (leadsComFiltros.error) {
-    return fail("internal_error", leadsComFiltros.error, 500, { requestId });
-  }
-
-  const leadsComConversa = await withConversas(
-    supabase,
-    (pipeline as Pipeline).organization_id,
-    leadsComFiltros.leads,
-  );
-  if (leadsComConversa.error) {
-    return fail("internal_error", leadsComConversa.error, 500, { requestId });
-  }
-
-  const leadsComMarcadores = await withMarcadoresDoContato(
-    supabase,
-    (pipeline as Pipeline).organization_id,
-    leadsComConversa.leads,
-  );
-  if (leadsComMarcadores.error) {
-    return fail("internal_error", leadsComMarcadores.error, 500, { requestId });
-  }
+  // Q2b (G2-3): as etapas só acrescentam, cada uma, o PRÓPRIO campo ao negócio
+  // (nenhuma lê o que a outra escreve), então correm juntas e `juntarEtapasPorLead`
+  // soma o que cada uma trouxe, casando por `lead.id`. Contatos e conversas são lidos
+  // UMA vez para o quadro (G2-2) e entregues às três etapas que os usam. O erro
+  // devolvido é o da primeira etapa que falhou, na ordem de sempre.
+  const contatosEConversas = lerContatosEConversas(supabase, organizationId, leadsVisiveis);
+  const comContatos = async (
+    etapa: (linhas: Awaited<typeof contatosEConversas>["linhas"]) => Lead[],
+  ): Promise<{ leads: Lead[]; error: string | null }> => {
+    const lidas = await contatosEConversas;
+    if (lidas.error) return { leads: leadsVisiveis, error: lidas.error };
+    return { leads: etapa(lidas.linhas), error: null };
+  };
+  const etapas = await Promise.all([
+    withOwnerAgents(supabase, organizationId, leadsVisiveis),
+    withNextActions(
+      createAdminClient(),
+      organizationId,
+      leadsVisiveis,
+      (pipelinePadrao as { id: string } | null)?.id ?? null,
+    ),
+    withScores(supabase, organizationId, leadsVisiveis),
+    withTarefas(supabase, organizationId, leadsVisiveis),
+    // FORK ESCALE · Fase 1D: atividades concluídas, nome do contato e a conversa
+    // da capa para os filtros e a ordenação do quadro.
+    contatosEConversas.then((lidas) =>
+      lidas.error
+        ? { leads: leadsVisiveis, error: lidas.error }
+        : comDadosDosFiltros(supabase, organizationId, leadsVisiveis, lidas.linhas),
+    ),
+    comContatos((linhas) => withConversas(leadsVisiveis, linhas.conversas)),
+    comContatos((linhas) => withMarcadoresDoContato(leadsVisiveis, linhas.contatos)),
+  ]);
+  const comErro = etapas.find((etapa) => etapa.error);
+  if (comErro) return fail("internal_error", comErro.error as string, 500, { requestId });
 
   const board: BoardData = {
     pipeline: pipeline as Pipeline,
     stages: (stages ?? []) as Stage[],
-    leads: leadsComMarcadores.leads,
+    leads: juntarEtapasPorLead(
+      leadsVisiveis,
+      etapas.map((etapa) => etapa.leads),
+    ),
   };
 
   return ok(board, { requestId });
