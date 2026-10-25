@@ -88,9 +88,8 @@ beforeEach(() => {
 });
 
 describe("ConversasDaCasca (c01, c23)", () => {
-  it("a barra do módulo, a fila vazia, o centro vazio e o painel vazio", () => {
+  it("a barra da fila, a fila vazia, o centro vazio e o painel vazio", () => {
     envolver(<ConversasDaCasca />);
-    expect(screen.getByRole("heading", { name: "Conversas" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Nova conversa" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Configurações" })).toHaveAttribute(
       "href",

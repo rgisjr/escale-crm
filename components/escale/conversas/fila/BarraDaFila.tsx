@@ -1,8 +1,10 @@
 "use client";
+import Link from "next/link";
+
 import { useT } from "@/hooks/i18n/useT";
 import type { Ordem } from "@/lib/escale/conversas/ordem";
 import { totalDeCriterios, type FiltrosDoPainel } from "@/lib/escale/conversas/filtros-da-fila";
-import { Search } from "@/lib/ui/icons-da-casca";
+import { Search, Settings, SquarePen } from "@/lib/ui/icons-da-casca";
 
 import { FunilDaFila } from "../filtros/FunilDaFila";
 import { MenuDeOrdem } from "./MenuDeOrdem";
@@ -28,6 +30,8 @@ export function BarraDaFila({
   visualizacaoForaDoPadrao,
   podeSelecionar,
   aoSelecionar,
+  aoNovaConversa,
+  novaAberta,
 }: {
   busca: string;
   aoBuscar: (v: string) => void;
@@ -46,26 +50,32 @@ export function BarraDaFila({
   visualizacaoForaDoPadrao: boolean;
   podeSelecionar: boolean;
   aoSelecionar: () => void;
+  aoNovaConversa: () => void;
+  novaAberta: boolean;
 }) {
   const t = useT();
   return (
-    <div className="shrink-0 px-3 pt-3 pb-4">
-      <label className="relative block">
+    <div className="shrink-0 border-b border-casca-borda">
+      <div className="flex h-14 items-center gap-2 border-b border-casca-borda px-4">
+        <Search size={20} aria-hidden className="shrink-0 text-casca-texto" />
         <input
           type="search"
           value={busca}
           onChange={(e) => aoBuscar(e.target.value)}
           placeholder={t("Pesquisar")}
           aria-label={t("Pesquisar")}
-          className="h-8 w-full rounded-casca-gatilho bg-casca-busca pr-8 pl-3 text-[12px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
+          className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-none"
         />
-        <Search
-          size={16}
-          aria-hidden
-          className="absolute top-1/2 right-2.5 -translate-y-1/2 text-casca-suave"
-        />
-      </label>
-      <div className="mt-5 flex h-8 items-center justify-between">
+        <Link
+          href="/app/inbox/configuracoes"
+          aria-label={t("Configurações")}
+          title={t("Configurações")}
+          className="grid size-8 shrink-0 place-items-center rounded-casca-gatilho text-casca-suave hover:bg-casca-raia"
+        >
+          <Settings size={18} aria-hidden />
+        </Link>
+      </div>
+      <div className="flex h-14 items-center justify-between px-4">
         <MenuDePresets
           painel={painel}
           aoMudarPainel={aoMudarPainel}
@@ -73,6 +83,16 @@ export function BarraDaFila({
           temGrupos={temGrupos}
         />
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={t("Nova conversa")}
+            title={t("Nova conversa")}
+            aria-pressed={novaAberta}
+            onClick={aoNovaConversa}
+            className={`grid size-8 place-items-center rounded-casca-gatilho hover:bg-casca-raia ${novaAberta ? "bg-casca-marca-suave text-casca-marca" : "text-casca-suave"}`}
+          >
+            <SquarePen size={18} aria-hidden />
+          </button>
           <FunilDaFila
             total={totalDeCriterios(painel)}
             ativo={filtrosAbertos}

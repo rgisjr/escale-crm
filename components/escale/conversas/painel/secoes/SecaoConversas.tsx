@@ -27,9 +27,9 @@ export function SecaoConversas({
   return (
     <SecaoAberta titulo={t("Conversas")} icone={ICONE_DA_SECAO.conversas} aoVoltar={aoVoltar}>
       {isLoading ? (
-        <p className="text-[12px] text-casca-suave">{t("Carregando…")}</p>
+        <p className="text-[14px] text-casca-suave">{t("Carregando…")}</p>
       ) : isError ? (
-        <p className="text-[12px] text-casca-suave">
+        <p className="text-[14px] text-casca-suave">
           {t("Não foi possível carregar as conversas.")}
         </p>
       ) : (
@@ -52,17 +52,17 @@ export function SecaoConversas({
                     <span className="flex items-center justify-between">
                       <span
                         className={cn(
-                          "rounded-sm px-1.5 py-px text-[11px] font-medium",
+                          "rounded-sm px-1.5 py-px text-[12px] font-medium",
                           classeDoStatus(c.status),
                         )}
                       >
                         {t(ROTULO_DO_STATUS[c.status as keyof typeof ROTULO_DO_STATUS] ?? c.status)}
                       </span>
-                      <span className="text-[11px] text-casca-meta">
+                      <span className="text-[12px] text-casca-meta">
                         {dataDaMensagem(c.last_message_at)}
                       </span>
                     </span>
-                    <span className="truncate text-[12px] text-casca-texto-2">
+                    <span className="truncate text-[14px] text-casca-texto-2">
                       {c.last_message_preview ?? t("Sem mensagem")}
                     </span>
                   </span>

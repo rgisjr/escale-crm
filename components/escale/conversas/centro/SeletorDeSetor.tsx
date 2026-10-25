@@ -11,7 +11,7 @@ import { filtrarSetores, ordenarSetores } from "@/lib/escale/conversas/setores";
 import { Building2, Check, Search } from "@/lib/ui/icons-da-casca";
 
 const LINHA =
-  "flex h-9 w-full cursor-pointer items-center gap-2 px-3 text-left text-[12px] text-casca-texto hover:bg-casca-raia";
+  "flex h-9 w-full cursor-pointer items-center gap-2 px-3 text-left text-[14px] text-casca-texto hover:bg-casca-raia";
 
 /** O selo do setor no cabeçalho (c02; E3) e "Alterar setor" (C3, N7): o setor novo entra em transferência. */
 export function SeletorDeSetor({ conversa }: { conversa: ConversationWithContact }) {
@@ -58,7 +58,7 @@ export function SeletorDeSetor({ conversa }: { conversa: ConversationWithContact
             onChange={(e) => setBusca(e.target.value)}
             placeholder={t("Buscar por setor...")}
             aria-label={t("Buscar setor")}
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-casca-texto outline-hidden placeholder:text-casca-meta"
+            className="min-w-0 flex-1 bg-transparent text-[14px] text-casca-texto outline-hidden placeholder:text-casca-meta"
           />
           <Search size={14} aria-hidden className="text-casca-suave" />
         </div>
@@ -82,7 +82,7 @@ export function SeletorDeSetor({ conversa }: { conversa: ConversationWithContact
             </li>
           ))}
           {lista.length === 0 ? (
-            <li className="px-3 py-2 text-[12px] text-casca-suave">
+            <li className="px-3 py-2 text-[14px] text-casca-suave">
               {t("Nenhum setor encontrado...")}
             </li>
           ) : null}

@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { VazioDaCasca } from "./VazioDaCasca";
 
 const GATILHO =
-  "flex h-8 w-[446px] max-w-full items-center justify-between rounded-casca-gatilho border px-3 text-[12px] text-casca-texto";
+  "flex h-8 w-[446px] max-w-full items-center justify-between rounded-casca-gatilho border px-3 text-[14px] text-casca-texto";
 
 /**
  * "NOVA CONVERSA" (fork Escale, Fase 3A; A12; c21, c84–c86). Troca o centro
@@ -105,7 +105,7 @@ export function NovaConversa({
           </span>
         )}
         {nomeDoContato ? (
-          <h2 className="text-[13px] font-medium text-casca-texto">{nomeDoContato}</h2>
+          <h2 className="text-[15px] font-medium text-casca-texto">{nomeDoContato}</h2>
         ) : null}
       </div>
       <div className="flex flex-1 flex-col items-center pt-24">
@@ -152,7 +152,7 @@ export function NovaConversa({
                 onChange={(e) => setTermo(e.target.value)}
                 placeholder={t("Pesquisar")}
                 aria-label={t("Pesquisar")}
-                className="h-8 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[12px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
+                className="h-8 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[14px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-2 focus-visible:outline-casca-marca"
               />
             </div>
             <ul
@@ -170,16 +170,16 @@ export function NovaConversa({
                       setBuscaAberta(false);
                       setCriando(termo.trim());
                     }}
-                    className="mb-1 h-8 w-full rounded-casca-gatilho bg-casca-marca text-[12px] font-medium text-white hover:bg-casca-marca-forte"
+                    className="mb-1 h-8 w-full rounded-casca-gatilho bg-casca-marca text-[14px] font-medium text-white hover:bg-casca-marca-forte"
                   >
                     {`${t("Criar")} "${termo.trim()}"`}
                   </button>
                 </li>
               ) : null}
               {lista.isLoading ? (
-                <li className="px-3 py-2 text-[12px] text-casca-suave">{t("Carregando…")}</li>
+                <li className="px-3 py-2 text-[14px] text-casca-suave">{t("Carregando…")}</li>
               ) : contatos.length === 0 ? (
-                <li className="px-3 py-2 text-[12px] text-casca-suave">
+                <li className="px-3 py-2 text-[14px] text-casca-suave">
                   {t("Nenhum contato encontrado.")}
                 </li>
               ) : (
@@ -199,10 +199,10 @@ export function NovaConversa({
                       >
                         <FotoDaLinha id={c.id} nome={nome} temFoto={false} />
                         <span className="flex min-w-0 flex-col">
-                          <span className="truncate text-[12px] font-medium text-casca-texto">
+                          <span className="truncate text-[14px] font-medium text-casca-texto">
                             {nome}
                           </span>
-                          <span className="flex items-center gap-3 text-[11px] text-casca-suave">
+                          <span className="flex items-center gap-3 text-[12px] text-casca-suave">
                             {c.phone_number ? (
                               <span className="flex items-center gap-1">
                                 <Phone size={12} aria-hidden />
@@ -228,7 +228,7 @@ export function NovaConversa({
 
         {contato ? (
           <div className="mt-6 flex w-[446px] max-w-full flex-col gap-2">
-            <p className="flex items-center gap-2 text-[13px] font-semibold text-casca-texto">
+            <p className="flex items-center gap-2 text-[15px] font-semibold text-casca-texto">
               {t("Selecione um dispositivo ou conta")}
               <AjudaDaCasca texto={t("A conversa sai por este dispositivo ou conta.")} />
             </p>
@@ -259,7 +259,7 @@ export function NovaConversa({
                   className="max-h-[360px] overflow-y-auto"
                 >
                   {grupos.length === 0 ? (
-                    <li className="px-3 py-2 text-[12px] text-casca-suave">
+                    <li className="px-3 py-2 text-[14px] text-casca-suave">
                       {t(
                         "Você precisa adicionar um dispositivo ou uma conta para iniciar uma nova conversa.",
                       )}
@@ -267,7 +267,7 @@ export function NovaConversa({
                   ) : null}
                   {grupos.map((g) => (
                     <li key={g.grupo}>
-                      <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-casca-meta uppercase">
+                      <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-casca-meta uppercase">
                         {t(ROTULO_DO_GRUPO[g.grupo])}
                       </p>
                       <ul>
@@ -287,10 +287,10 @@ export function NovaConversa({
                                 className="flex h-[42px] w-full items-center justify-between rounded-casca-gatilho px-3 text-left hover:bg-casca-raia aria-disabled:cursor-not-allowed aria-disabled:opacity-70"
                               >
                                 <span className="flex min-w-0 flex-col">
-                                  <span className="truncate text-[12px] text-casca-texto">
+                                  <span className="truncate text-[14px] text-casca-texto">
                                     {nomeDoCanal(c, t)}
                                   </span>
-                                  <span className="text-[11px] text-casca-suave">
+                                  <span className="text-[12px] text-casca-suave">
                                     {formatarTelefone(c.phone_number)}
                                   </span>
                                 </span>

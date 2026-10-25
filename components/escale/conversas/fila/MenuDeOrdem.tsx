@@ -40,7 +40,7 @@ export function MenuDeOrdem({ ordem, aoMudar }: { ordem: Ordem; aoMudar: (o: Ord
           {ORDENS.map((o) => (
             <MenuPrimitive.Item
               key={o}
-              className={cn(ITEM_DO_MENU, "h-9 text-[12px]", o === ordem && "text-casca-marca")}
+              className={cn(ITEM_DO_MENU, "h-9 text-[14px]", o === ordem && "text-casca-marca")}
               onSelect={() => aoMudar(o)}
             >
               <span className="flex-1">{t(ROTULO_DA_ORDEM[o])}</span>

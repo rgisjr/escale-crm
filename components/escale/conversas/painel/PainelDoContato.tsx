@@ -100,7 +100,7 @@ export function PainelDoContato({
           leads={[]}
           aoAbrirConversa={aoAbrirConversa}
         />
-        <p className="pt-6 text-center text-[12px] text-casca-suave">
+        <p className="pt-6 text-center text-[14px] text-casca-suave">
           {t("Não foi possível carregar as informações do contato.")}
         </p>
       </div>
@@ -121,7 +121,7 @@ export function PainelDoContato({
         pipelineId={quadro?.pipeline.id ?? null}
       />
       {negocio.carregando && !quadro ? (
-        <p className="flex items-center gap-2 pb-4 text-[12px] text-casca-suave">
+        <p className="flex items-center gap-2 pb-4 text-[14px] text-casca-suave">
           <Loader2 size={14} aria-hidden className="animate-spin" />
           {t("Carregando…")}
         </p>

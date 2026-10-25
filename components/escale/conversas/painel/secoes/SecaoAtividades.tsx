@@ -73,7 +73,7 @@ export function SecaoAtividades({
       direita={
         <>
           {atrasadas > 0 ? (
-            <span className="rounded-full bg-casca-atraso px-2 text-[11px] font-medium text-casca-alerta">{`${atrasadas} ${atrasadas === 1 ? t("atrasada") : t("atrasadas")}`}</span>
+            <span className="rounded-full bg-casca-atraso px-2 text-[12px] font-medium text-casca-alerta">{`${atrasadas} ${atrasadas === 1 ? t("atrasada") : t("atrasadas")}`}</span>
           ) : null}
           <Link
             href={href}
@@ -87,9 +87,9 @@ export function SecaoAtividades({
       }
     >
       {ativ.carregando ? (
-        <p className="text-[12px] text-casca-suave">{t("Carregando…")}</p>
+        <p className="text-[14px] text-casca-suave">{t("Carregando…")}</p>
       ) : ativ.falhou ? (
-        <p className="text-[12px] text-casca-suave">
+        <p className="text-[14px] text-casca-suave">
           {t("Não foi possível carregar as atividades")}
         </p>
       ) : grupos.length === 0 ? (
@@ -98,7 +98,7 @@ export function SecaoAtividades({
           icone={ClipboardList}
           titulo={t("Nenhuma atividade para este negócio")}
           acao={
-            <Link href={href} className="text-[12px] text-casca-marca hover:underline">
+            <Link href={href} className="text-[14px] text-casca-marca hover:underline">
               {t("Criar atividade")}
             </Link>
           }
@@ -106,9 +106,9 @@ export function SecaoAtividades({
       ) : (
         grupos.map((g) => (
           <div key={g.chave} className="flex flex-col gap-2">
-            <p className="flex items-center gap-2 text-[12px] font-semibold text-casca-texto">
+            <p className="flex items-center gap-2 text-[14px] font-semibold text-casca-texto">
               {g.rotulo ?? t("Sem prazo")}
-              <span className="rounded-full bg-casca-raia px-2 text-[11px] font-normal text-casca-suave">{`${g.itens.length} ${g.itens.length === 1 ? t("atividade") : t("atividades")}`}</span>
+              <span className="rounded-full bg-casca-raia px-2 text-[12px] font-normal text-casca-suave">{`${g.itens.length} ${g.itens.length === 1 ? t("atividade") : t("atividades")}`}</span>
             </p>
             {g.itens.map((a) => {
               const Icone = ICONE_DO_TIPO[a.tipo] ?? ClipboardList;
@@ -119,11 +119,11 @@ export function SecaoAtividades({
                 >
                   <Icone size={16} aria-hidden className="shrink-0 text-casca-marca" />
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[12px] font-medium text-casca-texto">
+                    <span className="truncate text-[14px] font-medium text-casca-texto">
                       {a.title}
                     </span>
                     {a.due_date ? (
-                      <span className="text-[11px] text-casca-suave">{`${horaDaTarefa(a.due_date, idioma)} · ${haQuantoTempo(a.due_date, agora, idioma)}`}</span>
+                      <span className="text-[12px] text-casca-suave">{`${horaDaTarefa(a.due_date, idioma)} · ${haQuantoTempo(a.due_date, agora, idioma)}`}</span>
                     ) : null}
                   </span>
                   <CaixaDaCasca
@@ -139,7 +139,7 @@ export function SecaoAtividades({
       )}
       <Link
         href={href}
-        className="flex items-center justify-center gap-1 pt-2 text-[11px] text-casca-marca hover:underline"
+        className="flex items-center justify-center gap-1 pt-2 text-[12px] text-casca-marca hover:underline"
       >
         {t("Criar, editar ou reagendar no negócio")}
         <ExternalLink size={12} aria-hidden />

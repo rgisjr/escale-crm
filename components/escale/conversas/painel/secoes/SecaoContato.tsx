@@ -102,7 +102,7 @@ export function SecaoContato({
   return (
     <SecaoAberta titulo={t("Contato")} icone={ICONE_DA_SECAO.contato} aoVoltar={aoVoltar}>
       {isError ? (
-        <p className="text-[12px] text-casca-suave">{t("Não consegui carregar o contato.")}</p>
+        <p className="text-[14px] text-casca-suave">{t("Não consegui carregar o contato.")}</p>
       ) : null}
       {campos.map((c) => (
         <CampoDaSecao
@@ -126,7 +126,7 @@ export function SecaoContato({
               value={String(c.valor ?? "")}
               aria-label={c.rotulo}
               placeholder={t("Clique aqui para adicionar")}
-              className="h-9 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[13px] text-casca-texto placeholder:text-casca-meta"
+              className="h-9 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[15px] text-casca-texto placeholder:text-casca-meta"
             />
           )}
         </CampoDaSecao>
@@ -139,7 +139,7 @@ export function SecaoContato({
             pipelineId={quadro.pipeline.id}
           />
         ) : (
-          <p className="text-[12px] text-casca-meta">
+          <p className="text-[14px] text-casca-meta">
             {(contato?.tags ?? []).join(" · ") || t("Sem tag")}
           </p>
         )}

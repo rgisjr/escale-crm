@@ -18,7 +18,7 @@ import { SeletorDeAtendente } from "./SeletorDeAtendente";
 import { SeletorDeSetor } from "./SeletorDeSetor";
 
 const ITEM =
-  "flex h-9 w-full items-center gap-3 px-3 text-left text-[12px] text-casca-texto hover:bg-casca-raia disabled:cursor-not-allowed disabled:opacity-50";
+  "flex h-9 w-full items-center gap-3 px-3 text-left text-[14px] text-casca-texto hover:bg-casca-raia disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * O CABEÇALHO DA CONVERSA (c02, c03; C1): foto 40px, nome 13px/600, o canal
@@ -71,8 +71,8 @@ export function CabecalhoDaConversa({
     >
       <FotoDaConversa conversa={conversa} tamanho="topo" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-semibold text-casca-texto">{nome}</div>
-        <div className="truncate text-[11px] text-casca-suave">
+        <div className="truncate text-[15px] font-semibold text-casca-texto">{nome}</div>
+        <div className="truncate text-[12px] text-casca-suave">
           {dispositivo ? `${canal} - ${dispositivo}` : canal}
         </div>
       </div>

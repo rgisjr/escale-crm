@@ -58,7 +58,7 @@ const ICONE_DE_GRUPO: Record<PresetDeGrupo, LucideIcon> = {
 const PRESETS_DO_TOPO: readonly Preset[] = ["todos", "nao_lidas"];
 
 const CABECALHO =
-  "px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
+  "px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase";
 
 /**
  * O botão de presets e o menu (fork Escale, Fases 3A e 3D; c31, c71, 02-006): o
@@ -109,7 +109,7 @@ export function MenuDePresets({
     return (
       <MenuPrimitive.Item
         key={p}
-        className={cn(ITEM_DO_MENU, "h-9 text-[12px]", atual && "text-casca-marca")}
+        className={cn(ITEM_DO_MENU, "h-9 text-[14px]", atual && "text-casca-marca")}
         onSelect={() => aoMudarPainel(PAINEL_DO_PRESET[p])}
       >
         <Ic size={16} aria-hidden />
@@ -119,7 +119,7 @@ export function MenuDePresets({
             valor={naoLidas}
             limite={99}
             rotulo={t("Não lidas")}
-            className="h-4 min-w-4 px-1.5 text-[10px]"
+            className="h-4 min-w-4 px-1.5 text-[11px]"
           />
         ) : null}
         {atual ? <Check size={14} aria-hidden /> : null}
@@ -134,7 +134,7 @@ export function MenuDePresets({
           <button
             type="button"
             className={cn(
-              "flex h-8 max-w-[200px] items-center gap-1.5 rounded-casca-gatilho border px-2.5 text-[12px] font-medium text-casca-texto",
+              "flex h-8 max-w-[200px] items-center gap-1.5 rounded-casca-gatilho border px-2.5 text-[14px] font-medium text-casca-texto",
               aberto ? "border-casca-marca" : "border-casca-borda hover:bg-casca-raia",
             )}
           >
@@ -158,7 +158,7 @@ export function MenuDePresets({
                   return (
                     <MenuPrimitive.Item
                       key={p}
-                      className={cn(ITEM_DO_MENU, "h-9 text-[12px]", atual && "text-casca-marca")}
+                      className={cn(ITEM_DO_MENU, "h-9 text-[14px]", atual && "text-casca-marca")}
                       onSelect={() => aoMudarPainel(PAINEL_DO_PRESET_DE_GRUPO[p])}
                     >
                       <Ic size={16} aria-hidden />
@@ -178,7 +178,7 @@ export function MenuDePresets({
                   <MenuPrimitive.Item
                     className={cn(
                       ITEM_DO_MENU,
-                      "h-9 flex-1 text-[12px]",
+                      "h-9 flex-1 text-[14px]",
                       atual && "text-casca-marca",
                     )}
                     onSelect={() => aoMudarPainel(s.criterios)}
@@ -201,13 +201,13 @@ export function MenuDePresets({
                           className={cn(CAIXA_DO_MENU, "w-[180px]")}
                         >
                           <MenuPrimitive.Item
-                            className={cn(ITEM_DO_MENU, "h-9 text-[12px]")}
+                            className={cn(ITEM_DO_MENU, "h-9 text-[14px]")}
                             onSelect={() => setRenomeando({ id: s.id, nome: s.nome })}
                           >
                             {t("Renomear")}
                           </MenuPrimitive.Item>
                           <MenuPrimitive.Item
-                            className={cn(ITEM_DO_MENU, "h-9 text-[12px]")}
+                            className={cn(ITEM_DO_MENU, "h-9 text-[14px]")}
                             onSelect={() =>
                               mudar.mutate({ id: s.id, compartilhado: !s.compartilhado })
                             }
@@ -215,7 +215,7 @@ export function MenuDePresets({
                             {s.compartilhado ? t("Deixar de compartilhar") : t("Compartilhar")}
                           </MenuPrimitive.Item>
                           <MenuPrimitive.Item
-                            className={cn(ITEM_DO_MENU, "h-9 text-[12px] text-casca-alerta")}
+                            className={cn(ITEM_DO_MENU, "h-9 text-[14px] text-casca-alerta")}
                             onSelect={() =>
                               excluir.mutate(s.id, {
                                 onSuccess: () => toast.success(t("Filtro excluído.")),
@@ -232,7 +232,7 @@ export function MenuDePresets({
               );
             })}
             <MenuPrimitive.Item
-              className={cn(ITEM_DO_MENU, "h-9 text-[12px] text-casca-marca")}
+              className={cn(ITEM_DO_MENU, "h-9 text-[14px] text-casca-marca")}
               onSelect={aoCriarFiltro}
             >
               <Plus size={16} aria-hidden />

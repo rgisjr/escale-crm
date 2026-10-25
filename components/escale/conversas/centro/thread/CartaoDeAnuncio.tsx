@@ -39,14 +39,14 @@ export function CartaoDeAnuncio({ anuncio }: { anuncio: AnuncioDaMensagem }) {
         <img src={anuncio.image_url} alt="" className="h-28 w-full object-cover" />
       ) : null}
       <div className="px-3 py-2">
-        <div className="text-[10px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
+        <div className="text-[11px] font-semibold tracking-wide text-casca-sobrelinha uppercase">
           {t("Anúncio")}
         </div>
         {anuncio.headline ? (
-          <div className="text-[13px] font-semibold text-casca-texto">{anuncio.headline}</div>
+          <div className="text-[15px] font-semibold text-casca-texto">{anuncio.headline}</div>
         ) : null}
         {corpo ? (
-          <p className="text-[12px] text-casca-suave">
+          <p className="text-[14px] text-casca-suave">
             {aberto || !longo ? corpo : `${corpo.slice(0, CORPO_CURTO)}… `}
             {longo && !aberto ? (
               <button
@@ -64,7 +64,7 @@ export function CartaoDeAnuncio({ anuncio }: { anuncio: AnuncioDaMensagem }) {
             href={anuncio.source_url}
             target="_blank"
             rel="noreferrer"
-            className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-casca-marca"
+            className="mt-1 inline-flex items-center gap-1 text-[14px] font-medium text-casca-marca"
           >
             {t("Ver anúncio")}
             <ExternalLink size={12} aria-hidden />

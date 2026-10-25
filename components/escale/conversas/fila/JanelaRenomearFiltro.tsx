@@ -25,7 +25,7 @@ export function JanelaRenomearFiltro({
   if (!filtro) return null;
   return (
     <JanelaDaCasca aberta onFechar={aoFechar} className="w-[400px] p-0">
-      <div className="flex h-14 items-center border-b border-casca-borda px-5 text-[15px] font-medium text-casca-texto">
+      <div className="flex h-14 items-center border-b border-casca-borda px-5 text-[17px] font-medium text-casca-texto">
         {t("Renomear filtro")}
       </div>
       <div className="px-5 py-4">
@@ -35,7 +35,7 @@ export function JanelaRenomearFiltro({
           maxLength={60}
           aria-label={t("Nome do filtro")}
           onChange={(e) => setNome(e.target.value)}
-          className="h-8 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[13px] text-casca-texto outline-hidden"
+          className="h-8 w-full rounded-casca-gatilho bg-casca-busca px-3 text-[15px] text-casca-texto outline-hidden"
         />
       </div>
       <div className="px-5 pb-4">

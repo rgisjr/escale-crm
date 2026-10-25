@@ -83,7 +83,7 @@ export function ListaDaFila({
 
   if (fila.isLoading && itens.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-[12px] text-casca-suave">
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-[14px] text-casca-suave">
         <Loader2 size={20} aria-hidden className="animate-spin text-casca-marca" />
         {t("Carregando mensagens...")}
       </div>
@@ -91,7 +91,7 @@ export function ListaDaFila({
   }
   if (fila.isError && itens.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-[12px] text-casca-suave">
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-[14px] text-casca-suave">
         {t("Erro ao carregar conversas.")}
         <BotaoDaCasca
           variante="texto"
