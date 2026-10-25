@@ -14,7 +14,7 @@ export function invalidarTotalDaFila(qc: QueryClient): void {
   void qc.invalidateQueries({ queryKey: ["fila-total"], refetchType: "none" });
 }
 
-/** Quantas conversas o painel alcança (N12: "Selecionar todas as N"; N7: tem grupo?). A chave NÃO começa por "conversations": o tempo real e as ações refaziam este COUNT da organização inteira a cada evento (Q1, B1-19); vale o staleTime, e as ações em massa invalidam "fila-total". */
+/** Quantas conversas o painel alcança (N12: "Selecionar todas as N"; o "tem grupo?" é do `useTemGruposNaFila`, Q7c). A chave NÃO começa por "conversations": o tempo real e as ações refaziam este COUNT da organização inteira a cada evento (Q1, B1-19); vale o staleTime, e as ações em massa invalidam "fila-total". */
 export function useTotalDaFila(consulta: ConsultaDaFila, ativo: boolean) {
   const qs = parametrosDaConsulta({ ...consulta, ordem: "interacao" }).toString();
   return useQuery({

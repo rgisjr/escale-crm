@@ -90,3 +90,10 @@ export async function contarFila(
   if (error) throw new Error(error.message);
   return Number(data ?? 0);
 }
+
+/** A organização tem alguma conversa de grupo visível na fila? (`EXISTS` do banco, sem contar; Q7c.) */
+export async function filaTemGrupos(supabase: SupabaseClient, orgId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("fn_escale_fila_tem_grupos", { p_org: orgId });
+  if (error) throw new Error(error.message);
+  return data === true;
+}

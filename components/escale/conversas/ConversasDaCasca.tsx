@@ -15,6 +15,7 @@ import { useModoEspiao } from "@/hooks/escale/useModoEspiao";
 import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
 import { usePreferenciasDeConversas } from "@/hooks/escale/usePreferenciasDeConversas";
 import { useValorComAtraso } from "@/hooks/escale/useValorComAtraso";
+import { useTemGruposNaFila } from "@/hooks/escale/useTemGruposNaFila";
 import { useTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { useT } from "@/hooks/i18n/useT";
 import { isNotFound, useConversation } from "@/hooks/inbox/useConversation";
@@ -171,8 +172,7 @@ export function ConversasDaCasca({
     [painel, ordem, buscaAtrasada],
   );
   const fila = useFilaDeConversas(consulta, orgId);
-  const temGrupos =
-    (useTotalDaFila({ painel: { grupos: "grupos" }, ordem: "interacao" }, !!orgId).data ?? 0) > 0;
+  const temGrupos = useTemGruposNaFila(orgId).data === true;
   const permissoes = useMinhasPermissoes();
   const podeSelecionar = permissoes.CHAT_BULK_ACTIONS === true;
   const qc = useQueryClient();
