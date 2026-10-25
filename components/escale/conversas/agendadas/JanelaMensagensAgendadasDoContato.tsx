@@ -1,5 +1,6 @@
 "use client";
 import { CabecaDaJanela, JanelaDaCasca } from "@/components/escale/origens/JanelaDaCasca";
+import { ErroDaLista } from "@/components/escale/ui/ErroDaLista";
 import { useMensagensAgendadas, useRemoverAgendada } from "@/hooks/escale/useMensagensAgendadas";
 import { useT } from "@/hooks/i18n/useT";
 
@@ -18,7 +19,7 @@ export function JanelaMensagensAgendadasDoContato({
   contatoNome: string;
 }) {
   const t = useT();
-  const { data, isLoading } = useMensagensAgendadas(
+  const { data, isLoading, isError, refetch } = useMensagensAgendadas(
     { conversation_id: conversationId, por_pagina: 50 },
     aberta,
   );
@@ -30,7 +31,13 @@ export function JanelaMensagensAgendadasDoContato({
         {isLoading ? (
           <p className="py-6 text-center text-[12px] text-casca-suave">{t("Carregando…")}</p>
         ) : null}
-        {!isLoading && (data?.data.length ?? 0) === 0 ? (
+        {isError && !data ? (
+          <ErroDaLista
+            mensagem={t("Não foi possível carregar as mensagens agendadas.")}
+            aoTentar={() => void refetch()}
+          />
+        ) : null}
+        {!isLoading && !isError && (data?.data.length ?? 0) === 0 ? (
           <p className="py-6 text-center text-[12px] text-casca-suave">
             {t("Nenhuma mensagem agendada.")}
           </p>

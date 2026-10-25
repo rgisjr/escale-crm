@@ -10990,6 +10990,7 @@ export const DICIONARIO: Traducoes = {
   "Criação": { es: "Creación" },
   "Envio": { es: "Envío" },
   "Nenhuma mensagem agendada.": { es: "Ningún mensaje programado." },
+  "Não foi possível carregar as mensagens agendadas.": { es: "No se pudieron cargar los mensajes programados." },
   "Você está em": { es: "Estás en" },
   "Buscar por nome, e-mail ou telefone": { es: "Buscar por nombre, correo o teléfono" },
   "Dispositivo ou conta": { es: "Dispositivo o cuenta" },

@@ -22,14 +22,16 @@ export async function GET(_req: NextRequest, ctx: Ctx): Promise<Response> {
         .select("id, from_user_id, to_user_id, changed_by, reason, created_at")
         .eq("organization_id", authz.org.orgId)
         .eq("conversation_id", conversa.id)
-        .order("created_at", { ascending: true })
+        // Os mais recentes: com mais de EVENTOS_MAX, o corte esconde os antigos, não a transferência de hoje.
+        .order("created_at", { ascending: false })
         .limit(EVENTOS_MAX),
       supabase
         .from("crm_eventos_da_conversa")
         .select("id, tipo, user_id, created_at")
         .eq("organization_id", authz.org.orgId)
         .eq("conversation_id", conversa.id)
-        .order("created_at", { ascending: true })
+        // Os mais recentes: com mais de EVENTOS_MAX, o corte esconde os antigos, não a transferência de hoje.
+        .order("created_at", { ascending: false })
         .limit(EVENTOS_MAX),
     ]);
     if (atribuicoes.error) throw atribuicoes.error;

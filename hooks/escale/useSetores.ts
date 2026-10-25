@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { invalidarTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { recarregarListasDasConversas } from "@/hooks/inbox/recargaDasConversas";
 import { apiClient } from "@/lib/api/client";
 import { lerEmLotes } from "@/lib/escale/conversas/lotes";
@@ -95,6 +96,7 @@ function useInvalidarConversa(conversationId: string) {
   const invalidar = useInvalidarSetores();
   return async () => {
     recarregarListasDasConversas(qc);
+    invalidarTotalDaFila(qc);
     await Promise.all([
       invalidar(),
       qc.invalidateQueries({ queryKey: ["conversation", conversationId] }),
@@ -128,6 +130,7 @@ export function useLiberarDeOutro() {
       apiClient.post(`/api/v1/conversas-da-casca/${conversationId}/liberar`, {}),
     onSuccess: async (_d, conversationId) => {
       recarregarListasDasConversas(qc);
+      invalidarTotalDaFila(qc);
       await qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
     },
   });

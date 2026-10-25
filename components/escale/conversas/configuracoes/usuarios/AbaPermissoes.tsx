@@ -84,11 +84,16 @@ export function AbaPermissoes({ membro }: { membro: TeamMember }) {
     setGrupo("personalizado");
   };
   const salvar = async () => {
-    if (grupoEhPapel) {
-      await mudarPapel.mutateAsync({ userId: membro.user_id, role: grupo as Papel });
-      await resetar.mutateAsync(membro.user_id);
-    } else if (Object.keys(pendentes).length > 0) {
-      await gravar.mutateAsync({ user_id: membro.user_id, valores: pendentes });
+    try {
+      if (grupoEhPapel) {
+        await mudarPapel.mutateAsync({ userId: membro.user_id, role: grupo as Papel });
+        await resetar.mutateAsync(membro.user_id);
+      } else if (Object.keys(pendentes).length > 0) {
+        await gravar.mutateAsync({ user_id: membro.user_id, valores: pendentes });
+      }
+    } catch {
+      // O aviso vem do hook. Os passos são idempotentes: salvar de novo refaz o que faltou.
+      return;
     }
     setPendentes({});
     toast.success(t("As permissões foram atualizadas com sucesso!"));

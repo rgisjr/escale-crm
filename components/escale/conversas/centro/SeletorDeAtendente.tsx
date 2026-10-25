@@ -3,6 +3,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
@@ -82,7 +83,8 @@ export function SeletorDeAtendente({ conversa }: { conversa: ConversationWithCon
               toast.error(
                 t("Só o atendente atual ou quem pode alterar atendentes libera a conversa."),
               );
-            else aoConflito(err);
+            else if (status === 409) aoConflito(err);
+            else showApiError(err);
           },
         });
     } else if (id === user.id) {

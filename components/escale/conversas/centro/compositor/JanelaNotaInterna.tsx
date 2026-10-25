@@ -30,7 +30,11 @@ export function JanelaNotaInterna({
   const salvar = async () => {
     const body = texto.trim();
     if (!body) return;
-    await criar.mutateAsync({ conversation_id: conversationId, body });
+    try {
+      await criar.mutateAsync({ conversation_id: conversationId, body });
+    } catch {
+      return; // o aviso vem do hook; a janela fica aberta com o texto
+    }
     fechar();
   };
   return (

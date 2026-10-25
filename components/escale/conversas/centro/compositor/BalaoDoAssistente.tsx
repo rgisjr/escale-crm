@@ -31,7 +31,13 @@ export function BalaoDoAssistente({
   const [pergunta, setPergunta] = useState("");
   if (!aberto) return null;
   const aoSugerir = async () => {
-    const r = await sugerir.mutateAsync(conversationId);
+    let r: Awaited<ReturnType<typeof sugerir.mutateAsync>>;
+    try {
+      r = await sugerir.mutateAsync(conversationId);
+    } catch {
+      toast.info(t("Não consegui sugerir uma resposta agora."));
+      return;
+    }
     const texto = r.data.draft?.trim();
     if (!texto) {
       toast.info(t("Não consegui sugerir uma resposta agora."));

@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api/client";
+import { invalidarTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useT } from "@/hooks/i18n/useT";
 import type { Conversation } from "@/lib/types/messaging";
@@ -30,6 +31,7 @@ export function useTransferConversation() {
     },
     onSuccess: (_data, args) => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
+      invalidarTotalDaFila(qc);
       qc.invalidateQueries({ queryKey: ["conversation", args.conversation_id] });
       toast.success(t("Conversa transferida."));
     },

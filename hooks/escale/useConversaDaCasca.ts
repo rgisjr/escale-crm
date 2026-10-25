@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { recarregarListasDasConversas } from "@/hooks/inbox/recargaDasConversas";
+import { invalidarTotalDaFila } from "@/hooks/escale/useTotalDaFila";
 import { apiClient } from "@/lib/api/client";
 import type { EventoDaConversa } from "@/lib/escale/conversas/eventos";
 
@@ -27,6 +28,7 @@ export function useConversaDaCasca(conversationId: string | null) {
   const invalidarConversa = async () => {
     if (!conversationId) return;
     recarregarListasDasConversas(qc);
+    invalidarTotalDaFila(qc);
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["conversation", conversationId] }),
       qc.invalidateQueries({ queryKey: CHAVE_DOS_EVENTOS(conversationId) }),
@@ -76,7 +78,11 @@ export function useConversaDaCasca(conversationId: string | null) {
   });
   const marcarNaoLida = useMutation({
     mutationFn: async () => apiClient.post(`${base}/nao-lida`, {}),
-    onSuccess: invalidarConversa,
+    // Sem esperar: quem chamou liga o "não lida manual" no seu onSuccess, e isso tem de vir ANTES
+    // de a lista voltar com unread=1 (senão o marcar-como-lida automático desfaz a marca).
+    onSuccess: () => {
+      void invalidarConversa();
+    },
     onError: showApiError,
   });
   const pausar = useMutation({
