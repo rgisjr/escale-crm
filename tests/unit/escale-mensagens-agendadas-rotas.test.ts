@@ -330,3 +330,24 @@ describe("enviarAgendada (o passo do cron)", () => {
     });
   });
 });
+
+describe("GET (busca por contato, B1-8)", () => {
+  const selecaoDaLista = (db: { from: unknown }) => {
+    const from = db.from as ReturnType<typeof vi.fn>;
+    const cadeia = from.mock.results[0]!.value as { select: ReturnType<typeof vi.fn> };
+    return String(cadeia.select.mock.calls[0]![0]);
+  };
+
+  it("com busca, o embed do contato é !inner (filtra as linhas, não só o contato)", async () => {
+    const { db } = banco({ crm_mensagens_agendadas: [] });
+    const r = await LISTAR(req("GET", "http://x/api/v1/mensagens-agendadas?busca=ana"));
+    expect(r.status).toBe(200);
+    expect(selecaoDaLista(db)).toContain("contacts:contact_id!inner");
+  });
+
+  it("sem busca, o embed segue sem !inner", async () => {
+    const { db } = banco({ crm_mensagens_agendadas: [] });
+    await LISTAR(req("GET", "http://x/api/v1/mensagens-agendadas"));
+    expect(selecaoDaLista(db)).not.toContain("!inner");
+  });
+});

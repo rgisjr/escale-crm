@@ -97,3 +97,19 @@ export function useMessagesRealtime(conversationId: string | null) {
 
   return { ...query, realtimeStatus, seguranca };
 }
+
+/**
+ * Lê as mensagens que a thread já carregou (mesma chave), SEM buscar e SEM abrir canal
+ * de tempo real. Quem precisa só do que está na tela (o compositor) usa esta; o canal
+ * fica com `useMessagesRealtime`, uma vez por conversa aberta (Q1, G1-1).
+ */
+export function useMensagensEmCache(conversationId: string | null) {
+  return useInfiniteQuery({
+    queryKey: ["messages", conversationId] as const,
+    enabled: false,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async (): Promise<MessagesResponse> => ({ data: [] }),
+    getNextPageParam: (last) =>
+      last.meta?.has_more && last.meta.cursor ? last.meta.cursor : undefined,
+  });
+}

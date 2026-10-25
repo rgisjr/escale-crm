@@ -16,10 +16,15 @@ export function useExecutarAcaoDaFila() {
   return useMutation({
     mutationFn: async (pedido: PedidoDaFila) =>
       (
-        await apiClient.post<{ data: { id: string; total: number; status: EstadoDaAcaoDaFila } }>(
-          ROTA,
-          pedido,
-        )
+        await apiClient.post<{
+          data: {
+            id: string;
+            total: number;
+            status: EstadoDaAcaoDaFila;
+            feitos?: number;
+            falhas?: number;
+          };
+        }>(ROTA, pedido)
       ).data,
   });
 }

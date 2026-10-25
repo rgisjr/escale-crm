@@ -1,5 +1,5 @@
 "use client";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
@@ -62,6 +62,10 @@ export function useFilaDeConversas(consulta: ConsultaDaFila, orgId: string | nul
 
   const query = useInfiniteQuery({
     queryKey,
+    // A busca troca a chave a cada termo: mantém a lista anterior na tela até a nova chegar.
+    placeholderData: keepPreviousData,
+    // Quem recarrega a fila no tempo real refaz só esta URL (a primeira página).
+    meta: { urlDaPrimeiraPagina: urlDaFila(consulta) },
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
       try {

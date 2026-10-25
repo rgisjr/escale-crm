@@ -10,7 +10,8 @@ import {
   SILENCIO_DURAVEL,
   silencioDaPausa,
 } from "@/lib/escale/conversas/pausa";
-import { pausaEnrollment, retomaEnrollment } from "@/lib/followup/intervencao";
+import { pausaEnrollment } from "@/lib/followup/intervencao";
+import { retomarEnrollmentsDaPausa } from "@/lib/escale/conversas/retomar-pausa";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -96,6 +97,30 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
         { requestId },
       );
     }
+    // A pausa é gravada ANTES de silenciar o bot e pausar os follow-ups: a linha é o único
+    // registro do que "Retomar" precisa desfazer. Se ela falhar, nada foi alterado.
+    const ativos = await enrollmentsAtivos(supabase, authz.org.orgId, conversa.id);
+    const { data: anterior, error: erroDoAnterior } = await supabase
+      .from("crm_pausas_de_automacao")
+      .select("enrollments")
+      .eq("conversation_id", conversa.id)
+      .maybeSingle();
+    if (erroDoAnterior) throw erroDoAnterior;
+    const pausa = {
+      conversation_id: conversa.id,
+      organization_id: authz.org.orgId,
+      ate,
+      user_id: authz.user.id,
+      enrollments: juntarEnrollments(
+        (anterior as { enrollments: string[] } | null)?.enrollments ?? [],
+        ativos.map((e) => e.id),
+      ),
+    };
+    const { error: erroDaPausa } = await supabase
+      .from("crm_pausas_de_automacao")
+      .upsert(pausa, { onConflict: "conversation_id" });
+    if (erroDaPausa) throw erroDaPausa;
+
     const { error } = await supabase
       .from("conversations")
       .update({ bot_silenced_until: silencioDaPausa(conversa.bot_silenced_until, ate) })
@@ -103,7 +128,6 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
       .eq("id", conversa.id);
     if (error) throw error;
 
-    const ativos = await enrollmentsAtivos(supabase, authz.org.orgId, conversa.id);
     const deps = {
       supabase,
       admin: createAdminClient(),
@@ -121,25 +145,6 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
           conversation_id: conversa.id,
         });
     }
-    const { data: anterior } = await supabase
-      .from("crm_pausas_de_automacao")
-      .select("enrollments")
-      .eq("conversation_id", conversa.id)
-      .maybeSingle();
-    const pausa = {
-      conversation_id: conversa.id,
-      organization_id: authz.org.orgId,
-      ate,
-      user_id: authz.user.id,
-      enrollments: juntarEnrollments(
-        (anterior as { enrollments: string[] } | null)?.enrollments ?? [],
-        pausados,
-      ),
-    };
-    const { error: erroDaPausa } = await supabase
-      .from("crm_pausas_de_automacao")
-      .upsert(pausa, { onConflict: "conversation_id" });
-    if (erroDaPausa) throw erroDaPausa;
     void audit({
       action: "conversation.automation_paused",
       actorUserId: authz.user.id,
@@ -157,12 +162,13 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
 export async function DELETE(_req: NextRequest, ctx: Ctx): Promise<Response> {
   const supportDenied = await requireSupportWrite();
   if (supportDenied) return supportDenied;
-  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId }) => {
-    const { data } = await supabase
+  return comAConversa(ctx.params, async ({ authz, supabase, conversa, requestId, t }) => {
+    const { data, error: erroDaLeitura } = await supabase
       .from("crm_pausas_de_automacao")
       .select("conversation_id, ate, user_id, enrollments, created_at")
       .eq("conversation_id", conversa.id)
       .maybeSingle();
+    if (erroDaLeitura) throw erroDaLeitura;
     const pausa = data as PausaLida | null;
     const { error } = await supabase
       .from("conversations")
@@ -177,15 +183,30 @@ export async function DELETE(_req: NextRequest, ctx: Ctx): Promise<Response> {
       userId: authz.user.id,
       requestId,
     };
-    for (const id of pausa?.enrollments ?? []) {
-      const r = await retomaEnrollment(deps, id);
-      if (!r.ok)
-        logger.warn("escale/pausa: follow-up não retomado", {
-          enrollment: id,
-          conversation_id: conversa.id,
-        });
+    const pendentes = await retomarEnrollmentsDaPausa(deps, pausa?.enrollments ?? [], {
+      origem: "escale/pausa",
+      conversationId: conversa.id,
+    });
+    if (pendentes.length > 0) {
+      // A pausa fica só com os que falharam: o cron (ou um novo "Retomar") tenta de novo.
+      // Se este update também falhar, a linha segue como estava, o que é seguro.
+      const { error: erroAoGuardar } = await supabase
+        .from("crm_pausas_de_automacao")
+        .update({ enrollments: pendentes })
+        .eq("conversation_id", conversa.id);
+      if (erroAoGuardar) throw erroAoGuardar;
+      return fail(
+        "internal_error",
+        t("Não foi possível retomar todos os follow-ups. Tente de novo."),
+        500,
+        { requestId },
+      );
     }
-    await supabase.from("crm_pausas_de_automacao").delete().eq("conversation_id", conversa.id);
+    const { error: erroAoApagar } = await supabase
+      .from("crm_pausas_de_automacao")
+      .delete()
+      .eq("conversation_id", conversa.id);
+    if (erroAoApagar) throw erroAoApagar;
     void audit({
       action: "conversation.automation_resumed",
       actorUserId: authz.user.id,

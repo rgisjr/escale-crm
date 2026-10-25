@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from "vitest";
  * por fora, como no app.
  */
 
+vi.mock("@/lib/escale/usa-tela-grande", () => ({ useTelaExtraGrande: () => true }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),

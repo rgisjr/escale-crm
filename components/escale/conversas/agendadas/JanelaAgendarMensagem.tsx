@@ -43,7 +43,7 @@ export function JanelaAgendarMensagem({
   const t = useT();
   const agendar = useAgendarMensagens();
   const provider = conversa.channel_sessions?.provider ?? null;
-  const { modelos, fonte } = useModelosDeMensagem(provider);
+  const { modelos, fonte } = useModelosDeMensagem(provider, aberta);
   const [texto, setTexto] = useState(textoInicial);
   const [modelo, setModelo] = useState<string>("");
   const [quando, setQuando] = useState(() => new Date(Date.now() + UMA_HORA_MS));
@@ -69,7 +69,9 @@ export function JanelaAgendarMensagem({
       },
     });
   const passado = dataNoPassado(quando.toISOString(), new Date());
-  const podeConfirmar = mensagens.length > 0 && !passado && !agendar.isPending;
+  // O modelo que exige valores e não tem `savedValues` falharia no cron, sem ninguém ver (B1-9).
+  const faltamValores = !!escolhido && (escolhido.slots?.length ?? 0) > 0 && !escolhido.savedValues;
+  const podeConfirmar = mensagens.length > 0 && !passado && !faltamValores && !agendar.isPending;
 
   const confirmar = async () => {
     if (!podeConfirmar) return;
@@ -134,7 +136,7 @@ export function JanelaAgendarMensagem({
               aria-label={t("Modelo de mensagem")}
             />
           )}
-          {escolhido && (escolhido.slots?.length ?? 0) > 0 && !escolhido.savedValues ? (
+          {faltamValores ? (
             <p className="text-[11px] text-casca-alerta">
               {t("Este modelo exige valores. Preencha-os em Modelos de mensagem antes de agendar.")}
             </p>

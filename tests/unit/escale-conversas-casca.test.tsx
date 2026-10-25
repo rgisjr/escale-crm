@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/escale/usa-tela-grande", () => ({ useTelaExtraGrande: () => true }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 const nav = vi.hoisted(() => ({
   replace: vi.fn(),

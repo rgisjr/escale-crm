@@ -49,6 +49,8 @@ export const DICIONARIO: Traducoes = {
   "Nome interno da conexão": { es: "Nombre interno de la conexión" },
   "Nome interno": { es: "Nombre interno" },
   "Nome interno atualizado.": { es: "Nombre interno actualizado." },
+  "Não foi possível retomar todos os follow-ups. Tente de novo.": { es: "No se pudieron reanudar todos los seguimientos. Inténtalo de nuevo." },
+  "A ação em massa terminou, mas {n} de {total} conversas não foram alteradas.": { es: "La acción masiva terminó, pero {n} de {total} conversaciones no se modificaron." },
   "Não foi possível salvar o nome.": { es: "No se pudo guardar el nombre." },
   "Só a sua equipe vê este nome. O nome público no provedor não muda.": { es: "Solo tu equipo ve este nombre. El nombre público en el proveedor no cambia." },
   "Ex.: WA | Fixo 7906": { es: "Ej.: WA | Fijo 7906" },
