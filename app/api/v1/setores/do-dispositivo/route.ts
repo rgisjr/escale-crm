@@ -5,6 +5,7 @@ import { z } from "zod";
 import { fail, noContent } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
+import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
 import { lerJson } from "@/lib/escale/origens/respostas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -47,7 +48,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
   if (error) {
     if (error.code === "23503")
       return fail("not_found", t("Dispositivo ou setor não encontrado."), 404, { requestId });
-    return fail("internal_error", error.message, 500, { requestId });
+    return falhaInesperadaDoQuadro(error, { rota: "setores/do-dispositivo", operacao: "gravar" }, t, requestId);
   }
   void audit({
     action: "crm_setor.device_set",

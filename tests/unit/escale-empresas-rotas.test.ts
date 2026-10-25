@@ -43,6 +43,14 @@ beforeEach(() => {
 });
 
 describe("GET /api/v1/empresas", () => {
+  it("filtro f que não vale responde 422 em vez de listar sem filtro (fora-5)", async () => {
+    authOk("viewer");
+    const db = banco({});
+    const r = await GET(pedido("/api/v1/empresas?f=isto-nao-e-json"));
+    expect(r.status).toBe(422);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
   it("chama a função com escopo, busca, dígitos do CNPJ e a página; devolve as linhas com o principal", async () => {
     authOk("viewer");
     const db = banco({

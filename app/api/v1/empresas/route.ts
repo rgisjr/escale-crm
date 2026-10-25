@@ -10,6 +10,7 @@ import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
+import { filtrosDaConsulta } from "@/lib/escale/contatos/lista";
 import { ErroDaEmpresa, STATUS_DO_ERRO_DA_EMPRESA, TEXTO_DO_ERRO_DA_EMPRESA, criarEmpresa, listarEmpresas } from "@/lib/escale/empresas/banco";
 import { consultaDaListaDeEmpresasSchema, novaEmpresaSchema } from "@/lib/escale/empresas/regras";
 import { lerJson } from "@/lib/escale/origens/respostas";
@@ -34,6 +35,10 @@ export async function GET(req: NextRequest): Promise<Response> {
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const consulta = consultaDaListaDeEmpresasSchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!consulta.success) return fail("unprocessable_entity", t("Consulta inválida."), 422, { requestId });
+  // Filtro que veio e não vale responde 422, como a lista de contatos (não lista sem filtro).
+  if (filtrosDaConsulta({ f: consulta.data.f }) === null) {
+    return fail("unprocessable_entity", t("Consulta inválida."), 422, { requestId });
+  }
   try {
     const pagina = await listarEmpresas(await createClient(), authz.org.orgId, consulta.data);
     return ok(pagina);

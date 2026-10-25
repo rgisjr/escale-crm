@@ -4,6 +4,7 @@ import { type NextRequest } from "next/server";
 import { fail, noContent, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
+import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
 import { trocarMembros } from "@/lib/escale/conversas/setores-banco";
 import { setorSchema } from "@/lib/escale/conversas/setores";
 import { lerUuid } from "@/lib/escale/origens/preferencias";
@@ -48,13 +49,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx): Promise<Response> {
       return fail("conflict", t("Já existe um setor com esse nome."), 409, { requestId });
     if (error.code === "42501")
       return fail("forbidden", t("Você não pode editar setores."), 403, { requestId });
-    return fail("internal_error", error.message, 500, { requestId });
+    return falhaInesperadaDoQuadro(error, { rota: "setores/[id]", operacao: "alterar" }, t, requestId);
   }
   if (!data) return fail("not_found", t("Setor não encontrado."), 404, { requestId });
   try {
     await trocarMembros(supabase, authz.org.orgId, id, parsed.data.membros);
   } catch (err) {
-    return fail("internal_error", (err as Error).message, 500, { requestId });
+    return falhaInesperadaDoQuadro(err as Error, { rota: "setores/[id]", operacao: "membros" }, t, requestId);
   }
   void audit({
     action: "crm_setor.updated",

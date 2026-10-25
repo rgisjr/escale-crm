@@ -4,6 +4,7 @@ import { type NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import { falhaInesperadaDoQuadro } from "@/lib/escale/capa/banco";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,6 +57,6 @@ export async function GET(
     }
     return ok({ ids }, { requestId });
   } catch (err) {
-    return fail("internal_error", (err as Error).message, 500, { requestId });
+    return falhaInesperadaDoQuadro(err as Error, { rota: "importacoes/contatos", operacao: "listar" }, t, requestId);
   }
 }

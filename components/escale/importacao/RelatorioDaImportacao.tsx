@@ -150,7 +150,8 @@ export function RelatorioDaImportacao({ id }: { id: string }) {
     a.href = url;
     a.download = `relatorio-importacao-${id}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    // O Safari aborta o download se a URL for revogada no mesmo instante do clique.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   return (
