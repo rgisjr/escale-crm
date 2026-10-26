@@ -53,6 +53,10 @@ it("todo handler mutante do app declara guarda de suporte ou é infraestrutura i
   // Só LÊ: o POST existe porque o público (ids e filtro) não cabe na URL. Não há efeito
   // a bloquear em support_readonly; a rota segue atrás de requireRole("manager").
   if(path==="app/api/v1/campanhas-da-casca/publico/route.ts")continue;
+  // Frente V: só LEEM (o texto com as variáveis trocadas e os valores do modelo
+  // para o contato da conversa); POST porque o texto não cabe na URL. Atrás de
+  // requireRole("agent") e da RLS da conversa; não há efeito a bloquear.
+  if(path==="app/api/v1/variaveis/resolver/route.ts"||path==="app/api/v1/channels/templates/valores/route.ts")continue;
   if(path.includes("/impersonate"))continue; // início/fim autenticam a posse e têm contrato próprio
   const source=ts.createSourceFile(path,readFileSync(path,"utf8"),ts.ScriptTarget.Latest,true);
   // DUAS FORMAS de exportar um handler, e o gate precisa das duas. A varredura

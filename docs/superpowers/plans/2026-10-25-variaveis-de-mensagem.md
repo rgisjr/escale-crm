@@ -28,15 +28,15 @@ Os prints da Clint de 25/10 estão em `C:\Documentos\projetos claude\Deskcom CRM
 
 | Print | O que mostra |
 |---|---|
-| `v01-lista-de-modelos.jpg` | Conversas › Configurações › Modelos de mensagem: busca, filtros, pastas, tabela e paginação |
-| `v02-modelo-mapeado.jpg` | Janela "Modelo de mensagem" com a variável já mapeada em "Primeiro nome" |
-| `v03-popover-negocio-aberto.jpg` | Popover "Variáveis" aberto pelo "Trocar campo", com o 1º grupo (Negócio) aberto e os campos personalizados no fim |
-| `v04-popover-grupos-fechados.jpg` | Fim do Negócio e os outros grupos fechados (Contato, Empresa, Usuário, Recuperação de vendas) |
-| `v05-popover-contato-aberto.jpg` | Grupo Contato aberto: Nome, Primeiro nome, Sobrenome, Cargo, Email, Telefone, ID do contato |
-| `v06-popover-busca.jpg` | Busca "nome": todos os grupos com resultado aparecem abertos |
-| `v07-popover-busca-vazia.jpg` | Busca sem resultado: "Nenhuma variável encontrada" |
-| `v08-valor-alternativo-aberto.jpg` | "Definir um valor alternativo" aberto: "Remover" e o campo "Digite o valor alternativo" |
-| `v09-escrever-um-valor.jpg` | Opção "Escrever um valor": "Texto enviado no lugar da variável", prévia com "variável 1 sem valor" e o rodapé "Pode salvar agora…" |
+| `docs/escale/clint/prints-variaveis/v01-lista-de-modelos.jpg` | Conversas › Configurações › Modelos de mensagem: busca, filtros, pastas, tabela e paginação |
+| `docs/escale/clint/prints-variaveis/v02-modelo-mapeado.jpg` | Janela "Modelo de mensagem" com a variável já mapeada em "Primeiro nome" |
+| `docs/escale/clint/prints-variaveis/v03-popover-negocio-aberto.jpg` | Popover "Variáveis" aberto pelo "Trocar campo", com o 1º grupo (Negócio) aberto e os campos personalizados no fim |
+| `docs/escale/clint/prints-variaveis/v04-popover-grupos-fechados.jpg` | Fim do Negócio e os outros grupos fechados (Contato, Empresa, Usuário, Recuperação de vendas) |
+| `docs/escale/clint/prints-variaveis/v05-popover-contato-aberto.jpg` | Grupo Contato aberto: Nome, Primeiro nome, Sobrenome, Cargo, Email, Telefone, ID do contato |
+| `docs/escale/clint/prints-variaveis/v06-popover-busca.jpg` | Busca "nome": todos os grupos com resultado aparecem abertos |
+| `docs/escale/clint/prints-variaveis/v07-popover-busca-vazia.jpg` | Busca sem resultado: "Nenhuma variável encontrada" |
+| `docs/escale/clint/prints-variaveis/v08-valor-alternativo-aberto.jpg` | "Definir um valor alternativo" aberto: "Remover" e o campo "Digite o valor alternativo" |
+| `docs/escale/clint/prints-variaveis/v09-escrever-um-valor.jpg` | Opção "Escrever um valor": "Texto enviado no lugar da variável", prévia com "variável 1 sem valor" e o rodapé "Pode salvar agora…" |
 | `docs/clint/prints-conversas/2026-10-17-c63-modelos-de-mensagem-previa.jpg` | Na conversa, a prévia sai **já resolvida** ("Boa tarde Aparecido") e há o link "Editar modelo" |
 
 **Código da Clint:**
