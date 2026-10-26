@@ -1,4 +1,5 @@
 import { renderizar, type ValoresDoDestinatario } from "@/lib/campanhas/renderizador";
+import type { FontesDasVariaveis } from "@/lib/variaveis/resolver";
 
 import { mensagemSchema, type MensagemDeModelo, type VariavelDoModelo } from "./assistente";
 
@@ -16,7 +17,45 @@ export const CAMPOS_BASICOS = [
 
 const POSICIONAL = /\{\{\s*(\d{1,2})\s*\}\}/g;
 
-export const tokenDoCampo = (campo: string): string => `{{${campo}}}`;
+/**
+ * O token do renderizador. Desde a Frente V o campo pode ser um token da lista
+ * única (`[CONTACT.FIRST_NAME]`), que vai como está; os valores antigos
+ * (`primeiro_nome`, `lead.x`) seguem como `{{campo}}`.
+ */
+export const tokenDoCampo = (campo: string): string => (campo.startsWith("[") ? campo : `{{${campo}}}`);
+
+/**
+ * Na campanha, os tokens da lista única leem o que a preparação já tem de cada
+ * destinatário: o nome e os campos personalizados do contato e do negócio
+ * (`fontesDoDestinatario`). O seletor da campanha só oferece esses.
+ */
+export const CAMPOS_FIXOS_DA_CAMPANHA = new Set(["[CONTACT.NAME]", "[CONTACT.FIRST_NAME]", "[CONTACT.LAST_NAME]"]);
+const FIXOS_DO_CONTATO = new Set(["NAME", "FIRST_NAME", "LAST_NAME", "ROLE", "EMAIL", "PHONE", "ID", "ORGANIZATION"]);
+const FIXOS_DO_NEGOCIO = new Set(["DATE", "STATUS", "STAGE", "VALUE", "ID", "LATEST_MEETING_LINK", "LATEST_MEETING_DATETIME"]);
+
+/** O token da lista única que a campanha sabe resolver (para o seletor e a prévia). */
+export function tokenDaCampanha(token: string): boolean {
+  if (CAMPOS_FIXOS_DA_CAMPANHA.has(token) || token === "{{saudacao}}") return true;
+  const m = /^\[(DEAL|CONTACT)\.([A-Z0-9_]+)\]$/.exec(token);
+  if (!m) return false;
+  return m[1] === "DEAL" ? !FIXOS_DO_NEGOCIO.has(m[2]!) : !FIXOS_DO_CONTATO.has(m[2]!);
+}
+
+export function fontesDoDestinatario(v: ValoresDoDestinatario): FontesDasVariaveis {
+  return {
+    contato: { id: null, nome: v.nome, email: null, telefone: null, campos: v.contato ?? null },
+    negocio: v.lead
+      ? { id: null, criadoEm: null, status: null, etapa: null, valorCentavos: null, moeda: null, campos: v.lead }
+      : null,
+  };
+}
+
+/** `[DEAL.X]` → `{{lead.x}}` e `[CONTACT.X]` → `{{contato.x}}`: o que a audiência lê para saber que mapas buscar. */
+function equivalenteAntigo(campo: string): string {
+  const m = /^\[(DEAL|CONTACT)\.([A-Z0-9_]+)\]$/.exec(campo);
+  if (!m || CAMPOS_FIXOS_DA_CAMPANHA.has(campo)) return tokenDoCampo(campo);
+  return `{{${m[1] === "DEAL" ? "lead" : "contato"}.${m[2]!.toLowerCase()}}}`;
+}
 
 /** As variáveis numeradas do corpo, na ordem em que aparecem, sem repetir. */
 export function variaveisDoCorpo(corpo: string): string[] {
@@ -28,7 +67,7 @@ export function variaveisDoCorpo(corpo: string): string[] {
 /** Os tokens que o modelo usa: decide se a preparação busca os campos personalizados. */
 export function tokensDoModelo(m: MensagemDeModelo): string {
   return Object.values(m.variaveis)
-    .map((v) => (v.fonte === "campo" ? tokenDoCampo(v.campo) : ""))
+    .map((v) => (v.fonte === "campo" ? equivalenteAntigo(v.campo) : ""))
     .join(" ");
 }
 
@@ -44,7 +83,11 @@ export function valoresDoModelo(
       saida[chave] = v.valor;
       continue;
     }
-    const r = renderizar(tokenDoCampo(v.campo), valores, quando);
+    const r = renderizar(
+      tokenDoCampo(v.campo),
+      v.campo.startsWith("[") ? { ...valores, fontes: fontesDoDestinatario(valores) } : valores,
+      quando,
+    );
     if (r.faltando.length === 0) {
       saida[chave] = r.texto;
       continue;

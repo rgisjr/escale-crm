@@ -1,4 +1,7 @@
 import type { MensagemDaCampanha, MensagemDeModelo } from "./assistente";
+import { rotuloDoToken } from "@/lib/variaveis/catalogo";
+import { tokenDoCampoAntigo } from "@/lib/variaveis/mapeamento";
+
 import { CAMPOS_BASICOS } from "./modelo";
 
 /**
@@ -13,19 +16,24 @@ export interface CampoPersonalizado {
 }
 
 export function rotuloDoCampo(campo: string, personalizados: readonly CampoPersonalizado[]): string {
+  // Frente V: o token da lista única (`[CONTACT.FIRST_NAME]`, `[DEAL.GANCHO]`).
+  if (campo.startsWith("[")) {
+    const personalizado = personalizados.find((c) => tokenDoCampoAntigo(c.campo) === campo);
+    return personalizado?.rotulo ?? rotuloDoToken(campo)?.rotulo ?? campo;
+  }
   const basico = CAMPOS_BASICOS.find((c) => c.campo === campo);
   if (basico) return basico.rotulo;
   return personalizados.find((c) => c.campo === campo)?.rotulo ?? campo.split(".").pop() ?? campo;
 }
 
-const TOKEN = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
+const TOKEN = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}|(\[[A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)+\])/g;
 
 function emPartes(texto: string, parte: (token: string, literal: string) => ParteDaPrevia): ParteDaPrevia[] {
   const saida: ParteDaPrevia[] = [];
   let ultimo = 0;
   for (const m of texto.matchAll(TOKEN)) {
     if (m.index > ultimo) saida.push({ tipo: "texto", texto: texto.slice(ultimo, m.index) });
-    saida.push(parte(m[1]!, m[0]));
+    saida.push(parte(m[1] ?? m[2]!, m[0]));
     ultimo = m.index + m[0].length;
   }
   if (ultimo < texto.length) saida.push({ tipo: "texto", texto: texto.slice(ultimo) });

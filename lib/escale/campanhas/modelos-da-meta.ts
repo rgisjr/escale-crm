@@ -1,7 +1,9 @@
 import type { ModeloAprovado } from "@/hooks/escale/useModelosDeMensagem";
 import { lerConteudo } from "@/lib/channels/template-conteudo";
+import { tokenDoCampoAntigo } from "@/lib/variaveis/mapeamento";
 
 import type { MensagemDeModelo } from "./assistente";
+import { tokenDaCampanha } from "./modelo";
 
 /** OS MODELOS DA META NO ASSISTENTE (fork Escale, Fase 8B; 09-023 a 09-025; N5). */
 export const ROTULO_DA_CATEGORIA: Record<string, string> = {
@@ -39,9 +41,18 @@ export function modeloEscolhivel(m: ModeloAprovado): boolean {
 
 export function mensagemDoModelo(m: ModeloAprovado): MensagemDeModelo {
   const variaveis: MensagemDeModelo["variaveis"] = {};
+  const mapeado = m.mapeamento?.variaveis ?? {};
   for (const s of m.slots ?? []) {
     const salvo = (m.savedValues ?? {})[s.valueKey]?.trim();
     if (s.expects !== "text" && salvo) variaveis[s.valueKey] = { fonte: "fixo", valor: salvo };
+    // Frente V: a campanha nasce com o que Modelos de mensagem salvou (e a
+    // pessoa ainda pode trocar só para esta campanha).
+    // Só o que a campanha sabe resolver: um campo que ela não lê (ex.: a etapa)
+    // tiraria todo mundo da lista; esse slot fica para a pessoa escolher.
+    else if (s.expects === "text" && mapeado[s.valueKey]) {
+      const v = mapeado[s.valueKey]!;
+      if (v.fonte === "fixo" || tokenDaCampanha(tokenDoCampoAntigo(v.campo))) variaveis[s.valueKey] = v;
+    }
   }
   return {
     tipo: "modelo",

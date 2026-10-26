@@ -18402,6 +18402,9 @@ export const DICIONARIO: Traducoes = {
   },
 
   // ─── FRENTE V: VARIÁVEIS DE MENSAGEM (lista única da Clint) ───
+  "Defina um valor alternativo no modelo ou complete o cadastro do contato.": {
+    es: "Define un valor alternativo en la plantilla o completa el registro del contacto.",
+  },
   "As variáveis foram salvas com sucesso!": { es: "¡Las variables se guardaron correctamente!" },
   "Erro ao salvar as variáveis.": { es: "Error al guardar las variables." },
   "Origem de cada valor, somente leitura.": { es: "Origen de cada valor, solo lectura." },

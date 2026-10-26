@@ -29,7 +29,14 @@ import { renderizar } from "./renderizador";
 import type { StatusDaCampanha } from "./tipos";
 // FORK ESCALE · Fase 8B: o público da casca e o modelo da Meta.
 import { candidatosDaCasca } from "@/lib/escale/campanhas/candidatos";
-import { corpoComValores, entradaDoEnvio, modeloDaCampanha, tokensDoModelo, valoresDoModelo } from "@/lib/escale/campanhas/modelo";
+import {
+  corpoComValores,
+  entradaDoEnvio,
+  fontesDoDestinatario,
+  modeloDaCampanha,
+  tokensDoModelo,
+  valoresDoModelo,
+} from "@/lib/escale/campanhas/modelo";
 
 export interface CampanhaCarregada {
   id: string;
@@ -457,9 +464,10 @@ export async function testarAcao(
     contactId: linha.id,
     corpo: c.message_body ?? "",
   });
+  const valoresDoTeste = { nome: nomeDoContato(linha), ...campos };
   const render = renderizar(
     c.message_body ?? "",
-    { nome: nomeDoContato(linha), ...campos },
+    { ...valoresDoTeste, fontes: fontesDoDestinatario(valoresDoTeste) },
     { agora, fuso },
   );
   if (render.faltando.length > 0) {

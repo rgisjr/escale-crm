@@ -24,7 +24,9 @@ export async function GET(): Promise<Response> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("meta_templates")
-    .select("id, name, language, status, parameter_format, components")
+    .select(
+      "id, name, language, status, parameter_format, components, contract_hash, variaveis, variaveis_contrato, saved_values",
+    )
     .eq("organization_id", authz.org.orgId)
     .order("name");
   if (error) return fail("internal_error", error.message, 500, { requestId });

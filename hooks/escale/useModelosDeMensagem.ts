@@ -4,6 +4,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { apiClient } from "@/lib/api/client";
+import type { VariavelDoModelo } from "@/lib/variaveis/mapeamento";
 import {
   fonteDeTemplates,
   rotaDeTemplates,
@@ -25,6 +26,8 @@ export interface ModeloAprovado {
   slots?: SlotDoModelo[];
   components?: unknown[];
   savedValues?: Record<string, string>;
+  /** De onde vem cada `{{n}}`, salvo em Modelos de mensagem (Frente V). Só a rota oficial devolve. */
+  mapeamento?: { variaveis: Record<string, VariavelDoModelo>; desatualizado: boolean };
 }
 
 const RECENTES_MAX = 5;

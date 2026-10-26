@@ -269,6 +269,12 @@ export function camposUsadosNoTexto(template: string): { lead: boolean; contato:
     if (raiz === "lead") lead = true;
     if (raiz === "contato") contato = true;
   }
+  // Frente V: o campo personalizado no formato da lista única (`[DEAL.GANCHO]`,
+  // `[CONTACT.LINK]`) também precisa do mapa. Os fixos do contato saem do nome.
+  for (const [, entidade, campo] of template.matchAll(/\[(DEAL|CONTACT)\.([A-Z0-9_]+)\]/g)) {
+    if (entidade === "DEAL") lead = true;
+    else if (!["NAME", "FIRST_NAME", "LAST_NAME"].includes(campo!)) contato = true;
+  }
   return { lead, contato };
 }
 
