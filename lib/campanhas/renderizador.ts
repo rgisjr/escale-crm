@@ -44,6 +44,8 @@
  * PRÓPRIA do jsonb do banco — `{{lead.__proto__}}` não atravessa protótipo.
  */
 
+import { resolverTexto, type FontesDasVariaveis } from "@/lib/variaveis/resolver";
+
 import { horaNoFuso } from "./relogio";
 
 /** As variáveis que existem. Oferecer uma que não resolve é prometer dado que não há. */
@@ -71,6 +73,12 @@ export interface ValoresDoDestinatario {
   lead?: CamposPersonalizados | null;
   /** `{{contato.x}}` — campos do contato. */
   contato?: CamposPersonalizados | null;
+  /**
+   * Os dados dos tokens da Clint (`[CONTACT.FIRST_NAME]`, Frente V). Sem
+   * fontes, esses tokens ficam como estão e não contam como falta: é o caso da
+   * segunda passada (o envio), que só resolve a saudação.
+   */
+  fontes?: FontesDasVariaveis | null;
 }
 
 /**
@@ -104,7 +112,7 @@ export function renderizar(
   const faltando = new Set<string>();
   const desconhecidas = new Set<string>();
 
-  const texto = template.replace(TOKEN, (literal, bruto: string) => {
+  const trocarLegado = (literal: string, bruto: string): string => {
     const chave = bruto.toLowerCase();
     switch (chave) {
       case "nome": {
@@ -137,7 +145,20 @@ export function renderizar(
         return literal;
       }
     }
+  };
+
+  const resolvido = resolverTexto(template, valores.fontes ?? null, {
+    vazio: "falta",
+    formatar: blindar,
+    legado: {
+      regex: TOKEN,
+      trocar: (literal) =>
+        literal.replace(new RegExp(TOKEN.source), (lit, bruto: string) => trocarLegado(lit, bruto)),
+    },
   });
+  for (const f of resolvido.faltando) faltando.add(f);
+  for (const d of resolvido.desconhecidas) desconhecidas.add(d);
+  const texto = resolvido.texto;
 
   // A renderização com instante é a FINAL (envio e envio de teste): só aqui a
   // blindagem sai. Sem instante (preparação), ela fica no corpo congelado e

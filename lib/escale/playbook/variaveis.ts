@@ -1,11 +1,24 @@
 /**
- * AS VARIÁVEIS DA MENSAGEM (fork Escale, Fase 1I; P10): o formato da Clint
- * (`[CONTACT.FIRST_NAME]`), com o que o Escale tem, inclusive os campos
- * personalizados do CRM (`[DEAL.<CHAVE>]` e `[CONTACT.<CHAVE>]`). A atividade guarda o
- * texto com as variáveis; a troca é feita na tela, na hora de mostrar o balão e
- * de enviar (a Clint também resolve no front). A variável sem valor vira vazio,
- * e a desconhecida (checkout, agendamento, IDs) fica como está.
+ * AS VARIÁVEIS DA MENSAGEM DA ATIVIDADE (fork Escale, Fase 1I; P10).
+ *
+ * Desde a Frente V a lista e a troca saem da LISTA ÚNICA
+ * (`lib/variaveis/catalogo.ts`) e do resolvedor único
+ * (`lib/variaveis/resolver.ts`). Este módulo só adapta o formato da 1I:
+ * a atividade guarda o texto com as variáveis e a troca é feita na tela, na
+ * hora de mostrar o balão e de enviar (a Clint também resolve no front).
+ * Variável sem valor vira vazio; checkout e campos sem dado no Escale também
+ * (D2); a desconhecida fica como está.
  */
+import {
+  chaveDaVariavel,
+  filtrarGrupos,
+  gruposComCampos,
+  type CampoDaVariavel,
+} from "@/lib/variaveis/catalogo";
+import { resolverTexto, type FontesDasVariaveis } from "@/lib/variaveis/resolver";
+
+export { chaveDaVariavel, type CampoDaVariavel };
+
 export interface VariavelDaMensagem {
   nome: string;
   rotulo: string;
@@ -16,106 +29,82 @@ export interface GrupoDeVariaveis {
   itens: readonly VariavelDaMensagem[];
 }
 
-export const VARIAVEIS_DA_MENSAGEM: readonly GrupoDeVariaveis[] = [
-  {
-    grupo: "Negócio",
-    itens: [
-      { nome: "[DEAL.STAGE]", rotulo: "Etapa" },
-      { nome: "[DEAL.VALUE]", rotulo: "Valor" },
-    ],
-  },
-  {
-    grupo: "Contato",
-    itens: [
-      { nome: "[CONTACT.NAME]", rotulo: "Nome" },
-      { nome: "[CONTACT.FIRST_NAME]", rotulo: "Primeiro nome" },
-      { nome: "[CONTACT.LAST_NAME]", rotulo: "Sobrenome" },
-      { nome: "[CONTACT.EMAIL]", rotulo: "Email" },
-      { nome: "[CONTACT.PHONE]", rotulo: "Telefone" },
-    ],
-  },
-  {
-    grupo: "Usuário",
-    itens: [
-      { nome: "[USER.FIRST_NAME]", rotulo: "Primeiro nome" },
-      { nome: "[USER.LAST_NAME]", rotulo: "Segundo nome" },
-      { nome: "[USER.EMAIL]", rotulo: "Email" },
-    ],
-  },
-  { grupo: "Empresa", itens: [{ nome: "[ORGANIZATION.NAME]", rotulo: "Nome da empresa" }] },
-];
-
-/** Um campo personalizado do CRM (`settings.fields` da origem): a chave e o rótulo. */
-export interface CampoDaVariavel {
-  chave: string;
-  rotulo: string;
-}
-
-/** A chave do campo no formato da Clint (`[DEAL.<CHAVE>]`): maiúsculas, e o que não é letra, número ou _ vira _. */
-export const chaveDaVariavel = (chave: string) => chave.toUpperCase().replace(/[^A-Z0-9_]/g, "_");
-
-/** Os grupos fixos mais os campos personalizados: em "Negócio" (valor do negócio) e em "Contato" (valor do contato). */
+/**
+ * Os grupos da lista única. Os campos personalizados da origem (`settings.fields`,
+ * que guardam o valor no negócio e no contato) entram no fim de Negócio e de Contato.
+ */
 export function gruposDeVariaveis(campos: readonly CampoDaVariavel[] = []): GrupoDeVariaveis[] {
-  const doCampo = (entidade: "DEAL" | "CONTACT") =>
-    campos.map((c) => ({ nome: `[${entidade}.${chaveDaVariavel(c.chave)}]`, rotulo: c.rotulo }));
-  return VARIAVEIS_DA_MENSAGEM.map((g) =>
-    g.grupo === "Negócio"
-      ? { ...g, itens: [...g.itens, ...doCampo("DEAL")] }
-      : g.grupo === "Contato"
-        ? { ...g, itens: [...g.itens, ...doCampo("CONTACT")] }
-        : g,
-  );
+  return gruposComCampos({ negocio: campos, contato: campos }).map((g) => ({
+    grupo: g.grupo,
+    itens: g.itens.map((i) => ({ nome: i.token, rotulo: i.rotulo })),
+  }));
 }
 
 export interface DadosDasVariaveis {
-  contato: { nome: string | null; email: string | null; telefone: string | null };
-  negocio: { etapa: string | null; valor: string | null };
+  contato: {
+    nome: string | null;
+    email: string | null;
+    telefone: string | null;
+    id?: string | null;
+    cargo?: string | null;
+  };
+  negocio: {
+    etapa: string | null;
+    /** Já em texto (R$ 1.234,56). */
+    valor: string | null;
+    id?: string | null;
+    criadoEm?: string | null;
+    status?: string | null;
+  };
   usuario: { nome: string | null; email: string | null };
-  empresa: { nome: string | null };
+  /** A empresa DO CONTATO (D14). O nome da conta é `conta`. */
+  empresa: { nome: string | null; cidade?: string | null; estado?: string | null };
+  conta?: { nome: string | null };
+  ultimoAgendamento?: { link: string | null; inicio: string | null } | null;
   /** Os campos personalizados, já em texto, pela variável inteira (`"[DEAL.PLANO]": "Ouro"`). */
   campos?: Readonly<Record<string, string>>;
+  fuso?: string | null;
 }
 
-const partes = (nome: string | null) => (nome ?? "").trim().split(/\s+/).filter(Boolean);
+export function fontesDaAtividade(d: DadosDasVariaveis): FontesDasVariaveis {
+  return {
+    contato: {
+      id: d.contato.id ?? null,
+      nome: d.contato.nome,
+      email: d.contato.email,
+      telefone: d.contato.telefone,
+      cargo: d.contato.cargo ?? null,
+    },
+    negocio: {
+      id: d.negocio.id ?? null,
+      criadoEm: d.negocio.criadoEm ?? null,
+      status: d.negocio.status ?? null,
+      etapa: d.negocio.etapa,
+      valorCentavos: null,
+      moeda: null,
+    },
+    empresa: { nome: d.empresa.nome, cidade: d.empresa.cidade ?? null, estado: d.empresa.estado ?? null },
+    usuario: d.usuario,
+    conta: d.conta ?? null,
+    ultimoAgendamento: d.ultimoAgendamento ?? null,
+    prontos: { ...(d.campos ?? {}), "[DEAL.VALUE]": d.negocio.valor ?? "" },
+    fuso: d.fuso ?? null,
+  };
+}
 
 export function resolverVariaveis(texto: string, d: DadosDasVariaveis): string {
-  const contato = partes(d.contato.nome);
-  const usuario = partes(d.usuario.nome);
-  const valores: Record<string, string> = {
-    ...(d.campos ?? {}),
-    "[DEAL.STAGE]": d.negocio.etapa ?? "",
-    "[DEAL.VALUE]": d.negocio.valor ?? "",
-    "[CONTACT.NAME]": contato.join(" "),
-    "[CONTACT.FIRST_NAME]": contato[0] ?? "",
-    "[CONTACT.LAST_NAME]": contato.slice(1).join(" "),
-    "[CONTACT.EMAIL]": d.contato.email ?? "",
-    "[CONTACT.PHONE]": d.contato.telefone ?? "",
-    "[USER.FIRST_NAME]": usuario[0] ?? "",
-    "[USER.LAST_NAME]": usuario.slice(1).join(" "),
-    "[USER.EMAIL]": d.usuario.email ?? "",
-    "[ORGANIZATION.NAME]": d.empresa.nome ?? "",
-  };
-  return texto.replace(/\[[A-Z0-9_]+(?:\.[A-Z0-9_]+)+\]/g, (v) => (v in valores ? valores[v]! : v));
+  return resolverTexto(texto, fontesDaAtividade(d), { vazio: "vazio" }).texto;
 }
-
-const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export function filtrarVariaveis(
   busca: string,
   t: (s: string) => string,
   campos: readonly CampoDaVariavel[] = [],
 ): GrupoDeVariaveis[] {
-  const termo = semAcento(busca.trim());
-  const grupos = gruposDeVariaveis(campos);
-  if (!termo) return grupos;
-  return grupos
-    .map((g) => ({
-      grupo: g.grupo,
-      itens: g.itens.filter(
-        (v) => semAcento(t(v.rotulo)).includes(termo) || semAcento(t(g.grupo)).includes(termo),
-      ),
-    }))
-    .filter((g) => g.itens.length > 0);
+  return filtrarGrupos(gruposComCampos({ negocio: campos, contato: campos }), busca, t).map((g) => ({
+    grupo: g.grupo,
+    itens: g.itens.map((i) => ({ nome: i.token, rotulo: i.rotulo })),
+  }));
 }
 
 export function inserirNoCursor(

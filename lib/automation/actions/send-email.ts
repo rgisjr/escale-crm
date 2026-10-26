@@ -38,6 +38,7 @@
 import { registerAction } from "@/lib/automation/actions";
 import type { ActionCtx, ActionResultDetail } from "@/lib/automation/types";
 import { renderTemplate } from "@/lib/automation/template";
+import { fontesDaAutomacao } from "@/lib/automation/fontes-da-automacao";
 import { sendEmail, type EmailDeliveryError } from "@/lib/email/roteador";
 import { checkRateLimit, peekRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 
@@ -225,10 +226,12 @@ async function execute(
     return { type: "send_email", status: "skipped", detail: { reason: para.motivo } };
   }
 
-  const assuntoPronto = renderTemplate(assunto, ctx.context);
-  const corpoPronto = renderTemplate(corpo, ctx.context);
+  const fontes = await fontesDaAutomacao(ctx, [assunto, corpo]);
+  const assuntoPronto = renderTemplate(assunto, ctx.context, undefined, fontes);
+  const corpoPronto = renderTemplate(corpo, ctx.context, undefined, fontes);
   // No HTML, cada valor de fora (contato, negócio) entra como texto.
-  const corpoHtml = formato === "html" ? renderTemplate(corpo, ctx.context, escaparHtml) : corpoPronto;
+  const corpoHtml =
+    formato === "html" ? renderTemplate(corpo, ctx.context, escaparHtml, fontes) : corpoPronto;
 
   // A consulta do `postponeUntil` é só o atalho; quem decide é esta contagem.
   // `skipped`, não `postponed`: o motor não reexecuta um evento por resultado
