@@ -25,12 +25,12 @@ describe("resolverVariaveis", () => {
       ),
     ).toBe("Olá Auta Graziela Souza, sou Régis da Escale IA (1. Entrada Lead, R$ 1.500,00)");
   });
-  it("sem valor vira vazio; desconhecida fica como está", () => {
+  it("sem valor vira vazio; checkout sai vazio (Frente V, D2); desconhecida fica como está", () => {
     const vazio = { ...DADOS, contato: { nome: null, email: null, telefone: null } };
     expect(resolverVariaveis("Oi [CONTACT.FIRST_NAME]!", vazio)).toBe("Oi !");
-    expect(resolverVariaveis("Link: [DEAL.PAYMENT_PIX_URL]", DADOS)).toBe(
-      "Link: [DEAL.PAYMENT_PIX_URL]",
-    );
+    // Antes da Frente V o token de checkout ficava cru e ia para o cliente.
+    expect(resolverVariaveis("Link: [DEAL.PAYMENT_PIX_URL]", DADOS)).toBe("Link: ");
+    expect(resolverVariaveis("X [FOO.BAR]", DADOS)).toBe("X [FOO.BAR]");
   });
   it("campos personalizados: o valor que vier em `campos`, pela variável inteira", () => {
     expect(

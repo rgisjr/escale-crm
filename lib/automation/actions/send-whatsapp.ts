@@ -3,6 +3,7 @@ import { protecaoAgendaSupabase } from "@/lib/agenda/protecao-followup";
 import { registerAction } from "@/lib/automation/actions";
 import type { ActionCtx, ActionResultDetail } from "@/lib/automation/types";
 import { renderTemplate } from "@/lib/automation/template";
+import { fontesDaAutomacao } from "@/lib/automation/fontes-da-automacao";
 import { serviceForAutomation } from "@/lib/atendimento/origem-automacao";
 import { checkDailyLimit, espacarEnvio } from "@/lib/automation/throttle";
 import { adiarAteAJanelaAbrir } from "@/lib/automation/janela-do-canal";
@@ -48,7 +49,7 @@ async function execute(ctx: ActionCtx, config: Record<string, unknown>): Promise
     const boundary = await serviceForAutomation(ctx, contact.id, sessionId);
     const conversationId = boundary.conversation_id;
     await espacarEnvio(sessionId);
-    const body = renderTemplate(template, ctx.context);
+    const body = renderTemplate(template, ctx.context, undefined, await fontesDaAutomacao(ctx, [template]));
     const message = await sendMessageHandler(
       ctx.admin,
       {

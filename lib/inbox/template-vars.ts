@@ -1,4 +1,5 @@
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
+import { resolverTexto, type FontesDasVariaveis } from "@/lib/variaveis/resolver";
 
 /**
  * Interpola variáveis de template com dados do contato da conversa (Onda 5).
@@ -43,6 +44,8 @@ function nomeResolvido(contact: TemplateContact): string {
  */
 export function faltouNomeDeContato(body: string, contact: TemplateContact): boolean {
   if (nomeResolvido(contact) !== "") return false;
+  // O nome no formato da Clint (Frente V) também sobrevive literal.
+  if (/\[CONTACT\.(?:NAME|FIRST_NAME|LAST_NAME)\]/.test(body)) return true;
   return VARIAVEIS_DE_NOME.some((key) => regexDaVariavel(key).test(body));
 }
 
@@ -76,13 +79,34 @@ export function motivoDoCuringaLiteral(
   return faltouNomeDeContato(body, contact) ? MOTIVO_CURINGA_LITERAL : null;
 }
 
-export function interpolateTemplate(body: string, contact: TemplateContact): string {
+const MARCACAO_ANTIGA = /\{\{\s*([a-zA-Z_]+)\s*\}\}/g;
+
+/**
+ * Dialeto "inbox" (Frente V, D10): `{{nome}}`/`{{primeiro_nome}}` como sempre,
+ * e os tokens da Clint (`[CONTACT.FIRST_NAME]`) pelo resolvedor único. Sem
+ * `fontes`, o contato da conversa é a fonte (só o nome). Variável sem valor ou
+ * desconhecida mantém o literal, nos dois formatos.
+ */
+export function interpolateTemplate(
+  body: string,
+  contact: TemplateContact,
+  fontes: FontesDasVariaveis | null = null,
+): string {
   const full = nomeResolvido(contact);
   const first = full.split(/\s+/)[0] ?? "";
-  return body.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (literal, rawKey: string) => {
-    const key = rawKey.toLowerCase();
-    if (key === "nome") return full !== "" ? full : literal;
-    if (key === "primeiro_nome") return first !== "" ? first : literal;
-    return literal; // desconhecida: mantém
-  });
+  const doContato: FontesDasVariaveis = {
+    contato: { id: null, nome: full || null, email: null, telefone: null },
+  };
+  return resolverTexto(body, fontes ?? doContato, {
+    vazio: "literal",
+    legado: {
+      regex: MARCACAO_ANTIGA,
+      trocar: (literal) => {
+        const key = literal.replace(/[{}\s]/g, "").toLowerCase();
+        if (key === "nome") return full !== "" ? full : literal;
+        if (key === "primeiro_nome") return first !== "" ? first : literal;
+        return literal; // desconhecida: mantém
+      },
+    },
+  }).texto;
 }
