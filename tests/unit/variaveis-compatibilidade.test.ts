@@ -97,3 +97,24 @@ describe("campanha (renderizar): o texto salvo sai igual", () => {
     ]);
   });
 });
+
+describe("Frente V: correções da revisão", () => {
+  it("o compositor barra a variável da lista única que ficou sem valor", async () => {
+    const { motivoDoCuringaLiteral } = await import("@/lib/inbox/template-vars");
+    expect(motivoDoCuringaLiteral("Oi [DEAL.STAGE]", { name: "Ana" })).toMatch(/\[DEAL\.STAGE\]/);
+    expect(motivoDoCuringaLiteral("Oi [FOO.BAR] {{codigo}}", { name: "Ana" })).toBeNull();
+    expect(motivoDoCuringaLiteral("Oi Ana", { name: "Ana" })).toBeNull();
+  });
+
+  it("um personalizado chamado 'email' não toma o lugar de [CONTACT.EMAIL]", async () => {
+    const { resolverVariaveis } = await import("@/lib/escale/playbook/variaveis");
+    const dados = {
+      contato: { nome: "Ana", email: "ana@x.com", telefone: null },
+      negocio: { etapa: "Entrada", valor: "R$ 10,00" },
+      usuario: { nome: null, email: null },
+      empresa: { nome: null },
+      campos: { "[CONTACT.EMAIL]": "", "[DEAL.STAGE]": "outra" },
+    };
+    expect(resolverVariaveis("[CONTACT.EMAIL] [DEAL.STAGE] [DEAL.VALUE]", dados)).toBe("ana@x.com Entrada R$ 10,00");
+  });
+});

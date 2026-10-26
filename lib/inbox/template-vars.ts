@@ -1,5 +1,10 @@
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
-import { resolverTexto, type FontesDasVariaveis } from "@/lib/variaveis/resolver";
+import {
+  resolverTexto,
+  tokensUsados,
+  valorDaVariavel,
+  type FontesDasVariaveis,
+} from "@/lib/variaveis/resolver";
 
 /**
  * Interpola variáveis de template com dados do contato da conversa (Onda 5).
@@ -57,6 +62,9 @@ export function faltouNomeDeContato(body: string, contact: TemplateContact): boo
  * precisa editar o texto antes de mandar — e o motivo tem de continuar na tela
  * enquanto ele edita.
  */
+/** Motivo fixo para variável da lista única que ficou literal no texto (Frente V). */
+export const MOTIVO_VARIAVEL_SEM_VALOR = "Variável sem valor no texto. Edite antes de enviar:";
+
 export const MOTIVO_CURINGA_LITERAL =
   "Contato sem nome no CRM: {{nome}}/{{primeiro_nome}} ficaram literais no texto. Edite antes de enviar.";
 
@@ -76,7 +84,11 @@ export function motivoDoCuringaLiteral(
   body: string,
   contact: TemplateContact,
 ): string | null {
-  return faltouNomeDeContato(body, contact) ? MOTIVO_CURINGA_LITERAL : null;
+  if (faltouNomeDeContato(body, contact)) return MOTIVO_CURINGA_LITERAL;
+  // Frente V: uma variável da lista única que sobrou no texto (o contato não
+  // tem o dado) também não pode ir ao cliente.
+  const sobrou = tokensUsados(body).find((t) => valorDaVariavel(t, {}) !== undefined);
+  return sobrou ? `${MOTIVO_VARIAVEL_SEM_VALOR} [${sobrou}]` : null;
 }
 
 const MARCACAO_ANTIGA = /\{\{\s*([a-zA-Z_]+)\s*\}\}/g;

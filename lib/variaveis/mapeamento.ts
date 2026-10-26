@@ -101,6 +101,9 @@ export function erroDoSlot(slot: SlotDoMapeamento, v: VariavelDoModelo | undefin
     return erroDoTextoFixo(v.valor);
   }
   if (!campoValido(v.campo)) return "Escolha o campo da Escale";
+  if (v.alternativo && v.alternativo.length > ALTERNATIVO_MAX) {
+    return `O valor alternativo pode ter no máximo ${ALTERNATIVO_MAX} caracteres.`;
+  }
   if (v.alternativo && erroDoTextoFixo(v.alternativo)) return erroDoTextoFixo(v.alternativo);
   return null;
 }

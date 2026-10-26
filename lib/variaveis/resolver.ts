@@ -47,6 +47,8 @@ export interface FontesDasVariaveis {
     etapa: string | null;
     valorCentavos: number | null;
     moeda: string | null;
+    /** O valor já em texto (a tela que só tem o texto pronto); vence os centavos. */
+    valorTexto?: string | null;
     campos?: Campos;
   } | null;
   empresa?: { nome: string | null; cidade: string | null; estado: string | null; campos?: Campos } | null;
@@ -55,9 +57,11 @@ export interface FontesDasVariaveis {
   conta?: { nome: string | null } | null;
   ultimoAgendamento?: { link: string | null; inicio: string | null } | null;
   /**
-   * Valores já em texto, pela variável inteira (`"[DEAL.PLANO]": "Ouro"`).
-   * Vencem tudo: é como os campos personalizados chegam formatados pelo tipo
-   * (moeda, data, opção) por quem tem as definições do catálogo.
+   * Os campos PERSONALIZADOS já em texto, pela variável inteira
+   * (`"[DEAL.PLANO]": "Ouro"`): é como chegam formatados pelo tipo (moeda,
+   * data, opção) por quem tem as definições do catálogo. Só valem para token
+   * que não é campo fixo: um personalizado chamado "email" não toma o lugar de
+   * `[CONTACT.EMAIL]`.
    */
   prontos?: Readonly<Record<string, string>>;
   /** Fuso das datas e horas. Sem fuso: `America/Sao_Paulo`. */
@@ -191,8 +195,6 @@ function textoDoCampo(campos: Campos, chave: string): string | null {
  * `undefined` = token desconhecido; `null` = conhecido, sem valor.
  */
 export function valorDaVariavel(token: string, f: FontesDasVariaveis): string | null | undefined {
-  const pronto = f.prontos?.[`[${token}]`];
-  if (pronto !== undefined) return textoOuNull(pronto);
   const fuso = f.fuso || FUSO_PADRAO;
   const [entidade, ...resto] = token.split(".");
   const campo = resto.join(".");
@@ -207,7 +209,9 @@ export function valorDaVariavel(token: string, f: FontesDasVariaveis): string | 
     case "DEAL.STAGE":
       return textoOuNull(negocio?.etapa);
     case "DEAL.VALUE":
-      return valorEmDinheiro(negocio?.valorCentavos, negocio?.moeda);
+      return negocio?.valorTexto !== undefined
+        ? textoOuNull(negocio.valorTexto)
+        : valorEmDinheiro(negocio?.valorCentavos, negocio?.moeda);
     case "DEAL.LATEST_MEETING_LINK":
       return textoOuNull(f.ultimoAgendamento?.link);
     case "DEAL.LATEST_MEETING_DATETIME":
@@ -245,6 +249,8 @@ export function valorDaVariavel(token: string, f: FontesDasVariaveis): string | 
       return textoOuNull(f.conta?.nome);
   }
   // Campo personalizado: `[DEAL.<CHAVE>]`, `[CONTACT.<CHAVE>]`, `[ORGANIZATION.<CHAVE>]`.
+  const pronto = f.prontos?.[`[${token}]`];
+  if (pronto !== undefined) return textoOuNull(pronto);
   if (resto.length === 1) {
     const mapa =
       entidade === "DEAL" ? negocio?.campos : entidade === "CONTACT" ? contato?.campos : entidade === "ORGANIZATION" ? empresa?.campos : undefined;

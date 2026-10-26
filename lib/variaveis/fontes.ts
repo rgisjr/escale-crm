@@ -191,8 +191,10 @@ async function lerAgendamento(sb: SB, orgId: string, contactId: string) {
 
 async function lerConta(sb: SB, orgId: string) {
   return exigir(
-    await sb.from("organizations").select("name, timezone").eq("id", orgId).maybeSingle(),
-  ) as { name: string | null; timezone: string | null } | null;
+    // `nome_da_conta` é o `display_name` da ORGANIZAÇÃO (não do contato: a cerca
+    // de `rotulo-do-contato` vigia a cadeia de nome de gente).
+    await sb.from("organizations").select("nome_da_conta:display_name, legal_name, timezone").eq("id", orgId).maybeSingle(),
+  ) as { nome_da_conta: string | null; legal_name: string | null; timezone: string | null } | null;
 }
 
 /**
@@ -264,7 +266,7 @@ export async function carregarFontes(
 
   const tz = conta?.timezone?.trim() ?? "";
   fontes.fuso = tz !== "" && fusoValido(tz) ? tz : FUSO_PADRAO;
-  if (p.conta) fontes.conta = { nome: conta?.name ?? null };
+  if (p.conta) fontes.conta = { nome: conta?.nome_da_conta?.trim() || conta?.legal_name?.trim() || null };
   if (p.usuario) fontes.usuario = usuario ?? { nome: null, email: null };
 
   if (p.negocio) {

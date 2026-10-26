@@ -87,6 +87,8 @@ const FORA_DE_INTERFACE: Record<string, string> = {
   // arquivo como caso especial pelo mesmo motivo. Emitir a data dele no idioma
   // da interface faria um documento de conformidade mudar de forma conforme
   // quem apertou o botão.
+  "lib/variaveis/resolver.ts":
+    "texto que vai ao CONTATO pelo WhatsApp/e-mail (variáveis de mensagem): formato brasileiro fixo por decisão do produto (CLAUDE.md, formatos BR)",
   "lib/escale/massa/csv-de-contatos.ts": "arquivo exportado (CSV) montado no servidor: data brasileira fixa, sem interface para perguntar",
   "lib/lgpd/pdf-renderer.tsx": "documento legal brasileiro: a data acompanha a lei, não a interface",
 };
