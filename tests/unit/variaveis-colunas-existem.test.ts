@@ -35,7 +35,7 @@ describe("as colunas lidas por lib/variaveis existem", () => {
         expect(existentes, `tabela ${tabela} fora de database.types.ts`).not.toBeNull();
         const faltam = colunas!
           .split(",")
-          .map((c) => c.trim())
+          .map((c) => c.trim().split(":").pop()!.trim())
           .filter((c) => c && !existentes!.has(c));
         expect(faltam).toEqual([]);
       });
