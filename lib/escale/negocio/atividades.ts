@@ -234,7 +234,15 @@ export function valorDoNegocio(lead: Pick<Lead, "value_cents" | "currency">): st
 export function dadosDasVariaveis(
   lead: Pick<
     Lead,
-    "contact_id" | "value_cents" | "currency" | "contact_email" | "contact_phone" | "custom_fields"
+    | "contact_id"
+    | "value_cents"
+    | "currency"
+    | "contact_email"
+    | "contact_phone"
+    | "custom_fields"
+    | "id"
+    | "created_at"
+    | "status"
   >,
   nomeDoContato: string | null,
   etapa: string | null,
@@ -258,12 +266,23 @@ export function dadosDasVariaveis(
     campos,
     contato: {
       nome: lead.contact_id ? nomeDoContato : null,
+      id: lead.contact_id ?? null,
       email: lead.contact_email ?? null,
       telefone: lead.contact_phone ?? null,
     },
-    negocio: { etapa, valor: valorDoNegocio(lead) },
+    negocio: {
+      etapa,
+      valor: valorDoNegocio(lead),
+      id: lead.id ?? null,
+      criadoEm: lead.created_at ?? null,
+      status: lead.status ?? null,
+    },
     usuario,
+    // Frente V: o nome da conta é `[USER.ORGANIZATION.NAME]`. `[ORGANIZATION.NAME]`
+    // (a empresa DO CONTATO na Clint, D14) segue com o nome da conta só para as
+    // atividades já salvas não ficarem vazias; o seletor não o oferece mais.
     empresa: { nome: organizacao },
+    conta: { nome: organizacao },
   };
 }
 

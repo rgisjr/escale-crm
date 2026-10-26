@@ -82,15 +82,39 @@ export function fontesDaAtividade(d: DadosDasVariaveis): FontesDasVariaveis {
       etapa: d.negocio.etapa,
       valorCentavos: null,
       moeda: null,
+      valorTexto: d.negocio.valor ?? "",
     },
     empresa: { nome: d.empresa.nome, cidade: d.empresa.cidade ?? null, estado: d.empresa.estado ?? null },
     usuario: d.usuario,
     conta: d.conta ?? null,
     ultimoAgendamento: d.ultimoAgendamento ?? null,
-    prontos: { ...(d.campos ?? {}), "[DEAL.VALUE]": d.negocio.valor ?? "" },
+    prontos: { ...(d.campos ?? {}) },
     fuso: d.fuso ?? null,
   };
 }
+
+/**
+ * O que a atividade sabe preencher (o que `dadosDasVariaveis` carrega). O
+ * seletor do playbook só oferece isto mais os campos da origem: oferecer o
+ * resto seria prometer um dado que sai sempre vazio (D1).
+ */
+export const VARIAVEIS_DA_ATIVIDADE: ReadonlySet<string> = new Set([
+  "[DEAL.DATE]",
+  "[DEAL.STATUS]",
+  "[DEAL.STAGE]",
+  "[DEAL.VALUE]",
+  "[DEAL.ID]",
+  "[CONTACT.NAME]",
+  "[CONTACT.FIRST_NAME]",
+  "[CONTACT.LAST_NAME]",
+  "[CONTACT.EMAIL]",
+  "[CONTACT.PHONE]",
+  "[CONTACT.ID]",
+  "[USER.FIRST_NAME]",
+  "[USER.LAST_NAME]",
+  "[USER.EMAIL]",
+  "[USER.ORGANIZATION.NAME]",
+]);
 
 export function resolverVariaveis(texto: string, d: DadosDasVariaveis): string {
   return resolverTexto(texto, fontesDaAtividade(d), { vazio: "vazio" }).texto;

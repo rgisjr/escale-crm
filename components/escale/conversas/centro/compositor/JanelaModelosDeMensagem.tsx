@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AjudaDaCasca } from "@/components/escale/ui/AjudaDaCasca";
@@ -85,7 +85,11 @@ export function JanelaModelosDeMensagem({
       })
     : null;
 
+  // A resposta que chega depois de trocar de modelo é de OUTRO modelo: as
+  // chaves ("1", "header:1") coincidem, e os valores iriam para o slot errado.
+  const pedidoAtual = useRef(0);
   const resolver = async (m: ModeloAprovado) => {
+    const pedido = ++pedidoAtual.current;
     setResolvido(null);
     try {
       const r = await fetch("/api/v1/channels/templates/valores", {
@@ -98,7 +102,7 @@ export function JanelaModelosDeMensagem({
         }),
       });
       const json = (await r.json().catch(() => null)) as { data?: ValoresDoMapeamento } | null;
-      if (!r.ok || !json?.data) return;
+      if (pedido !== pedidoAtual.current || !r.ok || !json?.data) return;
       const dados = json.data;
       setResolvido(dados);
       setValores((atuais) => ({ ...atuais, ...dados.valores }));

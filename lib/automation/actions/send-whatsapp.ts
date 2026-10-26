@@ -46,10 +46,13 @@ async function execute(ctx: ActionCtx, config: Record<string, unknown>): Promise
   // contador) — ver lib/automation/throttle.ts.
   try {
     await assertAgendaEffectSupabase(ctx.admin, { organizationId: ctx.organizationId, contactId: contact.id });
+    // Antes de abrir o atendimento: uma falha ao ler os dados das variáveis não
+    // pode deixar uma conversa aberta sem mensagem (Frente V).
+    const fontes = await fontesDaAutomacao(ctx, [template]);
     const boundary = await serviceForAutomation(ctx, contact.id, sessionId);
     const conversationId = boundary.conversation_id;
     await espacarEnvio(sessionId);
-    const body = renderTemplate(template, ctx.context, undefined, await fontesDaAutomacao(ctx, [template]));
+    const body = renderTemplate(template, ctx.context, undefined, fontes);
     const message = await sendMessageHandler(
       ctx.admin,
       {

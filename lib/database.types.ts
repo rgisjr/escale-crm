@@ -160,6 +160,7 @@ export type Database = {
           enrichment_error: string | null
           brasilapi_raw: Json | null
           created_by: string | null
+          custom_fields: Json
           created_at: string
           updated_at: string
         }
@@ -192,6 +193,7 @@ export type Database = {
           enrichment_error?: string | null
           brasilapi_raw?: Json | null
           created_by?: string | null
+          custom_fields?: Json
           created_at?: string
           updated_at?: string
         }
@@ -224,6 +226,7 @@ export type Database = {
           enrichment_error?: string | null
           brasilapi_raw?: Json | null
           created_by?: string | null
+          custom_fields?: Json
           created_at?: string
           updated_at?: string
         }

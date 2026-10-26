@@ -53,7 +53,8 @@ const TABELAS: Record<string, Linha[]> = {
   calendar_appointments: [
     { organization_id: ORG, contact_id: "c-1", meeting_url: "https://meet/x", starts_at: "2026-10-06T13:00:00Z", status: "confirmed" },
   ],
-  organizations: [{ id: ORG, name: "Escale IA", timezone: "America/Sao_Paulo" }],
+  // As colunas reais de `organizations` (baseline): não há `name`.
+  organizations: [{ id: ORG, display_name: "Escale IA", legal_name: "Escale IA Ltda", timezone: "America/Sao_Paulo" }],
   user_organizations: [{ organization_id: ORG, user_id: "u-1", revoked_at: null }],
   crm_campos_do_negocio: [
     {

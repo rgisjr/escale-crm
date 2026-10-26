@@ -199,10 +199,12 @@ describe("quem pode, dados e envio", () => {
         "Escale IA",
       ),
     ).toEqual({
-      contato: { nome: "Ana Souza", email: "ana@x.com", telefone: "+5543999990000" },
-      negocio: { etapa: "1. Entrada Lead", valor: "R$ 1.500,50" },
+      // Frente V: id do contato e do negócio, data, status e a conta entram nas fontes.
+      contato: { nome: "Ana Souza", id: "c1", email: "ana@x.com", telefone: "+5543999990000" },
+      negocio: { etapa: "1. Entrada Lead", valor: "R$ 1.500,50", id: null, criadoEm: null, status: null },
       usuario: { nome: "Régis", email: "r@e.com" },
       empresa: { nome: "Escale IA" },
+      conta: { nome: "Escale IA" },
       campos: {},
     });
     const comCampo = dadosDasVariaveis(

@@ -191,8 +191,8 @@ async function lerAgendamento(sb: SB, orgId: string, contactId: string) {
 
 async function lerConta(sb: SB, orgId: string) {
   return exigir(
-    await sb.from("organizations").select("name, timezone").eq("id", orgId).maybeSingle(),
-  ) as { name: string | null; timezone: string | null } | null;
+    await sb.from("organizations").select("display_name, legal_name, timezone").eq("id", orgId).maybeSingle(),
+  ) as { display_name: string | null; legal_name: string | null; timezone: string | null } | null;
 }
 
 /**
@@ -264,7 +264,7 @@ export async function carregarFontes(
 
   const tz = conta?.timezone?.trim() ?? "";
   fontes.fuso = tz !== "" && fusoValido(tz) ? tz : FUSO_PADRAO;
-  if (p.conta) fontes.conta = { nome: conta?.name ?? null };
+  if (p.conta) fontes.conta = { nome: conta?.display_name?.trim() || conta?.legal_name?.trim() || null };
   if (p.usuario) fontes.usuario = usuario ?? { nome: null, email: null };
 
   if (p.negocio) {
