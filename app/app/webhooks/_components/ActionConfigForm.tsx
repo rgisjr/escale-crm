@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -22,6 +21,8 @@ import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSes
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { useDefaultPipeline } from "@/hooks/pipelines/useDefaultPipeline";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
+import { SeletorDeVariaveis } from "@/components/escale/variaveis/SeletorDeVariaveis";
+import { Plus } from "@/lib/ui/icons-da-casca";
 import { apiClient } from "@/lib/api/client";
 import type { FollowupFlowPointerRow } from "@/hooks/followup/useFollowupFlows";
 import type { PlanoDeTarefas } from "@/lib/tarefas/plano";
@@ -165,11 +166,36 @@ function CreateOrMoveLeadForm({
   );
 }
 
-const TEMPLATE_VARS = [
-  { token: "{{nome}}", label: "Nome" },
-  { token: "{{telefone}}", label: "Telefone" },
-  { token: "{{lead.title}}", label: "Título do lead" },
-];
+/**
+ * "+ Adicionar variáveis" (fork Escale, Frente V): a lista única da Clint
+ * (`[CONTACT.FIRST_NAME]`…), com os campos cadastrados no funil
+ * (Configurações › Funis) no fim de Negócio. O token `[DEAL.<CHAVE>]` lê
+ * `lead.custom_fields`, como o `{{chave}}` de antes. Mensagens já salvas com
+ * `{{nome}}` continuam valendo.
+ */
+function AdicionarVariaveis({ aoEscolher }: { aoEscolher: (token: string) => void }) {
+  const t = useT();
+  const pipeline = useDefaultPipeline(true);
+  const campos = camposDoFunil(pipeline.data?.pipeline.settings ?? null).map((f) => ({
+    chave: f.key,
+    rotulo: f.label,
+  }));
+  return (
+    <SeletorDeVariaveis
+      aoEscolher={aoEscolher}
+      adicionais={{ negocio: campos }}
+      gatilho={
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-[13px] font-medium text-casca-marca hover:underline"
+        >
+          <Plus size={14} aria-hidden />
+          {t("Adicionar variáveis")}
+        </button>
+      }
+    />
+  );
+}
 
 function SendWhatsappForm({
   config,
@@ -178,13 +204,6 @@ function SendWhatsappForm({
   const t = useT();
   const { data: sessions } = useChannelSessions();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  // Os campos cadastrados no funil (Configurações › Funis) viram botões: quem
-  // monta a mensagem clica em "Serviço" em vez de adivinhar o nome interno. O
-  // token é só a chave — `renderTemplate` a resolve em `lead.custom_fields`.
-  const pipeline = useDefaultPipeline(true);
-  const camposDoFormulario = camposDoFunil(pipeline.data?.pipeline.settings ?? null)
-    .filter((f) => !TEMPLATE_VARS.some((v) => v.token === `{{${f.key}}}`))
-    .map((f) => ({ token: `{{${f.key}}}`, label: f.label }));
 
   const insertVar = (token: string) => {
     const el = textareaRef.current;
@@ -226,25 +245,13 @@ function SendWhatsappForm({
       </div>
       <div className="space-y-1">
         <Label>{t("Mensagem")}</Label>
-        <div className="flex flex-wrap gap-1">
-          {[...TEMPLATE_VARS, ...camposDoFormulario].map((v) => (
-            <Button
-              key={v.token}
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => insertVar(v.token)}
-            >
-              {v.label}
-            </Button>
-          ))}
-        </div>
+        <AdicionarVariaveis aoEscolher={insertVar} />
         <Textarea
           ref={textareaRef}
           rows={4}
           value={config.template}
           onChange={(e) => onChange({ ...config, template: e.target.value })}
-          placeholder="Oi {{nome}}, tudo bem?"
+          placeholder="Oi [CONTACT.FIRST_NAME], tudo bem?"
         />
         <p className="text-xs text-muted-foreground">
           {/* NÃO cravar "7h e 22h": a janela passou a vir dos ajustes DO NÚMERO
@@ -260,8 +267,8 @@ function SendWhatsappForm({
 /**
  * "Enviar e-mail" (#2726) — quem recebe, o assunto e o corpo.
  *
- * O corpo usa o MESMO jogo de variáveis da irmã de WhatsApp (`TEMPLATE_VARS`
- * + os campos do funil), porque quem montou a regra já escreveu aquela
+ * O corpo usa o MESMO jogo de variáveis da irmã de WhatsApp (a lista única
+ * da Frente V + os campos do funil), porque quem montou a regra já escreveu aquela
  * mensagem e não deve recomeçar: `{{destino}}` resolve igual nos dois canais.
  *
  * O que NÃO está aqui de propósito: transporte, credencial e remetente. O
@@ -281,10 +288,6 @@ function SendEmailForm({
 }>) {
   const t = useT();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const pipeline = useDefaultPipeline(true);
-  const camposDoFormulario = camposDoFunil(pipeline.data?.pipeline.settings ?? null)
-    .filter((f) => !TEMPLATE_VARS.some((v) => v.token === `{{${f.key}}}`))
-    .map((f) => ({ token: `{{${f.key}}}`, label: f.label }));
 
   const insertVar = (token: string) => {
     const el = textareaRef.current;
@@ -344,25 +347,13 @@ function SendEmailForm({
       ) : null}
       <div className="space-y-1">
         <Label>{t("Corpo do e-mail")}</Label>
-        <div className="flex flex-wrap gap-1">
-          {[...TEMPLATE_VARS, ...camposDoFormulario].map((v) => (
-            <Button
-              key={v.token}
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => insertVar(v.token)}
-            >
-              {v.label}
-            </Button>
-          ))}
-        </div>
+        <AdicionarVariaveis aoEscolher={insertVar} />
         <Textarea
           ref={textareaRef}
           rows={5}
           value={config.corpo}
           onChange={(e) => onChange({ ...config, corpo: e.target.value })}
-          placeholder="Oi {{nome}}, tudo bem?"
+          placeholder="Oi [CONTACT.FIRST_NAME], tudo bem?"
         />
       </div>
       <div className="space-y-1">
@@ -379,7 +370,7 @@ function SendEmailForm({
       </div>
       <p className="text-xs text-muted-foreground">
         {t(
-          "As variáveis do WhatsApp valem aqui: {{nome}}, {{primeiro_nome}}, {{lead.title}} e os campos do formulário como {{destino}}.",
+          "As variáveis do WhatsApp valem aqui, como [CONTACT.FIRST_NAME] e os campos do formulário. Mensagens antigas com {{nome}} e {{destino}} continuam valendo.",
         )}
       </p>
       <p className="text-xs text-muted-foreground">

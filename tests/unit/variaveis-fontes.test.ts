@@ -164,3 +164,28 @@ describe("carregarFontes", () => {
     expect(f.ultimoAgendamento).toBeNull();
   });
 });
+
+describe("fontesDaConversa", () => {
+  it("conversa que a sessão não enxerga: null", async () => {
+    const { fontesDaConversa } = await import("@/lib/variaveis/fontes-da-conversa");
+    const b = bancoFalso({ ...TABELAS, conversations: [] });
+    expect(await fontesDaConversa(b.cliente, b.cliente, ORG, "cv-1", "u-1", ["CONTACT.NAME"])).toBeNull();
+  });
+
+  it("o contato da conversa e o negócio aberto dele; o usuário é quem envia", async () => {
+    const { fontesDaConversa } = await import("@/lib/variaveis/fontes-da-conversa");
+    const b = bancoFalso({
+      ...TABELAS,
+      conversations: [{ id: "cv-1", organization_id: ORG, contact_id: "c-1" }],
+      crm_leads: [{ ...TABELAS.crm_leads![0]!, contact_id: "c-1" }],
+    });
+    const f = await fontesDaConversa(b.cliente, b.cliente, ORG, "cv-1", "u-1", [
+      "CONTACT.FIRST_NAME",
+      "DEAL.STAGE",
+      "USER.FIRST_NAME",
+    ]);
+    expect(resolverTexto("[CONTACT.FIRST_NAME]|[DEAL.STAGE]|[USER.FIRST_NAME]", f, { vazio: "vazio" }).texto).toBe(
+      "Ana|Entrada|Régis",
+    );
+  });
+});

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -30,17 +31,30 @@ const LISTA = [atv("a1"), atv("a2", { tipo: "ligacao", ordem: 1 }), atv("b1", { 
 function abrir(escolhidaId = "a1") {
   const props = { aoEscolher: vi.fn(), aoAtualizar: vi.fn(), aoNova: vi.fn(), aoFechar: vi.fn() };
   const user = userEvent.setup({ pointerEventsCheck: 0 });
+  // Frente V: o seletor de variáveis lê o catálogo de campos (o app tem o
+  // QueryClientProvider na raiz, em app/providers.tsx).
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify({ data: { grupos: [], campos: [] } }), { status: 200 }),
+    ),
+  );
   render(
-    <TooltipProvider>
-      <JanelaConfiguracoesDeAtividades
-        aberta
-        etapas={ETAPAS}
-        atividades={LISTA}
-        escolhidaId={escolhidaId}
-        campos={[{ chave: "proposta", rotulo: "Proposta" }]}
-        {...props}
-      />
-    </TooltipProvider>,
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <TooltipProvider>
+        <JanelaConfiguracoesDeAtividades
+          aberta
+          etapas={ETAPAS}
+          atividades={LISTA}
+          escolhidaId={escolhidaId}
+          campos={[{ chave: "proposta", rotulo: "Proposta" }]}
+          {...props}
+        />
+      </TooltipProvider>
+    </QueryClientProvider>,
   );
   return { user, ...props };
 }
@@ -80,7 +94,7 @@ describe("Configurações de atividades", () => {
     await user.type(caixa, "Olá !");
     (caixa as HTMLTextAreaElement).setSelectionRange(4, 4);
     await user.click(screen.getByRole("button", { name: "Adicionar variáveis" }));
-    await user.type(screen.getByRole("textbox", { name: "Buscar variável" }), "primeiro");
+    await user.type(screen.getByRole("searchbox", { name: "Buscar variável" }), "primeiro");
     const contato = screen.getByRole("group", { name: "Contato" });
     await user.click(within(contato).getByRole("button", { name: /Primeiro nome/ }));
     expect(caixa).toHaveValue("Olá [CONTACT.FIRST_NAME]!");
@@ -97,7 +111,7 @@ describe("Configurações de atividades", () => {
   it("o campo personalizado da origem entra nas variáveis de Negócio", async () => {
     const { user } = abrir();
     await user.click(screen.getByRole("button", { name: "Adicionar variáveis" }));
-    await user.type(screen.getByRole("textbox", { name: "Buscar variável" }), "proposta");
+    await user.type(screen.getByRole("searchbox", { name: "Buscar variável" }), "proposta");
     const negocio = screen.getByRole("group", { name: "Negócio" });
     await user.click(within(negocio).getByRole("button", { name: /Proposta/ }));
     expect(screen.getByRole("textbox", { name: "Conteúdo da atividade" })).toHaveValue(

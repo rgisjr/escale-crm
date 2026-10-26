@@ -1,5 +1,4 @@
 "use client";
-import * as Popover from "@radix-ui/react-popover";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,7 +8,7 @@ import {
   JanelaDaCasca,
   RodapeDaJanela,
 } from "@/components/escale/origens/JanelaDaCasca";
-import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
+import { SeletorDeVariaveis } from "@/components/escale/variaveis/SeletorDeVariaveis";
 import { SeletorMultiploDaCasca } from "@/components/escale/ui/SeletorMultiploDaCasca";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useMinhasPermissoes } from "@/hooks/escale/usePermissoesDeAtendimento";
@@ -38,7 +37,6 @@ import { InstagramLogo } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 
 const TODOS = "todos";
-const VARIAVEIS = ["{{nome}}", "{{primeiro_nome}}"] as const;
 const ICONE_EM_BREVE = "grid size-7 place-items-center rounded-casca-gatilho text-casca-meta";
 
 /**
@@ -168,8 +166,9 @@ export function JanelaRespostaRapida({
             <span title={t("Em breve")} className={ICONE_EM_BREVE}>
               <Mic size={16} aria-hidden />
             </span>
-            <Popover.Root>
-              <Popover.Trigger asChild>
+            <SeletorDeVariaveis
+              aoEscolher={inserir}
+              gatilho={
                 <button
                   type="button"
                   aria-label={t("Variáveis")}
@@ -178,20 +177,8 @@ export function JanelaRespostaRapida({
                 >
                   <Braces size={16} aria-hidden />
                 </button>
-              </Popover.Trigger>
-              <PainelSuspenso className="w-[200px] py-1">
-                {VARIAVEIS.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => inserir(v)}
-                    className="flex h-8 w-full items-center px-3 text-left font-mono text-[12px] text-casca-texto hover:bg-casca-raia"
-                  >
-                    {v}
-                  </button>
-                ))}
-              </PainelSuspenso>
-            </Popover.Root>
+              }
+            />
             <span className="flex-1" />
             <span
               title={t("Em breve")}

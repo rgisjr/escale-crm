@@ -11,6 +11,7 @@ import { useSetores } from "@/hooks/escale/useSetores";
 import { useT } from "@/hooks/i18n/useT";
 import { comBarra, type RespostaLida } from "@/lib/escale/conversas/respostas";
 import { interpolateTemplate, type TemplateContact } from "@/lib/inbox/template-vars";
+import { usaTokensDaClint } from "@/lib/variaveis/resolver";
 import { Search, Settings, X } from "@/lib/ui/icons-da-casca";
 
 /**
@@ -54,6 +55,28 @@ export function PainelRespostasRapidas({
       minhas: respostas.filter((r) => r.dono === user.id && bate(r)).sort(ordenar),
     };
   }, [respostas, busca, ordem, user.id]);
+  /**
+   * Frente V: a resposta com variável da Clint (`[DEAL.STAGE]`…) é resolvida
+   * no servidor, que conhece o negócio e a empresa do contato. Se a chamada
+   * falhar, o texto segue pelo caminho local (o nome do contato) e o resto
+   * fica literal, como sempre: o compositor barra o envio.
+   */
+  const escolher = async (corpo: string) => {
+    const local = interpolateTemplate(corpo, contato);
+    if (!usaTokensDaClint(corpo)) return aoEscolher(local);
+    try {
+      const r = await fetch("/api/v1/variaveis/resolver", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ texto: corpo, conversation_id: conversationId }),
+      });
+      const json = (await r.json().catch(() => null)) as { data?: { texto?: string } } | null;
+      const texto = r.ok ? json?.data?.texto : undefined;
+      aoEscolher(texto !== undefined ? interpolateTemplate(texto, contato) : local);
+    } catch {
+      aoEscolher(local);
+    }
+  };
   if (!aberto) return null;
   const grupo = (titulo: string, itens: RespostaLida[]) =>
     itens.length === 0 ? null : (
@@ -66,7 +89,7 @@ export function PainelRespostasRapidas({
             key={r.id}
             type="button"
             className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-casca-raia"
-            onClick={() => aoEscolher(interpolateTemplate(r.corpo, contato))}
+            onClick={() => void escolher(r.corpo)}
           >
             <span className="shrink-0 rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 font-mono text-[12px] text-casca-suave">
               {comBarra(r.atalho)}

@@ -18400,6 +18400,16 @@ export const DICIONARIO: Traducoes = {
   "A conversa abriu, mas a primeira mensagem não pôde ser enviada.": {
     es: "La conversación se abrió, pero el primer mensaje no se pudo enviar.",
   },
+
+  // ─── FRENTE V: VARIÁVEIS DE MENSAGEM (lista única da Clint) ───
+  Cargo: { es: "Cargo" },
+  "Link do último agendamento": { es: "Enlace de la última cita" },
+  "Data do último agendamento": { es: "Fecha de la última cita" },
+  "Segundo nome": { es: "Segundo nombre" },
+  "As variáveis do WhatsApp valem aqui, como [CONTACT.FIRST_NAME] e os campos do formulário. Mensagens antigas com {{nome}} e {{destino}} continuam valendo.":
+    {
+      es: "Las variables de WhatsApp valen aquí, como [CONTACT.FIRST_NAME] y los campos del formulario. Los mensajes antiguos con {{nome}} y {{destino}} siguen valiendo.",
+    },
 };
 
 /**
