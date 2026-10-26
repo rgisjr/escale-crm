@@ -12,8 +12,9 @@ type Resposta = { data: unknown; error: null };
 type Chamada = { alvo: string; op: string; valor?: unknown };
 
 /** Um cliente de mentira: anota insert/update/rpc e responde o mínimo que o motor lê. */
-function bancoFalso() {
+function bancoFalso(opcoes: { falhasDaGravacaoDoLote?: number } = {}) {
   const chamadas: Chamada[] = [];
+  let falhasRestantes = opcoes.falhasDaGravacaoDoLote ?? 0;
   const r = (data: unknown): Resposta => ({ data, error: null });
   const consulta = (alvo: string) => {
     const q: Record<string, unknown> = {};
@@ -34,6 +35,10 @@ function bancoFalso() {
   };
   const rpc = async (nome: string, args: unknown) => {
     chamadas.push({ alvo: nome, op: "rpc", valor: args });
+    if (nome === "fn_escale_gravar_desfechos_da_importacao" && falhasRestantes > 0) {
+      falhasRestantes -= 1;
+      return { data: null, error: { message: "banco indisponível" } };
+    }
     return r(nome === "fn_escale_empresa_da_importacao" ? "emp-1" : null);
   };
   return { chamadas, db: { from: consulta, rpc } as unknown as SupabaseClient };
@@ -196,11 +201,44 @@ describe("processar as linhas (Fase 2F)", () => {
     membroPorTexto: new Map(),
   };
 
-  it("importa a nova e pula a repetida, gravando o desfecho de cada linha", async () => {
+  const gravacoesDoLote = (chamadas: Chamada[]) =>
+    chamadas.filter((c) => c.alvo === "fn_escale_gravar_desfechos_da_importacao");
+
+  it("importa a nova e pula a repetida, gravando o desfecho do lote numa chamada só", async () => {
     const { chamadas, db } = bancoFalso();
     await processarLinhas(deps(db), rodada, [linha("l-1", ["Ana", "ana@x.com"]), linha("l-2", ["Ana", "ana@x.com"], 2)]);
-    const desfechos = chamadas.filter((c) => c.alvo === "crm_importacoes_linhas" && c.op === "update").map((c) => c.valor);
-    expect(desfechos[0]).toMatchObject({ status: "importada", contato_id: "novo-1", com_aviso: false });
-    expect(desfechos[1]).toMatchObject({ status: "pulada", motivo: "DUPLICATE_IN_BATCH" });
+    expect(chamadas.filter((c) => c.alvo === "crm_importacoes_linhas" && c.op === "update")).toEqual([]);
+    const gravacoes = gravacoesDoLote(chamadas);
+    expect(gravacoes).toHaveLength(1);
+    const { p_importacao, p_desfechos } = gravacoes[0]!.valor as { p_importacao: string; p_desfechos: unknown[] };
+    expect(p_importacao).toBe("imp-1");
+    expect(p_desfechos[0]).toMatchObject({ id: "l-1", status: "importada", contato_id: "novo-1", com_aviso: false });
+    expect(p_desfechos[1]).toMatchObject({ id: "l-2", status: "pulada", motivo: "DUPLICATE_IN_BATCH" });
+  });
+
+  it("grava em blocos de 10 desfechos", async () => {
+    const { chamadas, db } = bancoFalso();
+    const muitas = Array.from({ length: 11 }, (_, i) => linha(`l-${i}`, [`Pessoa ${i}`, `p${i}@x.com`]));
+    await processarLinhas(deps(db), rodada, muitas);
+    const tamanhos = gravacoesDoLote(chamadas).map((c) => (c.valor as { p_desfechos: unknown[] }).p_desfechos.length);
+    expect(tamanhos).toEqual([10, 1]);
+  });
+
+  it("sem linhas não chama o banco", async () => {
+    const { chamadas, db } = bancoFalso();
+    await processarLinhas(deps(db), rodada, []);
+    expect(gravacoesDoLote(chamadas)).toEqual([]);
+  });
+
+  it("uma falha passageira na gravação do lote é tentada de novo", async () => {
+    const { chamadas, db } = bancoFalso({ falhasDaGravacaoDoLote: 1 });
+    await processarLinhas(deps(db), rodada, [linha("l-1", ["Ana", "ana@x.com"])]);
+    expect(gravacoesDoLote(chamadas)).toHaveLength(2);
+  });
+
+  it("falha nas duas tentativas derruba o lote com a mensagem do banco", async () => {
+    const { chamadas, db } = bancoFalso({ falhasDaGravacaoDoLote: 2 });
+    await expect(processarLinhas(deps(db), rodada, [linha("l-1", ["Ana", "ana@x.com"])])).rejects.toThrow("banco indisponível");
+    expect(gravacoesDoLote(chamadas)).toHaveLength(2);
   });
 });

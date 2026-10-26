@@ -229,23 +229,21 @@ export async function excluirGrupo(sb: SB, orgId: string, id: string): Promise<v
   if (del.error) throw del.error;
 }
 
-/** Quantas gravações de posição vão ao banco ao mesmo tempo. */
-const GRAVACOES_EM_PARALELO = 25;
-
-/** Grava `posicao` dos grupos e dos campos (e o `grupo_id` de cada campo) na ordem recebida. */
+/**
+ * Grava `posicao` dos grupos e dos campos (e o `grupo_id` de cada campo) na ordem recebida,
+ * numa chamada só: a função do banco (9407) é uma transação, então falha no meio não deixa a ordem pela metade.
+ */
 export async function reordenar(sb: SB, orgId: string, ordem: OrdemDoCatalogo): Promise<void> {
-  const tabela = tabelaDe(ordem.objeto);
-  const gravacoes: Array<() => PromiseLike<{ error: unknown }>> = [
-    ...ordem.grupos.map((id, i) => () => sb.from("crm_grupos_de_campos").update({ posicao: i }).eq("organization_id", orgId).eq("id", id)),
-    ...ordem.campos.flatMap((grupo) =>
-      grupo.ids.map((id, i) => () => sb.from(tabela).update({ posicao: i, grupo_id: grupo.grupo_id }).eq("organization_id", orgId).eq("id", id)),
-    ),
-  ];
-  for (let inicio = 0; inicio < gravacoes.length; inicio += GRAVACOES_EM_PARALELO) {
-    const respostas = await Promise.all(gravacoes.slice(inicio, inicio + GRAVACOES_EM_PARALELO).map((g) => g()));
-    const falha = respostas.find((r) => r.error);
-    if (falha) throw falha.error;
-  }
+  const { error } = await sb.rpc("fn_escale_reordenar_campos", {
+    p_org: orgId,
+    p_objeto: ordem.objeto,
+    p_grupos: ordem.grupos,
+    p_campos: ordem.campos,
+  });
+  if (!error) return;
+  // 23503: o grupo foi apagado entre a conferência e a gravação.
+  if (error.message === "grupo_sumiu" || error.code === "23503") throw new ErroDoCatalogo("grupo_sumiu");
+  throw error;
 }
 
 /** Mensagem para cada erro tipado, com os textos da Clint. */

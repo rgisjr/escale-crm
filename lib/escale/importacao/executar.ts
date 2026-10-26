@@ -4,6 +4,8 @@
  * - 100 linhas por lote, 20 s por rodada; acabou o tempo, `retry`.
  * - O lote é marcado "processando" ANTES de agir (no máximo uma vez); a linha
  *   que ficou "processando" de uma rodada que caiu vira erro.
+ * - O desfecho das linhas é gravado em blocos de 10 (uma chamada por bloco)
+ *   (`fn_escale_gravar_desfechos_da_importacao`, 9407).
  * - Depois de cada lote, `fn_escale_contar_importacao` refaz as contagens e fecha
  *   a importação quando não sobra linha na fila.
  * - Importação cancelada para no lote seguinte.
@@ -28,6 +30,10 @@ export const LOTE = 100;
 export const ORCAMENTO_MS = 20_000;
 export const MENSAGEM_DA_INTERROMPIDA = "A importação foi interrompida nesta linha.";
 const TENTATIVAS_ANTES_DE_DESISTIR = 4;
+const TENTATIVAS_DA_GRAVACAO_DO_LOTE = 2;
+const PAUSA_ENTRE_TENTATIVAS_MS = 250;
+/** Quantos desfechos esperam na memória antes de irem ao banco: limita o que uma queda do worker deixa sem registro. */
+export const DESFECHOS_POR_GRAVACAO = 10;
 const COLUNAS_DA_LINHA = "id, numero, normalizado, repetida_de, resolucoes";
 
 export interface Dependencias extends DependenciasDaGravacao {
@@ -70,6 +76,7 @@ export async function processarLinhas(
   const contexto = await lerContextoDoLote(deps.db, rodada, linhas);
   const ctx = ctxDe(imp);
   const quemGrava = { id: imp.id, organization_id: imp.organization_id, user_id: imp.user_id, podeGanhar: rodada.podeGanhar };
+  const desfechos: Record<string, unknown>[] = [];
   for (const linha of linhas) {
     const desfecho = classificar(linha.normalizado, linha.repetida_de, contexto(linha), imp.decisoes, linha.resolucoes);
     let mudanca: Record<string, unknown>;
@@ -107,9 +114,29 @@ export async function processarLinhas(
         mensagem: null,
       };
     }
-    const { error } = await deps.db.from("crm_importacoes_linhas").update(mudanca).eq("id", linha.id);
-    if (error) throw new Error(error.message);
+    desfechos.push({ id: linha.id, ...mudanca });
+    if (desfechos.length >= DESFECHOS_POR_GRAVACAO) await gravarDesfechos(deps, imp.id, desfechos.splice(0));
   }
+  if (desfechos.length > 0) await gravarDesfechos(deps, imp.id, desfechos);
+}
+
+/** Grava o desfecho do lote inteiro de uma vez; uma segunda tentativa cobre falha passageira do banco. */
+async function gravarDesfechos(
+  deps: Pick<Dependencias, "db">,
+  importacaoId: string,
+  desfechos: readonly Record<string, unknown>[],
+): Promise<void> {
+  let erro: { message: string } | null = null;
+  for (let tentativa = 0; tentativa < TENTATIVAS_DA_GRAVACAO_DO_LOTE; tentativa++) {
+    const r = await deps.db.rpc("fn_escale_gravar_desfechos_da_importacao", {
+      p_importacao: importacaoId,
+      p_desfechos: desfechos,
+    });
+    if (!r.error) return;
+    erro = r.error;
+    if (tentativa + 1 < TENTATIVAS_DA_GRAVACAO_DO_LOTE) await new Promise((ok) => setTimeout(ok, PAUSA_ENTRE_TENTATIVAS_MS));
+  }
+  throw new Error(erro?.message ?? "falha ao gravar o lote");
 }
 
 export async function processarImportacao(row: EventRow, deps: Dependencias): Promise<HandlerResult> {

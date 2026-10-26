@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { lerCatalogo, lerCatalogosSemeando, reordenar } from "@/lib/escale/campos/banco";
 
-/** Q3 (G3-1, G3-5, G3-2, B3-8): leitura do catálogo em paralelo, semente só se vazio, reordenar em paralelo. */
+/** Q3 (G3-1, G3-5, G3-2, B3-8): leitura do catálogo em paralelo, semente só se vazio, reordenar numa chamada só (9407). */
 const ORG = "aaaaaaaa-0000-4000-8000-0000000000aa";
 
 /** Banco falso: uma "consulta" é thenable e conta quantas estão em voo ao mesmo tempo. */
-function bancoFalso(opcoes: { grupos?: unknown[]; falhaEm?: string } = {}) {
-  const estado = { emVoo: 0, picoEmVoo: 0, leituras: [] as string[], updates: [] as Array<{ tabela: string; valores: unknown; id: string }> };
+function bancoFalso(opcoes: { grupos?: unknown[]; erroDaOrdem?: string } = {}) {
+  const estado = { emVoo: 0, picoEmVoo: 0, leituras: [] as string[], rpcs: [] as Array<{ nome: string; args: unknown }> };
   const esperar = async <T,>(valor: T): Promise<T> => {
     estado.emVoo += 1;
     estado.picoEmVoo = Math.max(estado.picoEmVoo, estado.emVoo);
@@ -25,16 +25,11 @@ function bancoFalso(opcoes: { grupos?: unknown[]; falhaEm?: string } = {}) {
           esperar({ data: tabela === "crm_grupos_de_campos" ? (opcoes.grupos ?? []) : [], error: null }).then(ok, ko);
         return cadeia;
       },
-      update: (valores: unknown) => ({
-        eq: () => ({
-          eq: (_c: string, id: string) =>
-            esperar(null).then(() => {
-              estado.updates.push({ tabela, valores, id });
-              return { error: opcoes.falhaEm === id ? { message: "falhou" } : null };
-            }),
-        }),
-      }),
     }),
+    rpc: async (nome: string, args: unknown) => {
+      estado.rpcs.push({ nome, args });
+      return { data: null, error: opcoes.erroDaOrdem ? { message: opcoes.erroDaOrdem } : null };
+    },
   };
   return { sb: sb as never, estado };
 }
@@ -75,17 +70,22 @@ describe("reordenar (G3-2, B3-8)", () => {
   const G = ["00000000-0000-4000-8000-000000000001", "00000000-0000-4000-8000-000000000002"];
   const C = ["00000000-0000-4000-8000-0000000000c1", "00000000-0000-4000-8000-0000000000c2", "00000000-0000-4000-8000-0000000000c3"];
 
-  it("grava grupos e campos em paralelo, com a posição de cada um", async () => {
+  it("manda grupos e campos ao banco numa chamada só, com a ordem recebida", async () => {
     const { sb, estado } = bancoFalso();
-    await reordenar(sb, ORG, { objeto: "contato", grupos: G, campos: [{ grupo_id: G[0]!, ids: C }] });
-    expect(estado.updates).toHaveLength(5);
-    expect(estado.picoEmVoo).toBeGreaterThan(1);
-    expect(estado.updates.find((u) => u.id === C[2])?.valores).toEqual({ posicao: 2, grupo_id: G[0] });
-    expect(estado.updates.find((u) => u.id === G[1])?.valores).toEqual({ posicao: 1 });
+    const campos = [{ grupo_id: G[0]!, ids: C }];
+    await reordenar(sb, ORG, { objeto: "contato", grupos: G, campos });
+    expect(estado.rpcs).toEqual([
+      { nome: "fn_escale_reordenar_campos", args: { p_org: ORG, p_objeto: "contato", p_grupos: G, p_campos: campos } },
+    ]);
   });
 
-  it("uma gravação que falha derruba a chamada com o erro", async () => {
-    const { sb } = bancoFalso({ falhaEm: C[1] });
+  it("o erro do banco derruba a chamada", async () => {
+    const { sb } = bancoFalso({ erroDaOrdem: "falhou" });
     await expect(reordenar(sb, ORG, { objeto: "contato", grupos: [], campos: [{ grupo_id: G[0]!, ids: C }] })).rejects.toMatchObject({ message: "falhou" });
+  });
+
+  it("grupo que sumiu vira o erro tipado do catálogo", async () => {
+    const { sb } = bancoFalso({ erroDaOrdem: "grupo_sumiu" });
+    await expect(reordenar(sb, ORG, { objeto: "negocio", grupos: [], campos: [{ grupo_id: G[0]!, ids: C }] })).rejects.toMatchObject({ codigo: "grupo_sumiu" });
   });
 });
