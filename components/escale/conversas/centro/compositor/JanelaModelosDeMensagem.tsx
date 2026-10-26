@@ -6,6 +6,9 @@ import { AjudaDaCasca } from "@/components/escale/ui/AjudaDaCasca";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { JanelaDaCasca } from "@/components/escale/origens/JanelaDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
+import { JanelaDoModelo } from "@/components/escale/conversas/configuracoes/modelos/JanelaDoModelo";
+import { useAuth } from "@/hooks/auth/AuthProvider";
+import { useModelosDaConta } from "@/hooks/escale/useModelosDaConta";
 import { useModelosDeMensagem, type ModeloAprovado } from "@/hooks/escale/useModelosDeMensagem";
 import { useT } from "@/hooks/i18n/useT";
 import { useSendMessage } from "@/hooks/inbox/useSendMessage";
@@ -36,12 +39,22 @@ export function JanelaModelosDeMensagem({
   contato: TemplateContact;
 }) {
   const t = useT();
-  const { modelos, carregando, recarregar, recentes, marcarUsado } = useModelosDeMensagem(provider, aberta);
+  const { modelos, carregando, recarregar, recentes, marcarUsado } = useModelosDeMensagem(
+    provider,
+    aberta,
+  );
   const enviar = useSendMessage();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState("todas");
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const [valores, setValores] = useState<Record<string, string>>({});
+  // Frente V (D13): o que o mapeamento salvo resolve para este contato. Slot
+  // sem mapa (ou a chamada falhou: `null`) segue com o campo de digitar.
+  const [resolvido, setResolvido] = useState<ValoresDoMapeamento | null>(null);
+  const [editando, setEditando] = useState(false);
+  const { activeOrg } = useAuth();
+  const ehAdmin = activeOrg?.role === "admin";
+  const daConta = useModelosDaConta(editando);
   const categorias = useMemo(
     () => [...new Set(modelos.map((m) => m.category).filter((c): c is string => !!c))],
     [modelos],
@@ -56,7 +69,15 @@ export function JanelaModelosDeMensagem({
   }, [modelos, busca, categoria]);
   const atual = modelos.find((m) => m.name === escolhido) ?? null;
   const slots = atual?.slots ?? [];
-  const faltando = slots.filter((s) => !(valores[s.valueKey] ?? "").trim());
+  const mapeado = (chave: string) =>
+    resolvido !== null &&
+    !resolvido.slotsSemMapa.includes(chave) &&
+    !MIDIA.has(slotPorChave(slots, chave)?.expects ?? "");
+  const manuais = slots.filter((s) => !mapeado(s.valueKey));
+  const faltando = [
+    ...manuais.filter((s) => !(valores[s.valueKey] ?? "").trim()).map((s) => s.valueKey),
+    ...(resolvido?.faltando ?? []),
+  ];
   const previa = atual
     ? renderTemplatePreview(atual.components ?? [], valores, {
         name: atual.name,
@@ -64,9 +85,31 @@ export function JanelaModelosDeMensagem({
       })
     : null;
 
+  const resolver = async (m: ModeloAprovado) => {
+    setResolvido(null);
+    try {
+      const r = await fetch("/api/v1/channels/templates/valores", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: m.name,
+          language: m.language,
+          conversation_id: conversationId,
+        }),
+      });
+      const json = (await r.json().catch(() => null)) as { data?: ValoresDoMapeamento } | null;
+      if (!r.ok || !json?.data) return;
+      const dados = json.data;
+      setResolvido(dados);
+      setValores((atuais) => ({ ...atuais, ...dados.valores }));
+    } catch {
+      // Sem a resposta, todos os campos ficam para digitar, como antes.
+    }
+  };
   const escolher = (m: ModeloAprovado) => {
     setEscolhido(m.name);
     setValores({ ...(m.savedValues ?? {}) });
+    void resolver(m);
   };
   const enviarModelo = () => {
     if (!atual || faltando.length > 0) return;
@@ -227,14 +270,15 @@ export function JanelaModelosDeMensagem({
                 <span className="rounded-full bg-casca-fixada px-2 py-0.5 text-[11px] font-medium text-casca-espiao-texto">
                   {t("Aprovado")}
                 </span>
-                <a
-                  href="/app/settings/canal-oficial"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[12px] font-medium text-casca-marca"
-                >
-                  {t("Editar modelo")}
-                </a>
+                {ehAdmin ? (
+                  <button
+                    type="button"
+                    className="text-[12px] font-medium text-casca-marca hover:underline"
+                    onClick={() => setEditando(true)}
+                  >
+                    {t("Editar modelo")}
+                  </button>
+                ) : null}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto p-4">
                 <div className="max-w-[360px] rounded-lg rounded-tr-none border border-casca-borda-msg bg-casca-caixa-msg px-3 py-2 text-[15px] text-casca-texto">
@@ -254,12 +298,24 @@ export function JanelaModelosDeMensagem({
                     </div>
                   ))}
                 </div>
-                {slots.length > 0 ? (
+                {resolvido && resolvido.faltando.length > 0 ? (
+                  <p role="alert" className="mt-3 text-[12px] text-casca-alerta">
+                    {resolvido.faltando
+                      .map(
+                        (chave) =>
+                          `${t("variável")} ${chave.replace(/^\D+:/, "")} ${t("sem valor")}`,
+                      )
+                      .join(", ")}
+                    .{" "}
+                    {t("Defina um valor alternativo no modelo ou complete o cadastro do contato.")}
+                  </p>
+                ) : null}
+                {manuais.length > 0 ? (
                   <div className="mt-4 flex flex-col gap-2">
                     <div className="text-[12px] font-medium text-casca-suave">
                       {t("Preencha os campos do modelo")}
                     </div>
-                    {slots.map((s) => (
+                    {manuais.map((s) => (
                       <label
                         key={s.valueKey}
                         className="flex flex-col gap-1 text-[12px] text-casca-suave"
@@ -292,6 +348,32 @@ export function JanelaModelosDeMensagem({
           )}
         </div>
       </div>
+      {editando && atual
+        ? (() => {
+            const doModelo = daConta.data?.templates.find(
+              (m) => m.name === atual.name && m.language === atual.language,
+            );
+            return doModelo ? (
+              <JanelaDoModelo
+                modelo={doModelo}
+                aoFechar={() => {
+                  setEditando(false);
+                  void resolver(atual);
+                }}
+              />
+            ) : null;
+          })()
+        : null}
     </JanelaDaCasca>
   );
+}
+
+const MIDIA = new Set(["image", "video", "document"]);
+const slotPorChave = (slots: readonly { valueKey: string; expects: string }[], chave: string) =>
+  slots.find((s) => s.valueKey === chave);
+
+interface ValoresDoMapeamento {
+  valores: Record<string, string>;
+  faltando: string[];
+  slotsSemMapa: string[];
 }

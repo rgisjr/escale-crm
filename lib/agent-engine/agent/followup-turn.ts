@@ -53,6 +53,8 @@ import {
 import { isLeadInHandoff } from './human-handoff';
 import { aplicarPessoaNoComandoAoTurno } from '@/lib/followup/pessoa-no-comando-no-turno';
 import { fusoDaOrganizacao } from './fuso-da-org';
+import { fontesDoContexto } from '@/lib/variaveis/fontes-do-contexto';
+import { valoresDoModeloDoFluxo } from '@/lib/variaveis/mapeamento';
 import {
   followupPublicadoDoEnrollment,
   proximaAberturaDoFollowup,
@@ -700,7 +702,13 @@ async function runFlowDrivenTurn(
       input.fallbackTemplateId !== undefined &&
       (await janelaFechada(pool, target, clock()))
     ) {
-      passo = await resolveModeloAprovado(pool, target.tenantId, target.channelSessionId, input.fallbackTemplateId);
+      passo = await resolveModeloAprovado(
+        pool,
+        target.tenantId,
+        target.channelSessionId,
+        input.fallbackTemplateId,
+        target.leadId,
+      );
     }
     if (passo !== null && passo.tipo === 'recusado') {
       runLog.info('passo do fluxo pulado — o modelo não pode sair', { motivo: passo.motivo });
@@ -964,7 +972,7 @@ async function resolveFlowSendBody(
   // lia `message_templates`, e um fluxo apontado para um modelo aprovado — o único
   // envio que passa com a janela de 24 h fechada — morria neste `throw` no primeiro
   // disparo, depois de o editor ter aceitado e publicado o grafo.
-  const aprovado = await resolveModeloAprovado(pool, tenantId, channelSessionId, input.templateId);
+  const aprovado = await resolveModeloAprovado(pool, tenantId, channelSessionId, input.templateId, contactId);
   if (aprovado === null) {
     throw new Error('followup_turn sem modelo de mensagem — o template_id do passo não existe nesta organização');
   }
@@ -979,14 +987,17 @@ async function resolveFlowSendBody(
  * (`definicaoNaConexao`, a mesma regra do `send_template` do agente): dois números
  * podem espelhar o mesmo nome, e disparar a linha de outra conta é recusa certa.
  *
- * O fluxo não tem de onde tirar valor para variável, então modelo com `{{1}}` é
- * recusado com o motivo — mandar o marcador cru ao cliente seria pior.
+ * Modelo com `{{1}}` só sai com o mapeamento salvo em Modelos de mensagem
+ * (Frente V, D6): completo, do contrato de hoje, e com valor (ou alternativo)
+ * para este contato. Senão, é recusado com o motivo — mandar o marcador cru
+ * ao cliente seria pior.
  */
 async function resolveModeloAprovado(
   pool: pg.Pool,
   tenantId: string,
   channelSessionId: string,
   metaTemplateId: string,
+  contactId: string,
 ): Promise<PassoSemIa | null> {
   const { rows } = await pool.query<{ name: string; language: string }>(
     `select name, language from meta_templates where organization_id = $1 and id = $2 limit 1`,
@@ -994,9 +1005,17 @@ async function resolveModeloAprovado(
   );
   const alvo = rows[0];
   if (alvo === undefined) return null;
-  const linha = await definicaoNaConexao<{ components: unknown; parameter_format: string; status: string }>(
+  const linha = await definicaoNaConexao<{
+    components: unknown;
+    parameter_format: string;
+    status: string;
+    contract_hash: string;
+    variaveis: unknown;
+    variaveis_contrato: string | null;
+    saved_values: unknown;
+  }>(
     pool,
-    ['components', 'parameter_format', 'status'],
+    ['components', 'parameter_format', 'status', 'contract_hash', 'variaveis', 'variaveis_contrato', 'saved_values'],
     { organizationId: tenantId, name: alvo.name, language: alvo.language, channelSessionId },
   );
   if (linha === null) {
@@ -1015,16 +1034,22 @@ async function resolveModeloAprovado(
     parameter_format: linha.parameter_format,
     components: linha.components as never,
   });
+  let values: Record<string, string> = {};
   if (contrato.slots.length > 0) {
-    return {
-      tipo: 'recusado',
-      motivo: `O modelo "${alvo.name}" tem variáveis, e o fluxo não tem de onde tirar os valores. Use um modelo sem variáveis.`,
-    };
+    const fuso = await fusoDaOrganizacao(pool, tenantId);
+    const r = valoresDoModeloDoFluxo(
+      contrato,
+      linha,
+      fontesDoContexto(await contextoDoContato(pool, tenantId, contactId), fuso),
+      { agora: new Date(), fuso },
+    );
+    if (!r.ok) return { tipo: 'recusado', motivo: `O modelo "${alvo.name}" ${r.motivo}` };
+    values = r.valores;
   }
   return {
     tipo: 'modelo_aprovado',
-    body: renderTemplateBody(linha.components, {}, meta),
-    modelo: { name: alvo.name, language: alvo.language, values: {} },
+    body: renderTemplateBody(linha.components, values, meta),
+    modelo: { name: alvo.name, language: alvo.language, values },
   };
 }
 

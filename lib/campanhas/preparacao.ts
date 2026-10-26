@@ -45,7 +45,7 @@ import { renderizar } from "./renderizador";
 import type { MotivoDeExclusao } from "./tipos";
 // FORK ESCALE · Fase 8B: o público da casca chega resolvido; o modelo da Meta tem os valores próprios.
 import type { MensagemDeModelo } from "@/lib/escale/campanhas/assistente";
-import { corpoComValores, valoresDoModelo } from "@/lib/escale/campanhas/modelo";
+import { corpoComValores, fontesDoDestinatario, valoresDoModelo } from "@/lib/escale/campanhas/modelo";
 
 export interface ResumoDoSnapshot {
   total: number;
@@ -135,7 +135,9 @@ async function classificar(
           const v = valoresDoModelo(entrada.modelo, { nome: c.nome, lead: c.lead, contato: c.contato });
           return { texto: corpoComValores(entrada.modelo.corpo, v.valores), faltando: v.faltando };
         }
-        const r = renderizar(entrada.corpo, { nome: c.nome, lead: c.lead, contato: c.contato });
+        const valores = { nome: c.nome, lead: c.lead, contato: c.contato };
+        // Frente V: os tokens da lista única (`[CONTACT.FIRST_NAME]`) leem o mesmo nome e campos.
+        const r = renderizar(entrada.corpo, { ...valores, fontes: fontesDoDestinatario(valores) });
         return { texto: r.texto, faltando: r.faltando };
       },
     }),

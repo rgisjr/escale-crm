@@ -27,6 +27,7 @@ export function SeletorDeVariaveis({
   aoEscolher,
   extras = [],
   adicionais,
+  permitir,
   alinhar = "start",
 }: {
   gatilho: ReactNode;
@@ -34,12 +35,17 @@ export function SeletorDeVariaveis({
   extras?: readonly ExtraDasVariaveis[];
   /** Campos que a tela conhece por outro caminho (ex.: os da origem, no playbook). */
   adicionais?: CamposPorObjeto;
+  /** Só os tokens que a tela sabe resolver (a campanha lê menos dados que a automação). */
+  permitir?: (token: string) => boolean;
   alinhar?: "start" | "center" | "end";
 }) {
   const t = useT();
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
-  const { grupos } = useVariaveisDisponiveis(aberto, extras, adicionais);
+  const { grupos: todos } = useVariaveisDisponiveis(aberto, extras, adicionais);
+  const grupos = permitir
+    ? todos.map((g) => ({ ...g, itens: g.itens.filter((i) => permitir(i.token)) })).filter((g) => g.itens.length > 0)
+    : todos;
   const [abertos, setAbertos] = useState<ReadonlySet<ChaveDoGrupo> | null>(null);
   const filtrados = filtrarGrupos(grupos, busca, t);
   const buscando = busca.trim() !== "";

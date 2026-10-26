@@ -227,3 +227,70 @@ export function mapeamentoDaLinha(
     desatualizado: tinha && salvo.variaveis_contrato !== linha.contract_hash,
   };
 }
+
+interface LinhaDoFluxo {
+  contract_hash: string;
+  variaveis?: unknown;
+  variaveis_contrato?: string | null;
+  saved_values?: unknown;
+}
+
+/** Os links de mídia salvos (0382) que o contrato de hoje pede. `null` = falta algum. */
+function linksDeMidia(contrato: TemplateContract, salvos: unknown): Record<string, string> | null {
+  const mapa = salvos && typeof salvos === "object" ? (salvos as Record<string, unknown>) : {};
+  const saida: Record<string, string> = {};
+  for (const s of contrato.slots) {
+    if (!MIDIA.has(s.expects)) continue;
+    const chave = slotKey(s.address, s.key);
+    const link = mapa[chave];
+    if (typeof link !== "string" || link.trim() === "") return null;
+    saida[chave] = link;
+  }
+  return saida;
+}
+
+/**
+ * O fluxo de follow-up pode mandar este modelo sozinho? (Frente V, D6) Sem
+ * variável, sempre; com variável, só com o mapeamento salvo completo e atual e
+ * com o link de toda mídia salvo.
+ */
+export function modeloPodeSairNoFluxo(contrato: TemplateContract, linha: LinhaDoFluxo): boolean {
+  if (contrato.slots.length === 0) return true;
+  const mapa = mapeamentoAtual(linha.contract_hash, {
+    variaveis: linha.variaveis ?? {},
+    variaveis_contrato: linha.variaveis_contrato ?? null,
+  });
+  return mapeamentoCompleto(contrato, mapa) && linksDeMidia(contrato, linha.saved_values) !== null;
+}
+
+/**
+ * Os valores do modelo para o envio do fluxo, ou o motivo de não sair (o passo
+ * é pulado com ele: `variavel_sem_valor` quando o contato não tem o dado e não
+ * há alternativo).
+ */
+export function valoresDoModeloDoFluxo(
+  contrato: TemplateContract,
+  linha: LinhaDoFluxo,
+  fontes: FontesDasVariaveis,
+  quando: { agora: Date; fuso: string },
+): { ok: true; valores: Record<string, string> } | { ok: false; motivo: string } {
+  if (!modeloPodeSairNoFluxo(contrato, linha)) {
+    return {
+      ok: false,
+      motivo:
+        "tem variáveis sem o mapeamento salvo em Conversas › Configurações › Modelos de mensagem (ou sem o link da mídia).",
+    };
+  }
+  const mapa = mapeamentoAtual(linha.contract_hash, {
+    variaveis: linha.variaveis ?? {},
+    variaveis_contrato: linha.variaveis_contrato ?? null,
+  });
+  const r = valoresDoMapeamento(contrato, mapa, fontes, quando);
+  if (r.faltando.length > 0) {
+    return {
+      ok: false,
+      motivo: `tem variável sem valor para este contato (variavel_sem_valor: ${r.faltando.join(", ")}).`,
+    };
+  }
+  return { ok: true, valores: { ...linksDeMidia(contrato, linha.saved_values), ...r.valores } };
+}

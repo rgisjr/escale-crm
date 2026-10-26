@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/escale/useModelosDeMensagem", () => ({ useModelosDeMensagem: vi.fn() }));
 vi.mock("@/hooks/campanhas/useConfiguracao", () => ({ useTextosSalvos: vi.fn() }));
+// Frente V: o seletor de variáveis lê o catálogo de campos (no app, pelo QueryClient da raiz).
+vi.mock("@/hooks/escale/useVariaveisDisponiveis", async () => {
+  const { gruposComCampos } = await import("@/lib/variaveis/catalogo");
+  return { useVariaveisDisponiveis: () => ({ grupos: gruposComCampos({}, ["saudacao"]), carregando: false }) };
+});
 
 import { PassoConfigurar } from "@/components/escale/campanhas/assistente/PassoConfigurar";
 import { VariaveisDoModelo } from "@/components/escale/campanhas/assistente/VariaveisDoModelo";

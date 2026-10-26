@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 
-import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
+import { SeletorDeVariaveis } from "@/components/escale/variaveis/SeletorDeVariaveis";
 import { useT } from "@/hooks/i18n/useT";
 import type { MensagemDeModelo, VariavelDoModelo } from "@/lib/escale/campanhas/assistente";
 import {
-  CAMPOS_BASICOS,
   contagemResolvida,
+  tokenDaCampanha,
   trechoDaVariavel,
   variaveisDoCorpo,
 } from "@/lib/escale/campanhas/modelo";
 import type { CampoPersonalizado } from "@/lib/escale/campanhas/previa";
 import { cn } from "@/lib/utils";
+import { rotuloDoToken, TOKEN_DA_SAUDACAO } from "@/lib/variaveis/catalogo";
+import { tokenDoCampoAntigo } from "@/lib/variaveis/mapeamento";
 
 import { CAMPO } from "../molde/estilos";
 
@@ -42,10 +44,13 @@ export function VariaveisDoModelo({
   );
   if (chaves.length === 0) return null;
   const { feitas, total } = contagemResolvida(chaves, mensagem.variaveis);
-  const campos = [
-    ...CAMPOS_BASICOS.map((c) => ({ valor: c.campo, rotulo: t(c.rotulo) })),
-    ...personalizados.map((c) => ({ valor: c.campo, rotulo: c.rotulo })),
-  ];
+  // O rótulo do campo escolhido: o personalizado pelo catálogo, o resto pela lista única.
+  const rotuloDoCampo = (campo: string): string => {
+    const token = tokenDoCampoAntigo(campo);
+    const personalizado = personalizados.find((c) => tokenDoCampoAntigo(c.campo) === token);
+    if (personalizado) return personalizado.rotulo;
+    return t(rotuloDoToken(token)?.rotulo ?? campo);
+  };
   const mudar = (chave: string, v: VariavelDoModelo) =>
     aoMudar({ ...mensagem.variaveis, [chave]: v });
 
@@ -88,7 +93,7 @@ export function VariaveisDoModelo({
                           chave,
                           fonte === "fixo"
                             ? { fonte: "fixo", valor: "" }
-                            : { fonte: "campo", campo: "primeiro_nome", alternativo: null },
+                            : { fonte: "campo", campo: "[CONTACT.FIRST_NAME]", alternativo: null },
                         )
                       }
                       className={cn(
@@ -110,20 +115,31 @@ export function VariaveisDoModelo({
                     className={cn(CAMPO, "h-7 w-60")}
                   />
                 ) : (
-                  <SeletorDaCasca
-                    valor={v?.fonte === "campo" ? v.campo : ""}
-                    opcoes={campos}
-                    vazio={t("Selecione...")}
-                    aria-label={t("Campo do CRM")}
-                    aoMudar={(campo) =>
-                      campo &&
+                  <SeletorDeVariaveis
+                    extras={["saudacao"]}
+                    permitir={tokenDaCampanha}
+                    aoEscolher={(token) =>
                       mudar(chave, {
                         fonte: "campo",
-                        campo,
+                        campo: token === TOKEN_DA_SAUDACAO ? "saudacao" : token,
                         alternativo: v?.fonte === "campo" ? v.alternativo : null,
                       })
                     }
-                    className="h-7 w-56"
+                    gatilho={
+                      <button
+                        type="button"
+                        aria-label={t("Campo do CRM")}
+                        className={cn(CAMPO, "flex h-7 w-56 items-center text-left")}
+                      >
+                        {v?.fonte === "campo" ? (
+                          <span className="truncate rounded-[4px] bg-casca-marca-suave px-1.5 text-[12px] text-casca-marca">
+                            {rotuloDoCampo(v.campo)}
+                          </span>
+                        ) : (
+                          <span className="text-casca-meta">{t("Selecione...")}</span>
+                        )}
+                      </button>
+                    }
                   />
                 )}
               </div>
@@ -136,7 +152,7 @@ export function VariaveisDoModelo({
                     onChange={(e) =>
                       mudar(chave, {
                         fonte: "campo",
-                        campo: v?.fonte === "campo" ? v.campo : "primeiro_nome",
+                        campo: v?.fonte === "campo" ? v.campo : "[CONTACT.FIRST_NAME]",
                         alternativo: e.target.value || null,
                       })
                     }

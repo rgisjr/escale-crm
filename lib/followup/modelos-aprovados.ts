@@ -10,11 +10,13 @@
  * (`resolveModeloAprovado` em `lib/agent-engine/agent/followup-turn.ts`) — a
  * tela não oferece o que o motor depois pula:
  *   - status que não dispara (pendente, rejeitado, pausado);
- *   - modelo com variável: o fluxo não tem de onde tirar o valor.
+ *   - modelo com variável SEM o mapeamento salvo em Modelos de mensagem (Frente V,
+ *     D6): com ele completo e atual, o fluxo tira o valor do cadastro.
  */
 import { renderTemplateBody } from "@/lib/channels/meta/render-template";
 import { isStatusSendable } from "@/lib/channels/meta/template-binding";
 import { deriveTemplateContract } from "@/lib/channels/meta/template-contract";
+import { modeloPodeSairNoFluxo } from "@/lib/variaveis/mapeamento";
 
 export interface LinhaDeModeloDoCanal {
   id: string;
@@ -23,6 +25,10 @@ export interface LinhaDeModeloDoCanal {
   status: string;
   parameter_format: string | null;
   components: unknown;
+  contract_hash?: string;
+  variaveis?: unknown;
+  variaveis_contrato?: string | null;
+  saved_values?: unknown;
 }
 
 export interface ModeloAprovadoDoFluxo {
@@ -44,7 +50,7 @@ export function modelosQueOFluxoEnvia(linhas: LinhaDeModeloDoCanal[]): ModeloApr
       ...(l.parameter_format ? { parameter_format: l.parameter_format } : {}),
       components: l.components as never,
     });
-    if (contrato.slots.length > 0) continue;
+    if (!modeloPodeSairNoFluxo(contrato, { ...l, contract_hash: l.contract_hash ?? "" })) continue;
     saida.push({
       id: l.id,
       name: l.name,
