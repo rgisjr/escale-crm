@@ -166,7 +166,7 @@ describe("permissões (as 19 da Clint)", () => {
 });
 
 describe("hub", () => {
-  it("tem os 9 cartões na ordem da Clint, 3 em breve", () => {
+  it("tem os 9 cartões na ordem da Clint, 2 em breve (Modelos entrou na Frente V)", () => {
     expect(CARTOES_DO_HUB.map((c) => c.titulo)).toEqual([
       "Dispositivo",
       "Setores",
@@ -178,7 +178,13 @@ describe("hub", () => {
       "WhatsApp Flows",
       "Análise de templates",
     ]);
-    expect(CARTOES_DO_HUB.filter((c) => c.emBreve)).toHaveLength(3);
+    expect(CARTOES_DO_HUB.filter((c) => c.emBreve).map((c) => c.titulo)).toEqual([
+      "WhatsApp Flows",
+      "Análise de templates",
+    ]);
+    expect(CARTOES_DO_HUB.find((c) => c.chave === "modelos")?.destino).toBe(
+      "/app/inbox/configuracoes/modelos-de-mensagem",
+    );
   });
 });
 

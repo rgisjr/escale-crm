@@ -7922,6 +7922,8 @@ export type Database = {
           status: string
           synced_at: string
           updated_at: string
+          variaveis: Json
+          variaveis_contrato: string | null
           waba_id: string
         }
         Insert: {
@@ -7941,6 +7943,8 @@ export type Database = {
           status: string
           synced_at?: string
           updated_at?: string
+          variaveis?: Json
+          variaveis_contrato?: string | null
           waba_id: string
         }
         Update: {
@@ -7960,6 +7964,8 @@ export type Database = {
           status?: string
           synced_at?: string
           updated_at?: string
+          variaveis?: Json
+          variaveis_contrato?: string | null
           waba_id?: string
         }
         Relationships: [
