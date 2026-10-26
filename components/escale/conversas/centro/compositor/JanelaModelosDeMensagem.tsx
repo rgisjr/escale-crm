@@ -115,6 +115,13 @@ export function JanelaModelosDeMensagem({
     setValores({ ...(m.savedValues ?? {}) });
     void resolver(m);
   };
+  const modeloEmEdicao = atual
+    ? (daConta.data?.templates.find((m) => m.name === atual.name && m.language === atual.language) ?? null)
+    : null;
+  const fecharEdicao = () => {
+    setEditando(false);
+    if (atual) void resolver(atual);
+  };
   const enviarModelo = () => {
     if (!atual || faltando.length > 0) return;
     enviar.mutate(
@@ -352,22 +359,9 @@ export function JanelaModelosDeMensagem({
           )}
         </div>
       </div>
-      {editando && atual
-        ? (() => {
-            const doModelo = daConta.data?.templates.find(
-              (m) => m.name === atual.name && m.language === atual.language,
-            );
-            return doModelo ? (
-              <JanelaDoModelo
-                modelo={doModelo}
-                aoFechar={() => {
-                  setEditando(false);
-                  void resolver(atual);
-                }}
-              />
-            ) : null;
-          })()
-        : null}
+      {editando && modeloEmEdicao ? (
+        <JanelaDoModelo modelo={modeloEmEdicao} aoFechar={fecharEdicao} />
+      ) : null}
     </JanelaDaCasca>
   );
 }
