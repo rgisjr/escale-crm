@@ -3,6 +3,7 @@ import { z } from "zod";
 import { FILTRO_VAZIO } from "@/lib/campanhas/audiencia";
 import { ritmoSchema } from "@/lib/campanhas/schemas";
 import { alvoSchema } from "@/lib/escale/massa/tipos";
+import { variavelDoModeloSchema } from "@/lib/variaveis/mapeamento";
 
 /**
  * O ASSISTENTE DE CAMPANHA (fork Escale, Fase 8B; PRD B1–B17). Tudo o que os 4
@@ -19,17 +20,12 @@ export const NUMEROS_EXTRAS_MAX = 10;
 export const CAMPO_DA_VARIAVEL =
   /^(nome|primeiro_nome|saudacao|(contato|lead)\.[a-z][a-z0-9_]{0,39})$/;
 
-export const variavelDoModeloSchema = z.discriminatedUnion("fonte", [
-  z
-    .object({
-      fonte: z.literal("campo"),
-      campo: z.string().regex(CAMPO_DA_VARIAVEL),
-      alternativo: z.string().trim().max(200).nullable().default(null),
-    })
-    .strict(),
-  z.object({ fonte: z.literal("fixo"), valor: z.string().trim().min(1).max(1000) }).strict(),
-]);
-export type VariavelDoModelo = z.infer<typeof variavelDoModeloSchema>;
+/**
+ * A variável do modelo vem da lista única (Frente V): aceita os tokens da
+ * Clint (`[CONTACT.FIRST_NAME]`) e os valores que as campanhas já gravaram
+ * (`primeiro_nome`, `lead.x`).
+ */
+export { variavelDoModeloSchema, type VariavelDoModelo } from "@/lib/variaveis/mapeamento";
 
 /** A chave do slot é a do `slotKey` do original: "1" (corpo), "header:1", "button0:1". */
 const CHAVE_DO_SLOT = /^[a-z0-9:_]{1,40}$/i;

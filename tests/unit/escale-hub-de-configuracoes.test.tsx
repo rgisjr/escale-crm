@@ -40,7 +40,7 @@ describe("CabecaDaConfiguracao (c37)", () => {
 });
 
 describe("HubDeConfiguracoes (c37)", () => {
-  it("os 9 cartões; 3 em breve; os links; o toggle de notificações grava in_app e push", () => {
+  it("os 9 cartões; 2 em breve; os links; o toggle de notificações grava in_app e push", () => {
     render(<HubDeConfiguracoes />);
     expect(screen.getByRole("link", { name: /Setores/ })).toHaveAttribute(
       "href",
@@ -50,7 +50,12 @@ describe("HubDeConfiguracoes (c37)", () => {
       "href",
       "/app/inbox/configuracoes/canais",
     );
-    expect(screen.getByText("Modelos de mensagem").closest("[aria-disabled]")).toHaveAttribute(
+    // Frente V: Modelos de mensagem deixou de ser "Em breve".
+    expect(screen.getByRole("link", { name: /Modelos de mensagem/ })).toHaveAttribute(
+      "href",
+      "/app/inbox/configuracoes/modelos-de-mensagem",
+    );
+    expect(screen.getByText("WhatsApp Flows").closest("[aria-disabled]")).toHaveAttribute(
       "aria-disabled",
       "true",
     );

@@ -42,6 +42,8 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/respostas-rapidas":
     "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  "/app/inbox/configuracoes/modelos-de-mensagem":
+    "item do hub de configurações de Conversas (⚙ da tela de Conversas); também na aba do canal oficial",
   "/app/inbox/configuracoes/setores": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/usuarios": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/campaigns/prospeccao/nova":

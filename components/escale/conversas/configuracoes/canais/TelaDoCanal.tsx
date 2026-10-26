@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 
 import { AbasDaCasca } from "@/components/escale/ui/AbasDaCasca";
@@ -36,8 +37,16 @@ export function TelaDoCanal({ canal }: { canal: GrupoDeDispositivo }) {
             { valor: "setores", rotulo: t("Setores") },
           ]}
         />
+        {canal === "whatsapp_oficial" ? (
+          <Link
+            href="/app/inbox/configuracoes/modelos-de-mensagem"
+            className="pb-3 text-[13px] text-casca-suave hover:text-casca-texto"
+          >
+            {t("Modelos de mensagem")}
+          </Link>
+        ) : null}
         {canal === "whatsapp_oficial"
-          ? [t("Modelos de mensagem"), t("WhatsApp Flows"), t("Análise de templates")].map((r) => (
+          ? [t("WhatsApp Flows"), t("Análise de templates")].map((r) => (
               <span
                 key={r}
                 title={t("Em breve")}

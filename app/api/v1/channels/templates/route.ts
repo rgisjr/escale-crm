@@ -24,6 +24,7 @@ import { slotKey } from "@/lib/channels/meta/build-components";
 import { syncTemplates } from "@/lib/channels/meta/template-sync";
 import { mesclarValoresSalvos } from "@/lib/channels/meta/valores-salvos";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { mapeamentoDaLinha, type MapeamentoDaLinha } from "@/lib/variaveis/mapeamento";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -68,6 +69,11 @@ export interface TemplateView {
    * `template_values`. O painel da janela fechada pré-preenche com eles.
    */
   savedValues: Record<string, string>;
+  /**
+   * De onde vem cada `{{n}}` (Frente V): os slots que o mapeamento cobre, o
+   * mapeamento salvo (só se for do contrato de hoje) e se ficou desatualizado.
+   */
+  mapeamento: MapeamentoDaLinha;
 }
 
 /** Textos com placeholder, achatados (inclui os de dentro de card de carrossel). */
@@ -126,7 +132,7 @@ export async function GET(): Promise<NextResponse> {
   const { data, error } = await admin
     .from("meta_templates")
     .select(
-      "name, language, status, category, rejected_reason, quality_score, parameter_format, contract_hash, components, synced_at, saved_values",
+      "name, language, status, category, rejected_reason, quality_score, parameter_format, contract_hash, components, synced_at, saved_values, variaveis, variaveis_contrato",
     )
     .eq("organization_id", r.orgId)
     .order("status")
@@ -175,6 +181,7 @@ export async function GET(): Promise<NextResponse> {
         const r = mesclarValoresSalvos(contrato, (row.saved_values ?? {}) as Record<string, unknown>, {});
         return r.ok ? r.valores : {};
       })(),
+      mapeamento: mapeamentoDaLinha(contrato, row),
     };
   });
 

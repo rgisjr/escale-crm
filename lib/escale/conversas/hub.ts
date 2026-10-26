@@ -76,8 +76,8 @@ export const CARTOES_DO_HUB: readonly CartaoDoHub[] = [
     chave: "modelos",
     titulo: "Modelos de mensagem",
     descricao: "Gerencie seus modelos de mensagem de WhatsApp.",
-    destino: null,
-    emBreve: true,
+    destino: "/app/inbox/configuracoes/modelos-de-mensagem",
+    emBreve: false,
     soAdmin: false,
   },
   {
