@@ -544,7 +544,7 @@ NEXT_PUBLIC_ADMIN_URL=http://localhost:3000
 # `EVENT_LOG_WORKER_ENABLED` que ficava aqui nunca teve leitor e saiu em
 # 2026-08-25, junto com a chegada do laço de verdade no worker.
 EVENT_LOG_DRAIN_INTERVAL_MS=2000
-EVENT_LOG_DRAIN_IDLE_INTERVAL_MS=10000
+EVENT_LOG_DRAIN_IDLE_INTERVAL_MS=30000
 EVENT_LOG_DRAIN_BATCH_SIZE=50
 ```
 

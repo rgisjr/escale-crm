@@ -30,6 +30,18 @@ APP_ORIGIN="http://app:3000"
 # tests/unit/cron-routes-scheduled.test.ts (e mais dois) leem por grep — esse
 # teste compara a lista com o diretório app/api/v1/cron, e rota criada sem
 # agendamento reprova o CI.
+# CARGA FIXA DO SUPABASE (26/10/2026). O banco roda numa máquina de 426 MB de RAM
+# que já vive em swap, e estes crons somavam ~25–35 mil chamadas/dia com ou sem
+# ninguém usando o app; rajadas delas esperavam 13–30 s e o app mostrava "Erro
+# inesperado". Por isso nem tudo roda todo minuto: só o que o cliente VÊ na hora
+# (followup-flow-worker, routing-worker, mensagens-agendadas, campaign-worker,
+# channel-pause-scheduler) fica em 1 min. Os demais:
+#   - agent-dispatcher: a rota devolve { skipped, deprecated }; fica agendada só
+#     porque cron-routes-scheduled.test.ts exige toda rota do diretório na lista.
+#   - event-log-drain: o worker já drena a cada 2–30 s (runEventLogDrainLoop); o
+#     cron é só rede de segurança.
+#   - prospecting, proposta-travada: 5 min bastam.
+#   - webhook-replay: 2 min.
 # A agenda do Google entra com DUAS cadências, e elas são diferentes de propósito.
 #
 # RENOVAÇÃO a cada 10 min: o access_token do Google expira em cerca de 1h, e a
@@ -47,14 +59,14 @@ APP_ORIGIN="http://app:3000"
 # comentário, seria DADO — e crase em prosa dentro de aspas duplas o shell
 # EXECUTA. Foi o que quebrou o entrypoint na primeira tentativa desta linha.
 CRONS="
-* * * * *|240|api/v1/cron/prospecting
-* * * * *|25|api/v1/cron/agent-dispatcher
+*/5 * * * *|240|api/v1/cron/prospecting
+7 * * * *|25|api/v1/cron/agent-dispatcher
 * * * * *|25|api/v1/cron/followup-flow-worker
-* * * * *|45|api/v1/cron/event-log-drain
+*/5 * * * *|45|api/v1/cron/event-log-drain
 * * * * *|25|api/v1/cron/routing-worker
 */5 * * * *|25|api/v1/cron/recover-stuck-messages
-* * * * *|25|api/v1/cron/proposta-travada
-* * * * *|45|api/v1/cron/webhook-replay
+*/5 * * * *|25|api/v1/cron/proposta-travada
+*/2 * * * *|45|api/v1/cron/webhook-replay
 */5 * * * *|25|api/v1/cron/storage-redaction?limit=50
 */5 * * * *|25|api/v1/cron/snooze-watcher
 # FORK ESCALE · Fase 3B: as mensagens agendadas da casca (minuto a minuto) e a retomada das pausas de automação.
