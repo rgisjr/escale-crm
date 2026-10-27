@@ -141,7 +141,11 @@ const envSchema = z.object({
   // Até 2026-08-25 este laço não existia e os handlers só rodavam pelo cron
   // `event-log-drain` (1×/min) — ver o cabeçalho de lib/event-log/drain-loop.ts.
   EVENT_LOG_DRAIN_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
-  EVENT_LOG_DRAIN_IDLE_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
+  // Espera OCIOSA (nada a processar): 30 s desde 26/10/2026 (era 10 s). Eram ~17 mil
+  // consultas/dia ao Supabase com a fila vazia, numa máquina de 426 MB; o cron
+  // `event-log-drain` (5 min) segue de rede de segurança. Com evento processado o
+  // laço volta a EVENT_LOG_DRAIN_INTERVAL_MS (2 s).
+  EVENT_LOG_DRAIN_IDLE_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
   EVENT_LOG_DRAIN_BATCH_SIZE: z.coerce.number().int().positive().default(50),
   // Coalescência de rajada inbound: mensagens do MESMO contato dentro desta
   // janela viram UM job (responder em rajada é gatilho de ban). 0 = sem debounce.
