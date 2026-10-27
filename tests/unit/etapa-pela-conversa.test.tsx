@@ -62,7 +62,7 @@ function bancoFalso(tabelas: Record<string, Linha[]>) {
     };
     return chain;
   };
-  return { auth: { getUser: async () => ({ data: { user: { id: "u-1" } }, error: null }) }, from, selects };
+  return { auth: { getUser: async () => ({ data: { user: { id: "u-1" } }, error: null }), getClaims: async () => ({ data: { claims: { sub: "u-1" } }, error: null }) }, from, selects };
 }
 
 describe("crm-summary: a etapa do negócio e as etapas do funil", () => {

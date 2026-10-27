@@ -7,6 +7,7 @@ import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { audit } from "@/lib/audit";
 import { ipDoCliente } from "@/lib/http/ip-do-cliente";
 import { IDIOMAS, type Idioma } from "@/lib/i18n/idiomas";
+import { renovarClaimsDaSessao } from "@/lib/auth/claims";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -39,6 +40,10 @@ export async function trocarIdioma(
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ data: { locale: idioma } });
   if (error) return { ok: false, error: error.message };
+  // `loadAuthUser` lê o idioma das CLAIMS do token (`lib/auth/claims.ts`), e o
+  // token que o navegador já tem carrega o idioma ANTIGO até vencer. Renova a
+  // sessão para a próxima navegação já vir no idioma novo, não até 1 h depois.
+  await renovarClaimsDaSessao(supabase);
 
   const hdrs = await headers();
   const activeOrg = await resolveActiveOrg(authUser);

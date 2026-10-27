@@ -227,7 +227,7 @@ describe("o dreno em lotes do cron data-retention (#1534)", () => {
 describe("a rota messages/[id]/media não re-busca do provedor o que expirou", () => {
   vi.mock("@/lib/supabase/server", () => ({
     createClient: async () => ({
-      auth: { getUser: async () => ({ data: { user: { id: "usuario-1" } }, error: null }) },
+      auth: { getUser: async () => ({ data: { user: { id: "usuario-1" } }, error: null }), getClaims: async () => ({ data: { claims: { sub: "usuario-1" } }, error: null }) },
       from: () => cadeiaMensagem,
     }),
   }));

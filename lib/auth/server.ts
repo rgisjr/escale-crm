@@ -14,6 +14,7 @@ import { redirect } from "next/navigation";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { usuarioDoToken } from "@/lib/auth/claims";
 import {
   empresaExigeMfa,
   avaliaPoliticaDeMfa,
@@ -102,81 +103,37 @@ function escolherMembroAtivo(
  * Loads the AuthUser for the current request. Returns null if unauthenticated.
  * Use only in Server Components / Route Handlers / Server Actions.
  *
+ * Identifies the user from the JWT claims (`usuarioDoToken` → `getClaims()`,
+ * local signature check against the cached JWKS) instead of `getUser()`, which
+ * made a round-trip to GoTrue on every request — see `lib/auth/claims.ts`.
+ *
  * Uses the user-scoped server client (cookie session). RLS policies allow:
  * - user_organizations: user_id = auth.uid() (user_orgs_select)
  * - organizations: id IN fn_user_org_ids()  (orgs_select)
  * - platform_admins: only platform admins read (so non-admins get null — correct)
  */
 /**
- * "Não havia sessão nenhuma" — o estado NORMAL, não um incidente.
- *
- * `getUser()` não devolve `error: null` para quem não está logado. Sem cookie de
- * sessão, `GoTrueClient._getUser` corta antes de falar com o GoTrue e devolve
- * `{ data: { user: null }, error: new AuthSessionMissingError() }` (status 400).
- * Medido em `@supabase/auth-js` 2.112.1, com um cookie store vazio:
- *
- *     user  = null
- *     error = AuthSessionMissingError: Auth session missing! (status=400)
- *
- * Isso importa porque **não há `middleware.ts` neste projeto**: o gate de
- * `/app/*` é o próprio `app/app/layout.tsx`, que chama `loadAuthUser()` e só
- * então redireciona. Ou seja, todo visitante deslogado — e todo crawler — passa
- * por aqui sem sessão. Logar esse caso como erro reintroduziria, do lado do log,
- * exatamente a ambiguidade que o bloco acima existe para desfazer: o estado
- * normal e a falha transitória voltariam a ser a mesma linha, agora afogadas em
- * volume de tráfego anônimo.
- *
- * Compara por `name` e não por `instanceof`: há DUAS cópias de `@supabase/auth-js`
- * na árvore (2.111.0 e 2.112.1 em `node_modules/.pnpm`), e `instanceof` só acerta
- * quando o erro vem da mesma cópia que o teste importou.
+ * `ehSessaoAusente` mora em `lib/auth/claims.ts` (o helper que lê a sessão
+ * precisa dele, e importar daqui criaria ciclo); segue exportada daqui para
+ * quem já a importava deste módulo.
  */
-export function ehSessaoAusente(error: { name?: string } | null | undefined): boolean {
-  return error?.name === "AuthSessionMissingError";
-}
+export { ehSessaoAusente } from "@/lib/auth/claims";
 
 export const loadAuthUser = cache(async (): Promise<AuthUser | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  // ⚠️ O `error` era DESCARTADO — nem chegava a ser desestruturado —, e aqui
-  // `user: null` é tão ambíguo quanto o `data: null` que a query logo abaixo
-  // trata com todo o cuidado: significa "não está logado" (estado normal) E
-  // "não deu para perguntar" (rede, GoTrue fora do ar, token ilegível).
+  // Identidade pelas CLAIMS do JWT (assinatura verificada localmente), não por
+  // `getUser()`: ver `lib/auth/claims.ts` para o porquê (10–14 mil idas/dia ao
+  // GoTrue numa máquina de 426 MB) e para o risco aceito (sessão revogada vale
+  // até o token vencer, ≤ 1 h).
   //
-  // A ação não muda, e isso é deliberado: sem usuário confirmado, devolver
-  // `null` — e portanto redirecionar para o login — é o desfecho seguro.
-  // Falhar FECHADO na ação continua certo. O que estava errado era falhar
-  // fechado também na INFORMAÇÃO: quem investigasse depois via só uma pessoa
-  // "deslogada", sem nada distinguindo isso de uma falha transitória.
-  //
-  // Custou caro uma vez: um vermelho de e2e em que a barra lateral "perdeu o
-  // logo" foi, por eliminação, uma casca de app que não era a casca do app —
-  // e a hipótese nº 1 é justamente um redirect nascido aqui. Com este log, a
-  // próxima ocorrência se explica sozinha em vez de custar uma investigação.
-  //
-  // ⚠️ MAS NEM TODO `error` AQUI É INCIDENTE — e é por isso que `ehSessaoAusente`
-  // existe. Ver o comentário dela: sem esse filtro, este log dispara em todo
-  // visitante deslogado e refaz, do lado do log, a mesma fusão que este bloco
-  // existe para desfazer.
-  if (error && !ehSessaoAusente(error)) {
-    // As chaves são as MESMAS do outro `logger.error` desta função (linha ~134):
-    // `code` e `message`. Dois nomes para o mesmo conceito, dentro da mesma
-    // função, obrigariam quem consulta o agregador a escrever duas buscas — num
-    // conserto cujo objeto é diagnóstico.
-    //
-    // `name` viaja junto porque é o que separa as CLASSES: `AuthRetryableFetchError`
-    // (rede, GoTrue fora do ar) de `AuthApiError` (token ilegível). Ambas podem
-    // chegar com o mesmo `status`, e a mensagem vem em inglês do upstream — sem o
-    // nome, distinguir as duas viraria regex sobre texto que muda entre versões.
-    logger.error("[auth] getUser falhou — tratando como não autenticado", {
-      name: error.name,
-      code: error.code ?? null,
-      status: error.status ?? null,
-      message: error.message,
-    });
-  }
+  // ⚠️ `usuario: null` continua ambíguo — "não está logado" (normal) E "não deu
+  // para verificar" (token ilegível, JWKS fora do ar) —, e continua certo falhar
+  // FECHADO na ação: sem usuário confirmado, `null` → login. O que o helper faz
+  // é não falhar fechado também na INFORMAÇÃO: erro que não é sessão ausente é
+  // logado lá, com `name/code/status/message` (custou uma investigação inteira
+  // quando o erro era descartado: uma casca de app "sem logo" era um redirect
+  // nascido aqui).
+  const { usuario: user } = await usuarioDoToken(supabase);
   if (!user) return null;
 
   // Platform admin e Org memberships consultados em paralelo no Supabase:
@@ -266,9 +223,9 @@ export const loadAuthUser = cache(async (): Promise<AuthUser | null> => {
   });
 
   const support = await readSupportContext(supabase);
-  const fullName = (user.user_metadata?.full_name as string | undefined) ?? null;
-  const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) ?? null;
-  const locale = (user.user_metadata?.locale as string | undefined) ?? null;
+  const fullName = (user.user_metadata.full_name as string | undefined) ?? null;
+  const avatarUrl = (user.user_metadata.avatar_url as string | undefined) ?? null;
+  const locale = (user.user_metadata.locale as string | undefined) ?? null;
   // A cadeia inteira num lugar só: pessoa → organização ativa → padrão. Quem
   // consome pede `idioma` e não precisa saber que existe uma ordem.
   //
@@ -279,11 +236,11 @@ export const loadAuthUser = cache(async (): Promise<AuthUser | null> => {
   const idioma = normalizarIdioma(
     locale ?? support?.locale ?? (await localeDaOrgAtiva(memberships)),
   );
-  const timezone = (user.user_metadata?.timezone as string | undefined) ?? null;
+  const timezone = (user.user_metadata.timezone as string | undefined) ?? null;
 
   return {
     id: user.id,
-    email: user.email ?? "",
+    email: user.email,
     full_name: fullName,
     avatar_url: avatarUrl,
     is_platform_admin: !!paRow,

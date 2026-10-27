@@ -14,6 +14,7 @@ import { listMessagesQuerySchema } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
 
 import { listMessagesHandler } from "@/app/api/v1/messages/_handler";
+import { usuarioDoToken } from "@/lib/auth/claims";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +27,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const { id: conversationId } = await ctx.params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+  const { usuario: user, error: authErr } = await usuarioDoToken(supabase);
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }

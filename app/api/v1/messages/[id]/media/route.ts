@@ -24,6 +24,7 @@ import {
 } from "@/lib/channels";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioDoToken } from "@/lib/auth/claims";
 
 export const dynamic = "force-dynamic";
 
@@ -38,10 +39,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const { id: messageId } = await ctx.params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+  const { usuario: user, error: authErr } = await usuarioDoToken(supabase);
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }

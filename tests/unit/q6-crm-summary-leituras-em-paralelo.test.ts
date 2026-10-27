@@ -13,7 +13,7 @@ const estado = vi.hoisted(() => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: "u1" } }, error: null }) },
+    auth: { getUser: async () => ({ data: { user: { id: "u1" } }, error: null }), getClaims: async () => ({ data: { claims: { sub: "u1" } }, error: null }) },
     from: (tabela: string) => {
       const q: Record<string, unknown> = {};
       for (const n of ["select", "eq", "order", "limit", "is", "not"]) q[n] = () => q;

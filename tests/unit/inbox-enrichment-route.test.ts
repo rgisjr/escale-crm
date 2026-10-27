@@ -15,6 +15,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: {
       getUser: async () => ({ data: { user: state.user ? { id: "user-a" } : null }, error: null }),
+      getClaims: async () => ({
+        data: state.user ? { claims: { sub: "user-a" } } : null,
+        error: null,
+      }),
     },
     from: (table: string) => {
       const q: Record<string, unknown> = {};

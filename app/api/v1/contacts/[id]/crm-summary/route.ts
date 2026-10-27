@@ -35,6 +35,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { camposDoFunil, settingsDoEmbed } from "@/lib/leads/campos-do-funil";
 import { createClient } from "@/lib/supabase/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { usuarioDoToken } from "@/lib/auth/claims";
 
 export const dynamic = "force-dynamic";
 
@@ -82,10 +83,7 @@ export async function GET(
   const { id: contactId } = await ctx.params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+  const { usuario: user, error: authErr } = await usuarioDoToken(supabase);
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }

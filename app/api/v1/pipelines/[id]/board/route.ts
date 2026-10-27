@@ -45,6 +45,7 @@ import { idsDeContatosPessoais } from "@/app/api/v1/conversations/_handler";
 import type { BoardData, Pipeline, Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 import { lerEmPaginas } from "@/lib/escale/quadro/ler-em-paginas";
+import { usuarioDoToken } from "@/lib/auth/claims";
 
 export const dynamic = "force-dynamic";
 
@@ -267,10 +268,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const { id: pipelineId } = await ctx.params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+  const { usuario: user, error: authErr } = await usuarioDoToken(supabase);
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }

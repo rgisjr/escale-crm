@@ -40,6 +40,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { lgpdAnonymizeSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioDoToken } from "@/lib/auth/claims";
 
 export const dynamic = "force-dynamic";
 
@@ -50,10 +51,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+  const { usuario: user, error: authErr } = await usuarioDoToken(supabase);
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }

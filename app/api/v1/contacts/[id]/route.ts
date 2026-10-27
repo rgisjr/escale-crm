@@ -19,6 +19,7 @@ import { perfilDaOrganizacao } from "@/lib/legal/perfil-do-pais";
 import { createClient } from "@/lib/supabase/server";
 
 import { deleteContactHandler, getContactHandler, patchContactHandler } from "../_handler";
+import { usuarioDoToken } from "@/lib/auth/claims";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +31,7 @@ export async function GET(
   const { id } = await ctx.params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+  const { usuario: user, error: authErr } = await usuarioDoToken(supabase);
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
