@@ -170,6 +170,29 @@ describe("<PainelOrigens> — arrastar origens", () => {
     expect(nomes()).toEqual(["Turma 12", "Leads INSS WhatsApp", "Funil Nayara"]);
   });
 
+  it("a mensagem do arraste some ao abrir a busca", async () => {
+    vi.mocked(apiClient.patch).mockRejectedValue(new Error("Os funis desta lista estão empatados na ordenação."));
+    const user = await renderizar();
+    await soltar("f-turma", [G_CRED, 1], [G_CRED, 0]);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Buscar grupo ou funil" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("a mensagem do arraste some ao entrar no modo seleção", async () => {
+    vi.mocked(apiClient.patch).mockRejectedValue(new Error("Os funis desta lista estão empatados na ordenação."));
+    const user = await renderizar();
+    await soltar("f-turma", [G_CRED, 1], [G_CRED, 0]);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Mais ações de Credenciados" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Selecionar origens" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("soltar no mesmo lugar ou fora da lista não grava nada", async () => {
     await renderizar();
 

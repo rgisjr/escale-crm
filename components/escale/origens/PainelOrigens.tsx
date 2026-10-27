@@ -246,6 +246,7 @@ export function PainelOrigens({
   /** Entra no modo seleção já com `ids` marcadas, abrindo os grupos delas. */
   function selecionar(ids: string[], editando: string | null) {
     setErroDaSelecao(null);
+    setErroDoArraste(null);
     setSelecao({ editando, marcadas: new Set(ids) });
     // Sem a lista aberta o modo seleção seria invisível; não grava a preferência.
     setListaAberta(true);
@@ -434,6 +435,7 @@ export function PainelOrigens({
               onClick={() => {
                 setBuscaAberta((v) => !v);
                 setBusca("");
+                setErroDoArraste(null);
               }}
               className={cn(BOTAO_DE_ICONE, buscaAberta && "text-casca-marca")}
             >
@@ -461,7 +463,10 @@ export function PainelOrigens({
               <input
                 autoFocus
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={(e) => {
+                  setBusca(e.target.value);
+                  setErroDoArraste(null);
+                }}
                 placeholder={t("Buscar origens, grupos, visualizações…")}
                 aria-label={t("Buscar grupo ou funil")}
                 className="h-8 w-full rounded-casca-gatilho bg-casca-busca px-3 text-xs text-casca-texto outline-hidden placeholder:text-casca-meta focus:ring-1 focus:ring-casca-marca"
