@@ -59,7 +59,7 @@ const DEFAULT_TIMEOUT_MS = 10_000;
  * cliente desiste. Abortar uma escrita aos 10s não a impede — só joga fora a
  * RESPOSTA que estava a caminho, trocando um resultado conhecido por uma
  * dúvida. Numa leitura, desistir cedo é bom (a tela não fica presa, e o GET
- * ainda é repetido, então o orçamento dele não mudou); numa escrita, desistir
+ * ainda é repetido, uma vez — ver `MAX_ATTEMPTS_TIMEOUT`); numa escrita, desistir
  * cedo não tem nada a ganhar.
  *
  * 30s não é folga nova: é a mesma parede que a escrita já tinha, entregue como
@@ -69,6 +69,16 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 const MUTATION_TIMEOUT_MS = 30_000;
 
 const MAX_ATTEMPTS = 3;
+/**
+ * Tentativas de um GET que estoura o timeout ou falha na rede (só o `catch`);
+ * 429/503 com `Retry-After` seguem em `MAX_ATTEMPTS`.
+ *
+ * Eram 3 (= 3 × 10 s). Quando o banco trava (medido em 26/10/2026: consultas de
+ * 13–30 s numa máquina de 426 MB), cada tela repetindo 3× triplica a carga
+ * exatamente no pior momento e ainda segura o usuário por ~30 s. Duas tentativas
+ * cobrem o blip de rede e desistem em ~20 s, deixando o banco respirar.
+ */
+const MAX_ATTEMPTS_TIMEOUT = 2;
 const RETRYABLE_STATUSES = new Set([429, 503]);
 const MUTATING_METHODS = new Set<HttpMethod>(["POST", "PATCH", "PUT", "DELETE"]);
 
@@ -398,7 +408,7 @@ async function request<T>(
         throw err;
       }
       lastError = err;
-      if (attempt < MAX_ATTEMPTS) {
+      if (attempt < MAX_ATTEMPTS_TIMEOUT) {
         await sleep(backoffMs(attempt), opts.signal);
         continue;
       }
