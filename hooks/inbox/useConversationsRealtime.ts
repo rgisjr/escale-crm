@@ -5,7 +5,7 @@ import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import { useRefetchDeSeguranca } from "@/hooks/realtime/useRefetchDeSeguranca";
 import { agendarRecargaDasConversas } from "@/hooks/inbox/recargaDasConversas";
 import { apiClient } from "@/lib/api/client";
-import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { avisarSoNaPrimeiraCarga } from "@/lib/query/avisar-so-na-primeira-carga";
 import {
   type ModoDeEtiqueta,
   marcadoresEscolhidos,
@@ -180,7 +180,7 @@ export function useConversationsRealtime(
       try {
         return await apiClient.get<ListResponse>(`/api/v1/conversations?${qs.toString()}`);
       } catch (err) {
-        showApiError(err);
+        avisarSoNaPrimeiraCarga(qc, queryKey, err);
         throw err;
       }
     },

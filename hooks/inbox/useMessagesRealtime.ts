@@ -1,11 +1,11 @@
 "use client";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import { useRefetchDeSeguranca } from "@/hooks/realtime/useRefetchDeSeguranca";
 import { agendarRecargaDasConversas } from "@/hooks/inbox/recargaDasConversas";
 import { apiClient } from "@/lib/api/client";
-import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { avisarSoNaPrimeiraCarga } from "@/lib/query/avisar-so-na-primeira-carga";
 import type { Message } from "@/lib/types/messaging";
 
 interface MessagesResponse {
@@ -19,7 +19,7 @@ interface MessagesResponse {
  * query, e a recarga sem observador (tempo real, rede de segurança) roda
  * essa. Uma função vazia em qualquer leitor zerava a conversa aberta.
  */
-function buscarMensagens(conversationId: string | null) {
+function buscarMensagens(conversationId: string | null, qc: QueryClient) {
   return async ({ pageParam }: { pageParam: string | undefined }): Promise<MessagesResponse> => {
     if (!conversationId) {
       return { data: [], meta: { has_more: false, cursor: null } };
@@ -32,7 +32,7 @@ function buscarMensagens(conversationId: string | null) {
         `/api/v1/conversations/${conversationId}/messages?${qs.toString()}`,
       );
     } catch (err) {
-      showApiError(err);
+      avisarSoNaPrimeiraCarga(qc, ["messages", conversationId], err);
       throw err;
     }
   };
@@ -49,7 +49,7 @@ export function useMessagesRealtime(conversationId: string | null) {
     queryKey,
     enabled: !!conversationId,
     initialPageParam: undefined as string | undefined,
-    queryFn: buscarMensagens(conversationId),
+    queryFn: buscarMensagens(conversationId, qc),
     getNextPageParam: proximaPagina,
     /**
      * Voltar para a aba RESSINCRONIZA — aqui, e não no padrão global.
@@ -117,11 +117,12 @@ export function useMessagesRealtime(conversationId: string | null) {
  * A função de busca é a real (`buscarMensagens`), nunca uma vazia.
  */
 export function useMensagensEmCache(conversationId: string | null) {
+  const qc = useQueryClient();
   return useInfiniteQuery({
     queryKey: ["messages", conversationId] as const,
     enabled: false,
     initialPageParam: undefined as string | undefined,
-    queryFn: buscarMensagens(conversationId),
+    queryFn: buscarMensagens(conversationId, qc),
     getNextPageParam: proximaPagina,
   });
 }
