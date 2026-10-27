@@ -1,4 +1,5 @@
 "use client";
+import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -14,9 +15,11 @@ import {
 } from "@/components/escale/visualizacoes/SecaoVisualizacoes";
 import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useMoverOrigem } from "@/hooks/escale/useOrigens";
 import { useAtualizarVisualizacao } from "@/hooks/escale/useVisualizacoes";
 import { useT } from "@/hooks/i18n/useT";
 import { useAoAbrirConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/abrir";
+import { moverNaLista, movimentoDoArraste } from "@/lib/escale/origens/mover";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
 import {
   filtrarArvore,
@@ -170,6 +173,8 @@ export function PainelOrigens({
     null,
   );
   const atualizarVisualizacao = useAtualizarVisualizacao();
+  const moverOrigem = useMoverOrigem();
+  const [erroDoArraste, setErroDoArraste] = useState<string | null>(null);
 
   // O "Negócios" do menu do topo abre o último funil aberto (`/app/escale/negocios`).
   // Só grava quando muda: o valor do cookie veio do servidor (`ultimoFunil`).
@@ -189,6 +194,8 @@ export function PainelOrigens({
   const quantosOcultos = arvore.grupos.filter((g) => ocultos.includes(g.id)).length;
   const nadaAchado = buscando && visiveis.length === 0 && filtrada.semGrupo.length === 0;
   const visualizacoesVisiveis = filtrarVisualizacoes(visualizacoes, busca);
+  // Uma gravação de cada vez: a resposta de um arraste antigo não pode desfazer o seguinte.
+  const podeArrastar = podeGerenciar && !selecao && !buscando && !moverOrigem.isPending;
 
   const noModoSelecao: SelecaoNoPainel | undefined = selecao
     ? {
@@ -291,6 +298,28 @@ export function PainelOrigens({
 
   function abrirVisualizacao(id: string) {
     router.push(`/app/pipelines/visualizacoes/${id}`);
+  }
+
+  /** Soltou: a lista muda na hora; se o servidor recusar, volta como estava e diz por quê. */
+  function aoSoltar(r: DropResult) {
+    if (!r.destination) return;
+    const movimento = movimentoDoArraste(origens, {
+      id: r.draggableId,
+      de: r.source.droppableId,
+      para: r.destination.droppableId,
+      indice: r.destination.index,
+    });
+    if (!movimento) return;
+    const antes = origens;
+    setErroDoArraste(null);
+    setOrigens(moverNaLista(origens, movimento));
+    moverOrigem.mutate(movimento, {
+      onSuccess: setOrigens,
+      onError: (err) => {
+        setOrigens(antes);
+        setErroDoArraste(textoDoErro(err, t));
+      },
+    });
   }
 
   function salvarSelecao() {
@@ -434,30 +463,38 @@ export function PainelOrigens({
           {listaAberta && (
             <div>
               <nav aria-label={t("Funis por grupo")}>
-                <ul>
-                  {visiveis.map((g) => (
-                    <LinhaDoGrupo
-                      key={g.id}
-                      grupo={g}
-                      aberto={buscando || abertos.has(g.id) || novoEm === g.id}
-                      oculto={ocultos.includes(g.id)}
-                      ativo={ativo}
-                      podeGerenciar={podeGerenciar}
-                      criandoAqui={novoEm === g.id}
-                      selecao={noModoSelecao}
-                      onAlternar={() => alternarGrupo(g.id)}
-                      onNovaOrigem={() => setNovoEm(g.id)}
-                      onAcao={(a) => acaoDoGrupo(g.id, a)}
-                      onAcaoDaOrigem={acaoDaOrigem}
-                      onCriada={(novas, id) => {
-                        setOrigens(novas);
-                        setNovoEm(null);
-                        abrirOrigem(id);
-                      }}
-                      onCancelarCriacao={() => setNovoEm(null)}
-                    />
-                  ))}
-                </ul>
+                <DragDropContext
+                  onDragEnd={aoSoltar}
+                  dragHandleUsageInstructions={t(
+                    "Para mover a origem, aperte espaço, use as setas e aperte espaço de novo para soltar. Esc cancela.",
+                  )}
+                >
+                  <ul>
+                    {visiveis.map((g) => (
+                      <LinhaDoGrupo
+                        key={g.id}
+                        grupo={g}
+                        aberto={buscando || abertos.has(g.id) || novoEm === g.id}
+                        oculto={ocultos.includes(g.id)}
+                        ativo={ativo}
+                        podeGerenciar={podeGerenciar}
+                        podeArrastar={podeArrastar}
+                        criandoAqui={novoEm === g.id}
+                        selecao={noModoSelecao}
+                        onAlternar={() => alternarGrupo(g.id)}
+                        onNovaOrigem={() => setNovoEm(g.id)}
+                        onAcao={(a) => acaoDoGrupo(g.id, a)}
+                        onAcaoDaOrigem={acaoDaOrigem}
+                        onCriada={(novas, id) => {
+                          setOrigens(novas);
+                          setNovoEm(null);
+                          abrirOrigem(id);
+                        }}
+                        onCancelarCriacao={() => setNovoEm(null)}
+                      />
+                    ))}
+                  </ul>
+                </DragDropContext>
                 {filtrada.semGrupo.length > 0 && (
                   <div>
                     <p className="flex h-8 items-center px-4 text-[11px] font-semibold text-casca-suave uppercase">
@@ -479,6 +516,12 @@ export function PainelOrigens({
                   </div>
                 )}
               </nav>
+
+              {erroDoArraste && (
+                <p role="alert" className="px-4 py-1 text-[11px] text-casca-alerta">
+                  {erroDoArraste}
+                </p>
+              )}
 
               {nadaAchado && (
                 <p className="flex h-[34px] items-center px-4 text-xs text-casca-suave">

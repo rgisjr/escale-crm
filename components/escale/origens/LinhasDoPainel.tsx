@@ -1,4 +1,5 @@
 "use client";
+import { Draggable, Droppable, type DraggableProvided } from "@hello-pangea/dnd";
 import Link from "next/link";
 import { useState, type KeyboardEvent } from "react";
 
@@ -42,6 +43,12 @@ export type AcaoDaOrigem = "configurar" | "selecionar" | "arquivar" | "excluir";
 export interface SelecaoNoPainel {
   marcadas: ReadonlySet<string>;
   onAlternar: (ids: string[], marcar: boolean) => void;
+}
+
+/** Presente quando a linha da origem pode ser arrastada (fork Escale: ordem das origens no painel). */
+export interface ArrasteDaLinha {
+  provided: DraggableProvided;
+  arrastando: boolean;
 }
 
 /** O ⋮ do grupo: os itens, a ordem, os ícones e a divisória de 01-032; "Excluir" em vermelho. */
@@ -106,6 +113,7 @@ function MenuDaOrigem({ nome, onAcao }: { nome: string; onAcao: (a: AcaoDaOrigem
  * - A origem aberta ganha o fundo #EFF3FF e a barra de 3px da marca.
  * - O hover pinta de #F3F3F3 e mostra o ⋮.
  * - No modo seleção, a caixinha da casca vem antes do nome; clicar no nome também marca.
+ * - Com `arraste`, a linha inteira arrasta (sem alça; a Clint não tem esse arrastar).
  */
 export function LinhaDaOrigem({
   funil,
@@ -113,6 +121,7 @@ export function LinhaDaOrigem({
   podeGerenciar,
   recuo,
   selecao,
+  arraste,
   onAcao,
 }: {
   funil: FunilDaOrigem;
@@ -121,6 +130,7 @@ export function LinhaDaOrigem({
   recuo: boolean;
   /** Presente no modo seleção: a linha vira caixinha (clicar marca, não abre o quadro). */
   selecao?: SelecaoNoPainel;
+  arraste?: ArrasteDaLinha;
   onAcao: (a: AcaoDaOrigem) => void;
 }) {
   if (selecao) {
@@ -143,7 +153,18 @@ export function LinhaDaOrigem({
   }
   const atual = funil.id === ativo;
   return (
-    <li className={cn("group/origem", LINHA, atual ? LINHA_ATUAL : LINHA_COM_HOVER, "pr-1")}>
+    <li
+      ref={arraste?.provided.innerRef}
+      {...arraste?.provided.draggableProps}
+      {...arraste?.provided.dragHandleProps}
+      className={cn(
+        "group/origem",
+        LINHA,
+        atual ? LINHA_ATUAL : LINHA_COM_HOVER,
+        "pr-1",
+        arraste?.arrastando && "bg-surface shadow-casca-painel",
+      )}
+    >
       <Link
         href={`/app/pipelines/${funil.id}`}
         aria-current={atual ? "page" : undefined}
@@ -234,6 +255,7 @@ export function LinhaDoGrupo({
   oculto,
   ativo,
   podeGerenciar,
+  podeArrastar = false,
   criandoAqui,
   selecao,
   onAlternar,
@@ -248,6 +270,8 @@ export function LinhaDoGrupo({
   oculto: boolean;
   ativo: string | null;
   podeGerenciar: boolean;
+  /** Lista arrastável (fork Escale): quem gerencia, fora da busca e do modo seleção. */
+  podeArrastar?: boolean;
   criandoAqui: boolean;
   /** Presente no modo seleção: caixinha no grupo (marca todas) e nas origens; sem + e sem ⋮. */
   selecao?: SelecaoNoPainel;
@@ -261,6 +285,26 @@ export function LinhaDoGrupo({
   const t = useT();
   const estado = selecao ? estadoDoGrupo(grupo, selecao.marcadas) : "vazia";
   const temAOrigemAberta = grupo.funis.some((f) => f.id === ativo);
+  const novaOrigem = criandoAqui && !selecao && (
+    <NovaOrigemNoGrupo grupoId={grupo.id} onCriada={onCriada} onCancelar={onCancelarCriacao} />
+  );
+  const vazio = (
+    <li className={cn("flex h-[34px] items-center pr-3 text-[11px] text-casca-suave", RECUO_DO_TEXTO)}>
+      {t("Nenhum funil neste grupo.")}
+    </li>
+  );
+  const origem = (f: FunilDaOrigem, arraste?: ArrasteDaLinha) => (
+    <LinhaDaOrigem
+      key={f.id}
+      funil={f}
+      ativo={ativo}
+      podeGerenciar={podeGerenciar}
+      recuo
+      selecao={selecao}
+      arraste={arraste}
+      onAcao={(a) => onAcaoDaOrigem(f.id, a)}
+    />
+  );
   return (
     <li>
       <div
@@ -323,30 +367,29 @@ export function LinhaDoGrupo({
           </span>
         )}
       </div>
-      {aberto && (
-        <ul>
-          {criandoAqui && !selecao && (
-            <NovaOrigemNoGrupo grupoId={grupo.id} onCriada={onCriada} onCancelar={onCancelarCriacao} />
-          )}
-          {grupo.funis.length === 0 && !criandoAqui ? (
-            <li className={cn("flex h-[34px] items-center pr-3 text-[11px] text-casca-suave", RECUO_DO_TEXTO)}>
-              {t("Nenhum funil neste grupo.")}
-            </li>
-          ) : (
-            grupo.funis.map((f) => (
-              <LinhaDaOrigem
-                key={f.id}
-                funil={f}
-                ativo={ativo}
-                podeGerenciar={podeGerenciar}
-                recuo
-                selecao={selecao}
-                onAcao={(a) => onAcaoDaOrigem(f.id, a)}
-              />
-            ))
-          )}
-        </ul>
-      )}
+      {aberto &&
+        (podeArrastar ? (
+          <Droppable droppableId={grupo.id} type="origem">
+            {(prov) => (
+              <ul ref={prov.innerRef} {...prov.droppableProps}>
+                {novaOrigem}
+                {grupo.funis.length === 0 && !criandoAqui
+                  ? vazio
+                  : grupo.funis.map((f, i) => (
+                      <Draggable key={f.id} draggableId={f.id} index={i}>
+                        {(p, s) => origem(f, { provided: p, arrastando: s.isDragging })}
+                      </Draggable>
+                    ))}
+                {prov.placeholder}
+              </ul>
+            )}
+          </Droppable>
+        ) : (
+          <ul>
+            {novaOrigem}
+            {grupo.funis.length === 0 && !criandoAqui ? vazio : grupo.funis.map((f) => origem(f))}
+          </ul>
+        ))}
     </li>
   );
 }
