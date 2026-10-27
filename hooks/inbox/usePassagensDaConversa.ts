@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { avisarSoNaPrimeiraCarga } from "@/lib/query/avisar-so-na-primeira-carga";
 import { usePermission } from "@/hooks/auth/AuthProvider";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import { apiClient } from "@/lib/api/client";
@@ -45,7 +45,7 @@ export function usePassagensDaConversa(conversationId: string | null): PassagemD
           `/api/v1/conversations/${conversationId}/passagens`,
         );
       } catch (err) {
-        showApiError(err);
+        avisarSoNaPrimeiraCarga(qc, queryKey, err);
         throw err;
       }
     },

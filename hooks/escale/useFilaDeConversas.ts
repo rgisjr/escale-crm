@@ -2,7 +2,7 @@
 import { keepPreviousData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
-import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { avisarSoNaPrimeiraCarga } from "@/lib/query/avisar-so-na-primeira-carga";
 import { agendarRecargaDasConversas } from "@/hooks/inbox/recargaDasConversas";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
@@ -71,7 +71,7 @@ export function useFilaDeConversas(consulta: ConsultaDaFila, orgId: string | nul
       try {
         return await apiClient.get<PaginaDaFila>(urlDaFila(consulta, pageParam));
       } catch (err) {
-        showApiError(err);
+        avisarSoNaPrimeiraCarga(qc, queryKey, err);
         throw err;
       }
     },
