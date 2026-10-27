@@ -167,10 +167,24 @@ describe("apiClient", () => {
     }
   });
 
-  it("t10: GET que estoura o tempo CONTINUA sendo repetido — ler de novo é barato e seguro", async () => {
+  it("t10: GET que estoura o tempo CONTINUA sendo repetido, mas UMA vez só (2 tentativas)", async () => {
+    // Eram 3. Com o banco travado, 3 × 10 s triplicava a carga e prendia a tela
+    // por 30 s (26/10/2026); duas cobrem o blip de rede e desistem em ~20 s.
     fetchMock.mockImplementation(abortaSempre());
 
-    await apiClient.get("/x", { timeoutMs: 5 }).catch(() => undefined);
+    const err: unknown = await apiClient.get("/x", { timeoutMs: 5 }).catch((e: unknown) => e);
+
+    expect((err as Error).name).toBe("TimeoutError");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("t10b: 503 com Retry-After num GET segue até 3 tentativas — o servidor respondeu e pediu para esperar", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(503, { error: {} }, { "Retry-After": "0" }))
+      .mockResolvedValueOnce(jsonResponse(503, { error: {} }, { "Retry-After": "0" }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { ok: true } }));
+
+    await apiClient.get("/x");
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
@@ -266,9 +280,10 @@ describe("apiClient", () => {
     await vi.advanceTimersByTimeAsync(10_500);
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
+    // Aos ~20,5s a segunda estourou e o cliente desiste: não há terceira.
     await vi.advanceTimersByTimeAsync(30_000);
     expect(desfecho).toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
