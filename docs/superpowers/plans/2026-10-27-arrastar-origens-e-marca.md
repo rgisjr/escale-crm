@@ -15,7 +15,7 @@
 - Sem migration nesta frente: `test:db` e `test:db:update` não são exigidos.
 - Revisão: um revisor só para a frente, `code-reviewer` em Opus 5.5 (nunca Sonnet).
 - Toda frase nova em `t()` precisa de linha no `lib/i18n/dicionario.ts` com `es` (o guarda `tests/unit/i18n-espanhol-cobre-a-tela` reprova sem ela).
-- Nome do app: **"Escale OS"**, nunca só "Escale". Logo: `C:\Users\regis\Downloads\escale-ia-icone-1024-transparente.png` ("AI" azul e laranja, fundo transparente, 229 KB; o limite do upload é 512 KB, PNG ou JPEG).
+- Nome do app: **"Escale OS"**, nunca só "Escale". Logo: o ícone da Escale IA (PNG de 1024 px, na pasta Downloads do usuário) ("AI" azul e laranja, fundo transparente, 229 KB; o limite do upload é 512 KB, PNG ou JPEG).
 - Arrastar só para quem pode gerenciar origens (gerente ou admin), e desligado na busca, no modo seleção e enquanto uma gravação de arraste está em andamento.
 - A Clint não tem arrastar no painel Origens (nem nas capturas, nem nas fichas, nem no código). O visual é nosso e o mínimo possível: sem alça, a linha inteira arrasta, e a linha arrastada fica branca com a sombra `shadow-casca-painel`.
 - Git Bash: `export PATH="/c/Program Files/nodejs:$PATH"` e `corepack pnpm` (o `pnpm` não está no PATH).
@@ -1039,7 +1039,7 @@ No Chrome, logado como o usuário em https://app.escaleia.com:
 
 1. `/admin/marca`:
    - "Nome do sistema": `Escale OS`.
-   - Logo (tema claro): subir `C:\Users\regis\Downloads\escale-ia-icone-1024-transparente.png`.
+   - Logo (tema claro): subir o ícone da Escale IA (PNG de 1024 px, na pasta Downloads do usuário).
    - Ícone da aba: subir o mesmo arquivo.
    - Não mexer na cor da marca nem no CSS personalizado. Salvar.
 2. Configurações › Marca da organização: se o nome estiver `EscaleIA`, apagar o campo (vazio = vale o "Escale OS" da instalação) e salvar. Se a tela não aceitar vazio, gravar `Escale OS`. Não subir logo na organização (a da instalação já vale).
