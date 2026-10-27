@@ -9240,6 +9240,9 @@ export const DICIONARIO: Traducoes = {
   "Para mover a origem, aperte espaço, use as setas e aperte espaço de novo para soltar. Esc cancela.": {
     es: "Para mover el origen, pulsa espacio, usa las flechas y pulsa espacio otra vez para soltar. Esc cancela.",
   },
+  "A origem já está no grupo novo; só a posição não foi gravada.": {
+    es: "El origen ya está en el grupo nuevo; solo no se guardó la posición.",
+  },
   "Nada encontrado.": { es: "No se encontró nada." },
   "Agrupe os funis para achar cada um mais rápido. Funil sem grupo aparece em «Sem grupo».": {
     es: "Agrupe los embudos para encontrar cada uno más rápido. El embudo sin grupo aparece en «Sin grupo».",

@@ -68,6 +68,7 @@ async function renderizar(podeGerenciar = true) {
   const user = userEvent.setup({ pointerEventsCheck: 0 });
   // INSS de obras já vem aberto (tem a origem aberta); abre Credenciados também.
   await user.click(screen.getByRole("button", { name: "Abrir Credenciados" }));
+  return user;
 }
 
 const lista = () => screen.getByRole("navigation", { name: "Funis por grupo" });
@@ -150,6 +151,23 @@ describe("<PainelOrigens> — arrastar origens", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("empatados na ordenação");
     expect(nomes()).toEqual(["Funil Nayara", "Turma 12", "Leads INSS WhatsApp"]);
+  });
+
+  it("se o grupo trocou e só a posição falhou, a origem fica no grupo novo e a mensagem diz isso", async () => {
+    vi.mocked(apiClient.put).mockResolvedValue({ data: ORIGENS });
+    vi.mocked(apiClient.patch).mockRejectedValue(new Error("Os funis desta lista estão empatados na ordenação."));
+    // O banco depois do PUT: a Nayara já está em INSS de obras, na posição de sempre (logo depois da f-leads).
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: moverNaLista(ORIGENS, { id: "f-nayara", grupoNovo: G_OBRAS, depoisDe: "f-leads" }),
+    });
+    await renderizar();
+
+    await soltar("f-nayara", [G_CRED, 0], [G_OBRAS, 0]);
+
+    const alerta = await screen.findByRole("alert");
+    expect(alerta).toHaveTextContent("empatados na ordenação");
+    expect(alerta).toHaveTextContent("A origem já está no grupo novo; só a posição não foi gravada.");
+    expect(nomes()).toEqual(["Turma 12", "Leads INSS WhatsApp", "Funil Nayara"]);
   });
 
   it("soltar no mesmo lugar ou fora da lista não grava nada", async () => {

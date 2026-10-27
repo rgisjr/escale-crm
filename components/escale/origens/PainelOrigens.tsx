@@ -19,7 +19,7 @@ import { useMoverOrigem } from "@/hooks/escale/useOrigens";
 import { useAtualizarVisualizacao } from "@/hooks/escale/useVisualizacoes";
 import { useT } from "@/hooks/i18n/useT";
 import { useAoAbrirConfiguracoesDaOrigem } from "@/lib/escale/configuracoes/abrir";
-import { moverNaLista, movimentoDoArraste } from "@/lib/escale/origens/mover";
+import { moverNaLista, movimentoDoArraste, PosicaoNaoGravada } from "@/lib/escale/origens/mover";
 import type { PreferenciasDoPainel } from "@/lib/escale/origens/preferencias";
 import {
   filtrarArvore,
@@ -299,7 +299,10 @@ export function PainelOrigens({
     router.push(`/app/pipelines/visualizacoes/${id}`);
   }
 
-  /** Soltou: a lista muda na hora; se o servidor recusar, volta como estava e diz por quê. */
+  /**
+   * Soltou: a lista muda na hora; se o servidor recusar, volta como estava e diz por quê.
+   * Se o grupo trocou e só a posição falhou, fica a lista do banco (a origem no grupo novo).
+   */
   function aoSoltar(r: DropResult) {
     if (!r.destination) return;
     const movimento = movimentoDoArraste(origens, {
@@ -315,6 +318,13 @@ export function PainelOrigens({
     moverOrigem.mutate(movimento, {
       onSuccess: setOrigens,
       onError: (err) => {
+        if (err instanceof PosicaoNaoGravada) {
+          setOrigens(err.origens);
+          setErroDoArraste(
+            `${textoDoErro(err.causa, t)} ${t("A origem já está no grupo novo; só a posição não foi gravada.")}`,
+          );
+          return;
+        }
         setOrigens(antes);
         setErroDoArraste(textoDoErro(err, t));
       },
