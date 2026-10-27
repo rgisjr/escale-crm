@@ -186,6 +186,7 @@ export function TelaDeTags({ linhas }: { linhas: LinhaDaTela[] }) {
                     linha={l}
                     aberto={aberto?.tag === l.tag}
                     comecaRemovendo={aberto?.tag === l.tag && aberto.removendo}
+                    existentes={linhas.map((x) => x.tag).filter((x) => x !== l.tag)}
                     aoFechar={() => setAberto(null)}
                     ancora={
                       <span>

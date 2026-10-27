@@ -9,6 +9,7 @@ import { normalizarTag, TAMANHO_MAXIMO_DA_TAG } from "@/lib/contacts/tag-normali
 import { tomDaTag } from "@/lib/escale/tags/paleta";
 import { DESCRICAO_MAX } from "@/lib/escale/tags/schema";
 import type { LinhaDaTela } from "@/lib/escale/tags/tela";
+import { chaveDaEtiqueta } from "@/lib/tags/cor-da-etiqueta";
 import { Trash2 } from "@/lib/ui/icons-da-casca";
 
 import { SeletorDeCorDaCasca } from "./SeletorDeCorDaCasca";
@@ -20,6 +21,7 @@ export function BalaoEditarTag({
   aoFechar,
   ancora,
   comecaRemovendo = false,
+  existentes = [],
 }: {
   linha: LinhaDaTela;
   aberto: boolean;
@@ -27,6 +29,8 @@ export function BalaoEditarTag({
   ancora: ReactElement;
   /** O "Remover" do ⋮ abre o balão já na confirmação. */
   comecaRemovendo?: boolean;
+  /** Os nomes de todas as tags: renomear para um que já existe juntaria as duas. */
+  existentes?: readonly string[];
 }) {
   const t = useT();
   const { gravar, renomear, remover } = useTagsDaCasca();
@@ -35,15 +39,23 @@ export function BalaoEditarTag({
   const [descricao, setDescricao] = useState(linha.descricao ?? "");
   const [confirmando, setConfirmando] = useState(comecaRemovendo);
   const [salvando, setSalvando] = useState(false);
+  // O vocabulário guarda a grafia original ("Quente"); a chave é a que o banco compara.
+  const chaveAtual = chaveDaEtiqueta(linha.tag);
   const novoNome = normalizarTag(nome);
+  const renomeando = chaveDaEtiqueta(nome) !== chaveAtual;
+  const repetida = renomeando && existentes.some((e) => chaveDaEtiqueta(e) === novoNome);
+  // O banco só grava tag de até 40 caracteres; uma mais longa só muda de nome.
+  const longaDemais = !renomeando && chaveAtual.length > TAMANHO_MAXIMO_DA_TAG;
   const mudou =
-    novoNome !== linha.tag || cor !== tomDaTag(linha.cor, linha.tag).chave || descricao.trim() !== (linha.descricao ?? "");
+    renomeando || cor !== tomDaTag(linha.cor, linha.tag).chave || descricao.trim() !== (linha.descricao ?? "");
+  const podeAtualizar = novoNome !== "" && mudou && !repetida && !longaDemais && !salvando;
 
   async function atualizar() {
-    if (!novoNome || !mudou) return;
+    if (!podeAtualizar) return;
     setSalvando(true);
-    const renomeou = novoNome === linha.tag || (await renomear(linha.tag, novoNome));
-    const deu = renomeou && (await gravar(novoNome, cor, descricao.trim() || null));
+    const renomeou = !renomeando || (await renomear(linha.tag, novoNome));
+    const chaveFinal = renomeando ? novoNome : chaveAtual;
+    const deu = renomeou && (await gravar(chaveFinal, cor, descricao.trim() || null));
     setSalvando(false);
     if (deu) aoFechar();
   }
@@ -64,6 +76,16 @@ export function BalaoEditarTag({
               className="h-8 w-full rounded-[4px] border border-casca-marca bg-surface pr-2 pl-7 text-[13px] text-casca-texto outline-hidden"
             />
           </span>
+          {repetida ? (
+            <span role="alert" className="mt-1 block text-[11px] text-casca-alerta">
+              {t("Já existe uma tag com esse nome.")}
+            </span>
+          ) : null}
+          {longaDemais ? (
+            <span role="alert" className="mt-1 block text-[11px] text-casca-alerta">
+              {t("Esta tag tem mais de 40 caracteres: só dá para renomear.")}
+            </span>
+          ) : null}
         </label>
         <div>
           <p className="mb-2 text-[13px] text-casca-texto">{t("Cor")}</p>
@@ -105,7 +127,7 @@ export function BalaoEditarTag({
               </button>
               <button
                 type="button"
-                disabled={!novoNome || !mudou || salvando}
+                disabled={!podeAtualizar}
                 onClick={() => void atualizar()}
                 className="h-7 rounded-[4px] bg-casca-marca px-2.5 text-[12px] font-medium text-white disabled:opacity-50"
               >

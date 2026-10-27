@@ -18487,6 +18487,7 @@ export const DICIONARIO: Traducoes = {
   "Confirme o segundo fator para mudar as tags.": { es: "Confirma el segundo factor para cambiar las etiquetas." },
   "Remover as tags selecionadas de todos os contatos?": { es: "¿Quitar las etiquetas seleccionadas de todos los contactos?" },
   "Remover selecionadas": { es: "Eliminar seleccionadas" },
+  "Esta tag tem mais de 40 caracteres: só dá para renomear.": { es: "Esta etiqueta tiene más de 40 caracteres: solo se puede renombrar." },
 };
 
 /**
