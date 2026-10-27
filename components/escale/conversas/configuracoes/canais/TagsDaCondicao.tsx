@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { LinhaCriarTag } from "@/components/escale/ui/LinhaCriarTag";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
-import { ChipDeEtiqueta } from "@/components/tags/ChipDeEtiqueta";
+import { ChipDaTag } from "@/components/escale/quadro/PecasDoCard";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useContactTagVocabulary } from "@/hooks/contacts/useContactTagVocabulary";
@@ -42,7 +42,7 @@ export function TagsDaCondicao({
     <div className="flex flex-wrap items-center gap-1.5">
       {valores.map((tag) => (
         <span key={tag} className="flex items-center gap-0.5">
-          <ChipDeEtiqueta tag={tag} className="h-5 px-1.5 text-[11px]" />
+          <ChipDaTag tag={tag} className="h-5 px-1.5 text-[11px]" />
           {!desabilitado ? (
             <button
               type="button"
@@ -81,7 +81,7 @@ export function TagsDaCondicao({
               {nova ? <LinhaCriarTag tag={nova} aoCriar={incluir} /> : null}
               {opcoes.map((tag) => (
                 <button key={tag} type="button" onClick={() => incluir(tag)}>
-                  <ChipDeEtiqueta tag={tag} className="h-5 px-1.5 text-[11px]" />
+                  <ChipDaTag tag={tag} className="h-5 px-1.5 text-[11px]" />
                 </button>
               ))}
             </div>

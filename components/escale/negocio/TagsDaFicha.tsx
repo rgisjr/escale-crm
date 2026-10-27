@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { LinhaCriarTag } from "@/components/escale/ui/LinhaCriarTag";
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
-import { ChipDeEtiqueta } from "@/components/tags/ChipDeEtiqueta";
+import { ChipDaTag } from "@/components/escale/quadro/PecasDoCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -131,7 +131,7 @@ export function TagsDoContato({
       <ul className="flex min-w-0 flex-wrap items-center gap-1.5">
         {tags.map((tag) => (
           <li key={tag} className="flex items-center">
-            <ChipDeEtiqueta tag={tag} />
+            <ChipDaTag tag={tag} />
             <button
               type="button"
               aria-label={`${t("Remover a tag")} ${tag}`}
@@ -186,7 +186,7 @@ export function TagsDoContato({
                   onClick={() => void adicionar(tag)}
                   className="flex h-[34px] w-full items-center rounded-md px-2 text-left text-[11px] text-casca-texto hover:bg-casca-marca-suave"
                 >
-                  {tag}
+                  <ChipDaTag tag={tag} />
                 </button>
               </li>
             ))}
