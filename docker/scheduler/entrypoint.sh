@@ -40,7 +40,11 @@ APP_ORIGIN="http://app:3000"
 #     porque cron-routes-scheduled.test.ts exige toda rota do diretório na lista.
 #   - event-log-drain: o worker já drena a cada 2–30 s (runEventLogDrainLoop); o
 #     cron é só rede de segurança.
-#   - prospecting, proposta-travada: 5 min bastam.
+#   - proposta-travada: 5 min basta.
+#   - prospecting FICA em 1 min: o worker compara max(attempted_at) + intervalo com
+#     "agora", e o attempted_at é gravado segundos DEPOIS do disparo; com cron de
+#     5 min a rodada cai sempre uns segundos antes do limite e o envio pula uma
+#     volta (intervalo de 5 min virava 10, o de 15 virava 20).
 #   - webhook-replay: 2 min.
 # A agenda do Google entra com DUAS cadências, e elas são diferentes de propósito.
 #
@@ -59,7 +63,7 @@ APP_ORIGIN="http://app:3000"
 # comentário, seria DADO — e crase em prosa dentro de aspas duplas o shell
 # EXECUTA. Foi o que quebrou o entrypoint na primeira tentativa desta linha.
 CRONS="
-*/5 * * * *|240|api/v1/cron/prospecting
+* * * * *|240|api/v1/cron/prospecting
 7 * * * *|25|api/v1/cron/agent-dispatcher
 * * * * *|25|api/v1/cron/followup-flow-worker
 */5 * * * *|45|api/v1/cron/event-log-drain

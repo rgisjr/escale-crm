@@ -74,7 +74,21 @@ function comoObjeto(valor: unknown): Record<string, unknown> {
 export async function usuarioDoToken(
   supabase: SupabaseClient,
 ): Promise<{ usuario: UsuarioDoToken | null; error: AuthError | null }> {
-  const { data, error } = await supabase.auth.getClaims();
+  let resposta: Awaited<ReturnType<typeof supabase.auth.getClaims>>;
+  try {
+    resposta = await supabase.auth.getClaims();
+  } catch (err) {
+    // O auth-js só converte em retorno os erros de AUTH; token com partes
+    // base64 válidas mas conteúdo que não é JSON, `alg` desconhecido ou chave
+    // incompatível ele RELANÇA. Cookie corrompido não pode virar 500 em toda
+    // requisição: é "não autenticado" (login / 401), com rastro no log.
+    logger.error("[auth] getClaims lançou — tratando como não autenticado", {
+      name: err instanceof Error ? err.name : "desconhecido",
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return { usuario: null, error: null };
+  }
+  const { data, error } = resposta;
   const claims = data?.claims;
   if (!claims?.sub) {
     // ⚠️ `usuario: null` é ambíguo: "não está logado" (estado normal) E "não deu
@@ -116,5 +130,11 @@ export async function usuarioDoToken(
  */
 export async function renovarClaimsDaSessao(supabase: SupabaseClient): Promise<boolean> {
   const { error } = await supabase.auth.refreshSession();
+  if (error) {
+    logger.warn("[auth] refreshSession falhou após gravar metadado — claims antigas até o refresh natural", {
+      name: error.name,
+      message: error.message,
+    });
+  }
   return !error;
 }

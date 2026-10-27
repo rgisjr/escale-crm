@@ -10,7 +10,7 @@ export const supportSchema = z.object({
 });
 export type SupportContext = z.infer<typeof supportSchema>;
 
-/** Chamar depois de getUser. A RPC resolve auth.uid + auth.session_id, nunca cookie. */
+/** Chamar depois de confirmar a sessão (getClaims/getUser). A RPC resolve auth.uid + auth.session_id, nunca cookie. */
 export async function readSupportContext(db: Awaited<ReturnType<typeof createClient>>): Promise<SupportContext | null> {
   const { data, error } = await db.rpc("fn_support_context");
   if (error) throw new Error("Não foi possível confirmar o acompanhamento administrativo.");
