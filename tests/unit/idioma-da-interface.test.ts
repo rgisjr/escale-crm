@@ -99,7 +99,7 @@ describe("os elos que somem sem barulho", () => {
     // trocar meio segundo depois, em toda navegação — pior que não traduzir.
     expect(readFileSync("lib/auth/types.ts", "utf8")).toMatch(/locale\?: string \| null/);
     expect(readFileSync("lib/auth/server.ts", "utf8")).toMatch(
-      /user\.user_metadata\?\.locale as string \| undefined/,
+      /user\.user_metadata\.locale as string \| undefined/,
     );
     // E a CADEIA: preferência da pessoa → idioma da ORGANIZAÇÃO → padrão.
     //
