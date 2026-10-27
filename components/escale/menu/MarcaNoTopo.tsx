@@ -6,8 +6,9 @@ import { useMarcaDaInstalacao } from "@/lib/branding/contexto";
 import { cn } from "@/lib/utils";
 
 /**
- * Logo da organização (Configurações › Marca) quando houver; senão o nome da marca
- * na cor `--color-escale-marca`. Mesma precedência de `components/shell/Sidebar.tsx`:
+ * A logo (Configurações › Marca, ou a da instalação em /admin/marca) seguida do
+ * nome da marca na cor `--color-escale-marca`, como o "clint" no canto da Clint.
+ * Sem logo, fica só o nome. Mesma precedência de `components/shell/Sidebar.tsx`:
  * marca da organização acima da marca da instalação.
  */
 export function MarcaNoTopo() {
@@ -23,13 +24,14 @@ export function MarcaNoTopo() {
         : brand.logoDarkUrl;
 
   return (
-    <Link href="/app" className="flex shrink-0 items-center" aria-label={nome}>
+    <Link href="/app" className="flex shrink-0 items-center gap-2" aria-label={nome}>
       {logo ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={logo}
-            alt={nome}
+            alt=""
+            aria-hidden
             className={cn("h-7 w-auto max-w-[10rem] object-contain", logoEscuro && "dark:hidden")}
           />
           {logoEscuro ? (
@@ -42,14 +44,13 @@ export function MarcaNoTopo() {
             />
           ) : null}
         </>
-      ) : (
-        <span
-          className="max-w-[12rem] truncate text-lg font-bold tracking-tight"
-          style={{ color: "var(--color-escale-marca)" }}
-        >
-          {nome}
-        </span>
-      )}
+      ) : null}
+      <span
+        className="max-w-[12rem] truncate text-lg font-bold tracking-tight"
+        style={{ color: "var(--color-escale-marca)" }}
+      >
+        {nome}
+      </span>
     </Link>
   );
 }
