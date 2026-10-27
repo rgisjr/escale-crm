@@ -157,6 +157,8 @@ export function LinhaDaOrigem({
       ref={arraste?.provided.innerRef}
       {...arraste?.provided.draggableProps}
       {...arraste?.provided.dragHandleProps}
+      // A biblioteca põe role="button" na alça; a linha tem link e ⋮ dentro e segue sendo item de lista.
+      role={undefined}
       className={cn(
         "group/origem",
         LINHA,
@@ -256,6 +258,7 @@ export function LinhaDoGrupo({
   ativo,
   podeGerenciar,
   podeArrastar = false,
+  arrasteTravado = false,
   criandoAqui,
   selecao,
   onAlternar,
@@ -272,6 +275,8 @@ export function LinhaDoGrupo({
   podeGerenciar: boolean;
   /** Lista arrastável (fork Escale): quem gerencia, fora da busca e do modo seleção. */
   podeArrastar?: boolean;
+  /** Gravação em andamento: a árvore arrastável continua montada (foco do teclado), mas ninguém começa outro arraste. */
+  arrasteTravado?: boolean;
   criandoAqui: boolean;
   /** Presente no modo seleção: caixinha no grupo (marca todas) e nas origens; sem + e sem ⋮. */
   selecao?: SelecaoNoPainel;
@@ -376,7 +381,7 @@ export function LinhaDoGrupo({
                 {grupo.funis.length === 0 && !criandoAqui
                   ? vazio
                   : grupo.funis.map((f, i) => (
-                      <Draggable key={f.id} draggableId={f.id} index={i}>
+                      <Draggable key={f.id} draggableId={f.id} index={i} isDragDisabled={arrasteTravado}>
                         {(p, s) => origem(f, { provided: p, arrastando: s.isDragging })}
                       </Draggable>
                     ))}

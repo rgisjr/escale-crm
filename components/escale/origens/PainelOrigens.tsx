@@ -194,8 +194,7 @@ export function PainelOrigens({
   const quantosOcultos = arvore.grupos.filter((g) => ocultos.includes(g.id)).length;
   const nadaAchado = buscando && visiveis.length === 0 && filtrada.semGrupo.length === 0;
   const visualizacoesVisiveis = filtrarVisualizacoes(visualizacoes, busca);
-  // Uma gravação de cada vez: a resposta de um arraste antigo não pode desfazer o seguinte.
-  const podeArrastar = podeGerenciar && !selecao && !buscando && !moverOrigem.isPending;
+  const podeArrastar = podeGerenciar && !selecao && !buscando;
 
   const noModoSelecao: SelecaoNoPainel | undefined = selecao
     ? {
@@ -479,6 +478,8 @@ export function PainelOrigens({
                         ativo={ativo}
                         podeGerenciar={podeGerenciar}
                         podeArrastar={podeArrastar}
+                        // Uma gravação de cada vez: a resposta de um arraste antigo não pode desfazer o seguinte.
+                        arrasteTravado={moverOrigem.isPending}
                         criandoAqui={novoEm === g.id}
                         selecao={noModoSelecao}
                         onAlternar={() => alternarGrupo(g.id)}
