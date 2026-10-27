@@ -17,7 +17,7 @@ vi.mock("@hello-pangea/dnd", () => ({
     children({ innerRef: () => {}, droppableProps: {}, placeholder: null }, { isDraggingOver: false }),
   Draggable: ({ children }: { children: (p: unknown, s: unknown) => ReactNode }) =>
     children(
-      { innerRef: () => {}, draggableProps: {}, dragHandleProps: { "data-arrastavel": "" } },
+      { innerRef: () => {}, draggableProps: {}, dragHandleProps: { "data-arrastavel": "", role: "button", tabIndex: 0 } },
       { isDragging: false },
     ),
 }));
@@ -96,6 +96,13 @@ describe("<PainelOrigens> — arrastar origens", () => {
   it("só quem gerencia arrasta", async () => {
     await renderizar(false);
     expect(lista().querySelectorAll("[data-arrastavel]")).toHaveLength(0);
+  });
+
+  it("a linha arrastável segue sendo item de lista, com o link dentro", async () => {
+    await renderizar();
+    const linha = within(lista()).getByRole("link", { name: "Turma 12" }).closest("li");
+    expect(linha).not.toHaveAttribute("role", "button");
+    expect(within(lista()).getAllByRole("listitem").length).toBeGreaterThanOrEqual(3);
   });
 
   it("subir no grupo grava a posição e mostra a nova ordem", async () => {
