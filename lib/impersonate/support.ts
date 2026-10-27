@@ -51,8 +51,9 @@ export async function supportCallbackWriteAllowed(organizationId: string, actorI
 }
 export async function authenticatedSessionId(): Promise<string> {
   const db = await createClient();
-  const { data: { user } } = await db.auth.getUser();
-  if (!user) throw new Error("Sessão ausente.");
+  // Um só `getClaims()`: ele já verifica a assinatura e entrega `session_id` —
+  // o `getUser()` que vinha antes era uma ida ao GoTrue só para confirmar presença.
   const { data } = await db.auth.getClaims();
+  if (!data?.claims.sub) throw new Error("Sessão ausente.");
   return z.string().uuid().parse(data?.claims.session_id);
 }

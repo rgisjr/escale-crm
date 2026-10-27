@@ -1,8 +1,16 @@
 /**
  * Supabase client para Server Components, Route Handlers e Server Actions.
  *
- * Lê/escreve cookies via next/headers. Sempre use `getUser()` (valida JWT no
- * backend), NUNCA `getSession()` (confia no cookie local sem revalidar).
+ * Lê/escreve cookies via next/headers. Para saber QUEM é a pessoa use
+ * `usuarioDoToken()` (`lib/auth/claims.ts`: `getClaims()` valida a assinatura do
+ * JWT localmente pela JWKS em cache, sem ir ao GoTrue) ou `loadAuthUser()`;
+ * NUNCA `getSession()` (confia no cookie local sem revalidar).
+ *
+ * `getUser()` — que vai ao GoTrue a cada chamada — fica para o que precisa de
+ * dado FRESCO de lá (MFA, senha, e-mail, convite, callbacks de login, sair de
+ * todos os aparelhos). Em 26/10/2026 eram 10–14 mil idas/dia ao GoTrue numa
+ * máquina de 426 MB; o risco aceito é a sessão revogada valer até o token
+ * vencer (≤ 1 h).
  */
 
 import { createServerClient, type CookieOptions } from "@supabase/ssr";

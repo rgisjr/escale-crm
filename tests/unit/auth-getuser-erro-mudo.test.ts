@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * O ERRO DO `getUser()` É REGISTRADO — E O NÃO-ERRO NÃO É.
+ * O ERRO DO `getClaims()` É REGISTRADO — E O NÃO-ERRO NÃO É.
  *
  * ## O defeito original
  *
@@ -34,13 +34,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * o que é incidente, cala no que é estado normal.
  */
 
+// Agora a identidade vem de `getClaims()` (ver `lib/auth/claims.ts`); a regra
+// pinada é a mesma: o erro que não é "sem sessão" deixa rastro.
 interface RespostaGetUser {
-  data: { user: unknown };
+  data: { claims: { sub: string } } | null;
   error: { name?: string; message: string; status?: number; code?: string } | null;
 }
 
 const resposta: { atual: RespostaGetUser } = {
-  atual: { data: { user: null }, error: null },
+  atual: { data: null, error: null },
 };
 
 const erros: { msg: string; ctx: unknown }[] = [];
@@ -57,7 +59,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: async () => resposta.atual },
+    auth: { getClaims: async () => resposta.atual },
     from: () => {
       throw new Error("não deveria consultar tabela sem usuário");
     },
@@ -68,13 +70,13 @@ const { loadAuthUser, ehSessaoAusente } = await import("@/lib/auth/server");
 
 beforeEach(() => {
   erros.length = 0;
-  resposta.atual = { data: { user: null }, error: null };
+  resposta.atual = { data: null, error: null };
 });
 
-describe("loadAuthUser — o erro do getUser deixa rastro", () => {
+describe("loadAuthUser — o erro do getClaims deixa rastro", () => {
   it("falha transitória do GoTrue REGISTRA, com a classe e o código", async () => {
     resposta.atual = {
-      data: { user: null },
+      data: null,
       error: {
         name: "AuthRetryableFetchError",
         code: "over_request_rate_limit",
@@ -85,7 +87,7 @@ describe("loadAuthUser — o erro do getUser deixa rastro", () => {
 
     expect(await loadAuthUser()).toBeNull(); // a ação não muda: falha fechado
     expect(erros).toHaveLength(1);
-    expect(erros[0]!.msg).toMatch(/getUser falhou/);
+    expect(erros[0]!.msg).toMatch(/getClaims falhou/);
     // Sem estes campos a linha não diagnostica nada — seria um "algo deu errado"
     // que manda investigar do zero, que é o custo que o conserto veio evitar.
     // `name` é o que separa rede (AuthRetryableFetchError) de token ilegível
@@ -103,7 +105,7 @@ describe("loadAuthUser — o erro do getUser deixa rastro", () => {
     //   user  = null
     //   error = AuthSessionMissingError: Auth session missing! (status=400)
     resposta.atual = {
-      data: { user: null },
+      data: null,
       error: { name: "AuthSessionMissingError", message: "Auth session missing!", status: 400 },
     };
 
@@ -115,7 +117,7 @@ describe("loadAuthUser — o erro do getUser deixa rastro", () => {
   });
 
   it("sem erro nenhum também não registra", async () => {
-    resposta.atual = { data: { user: null }, error: null };
+    resposta.atual = { data: null, error: null };
 
     expect(await loadAuthUser()).toBeNull();
     expect(erros).toEqual([]);

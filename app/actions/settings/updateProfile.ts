@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { ipDoCliente } from "@/lib/http/ip-do-cliente";
+import { renovarClaimsDaSessao } from "@/lib/auth/claims";
 import { createClient } from "@/lib/supabase/server";
 import { audit } from "@/lib/audit";
 import {
@@ -45,6 +46,9 @@ export async function updateProfile(input: ProfileInput): Promise<UpdateProfileR
   if (error) {
     return { ok: false, error: error.message };
   }
+  // Nome, avatar, idioma e fuso saem das CLAIMS do token (`lib/auth/claims.ts`),
+  // que só mudam no refresh: renova agora para o perfil salvo aparecer já.
+  await renovarClaimsDaSessao(supabase);
 
   const activeOrg = await resolveActiveOrg(authUser);
 

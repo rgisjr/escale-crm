@@ -138,6 +138,10 @@ function montarBanco(
         sessao
           ? { data: { user: sessao }, error: null }
           : { data: { user: null }, error: { message: "Auth session missing!" } },
+      getClaims: async () =>
+        sessao
+          ? { data: { claims: { sub: sessao.id } }, error: null }
+          : { data: null, error: { name: "AuthSessionMissingError", message: "Auth session missing!" } },
     },
     from,
   } as never);

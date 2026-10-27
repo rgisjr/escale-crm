@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { fetchDoServidor } from "@/lib/supabase/fetch-do-servidor";
 import { urlDoSupabaseNoServidor } from "@/lib/supabase/url-do-servidor";
 import { isPublicPath } from "@/lib/auth/public-paths";
+import { usuarioDoToken } from "@/lib/auth/claims";
 import { CABECALHO_SEM_CSS, PARAMETRO_SEM_CSS } from "@/lib/branding/sem-css-personalizado";
 import {
   verifyImpersonateCookieEdge,
@@ -93,9 +94,13 @@ export async function proxy(request: NextRequest) {
   );
 
   // Validate JWT server-side (NEVER use getSession on backend per CLAUDE.md).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `getClaims()` verifica a assinatura localmente (JWKS em cache) em vez de ir
+  // ao GoTrue a cada requisição — o proxy roda em TODA navegação e chamada de
+  // API, e era a maior fonte das 10–14 mil idas/dia a `/auth/v1/user` (26/10).
+  // Ele continua sendo quem RENOVA o token: `getClaims()` passa por `getSession()`,
+  // que faz o refresh perto do vencimento e devolve os cookies novos via `setAll`.
+  // Risco aceito: sessão revogada no GoTrue vale até o token vencer (≤ 1 h).
+  const { usuario: user } = await usuarioDoToken(supabase);
 
   if (!user) {
     // API routes must respond with JSON envelope (contract: {error:{code,message}})

@@ -64,7 +64,7 @@ function bancoFalso(tabelas: Record<string, Linha[]>) {
     return chain;
   };
   return {
-    auth: { getUser: async () => ({ data: { user: { id: "u-1" } }, error: null }) },
+    auth: { getUser: async () => ({ data: { user: { id: "u-1" } }, error: null }), getClaims: async () => ({ data: { claims: { sub: "u-1" } }, error: null }) },
     from,
     selects,
     trilhas,

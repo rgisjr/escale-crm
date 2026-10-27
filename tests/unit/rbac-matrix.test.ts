@@ -68,6 +68,10 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
         role
           ? { data: { user: { id: USER_ID } }, error: null }
           : { data: { user: null }, error: null },
+      getClaims: async () =>
+        role
+          ? { data: { claims: { sub: USER_ID } }, error: null }
+          : { data: null, error: null },
     },
     from: (table: string) => chainFor(table),
     rpc: async (fn: string) =>

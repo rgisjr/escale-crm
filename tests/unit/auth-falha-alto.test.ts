@@ -46,8 +46,8 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     rpc: async () => ({ data: null, error: null }),
     auth: {
-      getUser: async () => ({
-        data: { user: { id: "u1", email: "a@b.c", user_metadata: {} } },
+      getClaims: async () => ({
+        data: { claims: { sub: "u1", email: "a@b.c", user_metadata: {} } },
         error: null,
       }),
     },

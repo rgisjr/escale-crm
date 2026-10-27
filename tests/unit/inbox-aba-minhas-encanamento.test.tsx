@@ -73,7 +73,7 @@ vi.mock("@/app/api/v1/conversations/_handler", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }) },
+    auth: { getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }), getClaims: async () => ({ data: { claims: { sub: "user-1" } }, error: null }) },
   }),
 }));
 vi.mock("@/lib/auth/server", () => ({

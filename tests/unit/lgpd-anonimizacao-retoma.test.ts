@@ -141,7 +141,7 @@ function db(
     }),
     // A rota valida o JWT no backend com `getUser()` (nunca `getSession()`), e
     // é a primeira coisa que ela faz.
-    auth: { getUser: async () => ({ data: { user: { id: USER } }, error: null }) },
+    auth: { getUser: async () => ({ data: { user: { id: USER } }, error: null }), getClaims: async () => ({ data: { claims: { sub: USER } }, error: null }) },
   };
   vi.mocked(createClient).mockResolvedValue(cliente as never);
   return cliente;

@@ -178,7 +178,7 @@ describe("urlDoSupabaseNoServidor — PRESENTE aponta o servidor para a URL nova
           if (opcoes.global?.fetch) desvios.push(opcoes.global.fetch);
           return {
             auth: {
-              getUser: async () => ({ data: { user: { id: "u1" } } }),
+              getClaims: async () => ({ data: { claims: { sub: "u1" } }, error: null }),
             },
             rpc: async () => ({ data: true }),
           };

@@ -34,7 +34,7 @@ function cliente() {
     return b;
   };
   return {
-    auth: { getUser: async () => ({ data: { user: { id: "u1" } }, error: null }) },
+    auth: { getUser: async () => ({ data: { user: { id: "u1" } }, error: null }), getClaims: async () => ({ data: { claims: { sub: "u1" } }, error: null }) },
     from,
     rpc: (nome: string) => {
       banco.chamadas.push(`rpc:${nome}`);

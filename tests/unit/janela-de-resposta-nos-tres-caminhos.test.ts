@@ -57,7 +57,7 @@ const CANAL = "22222222-2222-4222-8222-222222222222";
 /** Cliente que responde por TABELA; toda cadeia devolve a si mesma. */
 function cliente(porTabela: Record<string, unknown>) {
   return {
-    auth: { getUser: async () => ({ data: { user: { id: "u" } }, error: null }) },
+    auth: { getUser: async () => ({ data: { user: { id: "u" } }, error: null }), getClaims: async () => ({ data: { claims: { sub: "u" } }, error: null }) },
     from: (tabela: string) => {
       const resposta = { data: porTabela[tabela] ?? null, error: null };
       const cadeia: unknown = new Proxy(
