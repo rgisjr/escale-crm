@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import type { ComponentProps, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { tomDaTag } from "@/lib/escale/tags/paleta";
+
 vi.mock("@hello-pangea/dnd", () => ({
   Draggable: ({ children }: { children: (p: unknown, s: unknown) => ReactNode }) =>
     children(
@@ -98,15 +100,15 @@ describe("<CardDaCasca> (Casca V4, 01-010)", () => {
     expect(onOpen).toHaveBeenCalledWith("l1");
   });
 
-  it("as tags são chips na paleta da Clint; sem cor, o azul padrão", () => {
+  it("as tags são chips na paleta de 16 tons; sem cor, o tom automático do nome", () => {
     montar(COMPLETO);
     expect(screen.getByText("obra_notificada")).toHaveStyle({
-      backgroundColor: "#FFAAA3",
-      color: "#F44336",
+      backgroundColor: "#ffc4c2",
+      color: "#9c2933",
     });
     expect(screen.getByText("em_andamento")).toHaveStyle({
-      backgroundColor: "#91CEFF",
-      color: "#2196F3",
+      backgroundColor: tomDaTag(null, "em_andamento").fundo,
+      color: tomDaTag(null, "em_andamento").texto,
     });
   });
 
