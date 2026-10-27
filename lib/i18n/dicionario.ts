@@ -18485,6 +18485,8 @@ export const DICIONARIO: Traducoes = {
   "Confira o nome, a cor e a descrição.": { es: "Revisa el nombre, el color y la descripción." },
   "Só um gerente ou administrador da organização pode mudar as tags.": { es: "Solo un gerente o administrador de la organización puede cambiar las etiquetas." },
   "Confirme o segundo fator para mudar as tags.": { es: "Confirma el segundo factor para cambiar las etiquetas." },
+  "Remover as tags selecionadas de todos os contatos?": { es: "¿Quitar las etiquetas seleccionadas de todos los contactos?" },
+  "Remover selecionadas": { es: "Eliminar seleccionadas" },
 };
 
 /**

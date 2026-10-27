@@ -19,18 +19,21 @@ export function BalaoEditarTag({
   aberto,
   aoFechar,
   ancora,
+  comecaRemovendo = false,
 }: {
   linha: LinhaDaTela;
   aberto: boolean;
   aoFechar: () => void;
   ancora: ReactElement;
+  /** O "Remover" do ⋮ abre o balão já na confirmação. */
+  comecaRemovendo?: boolean;
 }) {
   const t = useT();
   const { gravar, renomear, remover } = useTagsDaCasca();
   const [nome, setNome] = useState(linha.tag);
   const [cor, setCor] = useState(tomDaTag(linha.cor, linha.tag).chave);
   const [descricao, setDescricao] = useState(linha.descricao ?? "");
-  const [confirmando, setConfirmando] = useState(false);
+  const [confirmando, setConfirmando] = useState(comecaRemovendo);
   const [salvando, setSalvando] = useState(false);
   const novoNome = normalizarTag(nome);
   const mudou =
