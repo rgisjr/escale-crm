@@ -110,6 +110,21 @@ describe("usuarioDoToken", () => {
   });
 });
 
+describe("usuarioDoToken — exceção do auth-js", () => {
+  it("cookie corrompido (getClaims LANÇA) vira não autenticado, com log, sem 500", async () => {
+    const getClaims = vi.fn(async () => {
+      throw new SyntaxError("Unexpected token");
+    });
+
+    const { usuario, error } = await usuarioDoToken(clienteCom(getClaims));
+
+    expect(usuario).toBeNull();
+    expect(error).toBeNull();
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.msg).toMatch(/getClaims lançou/);
+  });
+});
+
 describe("ehSessaoAusente", () => {
   it("reconhece a sessão ausente pelo nome e não engole outros erros", () => {
     expect(ehSessaoAusente({ name: "AuthSessionMissingError" })).toBe(true);
