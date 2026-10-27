@@ -56,3 +56,18 @@ export function moverNaLista(origens: Origens, { id, grupoNovo, depoisDe }: Movi
   const i = depoisDe === null ? 0 : resto.findIndex((f) => f.id === depoisDe) + 1;
   return { ...origens, funis: [...resto.slice(0, i), movido, ...resto.slice(i)] };
 }
+
+/**
+ * Arrastar para outro grupo são duas escritas (grupo, depois posição). Quando só a
+ * segunda falha, a origem JÁ está no grupo novo no banco: `origens` é a lista relida
+ * de lá, para a tela não voltar a origem a um grupo onde ela não está mais.
+ */
+export class PosicaoNaoGravada extends Error {
+  constructor(
+    public readonly causa: unknown,
+    public readonly origens: Origens,
+  ) {
+    super(causa instanceof Error ? causa.message : "posição não gravada");
+    this.name = "PosicaoNaoGravada";
+  }
+}

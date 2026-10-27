@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
-import type { MovimentoDeOrigem } from "@/lib/escale/origens/mover";
+import { PosicaoNaoGravada, type MovimentoDeOrigem } from "@/lib/escale/origens/mover";
 import type { IconeDeGrupo, Origens } from "@/lib/escale/origens/regras";
 
 /**
@@ -149,15 +149,25 @@ export function useExcluirOrigem() {
 /**
  * Arrastar no painel: troca o grupo (só se mudou) e depois grava a posição pelo
  * `depois_de` da rota do original. Nessa ordem porque a régua da posição é a da
- * organização inteira, e o grupo só decide em que lista a origem aparece: se a
- * segunda escrita falhar, a origem já está no grupo novo e a releitura mostra isso.
+ * organização inteira, e o grupo só decide em que lista a origem aparece. Se a
+ * posição falhar depois de o grupo ter trocado, relê e lança `PosicaoNaoGravada`
+ * com a lista do banco; se nem a releitura vier, lança o erro da posição.
  */
 export function useMoverOrigem() {
   const onSettled = useAoTerminar();
   return useMutation({
     mutationFn: async ({ id, grupoNovo, depoisDe }: MovimentoDeOrigem) => {
-      if (grupoNovo) await apiClient.put(grupoDoFunil(id), { group_id: grupoNovo });
-      await apiClient.patch(doFunil(id), { depois_de: depoisDe });
+      if (!grupoNovo) {
+        await apiClient.patch(doFunil(id), { depois_de: depoisDe });
+        return reler();
+      }
+      await apiClient.put(grupoDoFunil(id), { group_id: grupoNovo });
+      try {
+        await apiClient.patch(doFunil(id), { depois_de: depoisDe });
+      } catch (causa) {
+        const relidas = await reler().catch(() => null);
+        throw relidas ? new PosicaoNaoGravada(causa, relidas) : causa;
+      }
       return reler();
     },
     onSettled,
