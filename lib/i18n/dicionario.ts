@@ -18461,6 +18461,30 @@ export const DICIONARIO: Traducoes = {
     {
       es: "Las variables de WhatsApp valen aquí, como [CONTACT.FIRST_NAME] y los campos del formulario. Los mensajes antiguos con {{nome}} y {{destino}} siguen valiendo.",
     },
+  // ── Tela de Tags da casca (paleta de 16 cores) ──
+  "itens": { es: "elementos" },
+  "Criada por": { es: "Creada por" },
+  "Tags cadastradas": { es: "Etiquetas registradas" },
+  "Quantidade em uso": { es: "Cantidad en uso" },
+  "Editar descrição": { es: "Editar descripción" },
+  "Rosa": { es: "Rosa" },
+  "Laranja": { es: "Naranja" },
+  "Verde": { es: "Verde" },
+  "Ciano": { es: "Cian" },
+  "Marrom": { es: "Marrón" },
+  "Cinza-azulado": { es: "Gris azulado" },
+  "Azul-claro": { es: "Azul claro" },
+  "Laranja-escuro": { es: "Naranja oscuro" },
+  "Verde-claro": { es: "Verde claro" },
+  "Roxo-escuro": { es: "Morado oscuro" },
+  "Tag removida.": { es: "Etiqueta eliminada." },
+  "Já existe uma tag com esse nome.": { es: "Ya existe una etiqueta con ese nombre." },
+  "nome da tag": { es: "nombre de la etiqueta" },
+  "Para que serve esta tag? (opcional)": { es: "¿Para qué sirve esta etiqueta? (opcional)" },
+  "Remover esta tag de todos os contatos?": { es: "¿Quitar esta etiqueta de todos los contactos?" },
+  "Confira o nome, a cor e a descrição.": { es: "Revisa el nombre, el color y la descripción." },
+  "Só um gerente ou administrador da organização pode mudar as tags.": { es: "Solo un gerente o administrador de la organización puede cambiar las etiquetas." },
+  "Confirme o segundo fator para mudar as tags.": { es: "Confirma el segundo factor para cambiar las etiquetas." },
 };
 
 /**

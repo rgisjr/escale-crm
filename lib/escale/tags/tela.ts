@@ -68,9 +68,10 @@ export function paginar<T>(itens: readonly T[], pagina: number, porPagina: numbe
   return itens.slice(inicio, inicio + porPagina);
 }
 
-export function dataBr(iso: string | null): string {
+/** `idioma` é a tag do usuário (`useTagDeIdioma()`); o fuso é sempre o de São Paulo. */
+export function dataBr(iso: string | null, idioma: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return d.toLocaleDateString(idioma, { timeZone: "America/Sao_Paulo" });
 }

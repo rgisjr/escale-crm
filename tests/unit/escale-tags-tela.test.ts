@@ -32,7 +32,7 @@ describe("tela de Tags", () => {
 
   it("pagina e formata a data no padrão brasileiro", () => {
     expect(paginar([1, 2, 3, 4, 5], 2, 2)).toEqual([3, 4]);
-    expect(dataBr("2026-10-24T10:00:00Z")).toBe("24/10/2026");
-    expect(dataBr(null)).toBe("—");
+    expect(dataBr("2026-10-24T10:00:00Z", "pt-BR")).toBe("24/10/2026");
+    expect(dataBr(null, "pt-BR")).toBe("—");
   });
 });
