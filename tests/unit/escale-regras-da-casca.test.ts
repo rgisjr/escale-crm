@@ -135,10 +135,10 @@ describe("avatares e tags", () => {
     expect(inicialDoNome(null)).toBe("?");
   });
 
-  it("os 8 tons das nossas etiquetas viram a paleta da Clint; sem cor é o azul padrão", () => {
-    expect(coresDaTag("#cf3716")).toEqual({ fundo: "#FFAAA3", texto: "#F44336" });
-    expect(coresDaTag("#3E63DD")).toEqual({ fundo: "#B3BEFF", texto: "#3F51B5" });
-    expect(coresDaTag(null)).toEqual({ fundo: "#91CEFF", texto: "#2196F3" });
+  it("os tons antigos viram os 16 da casca; sem cor e sem nome é o Azul", () => {
+    expect(coresDaTag("#cf3716")).toEqual({ fundo: "#ffc4c2", texto: "#9c2933" });
+    expect(coresDaTag("#3E63DD")).toEqual({ fundo: "#bdc3ff", texto: "#43409f" });
+    expect(coresDaTag(null)).toEqual({ fundo: "#77c7ff", texto: "#004b73" });
   });
 });
 

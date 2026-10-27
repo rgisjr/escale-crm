@@ -25,10 +25,15 @@
  * as regras dos agentes. Mesmo gate do roteamento de filas — configuração, não
  * atendimento.
  */
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+
+import { TelaDeTags } from "@/components/escale/configuracoes/tags/TelaDeTags";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
+import { montarLinhas } from "@/lib/escale/tags/tela";
 import { traduzir } from "@/lib/i18n/dicionario";
 import type { LinhaDeVocabulario } from "@/lib/schemas/tags";
 import { createClient } from "@/lib/supabase/server";
@@ -64,6 +69,18 @@ export default async function TagsPage() {
   const { data, error } = await supabase.rpc("fn_vocabulario_de_tags", {
     p_org: activeOrg.orgId,
   });
+
+  // ── FORK ESCALE: com a casca (menu do topo), a tela de Tags da Clint. Falha na
+  // leitura cai na tela antiga, que mostra o aviso em vez de uma tabela vazia. ──
+  if (!error && lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo") {
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("settings")
+      .eq("id", activeOrg.orgId)
+      .maybeSingle();
+    return <TelaDeTags linhas={montarLinhas((data ?? []) as LinhaDeVocabulario[], org?.settings ?? null)} />;
+  }
+  // ── fim FORK ESCALE ──
 
   const idioma = user.idioma;
   const t = (texto: string) => traduzir(texto, idioma);

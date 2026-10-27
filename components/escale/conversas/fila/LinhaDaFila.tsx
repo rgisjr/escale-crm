@@ -1,6 +1,6 @@
 "use client";
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
-import { ChipDeEtiqueta } from "@/components/tags/ChipDeEtiqueta";
+import { ChipDaTag } from "@/components/escale/quadro/PecasDoCard";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import {
@@ -181,7 +181,7 @@ export function LinhaDaFila({
                 </span>
               ) : null}
               {tags.map((tag) => (
-                <ChipDeEtiqueta key={tag} tag={tag} className="h-4 px-1.5 text-[11px]" />
+                <ChipDaTag key={tag} tag={tag} className="h-4 px-1.5 text-[11px]" />
               ))}
             </span>
           ) : null}

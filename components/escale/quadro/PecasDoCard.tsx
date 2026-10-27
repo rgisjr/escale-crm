@@ -59,11 +59,14 @@ export function ChipsDoCard({ lead }: { lead: Lead }) {
   );
 }
 
-export function ChipDaTag({ tag }: { tag: string }) {
-  const { fundo, texto } = coresDaTag(useCorDaEtiqueta(tag));
+export function ChipDaTag({ tag, className }: { tag: string; className?: string }) {
+  const { fundo, texto } = coresDaTag(useCorDaEtiqueta(tag), tag);
   return (
     <span
-      className="inline-flex h-[15px] max-w-36 items-center truncate rounded-full px-2 text-[10px] leading-none"
+      className={cn(
+        "inline-flex h-[15px] max-w-36 items-center truncate rounded-full px-2 text-[10px] leading-none",
+        className,
+      )}
       style={{ backgroundColor: fundo, color: texto }}
     >
       {tag}

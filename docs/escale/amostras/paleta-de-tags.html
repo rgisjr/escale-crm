@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paleta de tags — amostra</title>
+<style>
+  body{font:14px system-ui,sans-serif;margin:24px;color:#1f2330}
+  h1{font-size:18px} h2{font-size:15px;margin-top:28px}
+  table{border-collapse:collapse;width:100%;max-width:980px}
+  th,td{padding:8px 10px;border-bottom:1px solid #e3e6ee;text-align:left;vertical-align:middle}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280}
+  .fundo{padding:6px 10px;border-radius:6px;display:inline-block}
+  .chip{display:inline-flex;align-items:center;height:15px;padding:0 8px;border-radius:9999px;font-size:10px;line-height:1;margin:2px}
+  .ok{color:#0a7d33} .ruim{color:#b3261e;font-weight:600}
+  .nota{max-width:980px;color:#444}
+</style>
+</head>
+<body>
+<h1>Paleta de 16 cores das tags — hoje × nova</h1>
+<p class="nota">Chips no tamanho real do <code>ChipDaTag</code> (15px de altura, fonte 10px, raio cheio), sobre branco e sobre o <code>#f7f8fc</code> da raia. "Hoje" existe só para os 8 tons antigos. Contraste = texto sobre fundo (piso 4,5; alvo 5,0).</p>
+<table id="t">
+  <thead><tr><th>Cor</th><th>Chave</th><th>Hoje</th><th>Nova (branco)</th><th>Nova (raia)</th><th>Contraste</th><th>Mais parecida com</th></tr></thead>
+  <tbody></tbody>
+</table>
+<h2>Limite conhecido</h2>
+<p class="nota">A primeira versão (todos no mesmo nível de luz) tinha pares quase iguais, como Vermelho × Laranja-escuro (ΔE 0,009). Nesta versão cada tom tem luz e croma próprios e nenhum par de fundos fica abaixo de ΔE 0,07. Sob daltonismo ainda há tons que se aproximam; o nome da tag continua sendo a informação e a cor é reforço.</p>
+<h2>Etiquetas parecidas</h2>
+<div id="par"></div>
+<script>
+const g=n=>P.find(p=>p[0]===n);
+const P=[
+["Rosa","#e91e63","#fe9cb6","#820f40",null],
+["Vermelho","#f44336","#ffc4c2","#9c2933",["#FFAAA3","#F44336"]],
+["Laranja-escuro","#ff5722","#ffa37f","#7a2a00",null],
+["Laranja","#ff9800","#ffcb8a","#764b00",["#FFD89E","#FF9800"]],
+["Âmbar","#ffc107","#d9ba6c","#584300",["#FFF2D1","#FAA200"]],
+["Verde-claro","#8bc34a","#9ece8c","#205300",null],
+["Verde","#4caf50","#b6f9b0","#167114",null],
+["Verde-água","#009688","#86fcf2","#006e68",["#A9FCF5","#009688"]],
+["Roxo","#9c27b0","#f9b5f6","#7d2d7d",["#F3A8FF","#9C27B0"]],
+["Roxo-escuro","#673ab7","#e9deff","#7148a9",null],
+["Índigo","#3f51b5","#bdc3ff","#43409f",["#B3BEFF","#3F51B5"]],
+["Azul","#2196f3","#77c7ff","#004b73",["#91CEFF","#2196F3"]],
+["Azul-claro","#03a9f4","#a9e2ff","#006082",null],
+["Ciano","#00bcd4","#54dfeb","#00585e",null],
+["Cinza-azulado","#607d8b","#a5c4cf","#004d60",["#D1F0FF","#607D8B"]],
+["Marrom","#795548","#d6b6a8","#7b2d00",null]];
+const lum=h=>{const c=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:((v+.055)/1.055)**2.4);return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+const cr=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+const chip=(n,f,t)=>`<span class="chip" style="background:${f};color:${t}">${n}</span>`;
+const ok=h=>{const c=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);const l=Math.cbrt(.4122214708*c[0]+.5363325363*c[1]+.0514459929*c[2]),m=Math.cbrt(.2119034982*c[0]+.6806995451*c[1]+.1073969566*c[2]),s=Math.cbrt(.0883024619*c[0]+.2817188376*c[1]+.6299787005*c[2]);return[.2104542553*l+.793617785*m-.0040720468*s,1.9779984951*l-2.428592205*m+.4505937099*s,.0259040371*l+.7827717662*m-.808675766*s]};
+const de=(a,b)=>{const x=ok(a),y=ok(b);return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2])};
+const viz=n=>{let best=null;for(const q of P){if(q[0]===n)continue;const d=de(g(n)[2],q[2]);if(!best||d<best[1])best=[q[0],d]}return best[0]+" ("+best[1].toFixed(3).replace(".",",")+")"};
+const tb=document.querySelector("#t tbody");
+for(const [n,k,f,t,old] of P){
+  const c=cr(t,f);
+  tb.insertAdjacentHTML("beforeend",`<tr><td>${n}</td><td><code>${k}</code></td>
+  <td>${old?`<span class="fundo" style="background:#fff">${chip("exemplo",old[0],old[1])}</span> <small>${cr(old[1],old[0]).toFixed(2).replace(".",",")}</small>`:"—"}</td>
+  <td><span class="fundo" style="background:#fff">${chip("exemplo",f,t)}${chip("vip",f,t)}</span></td>
+  <td><span class="fundo" style="background:#f7f8fc">${chip("exemplo",f,t)}${chip("vip",f,t)}</span></td>
+  <td class="${c>=4.5?"ok":"ruim"}">${c.toFixed(2).replace(".",",")}</td><td>${viz(n)}</td></tr>`);
+}
+const par=(a,b)=>`<p>${[a,b].map(n=>chip(n,g(n)[2],g(n)[3])).join(" × ")}</p>`;
+document.getElementById("par").innerHTML=par("Vermelho","Laranja-escuro")+par("Roxo-escuro","Índigo");
+</script>
+</body>
+</html>

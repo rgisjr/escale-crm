@@ -1,4 +1,5 @@
 import { dadosDeFiltro, type ConversaDoFiltro } from "@/lib/escale/filtros/dados-do-quadro";
+import { tomDaTag } from "@/lib/escale/tags/paleta";
 import { MOEDA_PADRAO, simboloDaMoeda } from "@/lib/money";
 import type { Lead } from "@/lib/types/leads";
 
@@ -119,22 +120,10 @@ export function inicialDoNome(nome: string | null | undefined): string {
   return limpo ? limpo[0]!.toUpperCase() : "?";
 }
 
-/** A paleta de chips da Clint (design system §3.4) a partir dos 8 tons das nossas etiquetas (D13). */
-const TAG_DA_CLINT: Readonly<Record<string, { fundo: string; texto: string }>> = {
-  "#ffe629": { fundo: "#FFF2D1", texto: "#FAA200" },
-  "#ffb224": { fundo: "#FFD89E", texto: "#FF9800" },
-  "#cf3716": { fundo: "#FFAAA3", texto: "#F44336" },
-  "#00655a": { fundo: "#A9FCF5", texto: "#009688" },
-  "#0091ff": { fundo: "#91CEFF", texto: "#2196F3" },
-  "#3e63dd": { fundo: "#B3BEFF", texto: "#3F51B5" },
-  "#ab4aba": { fundo: "#F3A8FF", texto: "#9C27B0" },
-  "#6f6f6f": { fundo: "#D1F0FF", texto: "#607D8B" },
-};
-/** O padrão da Clint para cor desconhecida. */
-const TAG_PADRAO = { fundo: "#91CEFF", texto: "#2196F3" } as const;
-
-export function coresDaTag(cor: string | null | undefined): { fundo: string; texto: string } {
-  return (cor ? TAG_DA_CLINT[cor.trim().toLowerCase()] : undefined) ?? { ...TAG_PADRAO };
+/** O par do chip (fundo, texto) do tom da tag: os 16 da Clint, medidos (lib/escale/tags/paleta). */
+export function coresDaTag(cor: string | null | undefined, tag?: string): { fundo: string; texto: string } {
+  const { fundo, texto } = tomDaTag(cor, tag);
+  return { fundo, texto };
 }
 
 /** O nome do card: o do contato; sem ele, o título do negócio (D1). */
