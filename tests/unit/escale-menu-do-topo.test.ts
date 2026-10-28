@@ -146,3 +146,16 @@ describe("a porta do ✦ e o selo vermelho", () => {
     expect(textoDoSelo(10, 9)).toBe("+9");
   });
 });
+
+describe("Indicadores por papel (Fase 7B)", () => {
+  it("viewer não vê Indicadores no topo; atendente vê", () => {
+    expect(montarMenuDoTopo(VIEWER, "viewer").topo.some((i) => i.href === "/app/metrics")).toBe(false);
+    expect(montarMenuDoTopo(AGENT, "agent").topo.some((i) => i.href === "/app/metrics")).toBe(true);
+  });
+
+  it("Desempenho do atendimento aparece no Mais, em Agente de IA › Acompanhar o agente, para atendente", () => {
+    const ia = montarMenuDoTopo(AGENT, "agent").mais.find((g) => g.grupo.id === "ia");
+    const secao = ia?.secoes.find((s) => s.secao === "Acompanhar o agente");
+    expect(secao?.itens.map((d) => d.href)).toContain("/app/ai/desempenho");
+  });
+});

@@ -71,7 +71,11 @@ export function itemAtivo(pathname: string, item: ItemDoTopo): boolean {
  * além da régua do registro. Campanhas exige gerente nas rotas e na RLS, mas o
  * registro não declara `minRole` (o original mostra o item a todos).
  */
-export const PAPEL_MINIMO_NO_TOPO: Readonly<Record<string, Role>> = { "/app/campaigns": "manager" };
+export const PAPEL_MINIMO_NO_TOPO: Readonly<Record<string, Role>> = {
+  "/app/campaigns": "manager",
+  // FORK ESCALE · Fase 7B: Indicadores é de atendente para cima (PRD 7, seção 5).
+  "/app/metrics": "agent",
+};
 
 export function montarMenuDoTopo(todas: readonly NavDestination[], papel?: Role | null): MenuDoTopo {
   // Sem papel (os testes antigos), a lista vale como veio.
