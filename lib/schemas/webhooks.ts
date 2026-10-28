@@ -528,6 +528,10 @@ function exigirConfigDoGatilhoDeData(
   });
 }
 
+/** A recusa do salvar feito de uma versão que outra tela já trocou (409). */
+export const MENSAGEM_DA_VERSAO_VELHA =
+  "Esta automação foi salva por outra tela depois que você a abriu. Feche e abra de novo para ver a versão atual antes de salvar.";
+
 export const updateAutomationRuleSchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
@@ -536,6 +540,12 @@ export const updateAutomationRuleSchema = z
     actions: z.array(actionSchema).min(1).max(10).optional(),
     trigger_config: z.record(z.string(), z.unknown()).optional(),
     is_active: z.boolean().optional(),
+    /**
+     * O `updated_at` da versão que o editor abriu. Com ele, a rota só grava se
+     * ninguém salvou por cima desde então (409 `state_conflict`): salvar de uma
+     * tela velha não apaga mais a versão boa. Não é coluna; a rota o tira do patch.
+     */
+    versao_lida: z.string().min(1).max(64).optional(),
   })
   .superRefine((patch, ctx) => {
     // O PATCH que troca o gatilho PARA o de data, sem mandar a configuração,

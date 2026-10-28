@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { ApiError } from "@/lib/api/types";
 import type {
   CreateAutomationRuleInput,
   UpdateAutomationRuleInput,
@@ -40,6 +41,35 @@ export function useAutomationRules() {
   });
 }
 
+/**
+ * Uma automação lida do banco NA HORA, para abrir no editor. A cópia da lista
+ * pode estar velha (a recarga depois de salvar falhou ou ainda não voltou), e
+ * abrir dela mostrava a versão antiga como se o salvar não tivesse valido; pior,
+ * salvar de novo dali gravava a versão antiga por cima da boa.
+ *
+ * `staleTime: 0` + `gcTime: 0`: nada fica guardado entre uma abertura e outra.
+ */
+export function opcoesDaRegra(id: string) {
+  return {
+    queryKey: ["automation-rule", id] as const,
+    queryFn: async () => apiClient.get<{ data: AutomationRuleRow }>(`/api/v1/automation-rules/${id}`),
+    staleTime: 0,
+    gcTime: 0,
+  };
+}
+
+export function useAutomationRule(id: string | null) {
+  return useQuery({
+    ...opcoesDaRegra(id ?? ""),
+    enabled: !!id,
+    // O editor monta o desenho uma vez; recarregar ao voltar para a aba não muda nada na tela.
+    refetchOnWindowFocus: false,
+    // Automação apagada (404) não volta tentando de novo.
+    retry: (falhas: number, erro: unknown) =>
+      !(erro instanceof ApiError && erro.code === "not_found") && falhas < 2,
+  });
+}
+
 export function useCreateAutomationRule() {
   const qc = useQueryClient();
   return useMutation({
@@ -56,7 +86,14 @@ export function useUpdateAutomationRule() {
     mutationFn: async ({ id, ...input }: UpdateAutomationRuleInput & { id: string }) =>
       apiClient.patch<{ data: AutomationRuleRow }>(`/api/v1/automation-rules/${id}`, input),
     onError: showApiError,
-    onSuccess: () => qc.invalidateQueries({ queryKey: RULES_KEY }),
+    onSuccess: (resposta) => {
+      // A versão gravada entra na lista já, sem depender da recarga: se ela
+      // falhar, a lista não fica mostrando a versão de antes do salvar.
+      qc.setQueryData<{ data: AutomationRuleRow[] }>(RULES_KEY, (velho) =>
+        velho ? { data: velho.data.map((r) => (r.id === resposta.data.id ? resposta.data : r)) } : velho,
+      );
+      return qc.invalidateQueries({ queryKey: RULES_KEY });
+    },
   });
 }
 

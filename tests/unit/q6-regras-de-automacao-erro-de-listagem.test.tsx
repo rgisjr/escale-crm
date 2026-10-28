@@ -13,6 +13,7 @@ const estado = vi.hoisted(() => ({
 
 vi.mock("@/hooks/webhooks/useAutomationRules", () => ({
   useAutomationRules: () => estado.q,
+  opcoesDaRegra: (id: string) => ({ queryKey: ["automation-rule", id], queryFn: async () => ({ data: null }) }),
   useUpdateAutomationRule: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteAutomationRule: () => ({ mutateAsync: vi.fn() }),
 }));

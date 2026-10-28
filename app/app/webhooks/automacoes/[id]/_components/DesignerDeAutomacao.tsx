@@ -6,22 +6,26 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/hooks/i18n/useT";
-import { useAutomationRules } from "@/hooks/webhooks/useAutomationRules";
+import { useAutomationRule } from "@/hooks/webhooks/useAutomationRules";
+import { ApiError } from "@/lib/api/types";
 
 import { CanvasDaAutomacao } from "./CanvasDaAutomacao";
 
 /**
  * O designer de automações (fase 1): abre uma automação gravada — ou uma nova,
- * com `id = "nova"` — no canvas. Lê da MESMA lista que a aba Automações usa
- * (`useAutomationRules`), então não há rota nova na API, e grava pelas mesmas
- * mutações do editor em lista.
+ * com `id = "nova"` — no canvas. A automação é lida do banco a cada abertura
+ * (`useAutomationRule`), nunca da cópia da lista: ela podia estar velha e o
+ * canvas, que monta o desenho uma vez só, mostrava a versão de antes do salvar.
+ * Grava pelas mesmas mutações do editor em lista.
  */
 export function DesignerDeAutomacao({ id }: { id: string }) {
   const t = useT();
   const nova = id === "nova";
-  const { data, isLoading, isFetching, isError } = useAutomationRules();
+  const { data, isPending, isError, error } = useAutomationRule(nova ? null : id);
+  // 404 é "não existe"; qualquer outra falha é leitura que não deu certo.
+  const falhou = isError && !(error instanceof ApiError && error.code === "not_found");
 
-  if (!nova && isLoading) {
+  if (!nova && isPending && !isError) {
     return (
       <div className="flex h-full flex-col gap-3 p-4">
         <Skeleton className="h-12 w-full" />
@@ -30,22 +34,12 @@ export function DesignerDeAutomacao({ id }: { id: string }) {
     );
   }
 
-  const regra = nova ? null : (data?.data.find((r) => r.id === id) ?? null);
-  // A lista pode estar sendo recarregada (logo depois de criar, por exemplo):
-  // "não existe" só depois de a resposta chegar.
-  if (!nova && !regra && isFetching) {
-    return (
-      <div className="flex h-full flex-col gap-3 p-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-full w-full" />
-      </div>
-    );
-  }
+  const regra = nova ? null : (data?.data ?? null);
   if (!nova && !regra) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="max-w-md text-sm text-text-muted">
-          {isError
+          {falhou
             ? t("Não consegui carregar as automações agora. Recarregue a página; se continuar, avise quem cuida da instalação.")
             : t("Esta automação não existe mais, ou não é desta organização.")}
         </p>

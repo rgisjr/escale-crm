@@ -129,6 +129,9 @@ export function CanvasDaAutomacao({ regra }: Props) {
   const [nome, setNome] = useState(regra?.name ?? "");
   const [salvo, setSalvo] = useState(() => retrato(regra?.name ?? "", inicial));
   const [ativo, setAtivo] = useState(regra?.is_active ?? false);
+  // A versão do banco sobre a qual este desenho foi feito: vai em cada salvar, e
+  // a rota recusa se outra tela gravou depois (em vez de apagar o que ela gravou).
+  const [versao, setVersao] = useState(regra?.updated_at ?? null);
   const [noSelecionado, setNoSelecionado] = useState<string | null>(null);
   const [ligacaoSelecionada, setLigacaoSelecionada] = useState<string | null>(null);
   const [problemasGerais, setProblemasGerais] = useState<ProblemaDoDesenho[]>([]);
@@ -292,15 +295,19 @@ export function CanvasDaAutomacao({ regra }: Props) {
     }
     try {
       if (regra) {
-        await atualizar.mutateAsync({ id: regra.id, ...resultado.corpo });
+        const gravada = await atualizar.mutateAsync({
+          id: regra.id,
+          ...resultado.corpo,
+          ...(versao ? { versao_lida: versao } : {}),
+        });
+        setVersao(gravada.data.updated_at);
         setSalvo(retrato(nome, desenho));
         toast.success(t("Automação atualizada."));
       } else {
         const criada = await criar.mutateAsync(resultado.corpo);
         toast.success(t("Automação criada — ligue quando estiver pronta."));
         setSalvo(retrato(nome, desenho));
-        // A regra nova entra na lista antes de trocar de endereço: a tela da
-        // automação gravada abre direto, sem esperar a lista recarregar.
+        // A regra nova entra na lista já; a tela da automação gravada a lê do banco.
         qc.setQueryData<{ data: AutomationRuleRow[] }>(["automation-rules"], (velho) =>
           velho ? { data: [...velho.data.filter((r) => r.id !== criada.data.id), criada.data] } : { data: [criada.data] },
         );
@@ -309,7 +316,7 @@ export function CanvasDaAutomacao({ regra }: Props) {
     } catch {
       /* showApiError já mostrou o toast */
     }
-  }, [nome, desenho, regraGravada, regra, atualizar, criar, router, qc, setNos, t]);
+  }, [nome, desenho, regraGravada, regra, versao, atualizar, criar, router, qc, setNos, t]);
 
   const alternarAtivo = useCallback(
     (ligar: boolean) => {
@@ -318,7 +325,11 @@ export function CanvasDaAutomacao({ regra }: Props) {
       atualizar.mutate(
         { id: regra.id, is_active: ligar },
         {
-          onSuccess: () => toast.success(ligar ? t("Automação ligada.") : t("Automação pausada.")),
+          onSuccess: (gravada) => {
+            // Ligar/pausar também troca a versão: sem isto, o próximo salvar daria conflito consigo mesmo.
+            setVersao(gravada.data.updated_at);
+            toast.success(ligar ? t("Automação ligada.") : t("Automação pausada."));
+          },
           onError: () => setAtivo(!ligar),
         },
       );
