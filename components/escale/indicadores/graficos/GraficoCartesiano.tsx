@@ -22,7 +22,7 @@ import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
 import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
 import type { Pergunta } from "@/lib/escale/indicadores/pergunta";
 
-import { DicaDoGrafico, ESTILO_DO_EIXO, Legenda } from "./PecasDoGrafico";
+import { DicaDoGrafico, ESTILO_DO_EIXO, Legenda, type PayloadDaDica } from "./PecasDoGrafico";
 
 type Props = {
   tipo: Extract<TipoPrincipal, "linha" | "area" | "barra" | "barra_empilhada">;
@@ -64,7 +64,14 @@ export function GraficoCartesiano({ tipo, resultado, pergunta, opcoes, altura }:
       />
       <Tooltip
         cursor={{ fill: "var(--color-casca-raia)" }}
-        content={(p) => <DicaDoGrafico {...p} series={dados.series} />}
+        content={(p) => (
+          <DicaDoGrafico
+            active={p.active}
+            payload={p.payload as unknown as PayloadDaDica[]}
+            label={p.label}
+            series={dados.series}
+          />
+        )}
       />
     </>
   );

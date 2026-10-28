@@ -33,11 +33,14 @@ export function GraficoDePizza({ tipo, resultado, opcoes, altura }: Props) {
               strokeWidth={1}
               labelLine={false}
               isAnimationActive={false}
-              label={({ x, y, value, fill, textAnchor }: RotuloProps) => (
-                <text x={x} y={y} fill={fill} textAnchor={textAnchor} dominantBaseline="central" fontSize={16}>
-                  {formatarValor(value ?? 0, unidade)}
-                </text>
-              )}
+              label={(props: unknown) => {
+                const { x, y, value, fill, textAnchor } = props as RotuloProps;
+                return (
+                  <text x={x} y={y} fill={fill} textAnchor={textAnchor} dominantBaseline="central" fontSize={16}>
+                    {formatarValor(value ?? 0, unidade)}
+                  </text>
+                );
+              }}
             >
               {dados.map((f) => (
                 <Cell key={f.nome} fill={f.cor} />

@@ -22,7 +22,7 @@ export function Legenda({ itens, className }: { itens: ReadonlyArray<{ nome: str
   );
 }
 
-type PayloadDaDica = { value?: number | string | null; name?: string; color?: string; dataKey?: string };
+export type PayloadDaDica = { value?: number | string | null; name?: string; color?: string; dataKey?: string };
 
 /** A dica (`content` do Tooltip do Recharts, que não exige provedor): caixa branca com o valor de cada série. */
 export function DicaDoGrafico({
