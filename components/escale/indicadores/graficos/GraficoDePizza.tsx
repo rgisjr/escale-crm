@@ -2,18 +2,25 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { fatias } from "@/lib/escale/indicadores/graficos/dados";
+import type { Clique } from "@/lib/escale/indicadores/graficos/detalhamento";
 import { formatarValor } from "@/lib/escale/indicadores/graficos/formatos";
 import type { OpcoesDoGrafico } from "@/lib/escale/indicadores/graficos/opcoes";
 import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
 
 import { Legenda } from "./PecasDoGrafico";
 
-type Props = { tipo: "pizza" | "donut"; resultado: Resultado; opcoes: OpcoesDoGrafico; altura: number };
+type Props = {
+  tipo: "pizza" | "donut";
+  resultado: Resultado;
+  opcoes: OpcoesDoGrafico;
+  altura: number;
+  aoClicarNoPonto?: (clique: Clique) => void;
+};
 
 type RotuloProps = { x?: number; y?: number; value?: number; fill?: string; textAnchor?: "start" | "middle" | "end" };
 
 /** Pizza e Donut (prints 10-006, 10-021, 10-047): o valor sempre FORA da fatia, na cor dela. */
-export function GraficoDePizza({ tipo, resultado, opcoes, altura }: Props) {
+export function GraficoDePizza({ tipo, resultado, opcoes, altura, aoClicarNoPonto }: Props) {
   const { fatias: dados, unidade } = fatias(resultado);
   const legendaEmbaixo = tipo === "pizza";
   const alturaDoGrafico = Math.max(altura - (opcoes.visualizacao.legendas && legendaEmbaixo ? 48 : 0), 40);
@@ -33,6 +40,8 @@ export function GraficoDePizza({ tipo, resultado, opcoes, altura }: Props) {
               strokeWidth={1}
               labelLine={false}
               isAnimationActive={false}
+              {...(aoClicarNoPonto ? { cursor: "pointer" } : {})}
+              onClick={(d) => aoClicarNoPonto?.({ rotulo: String((d as { name?: string }).name ?? "") })}
               label={(props: unknown) => {
                 const { x, y, value, fill, textAnchor } = props as RotuloProps;
                 return (

@@ -54,3 +54,16 @@ export function DicaDoGrafico({
     </div>
   );
 }
+
+/** A pílula do valor da meta, na ponta esquerda da linha tracejada (10-040). */
+export function PilulaDaMeta({ x, y, cor, texto }: { x: number; y: number; cor: string; texto: string }) {
+  const largura = Math.max(24, texto.length * 7 + 12);
+  return (
+    <g aria-label={texto}>
+      <rect x={x} y={y - 10} width={largura} height={20} rx={10} fill={cor} />
+      <text x={x + largura / 2} y={y + 4} textAnchor="middle" fontSize={11} fontWeight={600} fill="#fff">
+        {texto}
+      </text>
+    </g>
+  );
+}

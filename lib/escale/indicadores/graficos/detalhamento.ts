@@ -148,7 +148,7 @@ export function colunasDoDetalhamento(
   ];
 }
 
-type Clique = { rotulo?: string; t?: string; serie?: string; dsem?: number; hora?: number };
+export type Clique = { rotulo?: string; t?: string; serie?: string; dsem?: number; hora?: number };
 
 /**
  * O ponto que o clique define (T19): as variáveis que o clique fixa (o rótulo do eixo X sem tempo; o nome da
