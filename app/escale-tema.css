@@ -139,6 +139,8 @@ body:has([data-escale-casca]) {
   --color-casca-borda-msg: #e3ebff;
   --color-casca-busca: #f6f8ff;
   --color-casca-contador: #e8e4f5;
+  --color-casca-data-aplicada: #22b573;
+  --color-casca-data-fixada: #2563eb;
   --color-casca-cinza-selo: #e0e0e0;
   --color-casca-novo: #597eff;
   --color-casca-alerta: #ff4b4c;
@@ -221,6 +223,8 @@ body:has([data-escale-casca]) {
   --color-casca-borda-msg: #30364b;
   --color-casca-busca: #202433;
   --color-casca-contador: #2a2f42;
+  --color-casca-data-aplicada: #4ade80;
+  --color-casca-data-fixada: #60a5fa;
   --color-casca-cinza-selo: #353b52;
   --color-casca-novo: #6f8fff;
   --color-casca-alerta: #ff5f60;
