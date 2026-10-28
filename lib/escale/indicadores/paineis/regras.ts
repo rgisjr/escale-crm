@@ -64,13 +64,22 @@ function mesmoConjunto(a: readonly string[], b: readonly string[]): boolean {
   return b.every((v) => conjunto.has(v));
 }
 
+/** O corpo do PATCH: só os campos que mudaram (nome com trim, listas sem ordem). */
+export function camposMudados(antes: EdicaoDoPainel, depois: EdicaoDoPainel): Partial<EdicaoDoPainel> {
+  return {
+    ...(antes.nome.trim() !== depois.nome.trim() && { nome: depois.nome.trim() }),
+    ...(antes.cor !== depois.cor && { cor: depois.cor }),
+    ...(antes.icone !== depois.icone && { icone: depois.icone }),
+    ...(!mesmoConjunto(antes.permissoesUsuarios, depois.permissoesUsuarios) && {
+      permissoesUsuarios: [...depois.permissoesUsuarios],
+    }),
+    ...(!mesmoConjunto(antes.permissoesPapeis, depois.permissoesPapeis) && {
+      permissoesPapeis: [...depois.permissoesPapeis],
+    }),
+  };
+}
+
 /** Habilita o "Salvar" (B1): nome (com trim), cor, ícone e as duas listas (sem ordem). */
 export function mudouAlgo(antes: EdicaoDoPainel, depois: EdicaoDoPainel): boolean {
-  return (
-    antes.nome.trim() !== depois.nome.trim() ||
-    antes.cor !== depois.cor ||
-    antes.icone !== depois.icone ||
-    !mesmoConjunto(antes.permissoesUsuarios, depois.permissoesUsuarios) ||
-    !mesmoConjunto(antes.permissoesPapeis, depois.permissoesPapeis)
-  );
+  return Object.keys(camposMudados(antes, depois)).length > 0;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  camposMudados,
   continuaVendo,
   filtrarPaineis,
   mudouAlgo,
@@ -76,6 +77,15 @@ describe("regras dos painéis (Fase 7B)", () => {
     expect(mudouAlgo(base, { ...base, cor: "#FF4062" })).toBe(true);
     expect(mudouAlgo(base, { ...base, icone: "nenhum" })).toBe(true);
     expect(mudouAlgo(base, { ...base, permissoesUsuarios: ["a"] })).toBe(true);
+  });
+
+  it("monta o PATCH só com os campos mudados", () => {
+    expect(camposMudados(base, { ...base, nome: " Outro " })).toEqual({ nome: "Outro" });
+    expect(camposMudados(base, { ...base, permissoesPapeis: ["admin"], cor: "#FF4062" })).toEqual({
+      cor: "#FF4062",
+      permissoesPapeis: ["admin"],
+    });
+    expect(camposMudados(base, { ...base, permissoesUsuarios: ["b", "a"] })).toEqual({});
   });
 });
 
