@@ -8,3 +8,12 @@ export const ROTA_DO_DESEMPENHO = "/app/ai/desempenho";
 export function rotaDoPainel(id: string): string {
   return `${ROTA_DA_LISTA_DE_PAINEIS}/${encodeURIComponent(id)}`;
 }
+
+/** "Novo Chart +" do painel (a 7D lê o `painel` da busca). */
+export function rotaDoNovoChart(painelId: string): string {
+  return `${ROTA_DO_EDITOR}?painel=${encodeURIComponent(painelId)}`;
+}
+
+export function rotaDeEditarChart(graficoId: string): string {
+  return `${ROTA_DO_EDITOR}/${encodeURIComponent(graficoId)}`;
+}
