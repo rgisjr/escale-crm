@@ -1,4 +1,4 @@
-import { coluna, dimensao, juntarPerfil, medida, tempo } from "../construtores";
+import { coluna, dimensao, medida, tempo } from "../construtores";
 import type { Assunto } from "../tipos";
 
 const A = "negocio";
@@ -23,7 +23,6 @@ export const NEGOCIO: Assunto = {
       sql: "left join public.crm_pipeline_groups g on g.id = p.group_id and g.organization_id = b.organization_id",
       precisa: ["p"],
     },
-    pr: { sql: juntarPerfil("pr", "b.owner_user_id") },
     c: { sql: "left join public.contacts c on c.id = b.contact_id and c.organization_id = b.organization_id" },
     sp: { sql: "left join public.crm_stages sp on sp.id = b.lost_from_stage_id and sp.organization_id = b.organization_id" },
     tg: { sql: "left join lateral unnest(b.tags) tg(tag) on true" },
@@ -123,7 +122,7 @@ export const NEGOCIO: Assunto = {
     d("etapa", "Etapa", "texto", "b.stage_id", { rotuloSql: "s.name", precisa: ["s"], opcoes: "etapas", uuid: true }),
     d("origem", "Origem", "texto", "b.pipeline_id", { rotuloSql: "p.name", opcoes: "origens", uuid: true, precisa: ["p"] }),
     d("grupo_de_origem", "Grupo de origem", "texto", "p.group_id", { rotuloSql: "g.name", precisa: ["p", "g"], opcoes: "grupos_de_origem", uuid: true }),
-    d("dono", "Dono", "texto", "b.owner_user_id", { rotuloSql: "pr.full_name", precisa: ["pr"], opcoes: "usuarios", uuid: true }),
+    d("dono", "Dono", "texto", "b.owner_user_id", { opcoes: "usuarios", uuid: true }),
     d("status", "Status", "texto", "b.status", { opcoes: "status_do_negocio" }),
     d("motivo_de_perda", "Motivo de perda", "texto", "b.lost_reason", { opcoes: "motivos_de_perda" }),
     d("etapa_da_perda", "Etapa da perda", "texto", "b.lost_from_stage_id", { rotuloSql: "sp.name", precisa: ["sp"], opcoes: "etapas", uuid: true }),
@@ -157,7 +156,7 @@ export const NEGOCIO: Assunto = {
     coluna("id", "ID do negócio", "b.id"),
     coluna("titulo", "Título", "b.title"),
     coluna("contato", "Nome do contato", "c.name", ["c"]),
-    coluna("dono", "Dono", "pr.full_name", ["pr"]),
+    coluna("dono", "Dono", "b.owner_user_id"),
     coluna("origem", "Origem", "p.name", ["p"]),
     coluna("etapa", "Etapa", "s.name", ["s"]),
     coluna("status", "Status", "b.status"),

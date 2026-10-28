@@ -1,4 +1,4 @@
-import { coluna, dimensao, juntarPerfil, medida, tempo } from "../construtores";
+import { coluna, dimensao, medida, tempo } from "../construtores";
 import type { Assunto } from "../tipos";
 
 const A = "mensagem";
@@ -16,7 +16,6 @@ export const MENSAGEM: Assunto = {
     cv: { sql: "left join public.conversations cv on cv.id = b.conversation_id and cv.organization_id = b.organization_id" },
     c: { sql: "left join public.contacts c on c.id = b.contact_id and c.organization_id = b.organization_id" },
     cs: { sql: "left join public.channel_sessions cs on cs.id = b.channel_session_id and cs.organization_id = b.organization_id" },
-    pr: { sql: juntarPerfil("pr", "b.sent_by_user_id") },
     tg: { sql: "left join lateral unnest(c.tags) tg(tag) on true", precisa: ["c"] },
   },
   medidas: [
@@ -60,7 +59,7 @@ export const MENSAGEM: Assunto = {
     d("status", "Status", "texto", "b.status"),
     d("canal", "Canal", "texto", "cv.channel", { precisa: ["cv"], opcoes: "canais" }),
     d("numero", "Número", "texto", "b.channel_session_id", { rotuloSql: "coalesce(cs.display_name, cs.phone_number)", precisa: ["cs"], opcoes: "numeros", uuid: true }),
-    d("atendente", "Atendente", "texto", "b.sent_by_user_id", { rotuloSql: "pr.full_name", precisa: ["pr"], opcoes: "usuarios", uuid: true }),
+    d("atendente", "Atendente", "texto", "b.sent_by_user_id", { opcoes: "usuarios", uuid: true }),
     d("hora_do_dia", "Hora do dia", "numero", "extract(hour from (b.sent_at at time zone $fuso))::int"),
     d("dia_da_semana", "Dia da semana", "numero", "extract(isodow from (b.sent_at at time zone $fuso))::int"),
     d("contato", "Contato", "texto", "b.contact_id", { rotuloSql: "c.name", precisa: ["c"], uuid: true }),
@@ -78,6 +77,6 @@ export const MENSAGEM: Assunto = {
     coluna("tipo", "Tipo", "b.type"),
     coluna("status", "Status", "b.status"),
     coluna("enviada_em", "Enviada em", "b.sent_at"),
-    coluna("atendente", "Atendente", "pr.full_name", ["pr"]),
+    coluna("atendente", "Atendente", "b.sent_by_user_id"),
   ],
 };

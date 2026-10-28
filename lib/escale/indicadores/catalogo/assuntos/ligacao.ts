@@ -1,4 +1,4 @@
-import { coluna, dimensao, juntarPerfil, medida, tempo } from "../construtores";
+import { coluna, dimensao, medida, tempo } from "../construtores";
 import type { Assunto } from "../tipos";
 
 const A = "ligacao";
@@ -15,7 +15,6 @@ export const LIGACAO: Assunto = {
   joins: {
     c: { sql: "left join public.contacts c on c.id = b.contact_id and c.organization_id = b.organization_id" },
     cs: { sql: "left join public.channel_sessions cs on cs.id = b.channel_session_id and cs.organization_id = b.organization_id" },
-    pr: { sql: juntarPerfil("pr", "b.created_by") },
     tg: { sql: "left join lateral unnest(c.tags) tg(tag) on true", precisa: ["c"] },
   },
   medidas: [
@@ -56,7 +55,7 @@ export const LIGACAO: Assunto = {
     d("direcao", "Direção", "texto", "b.direction"),
     d("status", "Status", "texto", "b.status"),
     d("motivo_do_fim", "Motivo do fim", "texto", "b.end_reason"),
-    d("usuario", "Usuário", "texto", "b.created_by", { rotuloSql: "pr.full_name", precisa: ["pr"], opcoes: "usuarios", uuid: true }),
+    d("usuario", "Usuário", "texto", "b.created_by", { opcoes: "usuarios", uuid: true }),
     d("numero", "Número", "texto", "b.channel_session_id", { rotuloSql: "coalesce(cs.display_name, cs.phone_number)", precisa: ["cs"], opcoes: "numeros", uuid: true }),
     d("contato", "Contato", "texto", "b.contact_id", { rotuloSql: "c.name", precisa: ["c"], uuid: true }),
     d("tag_do_contato", "Tag do contato", "texto", "tg.tag", { precisa: ["tg"], multivalorada: true, opcoes: "tags" }),
@@ -77,6 +76,6 @@ export const LIGACAO: Assunto = {
     coluna("status", "Status", "b.status"),
     coluna("inicio", "Início", "b.started_at"),
     coluna("duracao", "Duração (s)", "b.duration_ms / 1000.0"),
-    coluna("usuario", "Usuário", "pr.full_name", ["pr"]),
+    coluna("usuario", "Usuário", "b.created_by"),
   ],
 };

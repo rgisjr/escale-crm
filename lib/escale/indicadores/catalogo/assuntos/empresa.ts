@@ -54,7 +54,7 @@ export const EMPRESA: Assunto = {
   camposPersonalizados: { empresa: { sql: "b.custom_fields" } },
   colunasDoDetalhamento: [
     coluna("razao_social", "Razão social", "b.legal_name"),
-    coluna("nome_fantasia", "Nome fantasia", "b.name"),
+    coluna("nome_fantasia", "Nome fantasia", "b.trade_name"),
     coluna("cnpj", "CNPJ", "b.normalized_cnpj"),
     coluna("cidade", "Cidade", "b.city"),
     coluna("estado", "Estado", "b.state"),

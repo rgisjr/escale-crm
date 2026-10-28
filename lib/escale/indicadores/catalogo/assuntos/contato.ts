@@ -1,4 +1,4 @@
-import { coluna, dimensao, juntarPerfil, medida, tempo } from "../construtores";
+import { coluna, dimensao, medida, tempo } from "../construtores";
 import type { Assunto } from "../tipos";
 
 const A = "contato";
@@ -20,7 +20,6 @@ export const CONTATO: Assunto = {
       sql: "left join lateral (select count(*) as n from public.conversations v where v.contact_id = b.id and v.organization_id = b.organization_id) cn on true",
     },
     tg: { sql: "left join lateral unnest(b.tags) tg(tag) on true" },
-    cr: { sql: juntarPerfil("cr", "b.created_by_user_id") },
   },
   medidas: [
     m("criados", "Contatos criados", "contagem", "count(*)", "Contatos cadastrados no período.", {
@@ -65,7 +64,7 @@ export const CONTATO: Assunto = {
     d("tag", "Tag", "texto", "tg.tag", { precisa: ["tg"], multivalorada: true, opcoes: "tags" }),
     d("tipo", "Tipo", "texto", "b.kind"),
     d("bloqueado", "Bloqueado", "booleano", "b.is_blocked"),
-    d("criado_por", "Criado por", "texto", "b.created_by_user_id", { rotuloSql: "cr.full_name", precisa: ["cr"], opcoes: "usuarios", uuid: true }),
+    d("criado_por", "Criado por", "texto", "b.created_by_user_id", { opcoes: "usuarios", uuid: true }),
     d("tem_negocio", "Tem negócio", "booleano", "(coalesce(ln.n, 0) > 0)", { precisa: ["ln"] }),
   ],
   tempos: [

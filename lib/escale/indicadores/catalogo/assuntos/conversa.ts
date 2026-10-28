@@ -1,4 +1,4 @@
-import { coluna, dimensao, juntarPerfil, medida, tempo } from "../construtores";
+import { coluna, dimensao, medida, tempo } from "../construtores";
 import type { Assunto } from "../tipos";
 
 const A = "conversa";
@@ -17,7 +17,6 @@ export const CONVERSA: Assunto = {
   joins: {
     c: { sql: "left join public.contacts c on c.id = b.contact_id and c.organization_id = b.organization_id" },
     cs: { sql: "left join public.channel_sessions cs on cs.id = b.channel_session_id and cs.organization_id = b.organization_id" },
-    pr: { sql: juntarPerfil("pr", "b.assigned_to_user_id") },
     fr: {
       sql: "left join lateral (select min(m.sent_at) filter (where m.direction = 'inbound') as primeira_entrada, min(m.sent_at) filter (where m.direction = 'outbound' and m.sent_by_user_id is not null) as primeira_resposta_humana, min(m.sent_at) filter (where m.direction = 'outbound') as primeira_resposta from public.messages m where m.conversation_id = b.id and m.organization_id = b.organization_id) fr on true",
     },
@@ -84,7 +83,7 @@ export const CONVERSA: Assunto = {
   ],
   dimensoes: [
     d("canal", "Canal", "texto", "b.channel", { opcoes: "canais" }),
-    d("atendente", "Atendente", "texto", "b.assigned_to_user_id", { rotuloSql: "pr.full_name", precisa: ["pr"], opcoes: "usuarios", uuid: true }),
+    d("atendente", "Atendente", "texto", "b.assigned_to_user_id", { opcoes: "usuarios", uuid: true }),
     d("numero", "Número", "texto", "b.channel_session_id", { rotuloSql: "coalesce(cs.display_name, cs.phone_number)", precisa: ["cs"], opcoes: "numeros", uuid: true }),
     d("status", "Status", "texto", "b.status", { opcoes: "status_da_conversa" }),
     d("situacao", "Situação", "texto", `case when ${ENCERRADA} then 'encerrada' else 'aberta' end`),
@@ -107,7 +106,7 @@ export const CONVERSA: Assunto = {
     coluna("contato", "Contato", "c.name", ["c"]),
     coluna("canal", "Canal", "b.channel"),
     coluna("numero", "Número", "coalesce(cs.display_name, cs.phone_number)", ["cs"]),
-    coluna("atendente", "Atendente", "pr.full_name", ["pr"]),
+    coluna("atendente", "Atendente", "b.assigned_to_user_id"),
     coluna("status", "Status", "b.status"),
     coluna("iniciada_em", "Iniciada em", "b.created_at"),
     coluna("ultima_mensagem", "Última mensagem", "b.last_message_at"),

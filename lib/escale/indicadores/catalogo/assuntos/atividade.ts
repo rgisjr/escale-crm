@@ -1,4 +1,4 @@
-import { coluna, dimensao, juntarPerfil, medida, tempo } from "../construtores";
+import { coluna, dimensao, medida, tempo } from "../construtores";
 import type { Assunto } from "../tipos";
 
 const A = "atividade";
@@ -20,8 +20,6 @@ export const ATIVIDADE: Assunto = {
     l: { sql: "left join public.crm_leads l on l.id = b.lead_id and l.organization_id = b.organization_id" },
     s: { sql: "left join public.crm_stages s on s.id = a.stage_id and s.organization_id = b.organization_id", precisa: ["a"] },
     p: { sql: "left join public.crm_pipelines p on p.id = l.pipeline_id and p.organization_id = b.organization_id", precisa: ["l"] },
-    pr: { sql: juntarPerfil("pr", "b.assigned_to") },
-    cr: { sql: juntarPerfil("cr", "b.created_by") },
   },
   medidas: [
     m("criadas", "Atividades criadas", "contagem", "count(*)", "Atividades criadas no recorte.", {
@@ -75,8 +73,8 @@ export const ATIVIDADE: Assunto = {
   ],
   dimensoes: [
     d("tipo", "Tipo", "texto", "coalesce(a.tipo, 'tarefa')", { precisa: ["a"], opcoes: "tipos_de_atividade" }),
-    d("responsavel", "Responsável", "texto", "b.assigned_to", { rotuloSql: "pr.full_name", precisa: ["pr"], opcoes: "usuarios", uuid: true }),
-    d("criador", "Criador", "texto", "b.created_by", { rotuloSql: "cr.full_name", precisa: ["cr"], opcoes: "usuarios", uuid: true }),
+    d("responsavel", "Responsável", "texto", "b.assigned_to", { opcoes: "usuarios", uuid: true }),
+    d("criador", "Criador", "texto", "b.created_by", { opcoes: "usuarios", uuid: true }),
     d("status", "Status", "texto", "b.status"),
     d("prioridade", "Prioridade", "texto", "b.priority"),
     d("etapa", "Etapa", "texto", "a.stage_id", { rotuloSql: "s.name", precisa: ["a", "s"], opcoes: "etapas", uuid: true }),
@@ -99,7 +97,7 @@ export const ATIVIDADE: Assunto = {
   colunasDoDetalhamento: [
     coluna("titulo", "Título", "b.title"),
     coluna("tipo", "Tipo", "coalesce(a.tipo, 'tarefa')", ["a"]),
-    coluna("responsavel", "Responsável", "pr.full_name", ["pr"]),
+    coluna("responsavel", "Responsável", "b.assigned_to"),
     coluna("status", "Status", "b.status"),
     coluna("vencimento", "Vencimento", "b.due_date"),
     coluna("concluida_em", "Concluída em", "a.concluida_em", ["a"]),

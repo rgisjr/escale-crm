@@ -69,6 +69,3 @@ export function coluna(chave: string, nome: string, sql: string, precisa?: reado
   return { chave, nome, sql, ...(precisa ? { precisa } : {}) };
 }
 
-/** `left join` de perfil de usuário por uma coluna da base. */
-export const juntarPerfil = (alias: string, coluna_: string): string =>
-  `left join public.profiles ${alias} on ${alias}.id = ${coluna_}`;
