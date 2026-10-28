@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { camposDoFiltroSchema, tagsSchema } from "@/lib/escale/contatos/filtros";
+
 import { dimensaoPorId, medidaPorId, tempoPorId } from "./catalogo";
 import type { CampoDinamico } from "./catalogo/campos-personalizados";
 import { lerCampoDinamico } from "./catalogo/campos-personalizados";
@@ -89,22 +91,16 @@ export const filtroSchema = z
   .strict();
 export type Filtro = z.infer<typeof filtroSchema>;
 
-export const tagsDoPainelSchema = z
-  .object({
-    modo: z.enum(["qualquer_tag", "sem_tag", "lista"]),
-    valores: z.array(z.string().max(80)).max(50).default([]),
-    operador: z.enum(["e", "ou"]).default("ou"),
-  })
-  .strict();
-
 export const filtroDoPainelSchema = z
   .object({
     periodo: periodoSchema.optional(),
     usuarios: z.array(z.string().uuid()).max(100).optional(),
     gruposDeOrigem: z.array(z.string().uuid()).max(100).optional(),
     origens: z.array(z.string().uuid()).max(100).optional(),
-    tags: tagsDoPainelSchema.optional(),
-    campos: z.array(condicaoSchema).max(CONDICOES_MAX).optional(),
+    /** Forma da 2B (TagFilterBuilder): grupos de "possui" / "não possui" / "qualquer" / "sem", E/OU. */
+    tags: tagsSchema.optional(),
+    /** Forma da 2B (FieldFilterBuilder): grupos de condições de Contato, Negócio e Empresa. */
+    campos: camposDoFiltroSchema.optional(),
   })
   .strict();
 export type FiltroDoPainel = z.infer<typeof filtroDoPainelSchema>;

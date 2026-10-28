@@ -19,7 +19,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const corpoSchema = z.object({ pergunta: perguntaSchema, filtroDoPainel: filtroDoPainelSchema.optional() }).strict();
+const corpoSchema = z
+  .object({ pergunta: perguntaSchema, filtroDoPainel: filtroDoPainelSchema.optional(), fresco: z.boolean().optional() })
+  .strict();
 
 /**
  * POST /api/v1/indicadores-da-casca/consultar — executa uma pergunta de Indicadores (fork Escale,
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return fail("upstream_unavailable", t("Os indicadores estão indisponíveis neste ambiente."), 503, { requestId });
   }
 
-  const { pergunta, filtroDoPainel } = lido.data;
+  const { pergunta, filtroDoPainel, fresco } = lido.data;
   const orgId = authz.org.orgId;
   try {
     const supabase = await createClient();
@@ -56,8 +58,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
     const chave = chaveDoCache(orgId, authz.user.id, pergunta, filtroDoPainel);
     const resultado = await comVaga(authz.user.id, () =>
-      comCache(chave, TEMPO_DO_CACHE_MS, () =>
-        consultar(getRequestPool(), { orgId, userId: authz.user.id, fuso }, pergunta, filtroDoPainel, { camposDaOrg }),
+      comCache(
+        chave,
+        TEMPO_DO_CACHE_MS,
+        () => consultar(getRequestPool(), { orgId, userId: authz.user.id, fuso }, pergunta, filtroDoPainel, { camposDaOrg }),
+        Date.now,
+        fresco === true,
       ),
     );
     return ok(resultado, { requestId });

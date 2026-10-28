@@ -30,9 +30,11 @@ export async function comCache<T>(
   ttlMs: number,
   fn: () => Promise<T>,
   agora: () => number = Date.now,
+  fresco = false,
 ): Promise<T> {
   const existente = ENTRADAS.get(chave);
-  if (existente && existente.expiraEm > agora()) return existente.valor as Promise<T>;
+  // `fresco` (Atualizar / Recarregar do painel) pula a leitura, mas a resposta nova fica guardada.
+  if (!fresco && existente && existente.expiraEm > agora()) return existente.valor as Promise<T>;
   const valor = fn();
   ENTRADAS.delete(chave);
   ENTRADAS.set(chave, { expiraEm: agora() + ttlMs, valor });

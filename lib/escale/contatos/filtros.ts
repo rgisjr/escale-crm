@@ -176,6 +176,11 @@ export const tagsSchema = z
   .object({ combinar: z.enum(["e", "ou"]), grupos: z.array(grupoDeTagsSchema).max(GRUPOS_MAX) })
   .strict();
 
+/** FORK ESCALE · Fase 7C: exportado para o filtro do painel de Indicadores reaproveitar a forma dos Campos. */
+export const camposDoFiltroSchema = z
+  .object({ combinar: z.enum(["e", "ou"]), grupos: z.array(grupoSchema).max(GRUPOS_MAX) })
+  .strict();
+
 type ComCampos = {
   campos?: { grupos: ReadonlyArray<{ condicoes: ReadonlyArray<{ op: string }> }> };
 };
@@ -191,10 +196,7 @@ export const filtrosDeContatosSchema = z
     telefone: z.enum(OPCOES_DE_TELEFONE).optional(),
     negocio: negocioSchema.optional(),
     tags: tagsSchema.optional(),
-    campos: z
-      .object({ combinar: z.enum(["e", "ou"]), grupos: z.array(grupoSchema).max(GRUPOS_MAX) })
-      .strict()
-      .optional(),
+    campos: camposDoFiltroSchema.optional(),
   })
   .strict()
   .refine((f) => contarContem(f) <= CONTEM_MAX, { message: "contem" });
@@ -204,6 +206,7 @@ export type CondicaoDoFiltro = z.infer<typeof condicaoSchema>;
 export type GrupoDoFiltro = z.infer<typeof grupoSchema>;
 export type NegocioDoFiltro = z.infer<typeof negocioSchema>;
 export type TagsDoFiltro = z.infer<typeof tagsSchema>;
+export type CamposDoFiltro = z.infer<typeof camposDoFiltroSchema>;
 export type CondicaoDeTag = z.infer<typeof condicaoDeTagSchema>;
 export type GrupoDeTags = z.infer<typeof grupoDeTagsSchema>;
 
