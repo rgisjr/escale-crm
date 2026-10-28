@@ -507,3 +507,20 @@ body:has([data-escale-casca]) {
   --escale-zap-balao: #202c33;
   --escale-zap-visto: #53bdeb;
 }
+/* FORK ESCALE · Fase 7C: a grade do painel de Indicadores (react-grid-layout). Só na casca nova. */
+body:has([data-escale-casca]) .react-grid-placeholder {
+  background: var(--color-casca-marca-suave);
+  opacity: 1;
+  border-radius: 6px;
+}
+/* A alça de redimensionar só aparece com o mouse em cima do card (print 10-006), na cor cinza da casca. */
+body:has([data-escale-casca]) .react-grid-item > .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+body:has([data-escale-casca]) .react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}
+body:has([data-escale-casca]) .react-grid-item > .react-resizable-handle::after {
+  border-color: var(--color-casca-suave);
+}
