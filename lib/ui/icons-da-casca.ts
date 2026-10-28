@@ -223,3 +223,7 @@ export {
   Funnel as TipoFunil,
   NumberSquareOne as TipoNumero,
 } from "@phosphor-icons/react/dist/ssr";
+
+// FORK ESCALE · Fase 7E: indicador calculado, heatmap, divisor e os tipos novos do seletor de gráfico.
+export { Calculator, ChartBarBig, ChartLine, Grid3x3, SeparatorHorizontal } from "lucide-react";
+export { ChartBarHorizontal as TipoBarra100, FlowArrow as TipoSankey } from "@phosphor-icons/react/dist/ssr";

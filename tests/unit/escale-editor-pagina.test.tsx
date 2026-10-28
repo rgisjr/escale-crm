@@ -97,7 +97,7 @@ describe("editor montado", () => {
     const user = userEvent.setup();
     render(<EditorDeGrafico modo="novo" grafico={null} painelDeOrigem={PAINEL} papel="manager" />);
     // indicador
-    await user.click(screen.getByRole("button", { name: "Adicionar indicador" }));
+    await user.click(screen.getAllByRole("button", { name: "Adicionar indicador" })[0]!);
     await user.click(screen.getByRole("button", { name: /^Negócio ·/ }));
     await user.click(screen.getByRole("button", { name: /^Quantidade/ }));
     await user.click(screen.getByRole("button", { name: "Adicionar" }));

@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { InterruptorDaCasca } from "@/components/escale/ui/InterruptorDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
@@ -12,7 +12,11 @@ import {
   VISUALIZACAO_POR_TIPO,
   type ChaveDeVisualizacao,
 } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
-import { ArrowDownAZ, ChevronDown, ChevronUp, LayoutList, type LucideIcon } from "@/lib/ui/icons-da-casca";
+import { ArrowDownAZ, LayoutList } from "@/lib/ui/icons-da-casca";
+
+import { Acordeao, TITULO_DO_CAMPO } from "./AcordeaoDaAba";
+import { AcordeaoMetas } from "./AcordeaoMetas";
+import { AcordeaoOpcoesDoGrafico } from "./AcordeaoOpcoesDoGrafico";
 
 type Props = {
   rascunho: RascunhoDoGrafico;
@@ -28,6 +32,8 @@ const ROTULO_DA_VISUALIZACAO: Record<ChaveDeVisualizacao, string> = {
   grade: "Grade",
   linhaDeMedia: "Exibir linha de média",
   linhaDeMediana: "Exibir linha de mediana",
+  projecaoNormal: "Projeção normal",
+  projecaoDiasUteis: "Projeção dias úteis",
 };
 const ROTULO_DO_CALCULO: Record<CalculoDoFunil, string> = {
   automatico: "Automático",
@@ -35,36 +41,18 @@ const ROTULO_DO_CALCULO: Record<CalculoDoFunil, string> = {
   etapa_anterior: "Etapa anterior",
   participacao: "Participação no total",
 };
-const TITULO_DO_CAMPO = "mb-2 text-[13px] text-casca-texto";
-
-function Acordeao({ titulo, Icone, children }: { titulo: string; Icone: LucideIcon; children: ReactNode }) {
-  const [aberto, setAberto] = useState(true);
-  return (
-    <section className="border-b border-casca-divisoria">
-      <button
-        type="button"
-        aria-expanded={aberto}
-        onClick={() => setAberto(!aberto)}
-        className="flex h-12 w-full items-center gap-2 text-left"
-      >
-        <Icone size={16} aria-hidden className="text-casca-suave" />
-        <span className="flex-1 text-[14px] font-bold text-casca-texto">{titulo}</span>
-        {aberto ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
-      </button>
-      {aberto ? <div className="flex flex-col gap-5 py-6">{children}</div> : null}
-    </section>
-  );
-}
-
-/** A aba Opções (10-015, 10-039, 10-041, 10-043, 10-044, 10-047): Visualização por tipo e Ordenação. Metas e projeções são da 7E. */
+/** A aba Opções (10-015, 10-039, 10-040, 10-041, 10-043, 10-044, 10-047): Metas, Visualização por tipo, Opções do gráfico e Ordenação. */
 export function AbaOpcoesDoEditor({ rascunho, catalogo, mudar, etapasDoResultado }: Props) {
   const t = useT();
   const chaves = VISUALIZACAO_POR_TIPO[rascunho.tipo];
-  const sobreOGrafico = [...rascunho.indicadores, ...rascunho.variaveis];
+  const sobreOGrafico = [...rascunho.indicadores, ...rascunho.variaveis, ...rascunho.calculados.map((c) => c.id)];
   const { funil } = rascunho.opcoes;
   const semResultado = etapasDoResultado.length === 0;
 
+  const opcoesDoGrafico = <AcordeaoOpcoesDoGrafico key="opcoes_do_grafico" rascunho={rascunho} mudar={mudar} etapas={etapasDoResultado} />;
   const acordeoes: Record<(typeof ACORDEOES_DAS_OPCOES)[number], ReactNode> = {
+    metas: <AcordeaoMetas key="metas" rascunho={rascunho} catalogo={catalogo} mudar={mudar} />,
+    opcoes_do_grafico: opcoesDoGrafico,
     visualizacao:
       chaves.length === 0 ? null : (
         <Acordeao key="visualizacao" titulo={t("Visualização")} Icone={LayoutList}>
@@ -73,7 +61,20 @@ export function AbaOpcoesDoEditor({ rascunho, catalogo, mudar, etapasDoResultado
               <InterruptorDaCasca
                 aria-label={t(ROTULO_DA_VISUALIZACAO[chave])}
                 ligado={rascunho.opcoes.visualizacao[chave]}
-                aoMudar={(v) => mudar((r) => mudarOpcoes(r, (o) => ({ ...o, visualizacao: { ...o.visualizacao, [chave]: v } })))}
+                aoMudar={(v) =>
+                  mudar((r) =>
+                    mudarOpcoes(r, (o) => ({
+                      ...o,
+                      visualizacao: {
+                        ...o.visualizacao,
+                        [chave]: v,
+                        // "Projeção normal" e "dias úteis" são excludentes: ligar uma desliga a outra.
+                        ...(v && chave === "projecaoNormal" ? { projecaoDiasUteis: false } : {}),
+                        ...(v && chave === "projecaoDiasUteis" ? { projecaoNormal: false } : {}),
+                      },
+                    })),
+                  )
+                }
               />
               {t(ROTULO_DA_VISUALIZACAO[chave])}
             </label>
@@ -89,7 +90,10 @@ export function AbaOpcoesDoEditor({ rascunho, catalogo, mudar, etapasDoResultado
             className="h-8"
             vazio={t("Selecione um campo")}
             valor={rascunho.ordem.por ?? ""}
-            opcoes={sobreOGrafico.map((id) => ({ valor: id, rotulo: catalogo ? nomeDoChip(id, catalogo) : id }))}
+            opcoes={sobreOGrafico.map((id) => ({
+              valor: id,
+              rotulo: rascunho.calculados.find((c) => c.id === id)?.nome ?? (catalogo ? nomeDoChip(id, catalogo) : id),
+            }))}
             aoMudar={(v) => mudar((r) => mudarOrdem(r, { por: v || null }))}
           />
         </div>

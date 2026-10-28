@@ -65,6 +65,6 @@ export const HISTORICO: Assunto = {
     coluna("de", "De", "so.name", ["so"]),
     coluna("para", "Para", "sd.name", ["sd"]),
     coluna("usuario", "Usuário", "b.performed_by_user_id"),
-    coluna("quando", "Quando", "b.performed_at"),
+    coluna("quando", "Quando", "b.performed_at", undefined, { formato: "data", tipo: "data" }),
   ],
 };

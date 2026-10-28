@@ -76,7 +76,7 @@ export const MENSAGEM: Assunto = {
     coluna("direcao", "Direção", "b.direction"),
     coluna("tipo", "Tipo", "b.type"),
     coluna("status", "Status", "b.status"),
-    coluna("enviada_em", "Enviada em", "b.sent_at"),
+    coluna("enviada_em", "Enviada em", "b.sent_at", undefined, { formato: "data", tipo: "data" }),
     coluna("atendente", "Atendente", "b.sent_by_user_id"),
   ],
 };

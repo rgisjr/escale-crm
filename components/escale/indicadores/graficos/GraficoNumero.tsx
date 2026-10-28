@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { useT } from "@/hooks/i18n/useT";
 import { numeros } from "@/lib/escale/indicadores/graficos/dados";
+import type { Clique } from "@/lib/escale/indicadores/graficos/detalhamento";
 import { formatarValor } from "@/lib/escale/indicadores/graficos/formatos";
 import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
 import { Triangle } from "@/lib/ui/icons-da-casca";
@@ -11,7 +12,13 @@ import { Triangle } from "@/lib/ui/icons-da-casca";
  * Número (prints 10-006, 10-035): o valor centralizado. Com 2 indicadores, o carrossel vertical da
  * Clint mostra um por vez, com ▲ ▼ no trilho à direita (comportamento inferido da captura: provisório).
  */
-export function GraficoNumero({ resultado }: { resultado: Resultado }) {
+export function GraficoNumero({
+  resultado,
+  aoClicarNoPonto,
+}: {
+  resultado: Resultado;
+  aoClicarNoPonto?: (clique: Clique) => void;
+}) {
   const t = useT();
   const itens = numeros(resultado);
   const [atual, setAtual] = useState(0);
@@ -20,7 +27,10 @@ export function GraficoNumero({ resultado }: { resultado: Resultado }) {
   const seta = "grid size-4 place-items-center text-casca-suave hover:text-casca-texto disabled:opacity-40";
   return (
     <div className="relative flex h-full items-center justify-center">
-      <p className="text-[20px] font-medium text-casca-texto">
+      <p
+        className={`text-[20px] font-medium text-casca-texto ${aoClicarNoPonto ? "cursor-pointer" : ""}`}
+        {...(aoClicarNoPonto ? { onClick: () => aoClicarNoPonto({}), role: "button" } : {})}
+      >
         {formatarValor(item.valor, item.unidade)}
         <span className="sr-only"> {item.nome}</span>
       </p>

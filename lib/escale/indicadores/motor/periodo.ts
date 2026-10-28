@@ -26,6 +26,29 @@ const ultimoDoMes = (dia: string): string => {
   return comoTexto(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
 };
 
+/** Fase 7E: o dia de hoje no fuso (AAAA-MM-DD). */
+export const hojeNoFuso = diaNoFuso;
+
+const diasEntre = (de: string, ate: string): number => Math.round((emUtc(ate).getTime() - emUtc(de).getTime()) / DIA_EM_MS) + 1;
+/** Mesmo dia `meses` depois, recortado ao último dia do mês de destino (31/10 − 1 mês = 30/09). */
+function deslocarMeses(dia: string, meses: number): string {
+  const d = emUtc(dia);
+  const alvo = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + meses, 1));
+  const ultimo = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+  alvo.setUTCDate(Math.min(d.getUTCDate(), ultimo));
+  return comoTexto(alvo);
+}
+
+/** Fase 7E (T3): o período de referência da comparação. */
+export function periodoAnterior(p: IntervaloDeDias, modo: "equivalente" | "mes_anterior" | "ano_anterior"): IntervaloDeDias {
+  if (modo === "equivalente") {
+    const n = diasEntre(p.de, p.ate);
+    return { de: somar(p.de, -n), ate: somar(p.de, -1) };
+  }
+  const meses = modo === "mes_anterior" ? -1 : -12;
+  return { de: deslocarMeses(p.de, meses), ate: deslocarMeses(p.ate, meses) };
+}
+
 /** `null` significa "tudo": sem limite de data. */
 export function resolverPeriodo(p: Periodo, agora: Date, fuso: string): IntervaloDeDias | null {
   const hoje = diaNoFuso(agora, fuso);

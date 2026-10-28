@@ -127,6 +127,8 @@ describe("período e preferências", () => {
   it("limites e visualização por tipo", () => {
     expect([limiteDoTipo("pizza"), limiteDoTipo("numero"), limiteDoTipo("barra")]).toEqual([1, 2, 5]);
     expect(VISUALIZACAO_POR_TIPO.donut).toEqual(["valores", "legendas"]);
-    expect(VISUALIZACAO_POR_TIPO.tabela).toEqual([]);
+    expect(VISUALIZACAO_POR_TIPO.tabela).toEqual(["projecaoNormal", "projecaoDiasUteis"]);
+    expect(VISUALIZACAO_POR_TIPO.ranking).toEqual([]);
+    expect(limiteDoTipo("ranking")).toBe(1);
   });
 });

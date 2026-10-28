@@ -18,23 +18,23 @@ function Montar({ tipo = "linha", etapas = [] as Array<{ valor: string; rotulo: 
 }
 
 describe("aba Opções", () => {
-  it("Linha: Visualização com os cinco interruptores e Ordenação; sem Metas nem projeções", () => {
+  it("Linha: Visualização com os cinco interruptores e Ordenação; com Metas e projeções", () => {
     render(<Montar />);
     expect(screen.getByText("Visualização")).toBeInTheDocument();
-    for (const nome of ["Valores", "Legendas", "Grade", "Exibir linha de média", "Exibir linha de mediana"]) {
+    for (const nome of ["Valores", "Legendas", "Grade", "Exibir linha de média", "Exibir linha de mediana", "Projeção normal", "Projeção dias úteis"]) {
       expect(screen.getByRole("switch", { name: nome })).toBeInTheDocument();
     }
     expect(screen.getByText("Ordenação")).toBeInTheDocument();
-    expect(screen.queryByText("Metas")).toBeNull();
-    expect(screen.queryByText(/Projeção/)).toBeNull();
+    expect(screen.getByText("Metas")).toBeInTheDocument();
   });
 
-  it("Donut só tem Valores e Legendas; Tabela não tem Visualização", () => {
+  it("Donut só tem Valores e Legendas (e o interruptor de Metas); Tabela só tem as projeções", () => {
     const { unmount } = render(<Montar tipo="donut" />);
-    expect(screen.getAllByRole("switch").map((s) => s.getAttribute("aria-label"))).toEqual(["Valores", "Legendas"]);
+    expect(screen.getAllByRole("switch").map((s) => s.getAttribute("aria-label"))).toEqual(["Metas", "Valores", "Legendas"]);
     unmount();
     render(<Montar tipo="tabela" />);
-    expect(screen.queryByText("Visualização")).toBeNull();
+    expect(screen.getByRole("switch", { name: "Projeção normal" })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Valores" })).toBeNull();
   });
 
   it("desligar Grade muda a opção", async () => {

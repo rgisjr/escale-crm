@@ -9,8 +9,8 @@
 import { randomId } from "@/lib/random-id";
 
 import { opcoesComPadrao } from "../graficos/opcoes";
-import { ehTipoPrincipal } from "../graficos/tipos";
-import { perguntaSchema, type Condicao, type Pergunta } from "../pergunta";
+import { ehTipoDeGrafico } from "../graficos/tipos";
+import { perguntaSchema, type Condicao, type Pergunta, type PerguntaDoDivisor } from "../pergunta";
 import { tipoDoCampo, type CatalogoDaTela } from "./catalogo-da-tela";
 import { precisaDeValor, textoDoNumeroBr } from "./operadores";
 import {
@@ -23,8 +23,14 @@ import {
 import { periodoPadrao } from "./periodo-do-editor";
 import { limiteDoTipo, TIPO_PADRAO } from "./tipos-de-grafico";
 
-export type ErroDoRascunho = { secao: "indicador" | "filtro"; condicao?: string };
+export type ErroDoRascunho = { secao: "indicador" | "filtro" | "filtro_quantitativo"; condicao?: string };
 export type ResultadoDaPergunta = { ok: true; pergunta: Pergunta } | { ok: false; erros: readonly ErroDoRascunho[] };
+export type ResultadoComDivisor = ResultadoDaPergunta | { ok: true; divisor: true; pergunta: PerguntaDoDivisor };
+
+/** T15: o Divisor não tem pergunta (`{ divisor: true }`); os outros tipos passam por `perguntaDoRascunho`. */
+export function perguntaOuDivisor(r: RascunhoDoGrafico, cat: CatalogoDaTela): ResultadoComDivisor {
+  return r.tipo === "divisor" ? { ok: true, divisor: true, pergunta: { divisor: true } } : perguntaDoRascunho(r, cat);
+}
 
 const vazio = (v: ValorDaCondicao | undefined): boolean =>
   v === undefined || v === "" || (Array.isArray(v) && v.length === 0) || (typeof v === "number" && Number.isNaN(v));
@@ -59,8 +65,12 @@ function condicoesDaCaixa(
 }
 
 export function perguntaDoRascunho(r: RascunhoDoGrafico, cat: CatalogoDaTela): ResultadoDaPergunta {
+  if (r.tipo === "divisor") return { ok: false, erros: [] };
   const erros: ErroDoRascunho[] = [];
   if (r.indicadores.length === 0) erros.push({ secao: "indicador" });
+  for (const f of r.filtroQuantitativo) {
+    if (!f.indicador || f.valor === null || Number.isNaN(f.valor)) erros.push({ secao: "filtro_quantitativo", condicao: f.chave });
+  }
 
   const caixas = r.filtro
     .map((c) => ({ modo: c.modo, condicoes: condicoesDaCaixa(c, cat, erros) }))
@@ -79,18 +89,26 @@ export function perguntaDoRascunho(r: RascunhoDoGrafico, cat: CatalogoDaTela): R
   const periodo =
     r.tempo.periodo.atalho === "personalizado" && !(r.tempo.periodo.de && r.tempo.periodo.ate) ? periodoPadrao() : r.tempo.periodo;
   const indicadores = r.indicadores.slice(0, limiteDoTipo(r.tipo));
-  const ordemValida = r.ordem.por && [...indicadores, ...r.variaveis].includes(r.ordem.por);
+  const ordemValida = r.ordem.por && [...indicadores, ...r.variaveis, ...r.calculados.map((c) => c.id)].includes(r.ordem.por);
+  const comTempoDefinido = Boolean(r.tempo.campo) && r.tempo.periodo.atalho !== "tudo";
+  const heatmap = r.tipo === "heatmap";
 
   return {
     ok: true,
     pergunta: perguntaSchema.parse({
       indicadores,
-      variaveis: r.variaveis,
+      variaveis: heatmap ? [] : r.variaveis,
+      calculados: r.calculados,
+      filtroQuantitativo: r.filtroQuantitativo.flatMap((f) =>
+        f.indicador && f.valor !== null ? [{ indicador: f.indicador, op: f.op, valor: f.valor }] : [],
+      ),
+      ...(r.comparar && comTempoDefinido && !heatmap ? { comparacao: { modo: r.comparacao ?? "equivalente" } } : {}),
+      ...(heatmap ? { matrizDeTempo: true } : {}),
       ...(r.tempo.campo
         ? {
             tempo: {
               campo: r.tempo.campo,
-              ...(r.tempo.granularidade ? { granularidade: r.tempo.granularidade } : {}),
+              ...(r.tempo.granularidade && !heatmap ? { granularidade: r.tempo.granularidade } : {}),
               periodo,
               fixo: r.tempo.fixo,
             },
@@ -111,7 +129,8 @@ const comChave = (c: Condicao): CondicaoDoRascunho => ({
 
 /** Reabre um gráfico salvo. Pergunta inválida (a 7A pode passar a recusar) → rascunho novo com o tipo gravado. */
 export function rascunhoDoGrafico(g: { tipo: string; pergunta: unknown; opcoes: unknown }): RascunhoDoGrafico {
-  const tipo = ehTipoPrincipal(g.tipo) ? g.tipo : TIPO_PADRAO;
+  const tipo = ehTipoDeGrafico(g.tipo) ? g.tipo : TIPO_PADRAO;
+  if (tipo === "divisor") return { ...rascunhoNovo("divisor"), opcoes: opcoesComPadrao(g.opcoes) };
   const lida = perguntaSchema.safeParse(g.pergunta);
   if (!lida.success) return { ...rascunhoNovo(tipo), opcoes: opcoesComPadrao(g.opcoes) };
   const p = lida.data;
@@ -135,5 +154,9 @@ export function rascunhoDoGrafico(g: { tipo: string; pergunta: unknown; opcoes: 
     filtro: caixas,
     ordem: { por: p.ordem && p.ordem.por !== "tempo" ? p.ordem.por : null, direcao: p.ordem?.direcao ?? "asc" },
     opcoes: opcoesComPadrao(g.opcoes),
+    calculados: p.calculados,
+    filtroQuantitativo: p.filtroQuantitativo.map((f) => ({ chave: randomId(), indicador: f.indicador, op: f.op, valor: f.valor })),
+    comparar: Boolean(p.comparacao),
+    comparacao: p.comparacao?.modo ?? null,
   };
 }

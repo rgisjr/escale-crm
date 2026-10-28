@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/hooks/escale/useResultadoDoGrafico", () => ({ useResultadoDoGrafico: mocks.consulta }));
+vi.mock("@/hooks/escale/useCatalogoDeIndicadores", () => ({ useCatalogoDeIndicadores: () => ({ data: undefined }) }));
 vi.mock("@/hooks/escale/useApareceuNaTela", () => ({
   useApareceuNaTela: () => ({ ref: () => {}, apareceu: mocks.apareceu.valor }),
 }));

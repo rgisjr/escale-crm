@@ -36,12 +36,37 @@ export const corDaSerie = (i: number): string => CORES_DAS_SERIES[i % CORES_DAS_
 
 const VERDE_DO_FUNIL = "#16A34A";
 
-/** R15 (provisório): degradê da marca até verde; a última etapa é sempre verde. */
-export function coresDoFunil(n: number): string[] {
-  if (n <= 1) return [VERDE_DO_FUNIL];
-  return Array.from({ length: n }, (_, i) =>
-    i === n - 1
+/** Fase 7E (T11): o verde da meta (GOAL da Clint), um por meta em rodízio. */
+export const CORES_DA_META = ["#22C55E", "#16A34A", "#15803D", "#14532D"] as const;
+export const corDaMeta = (i: number): string => CORES_DA_META[i % CORES_DA_META.length] ?? "#22C55E";
+
+/** Fase 7E (T12, provisório): a paleta "uma cor por etapa", lida de 10-044 no olho. */
+export const PALETA_POR_ETAPA = ["#5B4FE9", "#6D28D9", "#7C3AED", "#2563EB", "#0E7490", "#0D9488", "#059669", "#16A34A"] as const;
+
+/** T12: `iguais` = marca em todas; `degrade` = o da 7C (marca → verde); `por_etapa` = a paleta em rodízio; a última pode ficar verde. */
+export function coresDoFunil(n: number, modo: "iguais" | "degrade" | "por_etapa" = "degrade", ultimaEmVerde = false): string[] {
+  if (n <= 0) return [];
+  const base = Array.from({ length: n }, (_, i): string => {
+    if (modo === "iguais") return "var(--color-casca-marca)";
+    if (modo === "por_etapa") return PALETA_POR_ETAPA[i % PALETA_POR_ETAPA.length] ?? "#5B4FE9";
+    if (n === 1) return VERDE_DO_FUNIL;
+    return i === n - 1
       ? VERDE_DO_FUNIL
-      : `color-mix(in oklab, var(--color-casca-marca) ${Math.round(100 - (i * 100) / (n - 1))}%, ${VERDE_DO_FUNIL})`,
-  );
+      : `color-mix(in oklab, var(--color-casca-marca) ${Math.round(100 - (i * 100) / (n - 1))}%, ${VERDE_DO_FUNIL})`;
+  });
+  return ultimaEmVerde ? [...base.slice(0, -1), VERDE_DO_FUNIL] : base;
+}
+
+const CORES_DO_AVATAR = ["#F5B8C8", "#B8D4F5", "#C3E8C5", "#F5E1A8", "#D4C3F0", "#F5CBA7", "#A8E0E0", "#E0C3D9"] as const;
+/** Fase 7E (provisório): uma de 8 cores pastel estável pelo nome. */
+export function corDoAvatar(nome: string): string {
+  let h = 0;
+  for (const c of nome) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return CORES_DO_AVATAR[h % CORES_DO_AVATAR.length] ?? "#B8D4F5";
+}
+
+/** Fase 7E (T18): `casca-raia` no nível 0 e a marca em 25/50/75/100% nos níveis 1–4. */
+export function escalaDoHeatmap(nivel: 0 | 1 | 2 | 3 | 4): string {
+  if (nivel === 0) return "var(--color-casca-raia)";
+  return `color-mix(in oklab, var(--color-casca-marca) ${nivel * 25}%, white)`;
 }

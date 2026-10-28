@@ -22,7 +22,7 @@ const tres = () => {
 };
 
 describe("faixa do editor", () => {
-  it("tipo Linha por padrão; a lista tem os 10 tipos na ordem, Linha marcada", async () => {
+  it("tipo Linha por padrão; a lista tem os 16 tipos na ordem, Linha marcada", async () => {
     const user = userEvent.setup();
     render(<Montar />);
     expect(screen.getByRole("combobox", { name: "Tipo" })).toHaveTextContent("Linha");
@@ -30,6 +30,7 @@ describe("faixa do editor", () => {
     const opcoes = screen.getAllByRole("option");
     expect(opcoes.map((o) => o.textContent)).toEqual([
       "Linha", "Área", "Barra", "Barra Empilhada", "Pizza", "Donut", "Funil", "Tabela", "Número", "Painel de KPI",
+      "Ranking de distribuição", "Barra 100% empilhada", "Número avançado", "Heatmap dia × hora", "Sankey de fluxo", "Divisor",
     ]);
     expect(opcoes[0]).toHaveAttribute("aria-selected", "true");
     await user.click(within(opcoes[2]!).getByRole("button"));

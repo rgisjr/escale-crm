@@ -9,7 +9,7 @@ import { camposDaOrganizacao, objetosCitados } from "@/lib/escale/indicadores/ca
 import { novoGraficoSchema, TAMANHO_DO_NOVO } from "@/lib/escale/indicadores/editor/schema";
 import { criarGrafico, ErroDoGrafico, lerLayoutsDoPainel } from "@/lib/escale/indicadores/graficos/banco";
 import { posicaoNoFim } from "@/lib/escale/indicadores/graficos/regras-do-card";
-import { GRAFICOS_POR_PAINEL_MAX } from "@/lib/escale/indicadores/graficos/tipos";
+import { GRAFICOS_POR_PAINEL_MAX, TAMANHO_DO_DIVISOR } from "@/lib/escale/indicadores/graficos/tipos";
 import { lerPainel } from "@/lib/escale/indicadores/paineis/banco";
 import { validarPergunta } from "@/lib/escale/indicadores/pergunta";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -40,9 +40,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     const supabase = await createClient();
     const camposDaOrg = await camposDaOrganizacao(supabase, orgId, objetosCitados(novo.pergunta));
-    const validada = validarPergunta(novo.pergunta, camposDaOrg);
-    if (!validada.ok) {
-      return fail("validation_failed", t("Pergunta inválida."), 422, { requestId, details: { erro: validada.erro } });
+    // O Divisor (T15) não tem pergunta para validar.
+    if (!("divisor" in novo.pergunta)) {
+      const validada = validarPergunta(novo.pergunta, camposDaOrg);
+      if (!validada.ok) {
+        return fail("validation_failed", t("Pergunta inválida."), 422, { requestId, details: { erro: validada.erro } });
+      }
     }
     if (!(await lerPainel(supabase, orgId, novo.painelId, false))) {
       return fail("not_found", t("Dashboard não encontrado."), 404, { requestId });
@@ -53,7 +56,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       orgId,
       authz.user.id,
       novo,
-      posicaoNoFim(layouts, TAMANHO_DO_NOVO.w, TAMANHO_DO_NOVO.h),
+      posicaoNoFim(layouts, novo.tipo === "divisor" ? TAMANHO_DO_DIVISOR.w : TAMANHO_DO_NOVO.w, novo.tipo === "divisor" ? TAMANHO_DO_DIVISOR.h : TAMANHO_DO_NOVO.h),
     );
     void audit({
       action: "dashboard.chart_created",

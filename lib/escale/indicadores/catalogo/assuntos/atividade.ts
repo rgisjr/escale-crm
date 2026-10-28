@@ -99,7 +99,7 @@ export const ATIVIDADE: Assunto = {
     coluna("tipo", "Tipo", "coalesce(a.tipo, 'tarefa')", ["a"]),
     coluna("responsavel", "Responsável", "b.assigned_to"),
     coluna("status", "Status", "b.status"),
-    coluna("vencimento", "Vencimento", "b.due_date"),
+    coluna("vencimento", "Vencimento", "b.due_date", undefined, { formato: "data", tipo: "data" }),
     coluna("concluida_em", "Concluída em", "a.concluida_em", ["a"]),
     coluna("negocio", "Negócio", "l.title", ["l"]),
   ],

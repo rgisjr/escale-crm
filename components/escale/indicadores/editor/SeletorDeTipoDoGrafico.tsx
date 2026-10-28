@@ -5,29 +5,34 @@ import { CONTEUDO_DO_MENU, SOMBRA_DO_MENU } from "@/components/escale/menu/estil
 import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/hooks/i18n/useT";
-import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
+import type { TipoDeGrafico } from "@/lib/escale/indicadores/graficos/tipos";
 import { ROTULO_DO_TIPO_DO_GRAFICO, TIPO_PADRAO, TIPOS_DO_EDITOR } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
 import {
   ChartArea,
   ChartColumnStacked,
+  ChartBarBig,
   Check,
   ChevronDown,
   ChevronUp,
+  Grid3x3,
+  SeparatorHorizontal,
   Table,
   TipoBarra,
+  TipoBarra100,
   TipoDonut,
   TipoFunil,
   TipoLinha,
   TipoNumero,
   TipoPainelDeKpi,
   TipoPizza,
+  TipoSankey,
   X,
 } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 type Icone = ComponentType<{ size?: number; weight?: "fill"; "aria-hidden"?: boolean; className?: string }>;
 /** Sólidos como os react-icons da Clint: Phosphor `fill` e Lucide com `fill-current`. */
-const ICONES: Record<TipoPrincipal, Icone> = {
+const ICONES: Record<TipoDeGrafico, Icone> = {
   linha: TipoLinha,
   area: ChartArea,
   barra: TipoBarra,
@@ -38,15 +43,21 @@ const ICONES: Record<TipoPrincipal, Icone> = {
   tabela: Table,
   numero: TipoNumero,
   painel_de_kpi: TipoPainelDeKpi,
+  ranking: ChartBarBig,
+  barra_100: TipoBarra100,
+  numero_avancado: TipoNumero,
+  heatmap: Grid3x3,
+  sankey: TipoSankey,
+  divisor: SeparatorHorizontal,
 };
 
-function IconeDoTipo({ tipo, className }: { tipo: TipoPrincipal; className?: string }) {
+function IconeDoTipo({ tipo, className }: { tipo: TipoDeGrafico; className?: string }) {
   const Desenho = ICONES[tipo];
   return <Desenho size={14} weight="fill" aria-hidden className={cn("fill-current", className)} />;
 }
 
 /** O seletor "Tipo de gráfico" (10-013): gatilho de 160 px com × e seta; lista com ícone sólido e o ativo na cor da marca. */
-export function SeletorDeTipoDoGrafico({ tipo, aoEscolher }: { tipo: TipoPrincipal; aoEscolher: (t: TipoPrincipal) => void }) {
+export function SeletorDeTipoDoGrafico({ tipo, aoEscolher }: { tipo: TipoDeGrafico; aoEscolher: (t: TipoDeGrafico) => void }) {
   const t = useT();
   const [aberto, setAberto] = useState(false);
   return (

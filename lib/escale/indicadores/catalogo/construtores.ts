@@ -15,6 +15,31 @@ interface ExtraDaMedida {
   precisa?: readonly string[];
 }
 
+const MARCA_DO_FILTRO = "filter (where ";
+/** Durações que listam registros mesmo sendo médias de intervalo (T8). */
+const DURACOES_COM_DETALHE: ReadonlySet<string> = new Set(["negocio.ciclo_de_venda", "negocio.tempo_ate_perda"]);
+
+/** O predicado do único `filter (where …)` do SQL (parênteses balanceados), ou `null`. */
+export function predicadoDoFiltro(sql: string): string | null {
+  const inicio = sql.indexOf(MARCA_DO_FILTRO);
+  if (inicio < 0 || sql.indexOf(MARCA_DO_FILTRO, inicio + 1) >= 0) return null;
+  const comeco = inicio + MARCA_DO_FILTRO.length;
+  let fundo = 1;
+  for (let i = comeco; i < sql.length; i++) {
+    if (sql[i] === "(") fundo++;
+    else if (sql[i] === ")" && --fundo === 0) return sql.slice(comeco, i);
+  }
+  return null;
+}
+
+/** Fase 7E (T8): taxas e médias de intervalo não têm detalhamento; o resto lista as linhas que a medida conta. */
+function detalheDaMedida(id: string, unidade: Unidade, sql: string): Pick<Medida, "detalheSql" | "semDetalhe"> {
+  const intervalo = unidade === "duracao" && /extract\(epoch/.test(sql) && !DURACOES_COM_DETALHE.has(id);
+  if (unidade === "percentual" || intervalo) return { semDetalhe: true };
+  const predicado = predicadoDoFiltro(sql);
+  return predicado ? { detalheSql: predicado } : {};
+}
+
 /** Medida: o id recebe o prefixo do assunto; apelidos e perguntas têm padrão derivado do nome. */
 export function medida(
   assunto: string,
@@ -39,6 +64,7 @@ export function medida(
     ...(extra.antesDeUsar ? { antesDeUsar: extra.antesDeUsar } : {}),
     ...(dinheiro ? { moeda: true } : {}),
     ...(extra.precisa ? { precisa: extra.precisa } : {}),
+    ...detalheDaMedida(`${assunto}.${chave}`, unidade, sql),
   };
 }
 
@@ -65,7 +91,13 @@ export function tempo(
   return { id: `${assunto}.${chave}`, nome, sql, ...extra };
 }
 
-export function coluna(chave: string, nome: string, sql: string, precisa?: readonly string[]): ColunaDoDetalhamento {
-  return { chave, nome, sql, ...(precisa ? { precisa } : {}) };
+export function coluna(
+  chave: string,
+  nome: string,
+  sql: string,
+  precisa?: readonly string[],
+  extra: Pick<ColunaDoDetalhamento, "formato" | "tipo"> = {},
+): ColunaDoDetalhamento {
+  return { chave, nome, sql, ...(precisa ? { precisa } : {}), ...extra };
 }
 

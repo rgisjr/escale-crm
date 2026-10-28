@@ -12,14 +12,14 @@ import { useAcoesDosPaineis, usePaineis } from "@/hooks/escale/usePaineisDaCasca
 import { useSalvarGrafico } from "@/hooks/escale/useSalvarGrafico";
 import { useT } from "@/hooks/i18n/useT";
 import type { ApiError } from "@/lib/api/types";
-import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
+import type { TipoDeGrafico } from "@/lib/escale/indicadores/graficos/tipos";
 import type { OpcoesDoGrafico } from "@/lib/escale/indicadores/graficos/opcoes";
-import type { Pergunta } from "@/lib/escale/indicadores/pergunta";
+import type { Pergunta, PerguntaDoDivisor } from "@/lib/escale/indicadores/pergunta";
 import { rotaDoPainel } from "@/lib/escale/indicadores/rotas";
 import { CirclePlus } from "@/lib/ui/icons-da-casca";
 
 export type GraficoSendoEditado = { id: string; painelId: string; nome: string; descricao: string | null };
-export type ConteudoDoGrafico = { tipo: TipoPrincipal; pergunta: Pergunta; opcoes: OpcoesDoGrafico };
+export type ConteudoDoGrafico = { tipo: TipoDeGrafico; pergunta: Pergunta | PerguntaDoDivisor; opcoes: OpcoesDoGrafico };
 
 type Props = {
   modo: "novo" | "editar";

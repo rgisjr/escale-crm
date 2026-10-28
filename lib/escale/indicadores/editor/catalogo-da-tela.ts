@@ -4,7 +4,7 @@
  * nunca chega aqui.
  */
 import type { CampoDinamico } from "../catalogo/campos-personalizados";
-import type { Categoria, FonteDeOpcoes, ObjetoDeCampoDoCatalogo, TipoDeDimensao, Unidade } from "../catalogo/tipos";
+import type { Categoria, FonteDeOpcoes, FormatoDaColuna, ObjetoDeCampoDoCatalogo, TipoDeDimensao, Unidade } from "../catalogo/tipos";
 import { limiteDoTipo } from "./tipos-de-grafico";
 import type { RascunhoDoGrafico } from "./rascunho";
 
@@ -16,6 +16,8 @@ export type MedidaDaTela = {
   apelidos: readonly string[];
   perguntas: readonly string[];
   antesDeUsar: string | null;
+  /** Fase 7E: a medida lista registros no detalhamento. */
+  temDetalhe?: boolean;
 };
 export type VariavelDaTela = {
   id: string;
@@ -36,7 +38,7 @@ export type AssuntoDaTela = {
   variaveis: readonly VariavelDaTela[];
   tempos: readonly TempoDaTela[];
   camposPersonalizados: readonly ObjetoDeCampoDoCatalogo[];
-  colunasDoDetalhamento: ReadonlyArray<{ chave: string; nome: string }>;
+  colunasDoDetalhamento: ReadonlyArray<{ chave: string; nome: string; formato?: FormatoDaColuna | null }>;
 };
 export type CatalogoDaTela = {
   assuntos: readonly AssuntoDaTela[];

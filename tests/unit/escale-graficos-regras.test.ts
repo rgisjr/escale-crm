@@ -74,11 +74,18 @@ describe("cores e opções", () => {
     expect(f[7]).toBe("#16A34A");
   });
   it("padrão das opções", () => {
-    expect(opcoesComPadrao(undefined)).toEqual({
-      visualizacao: { valores: false, legendas: true, grade: true, linhaDeMedia: false, linhaDeMediana: false },
-      tabela: { totais: false },
-      funil: { primeiraEtapa: null, calculo: "automatico" },
+    const o = opcoesComPadrao(undefined);
+    expect(o.visualizacao).toEqual({
+      valores: false,
+      legendas: true,
+      grade: true,
+      linhaDeMedia: false,
+      linhaDeMediana: false,
+      projecaoNormal: false,
+      projecaoDiasUteis: false,
     });
+    expect(o.tabela).toEqual({ totais: false });
+    expect(o.funil).toMatchObject({ primeiraEtapa: null, calculo: "automatico", cores: "por_etapa" });
     expect(opcoesComPadrao({ visualizacao: { valores: true }, funil: { x: 1 } }).visualizacao.valores).toBe(true);
     expect(opcoesComPadrao("lixo").visualizacao.legendas).toBe(true);
   });

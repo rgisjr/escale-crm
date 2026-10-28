@@ -45,6 +45,10 @@ export interface Medida extends Textos {
   moeda?: boolean;
   /** Aliases de join necessários. */
   precisa?: readonly string[];
+  /** Fase 7E (T8): predicado de LINHA que define "esta linha conta na medida" (o do `filter (where …)`). Ausente = toda linha conta. */
+  detalheSql?: string;
+  /** Fase 7E (T8): taxas, percentuais e médias de intervalo não têm detalhamento. */
+  semDetalhe?: true;
 }
 export interface Dimensao {
   id: string;
@@ -75,11 +79,23 @@ export interface CampoDeTempo {
   /** Fase 7D (S6): texto do detalhe no catálogo (vazio até a 7G). */
   descricao?: string;
 }
+export type FormatoDaColuna =
+  | "valor"
+  | "data"
+  | "duracao"
+  | "numero"
+  | "status_do_negocio"
+  | "status_da_conversa"
+  | "status_da_campanha";
 export interface ColunaDoDetalhamento {
   chave: string;
   nome: string;
   sql: string;
   precisa?: readonly string[];
+  /** Como a tela e o CSV formatam: ausente = texto. */
+  formato?: FormatoDaColuna;
+  /** Tipo para ordenar (`nulls last` em todos). */
+  tipo?: "texto" | "numero" | "data";
 }
 export interface JoinDoAssunto {
   sql: string;
@@ -112,3 +128,10 @@ export const CONDICOES_MAX = 20;
 export const LINHAS_MAX = 5000;
 export const TEMPO_MAXIMO_MS = 8000;
 export const DIAS_MAX_POR_HORA = 31;
+
+/** Fase 7E: tetos do indicador calculado, do filtro quantitativo e do detalhamento. */
+export const CALCULADOS_MAX = 3;
+export const FILTROS_QUANTITATIVOS_MAX = 5;
+export const LINHAS_DO_DETALHAMENTO_MAX = 10_000;
+export const LINHAS_DO_CSV_DO_DETALHAMENTO_MAX = 20_000;
+export const CELULAS_DA_MATRIZ = 168;

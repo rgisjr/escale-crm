@@ -2,7 +2,7 @@
 import type { Resultado } from "../motor/executar";
 import type { Pergunta } from "../pergunta";
 import { semDados } from "./dados";
-import { GRAFICOS_POR_PAINEL_MAX, type LayoutDoGrafico, type TipoPrincipal } from "./tipos";
+import { GRAFICOS_POR_PAINEL_MAX, type LayoutDoGrafico, type TipoDeGrafico } from "./tipos";
 
 /** Material seção 6: h × 40 + (h − 1) × 12 − 37. */
 export const alturaUtil = (h: number): number => h * 40 + (h - 1) * 12 - 37;
@@ -20,14 +20,14 @@ export function estadoDaData(p: Pergunta | null): EstadoDaData {
 export const podeAdicionar = (quantos: number): boolean => quantos < GRAFICOS_POR_PAINEL_MAX;
 
 export type EstadoDoResultado = "invisivel" | "carregando" | "erro" | "moedas" | "vazio" | "pronto";
-const NUNCA_VAZIOS: readonly TipoPrincipal[] = ["numero", "painel_de_kpi"];
+const NUNCA_VAZIOS: readonly TipoDeGrafico[] = ["numero", "painel_de_kpi", "numero_avancado", "divisor"];
 
 export function estadoDoResultado(a: {
   apareceu: boolean;
   carregando: boolean;
   erro: unknown;
   resultado?: Resultado | undefined;
-  tipo: TipoPrincipal;
+  tipo: TipoDeGrafico;
 }): EstadoDoResultado {
   if (!a.apareceu) return "invisivel";
   if (a.erro) return "erro";

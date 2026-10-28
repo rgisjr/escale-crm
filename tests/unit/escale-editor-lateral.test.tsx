@@ -41,13 +41,12 @@ function Montar({ inicial = rascunhoNovo(), erros = [] as ErroDoRascunho[] }: { 
 beforeEach(() => window.localStorage.clear());
 
 describe("lateral do editor", () => {
-  it("abas Filtros e Opções; seções na ordem; sem Filtro Quantitativo nem Indicador calculado", () => {
+  it("abas Filtros e Opções; seções na ordem, com o Filtro Quantitativo; Indicador calculado só com indicador", () => {
     render(<Montar />);
     expect(screen.getByRole("tab", { name: "Filtros" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Opções" })).toBeInTheDocument();
     const titulos = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent?.replace("?", ""));
-    expect(titulos).toEqual(["Indicador", "Variável", "Tempo", "Filtro"]);
-    expect(screen.queryByText(/Filtro Quantitativo/)).toBeNull();
+    expect(titulos).toEqual(["Indicador", "Variável", "Tempo", "Filtro", "Filtro Quantitativo"]);
     expect(screen.queryByText(/Indicador calculado/)).toBeNull();
   });
 
@@ -55,7 +54,7 @@ describe("lateral do editor", () => {
     const user = userEvent.setup();
     render(<Montar />);
     const ajudas = screen.getAllByRole("img", { name: "Ajuda" });
-    expect(ajudas).toHaveLength(3);
+    expect(ajudas).toHaveLength(4);
     await user.hover(ajudas[0]!);
     expect(screen.getByRole("tooltip")).toHaveTextContent("Selecione os indicadores que você quer analisar no seu dashboard.");
   });

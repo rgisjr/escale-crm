@@ -59,6 +59,6 @@ export const EMPRESA: Assunto = {
     coluna("cidade", "Cidade", "b.city"),
     coluna("estado", "Estado", "b.state"),
     coluna("porte", "Porte", "b.company_size"),
-    coluna("criada_em", "Criada em", "b.created_at"),
+    coluna("criada_em", "Criada em", "b.created_at", undefined, { formato: "data", tipo: "data" }),
   ],
 };
