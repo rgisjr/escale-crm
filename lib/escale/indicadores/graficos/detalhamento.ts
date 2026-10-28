@@ -154,12 +154,12 @@ export type Clique = { rotulo?: string; t?: string; serie?: string; dsem?: numbe
  * O ponto que o clique define (T19): as variáveis que o clique fixa (o rótulo do eixo X sem tempo; o nome da
  * série com tempo ou além da 1ª variável), o bucket de tempo ou a célula do heatmap. Sem clique, o total.
  */
-export function pontoDoClique(r: Resultado, pergunta: Pergunta, clique: Clique = {}): Ponto {
-  if (clique.dsem !== undefined && clique.hora !== undefined) return { variaveis: [], diaDaSemana: clique.dsem, hora: clique.hora };
+function candidatasDoClique(r: Resultado, pergunta: Pergunta, clique: Clique) {
   const comTempo = r.colunas.some((c) => c.papel === "tempo");
   const nVariaveis = pergunta.variaveis.length;
   const primeiraDeSerie = comTempo ? 0 : 1;
-  const candidatas = r.linhas.filter((l) => {
+  return r.linhas.filter((l) => {
+    if (clique.dsem !== undefined && (Number(l.dsem) !== clique.dsem || Number(l.hora) !== clique.hora)) return false;
     if (clique.t && String(l.t) !== clique.t) return false;
     if (!comTempo && clique.rotulo !== undefined && rotuloDaVariavel(l, 0) !== clique.rotulo) return false;
     if (clique.serie !== undefined && nVariaveis > primeiraDeSerie) {
@@ -168,7 +168,19 @@ export function pontoDoClique(r: Resultado, pergunta: Pergunta, clique: Clique =
     }
     return true;
   });
-  const linha = candidatas[0];
+}
+
+/** O valor do indicador no ponto clicado (a soma das linhas que o clique alcança); sem clique, o total. */
+export function valorDoClique(r: Resultado, pergunta: Pergunta, clique: Clique, chaveDoIndicador: string): number {
+  return candidatasDoClique(r, pergunta, clique).reduce((n, l) => n + (Number(l[chaveDoIndicador]) || 0), 0);
+}
+
+export function pontoDoClique(r: Resultado, pergunta: Pergunta, clique: Clique = {}): Ponto {
+  if (clique.dsem !== undefined && clique.hora !== undefined) return { variaveis: [], diaDaSemana: clique.dsem, hora: clique.hora };
+  const comTempo = r.colunas.some((c) => c.papel === "tempo");
+  const nVariaveis = pergunta.variaveis.length;
+  const primeiraDeSerie = comTempo ? 0 : 1;
+  const linha = candidatasDoClique(r, pergunta, clique)[0];
   const fixas: number[] = [];
   if (!comTempo && nVariaveis > 0 && clique.rotulo !== undefined) fixas.push(0);
   if (clique.serie !== undefined) for (let i = primeiraDeSerie; i < nVariaveis; i++) fixas.push(i);

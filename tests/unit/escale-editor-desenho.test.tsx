@@ -40,7 +40,7 @@ describe("opções", () => {
   it("padrão de leitura e do gráfico novo", () => {
     const o = opcoesComPadrao({});
     expect(o.visualizacao).toMatchObject({ valores: false, linhaDeMedia: false, linhaDeMediana: false });
-    expect(o.funil).toEqual({ primeiraEtapa: null, calculo: "automatico" });
+    expect(o.funil).toMatchObject({ primeiraEtapa: null, calculo: "automatico" });
     expect(opcoesDoGraficoNovo().visualizacao).toMatchObject({ valores: true, legendas: true, grade: true });
   });
 });

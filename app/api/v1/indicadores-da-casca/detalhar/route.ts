@@ -57,7 +57,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         detalhar(getRequestPool(), { orgId, userId: authz.user.id, fuso }, pedido, { camposDaOrg }),
       ),
     );
-    return ok({ ...pagina, pagina: pedido.pagina, porPagina: pedido.porPagina }, { requestId });
+    return ok({ ...pagina, pagina: pedido.pagina, porPagina: pedido.porPagina, fuso }, { requestId });
   } catch (err) {
     if (err instanceof ErroDoMotor) {
       if (err.codigo === "consulta_demorou") {
