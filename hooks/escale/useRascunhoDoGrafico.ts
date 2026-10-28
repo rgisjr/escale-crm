@@ -39,6 +39,13 @@ export function useRascunhoDoGrafico(inicial: RascunhoDoGrafico, catalogo: Catal
     return true;
   }, [rascunho, cat]);
 
+  /** Só confere o rascunho e marca os erros das seções (o "Adicionar ao dashboard" sem consultar). */
+  const validar = useCallback((): boolean => {
+    const res = perguntaDoRascunho(rascunho, cat);
+    setErros(res.ok ? [] : res.erros);
+    return res.ok;
+  }, [rascunho, cat]);
+
   /** Mudou algo que muda a consulta desde o último Executar (opções visuais e tipo redesenham sem consultar). */
   const pendente = useMemo(() => {
     if (!foto) return false;
@@ -46,5 +53,5 @@ export function useRascunhoDoGrafico(inicial: RascunhoDoGrafico, catalogo: Catal
     return !agora.ok || JSON.stringify(agora.pergunta) !== JSON.stringify(foto);
   }, [foto, rascunho, cat]);
 
-  return { rascunho, mudar, erros, foto, rodada: Math.max(rodada, 0), executar, pendente };
+  return { rascunho, mudar, erros, foto, rodada: Math.max(rodada, 0), executar, validar, pendente };
 }
