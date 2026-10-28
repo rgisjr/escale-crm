@@ -46,8 +46,8 @@ export const HISTORICO: Assunto = {
     }),
   ],
   dimensoes: [
-    d("etapa_de_origem", "Etapa de origem", "texto", "b.payload ->> 'from_stage_id'", { rotuloSql: "so.name", precisa: ["so"], opcoes: "etapas", uuid: true }),
-    d("etapa_de_destino", "Etapa de destino", "texto", "b.payload ->> 'to_stage_id'", { rotuloSql: "sd.name", precisa: ["sd"], opcoes: "etapas", uuid: true }),
+    d("etapa_de_origem", "Etapa de origem", "texto", "b.payload ->> 'from_stage_id'", { rotuloSql: "so.name", precisa: ["so"], opcoes: "etapas", uuid: true, ordemNatural: "so.position" }),
+    d("etapa_de_destino", "Etapa de destino", "texto", "b.payload ->> 'to_stage_id'", { rotuloSql: "sd.name", precisa: ["sd"], opcoes: "etapas", uuid: true, ordemNatural: "sd.position" }),
     d("usuario", "Usuário", "texto", "b.performed_by_user_id", { opcoes: "usuarios", uuid: true }),
     d("origem", "Origem", "texto", "l.pipeline_id", { rotuloSql: "p.name", precisa: ["l", "p"], opcoes: "origens", uuid: true }),
     d("negocio", "Negócio", "texto", "b.lead_id", { rotuloSql: "l.title", precisa: ["l"], uuid: true }),

@@ -306,3 +306,41 @@ describe("o filtro do painel no banco (fase 7C)", () => {
     expect(contar({ periodo: MES }, soDoTeste)).toBe(3);
   });
 });
+
+describe("a etapa na ordem do quadro (fase 7D)", () => {
+  const PIPELINE = "cccccccc-5555-4000-8000-000000000001";
+  const ETAPAS = [
+    ["cccccccc-7d00-4000-8000-000000000003", "ind7d terceira", 3],
+    ["cccccccc-7d00-4000-8000-000000000001", "ind7d primeira", 1],
+    ["cccccccc-7d00-4000-8000-000000000002", "ind7d segunda", 2],
+  ] as const;
+  const QUANTIDADES = [3, 1, 5];
+
+  beforeAll(() => {
+    sql(`
+      delete from public.crm_leads where title like 'ind7d %';
+      delete from public.crm_stages where name like 'ind7d %';
+      ${ETAPAS.map(
+        ([id, nome, posicao]) =>
+          `insert into public.crm_stages (id, organization_id, pipeline_id, name, slug, position) values ('${id}', '${GOV_ORG}', '${PIPELINE}', '${nome}', 'ind7d-${posicao}', ${posicao});`,
+      ).join("\n")}
+      ${ETAPAS.map(([id], i) =>
+        Array.from(
+          { length: QUANTIDADES[i] ?? 0 },
+          () =>
+            `insert into public.crm_leads (organization_id, pipeline_id, stage_id, title, status, created_at) values ('${GOV_ORG}', '${PIPELINE}', '${id}', 'ind7d lead', 'open', now());`,
+        ).join("\n"),
+      ).join("\n")}
+    `);
+  });
+
+  it("sem ordem pedida, a pergunta por etapa devolve as etapas na ordem 1, 2, 3", () => {
+    const linhas = rodarPergunta(GOV_MANAGER, {
+      indicadores: ["negocio.quantidade"],
+      variaveis: ["negocio.etapa"],
+      filtro: { condicoes: [{ campo: "negocio.titulo", op: "contem", valor: "ind7d" }] },
+    });
+    const nomes = linhas.map((l) => l.split("|")[1]);
+    expect(nomes).toEqual(["ind7d primeira", "ind7d segunda", "ind7d terceira"]);
+  });
+});

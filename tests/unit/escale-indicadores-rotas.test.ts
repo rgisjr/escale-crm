@@ -112,4 +112,14 @@ describe("GET catalogo", () => {
     expect(json.data.camposPersonalizados.negocio).toHaveLength(1);
     expect(r.headers.get("Cache-Control")).toBe("private, max-age=60");
   });
+
+  it("avisa que a etapa tem ordem natural sem entregar o fragmento", async () => {
+    const json = await (await GET()).json();
+    const negocio = json.data.assuntos.find((a: { id: string }) => a.id === "negocio");
+    const etapa = negocio.variaveis.find((v: { id: string }) => v.id === "negocio.etapa");
+    expect(etapa.ordemNatural).toBe(true);
+    expect(negocio.variaveis.find((v: { id: string }) => v.id === "negocio.origem").ordemNatural).toBe(false);
+    expect(JSON.stringify(json)).not.toContain("position");
+    expect(etapa).toHaveProperty("descricao", null);
+  });
 });

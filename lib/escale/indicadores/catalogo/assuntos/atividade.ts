@@ -77,7 +77,7 @@ export const ATIVIDADE: Assunto = {
     d("criador", "Criador", "texto", "b.created_by", { opcoes: "usuarios", uuid: true }),
     d("status", "Status", "texto", "b.status"),
     d("prioridade", "Prioridade", "texto", "b.priority"),
-    d("etapa", "Etapa", "texto", "a.stage_id", { rotuloSql: "s.name", precisa: ["a", "s"], opcoes: "etapas", uuid: true }),
+    d("etapa", "Etapa", "texto", "a.stage_id", { rotuloSql: "s.name", precisa: ["a", "s"], opcoes: "etapas", uuid: true, ordemNatural: "s.position" }),
     d("origem", "Origem", "texto", "l.pipeline_id", { rotuloSql: "p.name", precisa: ["l", "p"], opcoes: "origens", uuid: true }),
     d("concluida", "Concluída", "booleano", CONCLUIDA, { precisa: ["a"] }),
     d("negocio", "Negócio", "texto", "b.lead_id", { rotuloSql: "l.title", precisa: ["l"], uuid: true }),
