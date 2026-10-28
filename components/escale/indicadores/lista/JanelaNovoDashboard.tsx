@@ -13,8 +13,7 @@ import { rotaDoPainel } from "@/lib/escale/indicadores/rotas";
 import { Search } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
-const CATEGORIAS = ["Todos os modelos", "Meus templates"] as const;
-type Categoria = (typeof CATEGORIAS)[number];
+type Categoria = "todos" | "meus";
 
 /**
  * O MODAL "NOVO DASHBOARD" (10-005): categorias à esquerda, "Selecione um modelo"
@@ -25,8 +24,12 @@ export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoF
   const t = useT();
   const router = useRouter();
   const { criar } = useAcoesDosPaineis();
-  const [categoria, setCategoria] = useState<Categoria>("Todos os modelos");
+  const [categoria, setCategoria] = useState<Categoria>("todos");
   const [busca, setBusca] = useState("");
+  const categorias: { valor: Categoria; rotulo: string }[] = [
+    { valor: "todos", rotulo: t("Todos os modelos") },
+    { valor: "meus", rotulo: t("Meus templates") },
+  ];
 
   function criarEmBranco() {
     criar.mutate(undefined, {
@@ -46,7 +49,7 @@ export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoF
       <div className="flex h-[540px] min-h-0">
         <nav aria-label={t("Selecione um modelo")} className="w-40 shrink-0 border-r border-casca-divisoria p-4">
           <ul className="grid gap-1">
-            {CATEGORIAS.map((c) => (
+            {categorias.map(({ valor: c, rotulo }) => (
               <li key={c}>
                 <button
                   type="button"
@@ -59,7 +62,7 @@ export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoF
                       : "border-transparent text-casca-texto hover:bg-casca-raia",
                   )}
                 >
-                  {t(c)}
+                  {rotulo}
                 </button>
               </li>
             ))}

@@ -704,6 +704,15 @@ export const NAV_CATALOG = [
     section: "Acompanhar o agente",
     minRole: "manager",
   },
+  // FORK ESCALE · Fase 7B: a página Desempenho mudou para cá (PRD 7, decisão 8).
+  {
+    href: "/app/ai/desempenho",
+    label: "Desempenho do atendimento",
+    description: "Atrito, canais, perdas e previsão por atendente nos últimos 30 dias.",
+    icon: "ChartBar",
+    group: "ia",
+    section: "Acompanhar o agente",
+  },
 
   // ---- Canais — por onde as mensagens entram e saem ----
   {

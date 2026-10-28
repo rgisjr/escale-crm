@@ -1,36 +1,36 @@
 import type { Metadata } from "next";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { traduzir } from "@/lib/i18n/dicionario";
-import { ROLE_RANK } from "@/lib/auth/types";
+// ── FORK ESCALE · Fase 7B: com a casca, a lista de painéis da Clint ──
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { MetricsClient } from "./_components/MetricsClient";
+import { IndicadoresDaCasca } from "@/components/escale/indicadores/lista/IndicadoresDaCasca";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { roleAtLeast } from "@/lib/auth/types";
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
+// ── fim FORK ESCALE ──
+
+import { PaginaDeDesempenho } from "./_components/PaginaDeDesempenho";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Desempenho" };
+
+const FUSO_PADRAO = "America/Sao_Paulo";
+
+async function comCasca(): Promise<boolean> {
+  return lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo";
+}
+
+/** FORK ESCALE · Fase 7B: o título da aba é "Indicadores" com a casca; sem ela, o de sempre. */
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await comCasca()) ? "Indicadores" : "Desempenho" };
+}
 
 export default async function MetricsPage() {
-  const user = await requireAuth();
-  const activeOrg = await resolveActiveOrg(user);
-  // spec 13 §6.1: agent vê as próprias (RLS); a comparação por atendente é manager+.
-  const canCompare = !!activeOrg && ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
-  // `t` local em vez do hook: esta página é componente de SERVIDOR, e lá o
-  // idioma vem resolvido em `user.idioma` (a cadeia pessoa → organização →
-  // padrão vive em `lib/auth/server.ts`), sem reler o `locale` cru.
-  const idioma = user.idioma;
-  const t = (texto: string) => traduzir(texto, idioma);
-
-  return (
-    <div className="flex h-full flex-col gap-6 p-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("Desempenho")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {canCompare
-            ? t("Atrito, funil e performance por atendente nos últimos 30 dias.")
-            : t("Atrito, seu funil e sua performance nos últimos 30 dias.")}
-        </p>
-      </header>
-
-      <MetricsClient canCompare={canCompare} currentUserId={user.id} />
-    </div>
-  );
+  // ── FORK ESCALE · Fase 7B: sem a casca, a página Desempenho segue igual ──
+  if (await comCasca()) {
+    const org = await resolveActiveOrg(await requireAuth());
+    if (!org || !roleAtLeast(org.role, "agent")) redirect("/app/inbox");
+    return <IndicadoresDaCasca papel={org.role} fuso={org.timezone ?? FUSO_PADRAO} />;
+  }
+  // ── fim FORK ESCALE ──
+  return <PaginaDeDesempenho titulo="Desempenho" />;
 }
