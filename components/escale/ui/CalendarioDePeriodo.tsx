@@ -54,6 +54,8 @@ export type CalendarioDePeriodoProps = {
   semAbas?: boolean;
   /** FORK ESCALE · Fase 3D: só as abas de `tiposDisponiveis` (c76 tem três ícones, não quatro). */
   soDisponiveis?: boolean;
+  /** FORK ESCALE · Fase 7D (10-055): o editor de gráfico mostra um mês só, com as duas setas. */
+  umMes?: boolean;
 };
 
 const TIPOS_DE_DATA: readonly TipoDeData[] = ["criacao", "ganho", "perda", "agendado"];
@@ -117,6 +119,8 @@ type GradeDoMesProps = {
   diasDaSemana: readonly string[];
   navegacao: ReactNode;
   ladoDaNavegacao: "esquerda" | "direita";
+  /** Um mês só: a seta do outro lado. */
+  navegacaoOposta?: ReactNode;
   aoEscolher: (iso: string) => void;
   aoTeclar: (e: KeyboardEvent<HTMLDivElement>) => void;
 };
@@ -130,6 +134,7 @@ function GradeDoMes({
   diasDaSemana,
   navegacao,
   ladoDaNavegacao,
+  navegacaoOposta,
   aoEscolher,
   aoTeclar,
 }: GradeDoMesProps) {
@@ -138,11 +143,11 @@ function GradeDoMes({
   return (
     <div role="group" aria-labelledby={idDoTitulo} className="w-[260px]">
       <div className="mb-4 flex h-7 items-center justify-between">
-        {ladoDaNavegacao === "esquerda" ? navegacao : vazio}
+        {ladoDaNavegacao === "esquerda" ? navegacao : (navegacaoOposta ?? vazio)}
         <p id={idDoTitulo} className="text-sm font-medium text-casca-texto">
           {titulo}
         </p>
-        {ladoDaNavegacao === "direita" ? navegacao : vazio}
+        {ladoDaNavegacao === "direita" ? navegacao : (navegacaoOposta ?? vazio)}
       </div>
       <div aria-hidden className="mb-3 grid grid-cols-7 gap-x-1.5">
         {diasDaSemana.map((dia) => (
@@ -185,7 +190,7 @@ function GradeDoMes({
   );
 }
 
-export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIPOS_DE_DATA], semAbas = false, soDisponiveis = false }: CalendarioDePeriodoProps) {
+export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIPOS_DE_DATA], semAbas = false, soDisponiveis = false, umMes = false }: CalendarioDePeriodoProps) {
   const t = useT();
   // FORK ESCALE · Fase 3D: com `soDisponiveis`, só as abas que valem aparecem.
   const abas = soDisponiveis ? TIPOS_DE_DATA.filter((x) => tiposDisponiveis.includes(x)) : TIPOS_DE_DATA;
@@ -196,7 +201,7 @@ export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIP
   const [foco, setFoco] = useState<string | null>(null);
   const segundo = mesVizinho(primeiro.ano, primeiro.mes0, 1);
 
-  const visiveis = [...diasDoMes(primeiro.ano, primeiro.mes0), ...diasDoMes(segundo.ano, segundo.mes0)]
+  const visiveis = [...diasDoMes(primeiro.ano, primeiro.mes0), ...(umMes ? [] : diasDoMes(segundo.ano, segundo.mes0))]
     .filter((d) => d.doMes)
     .map((d) => d.iso);
   const focado = [foco, valor.de].find((iso): iso is string => !!iso && visiveis.includes(iso)) ?? visiveis[0];
@@ -271,7 +276,7 @@ export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIP
   );
 
   return (
-    <div data-calendario-de-periodo="" className="flex w-[742px] max-w-full text-casca-texto">
+    <div data-calendario-de-periodo="" className={cn("flex max-w-full text-casca-texto", umMes ? "w-[480px]" : "w-[742px]")}>
       <div className="flex w-[184px] shrink-0 flex-col border-r border-casca-borda">
         {semAbas ? null : (
           <div
@@ -339,9 +344,11 @@ export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIP
           diasDaSemana={diasDaSemana}
           navegacao={seta(-1)}
           ladoDaNavegacao="esquerda"
+          navegacaoOposta={umMes ? seta(1) : undefined}
           aoEscolher={escolherDia}
           aoTeclar={teclaNosDias}
         />
+        {umMes ? null : (
         <GradeDoMes
           mes={segundo}
           titulo={titulo(segundo)}
@@ -354,6 +361,7 @@ export function CalendarioDePeriodo({ valor, aoMudar, tiposDisponiveis = [...TIP
           aoEscolher={escolherDia}
           aoTeclar={teclaNosDias}
         />
+        )}
       </div>
       <p role="status" className="sr-only">
         {resumo}

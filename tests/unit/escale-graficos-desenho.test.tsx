@@ -86,8 +86,9 @@ describe("DesenhoDoGrafico", () => {
     desenhar("funil", POR_ORIGEM);
     expect(screen.getByText("Leads INSS Forms")).toBeTruthy();
     expect(screen.getByText("34")).toBeTruthy();
-    expect(screen.getByText("100%")).toBeTruthy();
-    expect(screen.getByText("50%")).toBeTruthy();
+    // Automático por origem (sem ordem natural): participação no total, como a captura 10-043 (7D, S11).
+    expect(screen.getByText("67%")).toBeTruthy();
+    expect(screen.getByText("33%")).toBeTruthy();
   });
 
   it("Tabela pagina de 50, ordena e soma o total", () => {

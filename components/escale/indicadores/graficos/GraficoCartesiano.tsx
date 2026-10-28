@@ -9,13 +9,15 @@ import {
   LabelList,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
-import { dadosCartesianos } from "@/lib/escale/indicadores/graficos/dados";
+import { useT } from "@/hooks/i18n/useT";
+import { dadosCartesianos, linhasDeReferencia } from "@/lib/escale/indicadores/graficos/dados";
 import { formatarEixo, formatarValor } from "@/lib/escale/indicadores/graficos/formatos";
 import type { OpcoesDoGrafico } from "@/lib/escale/indicadores/graficos/opcoes";
 import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
@@ -36,6 +38,7 @@ const ALTURA_DA_LEGENDA = 48;
 
 /** Linha, Área, Barra e Barra Empilhada (prints 10-006, 10-021, 10-067). */
 export function GraficoCartesiano({ tipo, resultado, pergunta, opcoes, altura }: Props) {
+  const t = useT();
   const idDoDegrade = useId().replace(/:/g, "");
   const granularidade = resultado.avisos.includes("granularidade_ajustada") ? "dia" : pergunta.tempo?.granularidade;
   const base = dadosCartesianos(resultado, granularidade, tipo);
@@ -44,11 +47,21 @@ export function GraficoCartesiano({ tipo, resultado, pergunta, opcoes, altura }:
     tipo === "barra_empilhada"
       ? { ...base, pontos: base.pontos.map((p) => ({ ...p, total: base.series.reduce((n, s) => n + Number(p[s.chave] ?? 0), 0) })) }
       : base;
-  const { valores, legendas, grade } = opcoes.visualizacao;
+  const { valores, legendas, grade, linhaDeMedia, linhaDeMediana } = opcoes.visualizacao;
   const unidade = dados.series[0]?.unidade ?? "contagem";
   const alturaDoGrafico = Math.max(altura - (legendas ? ALTURA_DA_LEGENDA : 0), 40);
   const formatoDoRotulo = (v: unknown) => formatarValor(v === null || v === undefined ? null : Number(v), unidade);
 
+  const referencias = linhasDeReferencia(dados);
+  const linha = (y: number | null, rotulo: string) =>
+    y === null ? null : (
+      <ReferenceLine
+        y={y}
+        stroke="var(--color-casca-suave)"
+        strokeDasharray="4 4"
+        label={{ value: `${rotulo}: ${formatarValor(y, unidade)}`, position: "right", fontSize: 10, fill: "var(--color-casca-suave)" }}
+      />
+    );
   const eixos = (
     <>
       {grade ? (
@@ -62,6 +75,8 @@ export function GraficoCartesiano({ tipo, resultado, pergunta, opcoes, altura }:
         width={48}
         tickFormatter={(v: number) => formatarEixo(v, unidade)}
       />
+      {linhaDeMedia ? linha(referencias.media, t("Média")) : null}
+      {linhaDeMediana ? linha(referencias.mediana, t("Mediana")) : null}
       <Tooltip
         cursor={{ fill: "var(--color-casca-raia)" }}
         content={(p) => (

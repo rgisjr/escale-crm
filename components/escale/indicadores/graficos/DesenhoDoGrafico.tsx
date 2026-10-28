@@ -32,7 +32,7 @@ export function DesenhoDoGrafico({ tipo, resultado, pergunta, opcoes, altura }: 
     case "donut":
       return <GraficoDePizza tipo={tipo} resultado={resultado} opcoes={opcoes} altura={altura} />;
     case "funil":
-      return <GraficoFunil resultado={resultado} altura={altura} />;
+      return <GraficoFunil resultado={resultado} altura={altura} opcoes={opcoes} pergunta={pergunta} />;
     case "tabela":
       return <GraficoTabela resultado={resultado} pergunta={pergunta} opcoes={opcoes} />;
     case "numero":

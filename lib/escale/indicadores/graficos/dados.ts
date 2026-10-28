@@ -5,6 +5,7 @@ import type { Coluna } from "../motor/sql";
 import type { Granularidade } from "../pergunta";
 import { coresDoFunil, corDaSerie } from "./cores";
 import { rotuloDoTempo } from "./formatos";
+import type { CalculoDoFunil } from "./opcoes";
 import type { TipoPrincipal } from "./tipos";
 
 type Linha = Record<string, unknown>;
@@ -21,7 +22,7 @@ export type DadosCartesianos = {
   granularidade?: Granularidade;
 };
 export type Fatia = { nome: string; valor: number; cor: string };
-export type EtapaDoFunil = { nome: string; valor: number; percentual: number; cor: string };
+export type EtapaDoFunil = { chave: string; nome: string; valor: number; percentual: number; cor: string };
 export type ColunaDaTabela = { chave: string; nome: string; unidade?: Unidade; tipo?: string };
 
 const indicadoresDe = (r: Resultado): Coluna[] => r.colunas.filter((c) => c.papel === "indicador");
@@ -105,17 +106,55 @@ export function fatias(r: Resultado): { fatias: Fatia[]; unidade: Unidade } {
   return { fatias: validas.map((f, i) => ({ ...f, cor: corDaSerie(i) })), unidade: ind.unidade ?? "contagem" };
 }
 
-export function etapasDoFunil(r: Resultado): EtapaDoFunil[] {
+/**
+ * O funil (7C, 7D): `funil` ausente = percentual sobre a primeira etapa (o desenho da 7C). "automatico" (S11):
+ * sobre a primeira etapa quando a variável tem ordem natural (etapa do quadro), senão participação no total.
+ * `primeiraEtapa` (a chave `v0`) sobe para o topo e vira a base do cálculo.
+ */
+export function etapasDoFunil(
+  r: Resultado,
+  funil?: { primeiraEtapa: string | null; calculo: CalculoDoFunil },
+  temOrdemNatural = false,
+): EtapaDoFunil[] {
   const ind = indicadoresDe(r)[0];
   if (!ind) return [];
-  const brutas = r.linhas.map((linha) => ({ nome: rotuloDaVariavel(linha, 0), valor: numero(linha[ind.chave]) ?? 0 }));
-  const cores = coresDoFunil(brutas.length);
-  const primeira = brutas[0]?.valor ?? 0;
-  return brutas.map((e, i) => ({
-    ...e,
-    percentual: primeira === 0 ? 0 : (100 * e.valor) / primeira,
-    cor: cores[i] ?? "#16A34A",
+  let brutas = r.linhas.map((linha) => ({
+    chave: texto(linha.v0),
+    nome: rotuloDaVariavel(linha, 0),
+    valor: numero(linha[ind.chave]) ?? 0,
   }));
+  const fixada = funil?.primeiraEtapa ? brutas.findIndex((e) => e.chave === funil.primeiraEtapa) : -1;
+  if (fixada > 0) brutas = [brutas[fixada] as (typeof brutas)[number], ...brutas.filter((_, i) => i !== fixada)];
+  const calculo: Exclude<CalculoDoFunil, "automatico"> = !funil
+    ? "primeira_etapa"
+    : funil.calculo === "automatico"
+      ? temOrdemNatural
+        ? "primeira_etapa"
+        : "participacao"
+      : funil.calculo;
+  const total = brutas.reduce((n, e) => n + e.valor, 0);
+  const divisor = (i: number): number =>
+    calculo === "primeira_etapa" ? (brutas[0]?.valor ?? 0) : calculo === "etapa_anterior" ? (brutas[i - 1]?.valor ?? brutas[i]?.valor ?? 0) : total;
+  const cores = coresDoFunil(brutas.length);
+  return brutas.map((e, i) => {
+    const base = divisor(i);
+    return { ...e, percentual: base === 0 ? 0 : (100 * e.valor) / base, cor: cores[i] ?? "#16A34A" };
+  });
+}
+
+const texto = (v: unknown): string => (v === null || v === undefined ? "" : String(v));
+
+/** Média e mediana da 1ª série, ignorando pontos sem valor; sem pontos, `null` (provisório: uma linha só). */
+export function linhasDeReferencia(d: DadosCartesianos): { media: number | null; mediana: number | null } {
+  const chave = d.series[0]?.chave;
+  const valores = chave
+    ? d.pontos.map((p) => p[chave]).filter((v): v is number => typeof v === "number")
+    : [];
+  if (valores.length === 0) return { media: null, mediana: null };
+  const ordenados = [...valores].sort((a, b) => a - b);
+  const meio = Math.floor(ordenados.length / 2);
+  const mediana = ordenados.length % 2 ? (ordenados[meio] as number) : ((ordenados[meio - 1] as number) + (ordenados[meio] as number)) / 2;
+  return { media: valores.reduce((n, v) => n + v, 0) / valores.length, mediana };
 }
 
 /** Número e Painel de KPI: os indicadores (até 2, o limite da Clint) da 1ª linha; sem linhas, 0. */
