@@ -74,8 +74,8 @@ export const LIGACAO: Assunto = {
     coluna("telefone", "Telefone", "c.phone_number", ["c"]),
     coluna("direcao", "Direção", "b.direction"),
     coluna("status", "Status", "b.status"),
-    coluna("inicio", "Início", "b.started_at"),
-    coluna("duracao", "Duração (s)", "b.duration_ms / 1000.0"),
+    coluna("inicio", "Início", "b.started_at", undefined, { formato: "data", tipo: "data" }),
+    coluna("duracao", "Duração (s)", "b.duration_ms / 1000.0", undefined, { formato: "duracao", tipo: "numero" }),
     coluna("usuario", "Usuário", "b.created_by"),
   ],
 };

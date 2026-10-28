@@ -107,9 +107,9 @@ export const CONVERSA: Assunto = {
     coluna("canal", "Canal", "b.channel"),
     coluna("numero", "Número", "coalesce(cs.display_name, cs.phone_number)", ["cs"]),
     coluna("atendente", "Atendente", "b.assigned_to_user_id"),
-    coluna("status", "Status", "b.status"),
-    coluna("iniciada_em", "Iniciada em", "b.created_at"),
-    coluna("ultima_mensagem", "Última mensagem", "b.last_message_at"),
-    coluna("primeira_resposta", "Primeira resposta (s)", "extract(epoch from (fr.primeira_resposta - fr.primeira_entrada))", ["fr"]),
+    coluna("status", "Status", "b.status", undefined, { formato: "status_da_conversa", tipo: "texto" }),
+    coluna("iniciada_em", "Iniciada em", "b.created_at", undefined, { formato: "data", tipo: "data" }),
+    coluna("ultima_mensagem", "Última mensagem", "b.last_message_at", undefined, { formato: "data", tipo: "data" }),
+    coluna("primeira_resposta", "Primeira resposta (s)", "extract(epoch from (fr.primeira_resposta - fr.primeira_entrada))", ["fr"], { formato: "duracao", tipo: "numero" }),
   ],
 };

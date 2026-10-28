@@ -38,6 +38,8 @@ export async function GET(): Promise<Response> {
         apelidos: m.apelidos,
         perguntas: m.perguntas,
         antesDeUsar: m.antesDeUsar ?? null,
+        // Só o aviso de que lista registros; o predicado SQL nunca sai.
+        temDetalhe: !m.semDetalhe,
       })),
       variaveis: a.dimensoes.map((d) => ({
         id: d.id,
@@ -51,7 +53,7 @@ export async function GET(): Promise<Response> {
       tempos: a.tempos.map((x) => ({ id: x.id, nome: x.nome, padrao: Boolean(x.padrao), descricao: x.descricao ?? null })),
       filtroDoPainel: Object.keys(a.filtroDoPainel),
       camposPersonalizados: Object.keys(a.camposPersonalizados),
-      colunasDoDetalhamento: a.colunasDoDetalhamento.map((c) => ({ chave: c.chave, nome: c.nome })),
+      colunasDoDetalhamento: a.colunasDoDetalhamento.map((c) => ({ chave: c.chave, nome: c.nome, formato: c.formato ?? null })),
     }));
     const resposta = ok({ assuntos, camposPersonalizados }, { requestId });
     resposta.headers.set("Cache-Control", "private, max-age=60");

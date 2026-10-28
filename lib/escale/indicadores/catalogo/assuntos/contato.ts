@@ -80,6 +80,6 @@ export const CONTATO: Assunto = {
     coluna("fonte", "Fonte", "b.source"),
     coluna("tags", "Tags", "array_to_string(b.tags, ', ')"),
     coluna("negocios", "Negócios", "ln.n", ["ln"]),
-    coluna("criado_em", "Criado em", "b.created_at"),
+    coluna("criado_em", "Criado em", "b.created_at", undefined, { formato: "data", tipo: "data" }),
   ],
 };

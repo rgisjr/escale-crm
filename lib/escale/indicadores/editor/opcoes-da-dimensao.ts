@@ -107,6 +107,9 @@ async function peloMotor(dimensaoId: string, deps: DependenciasDasOpcoes): Promi
     filtro: { modo: "todas", condicoes: [], grupos: [] },
     ordem: { por: medida, direcao: "desc" },
     limite: LIMITE_PELO_MOTOR,
+    calculados: [],
+    filtroQuantitativo: [],
+    matrizDeTempo: false,
   });
   const vistos = new Set<string>();
   const saida: OpcaoDoFiltro[] = [];

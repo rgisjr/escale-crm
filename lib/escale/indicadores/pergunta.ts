@@ -10,9 +10,12 @@ import { dimensaoPorId, medidaPorId, tempoPorId } from "./catalogo";
 import type { CampoDinamico } from "./catalogo/campos-personalizados";
 import { lerCampoDinamico } from "./catalogo/campos-personalizados";
 import {
+  CALCULADOS_MAX,
   CONDICOES_MAX,
   DIAS_MAX_POR_HORA,
+  FILTROS_QUANTITATIVOS_MAX,
   INDICADORES_POR_PERGUNTA_MAX,
+  LINHAS_DO_DETALHAMENTO_MAX,
   LINHAS_MAX,
   VARIAVEIS_POR_PERGUNTA_MAX,
   type Assunto,
@@ -105,6 +108,48 @@ export const filtroDoPainelSchema = z
   .strict();
 export type FiltroDoPainel = z.infer<typeof filtroDoPainelSchema>;
 
+/** Fase 7E: indicador calculado (A op B), comparação de períodos e filtro quantitativo. */
+export const OPERACOES = ["soma", "subtracao", "multiplicacao", "divisao"] as const;
+export type Operacao = (typeof OPERACOES)[number];
+export const FORMATOS_DO_CALCULADO = ["numero", "moeda", "percentual"] as const;
+export type FormatoDoCalculado = (typeof FORMATOS_DO_CALCULADO)[number];
+export const MODOS_DE_COMPARACAO = ["equivalente", "mes_anterior", "ano_anterior"] as const;
+export type ModoDeComparacao = (typeof MODOS_DE_COMPARACAO)[number];
+export const OPERADORES_QUANTITATIVOS = [
+  "igual_a",
+  "diferente_de",
+  "maior_que",
+  "maior_ou_igual_a",
+  "menor_que",
+  "menor_ou_igual_a",
+] as const;
+export type OperadorQuantitativo = (typeof OPERADORES_QUANTITATIVOS)[number];
+const idDeMedida = z.string().regex(/^[a-z_]+\.[a-z_0-9]+$/).max(80);
+const idDeCalculado = z.string().regex(/^calc:[a-z0-9_]{1,40}$/);
+export const calculadoSchema = z
+  .object({
+    id: idDeCalculado,
+    nome: z.string().trim().min(1).max(80),
+    a: idDeMedida,
+    op: z.enum(OPERACOES),
+    b: idDeMedida,
+    formato: z.enum(FORMATOS_DO_CALCULADO),
+  })
+  .strict()
+  .refine(
+    (c) => c.formato !== "percentual" || c.op === "divisao",
+    "O formato percentual só vale para divisão, porque ele mostra a razão entre os dois indicadores.",
+  );
+export type Calculado = z.infer<typeof calculadoSchema>;
+export const filtroQuantitativoSchema = z
+  .object({
+    indicador: z.union([idDeMedida, idDeCalculado]),
+    op: z.enum(OPERADORES_QUANTITATIVOS),
+    valor: z.number().finite(),
+  })
+  .strict();
+export type FiltroQuantitativo = z.infer<typeof filtroQuantitativoSchema>;
+
 export const perguntaSchema = z
   .object({
     indicadores: z.array(id).min(1).max(INDICADORES_POR_PERGUNTA_MAX),
@@ -119,11 +164,57 @@ export const perguntaSchema = z
       .strict()
       .optional(),
     filtro: filtroSchema.default({ modo: "todas", condicoes: [], grupos: [] }),
-    ordem: z.object({ por: z.union([id, z.literal("tempo")]), direcao: z.enum(["asc", "desc"]) }).strict().optional(),
+    ordem: z
+      .object({ por: z.union([id, idDeCalculado, z.literal("tempo")]), direcao: z.enum(["asc", "desc"]) })
+      .strict()
+      .optional(),
     limite: z.number().int().min(1).max(LINHAS_MAX).default(1000),
+    calculados: z.array(calculadoSchema).max(CALCULADOS_MAX).default([]),
+    filtroQuantitativo: z.array(filtroQuantitativoSchema).max(FILTROS_QUANTITATIVOS_MAX).default([]),
+    comparacao: z.object({ modo: z.enum(MODOS_DE_COMPARACAO) }).strict().optional(),
+    /** Heatmap dia × hora: agrupa por dia da semana e hora do campo de tempo (T7). */
+    matrizDeTempo: z.boolean().default(false),
   })
   .strict();
 export type Pergunta = z.infer<typeof perguntaSchema>;
+/** T15: o Divisor é um gráfico sem pergunta. */
+export const perguntaDoDivisorSchema = z.object({ divisor: z.literal(true) }).strict();
+export type PerguntaDoDivisor = z.infer<typeof perguntaDoDivisorSchema>;
+
+export const pontoSchema = z
+  .object({
+    variaveis: z
+      .array(z.object({ id, valor: z.string().max(200).nullable() }).strict())
+      .max(VARIAVEIS_POR_PERGUNTA_MAX)
+      .default([]),
+    /** Início do bucket (ISO sem fuso, como o motor devolve em `t`). */
+    t: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/).optional(),
+    /** Para o heatmap. */
+    diaDaSemana: z.number().int().min(1).max(7).optional(),
+    hora: z.number().int().min(0).max(23).optional(),
+  })
+  .strict();
+export type Ponto = z.infer<typeof pontoSchema>;
+const ordemDoDetalhamento = z.object({ coluna: z.string().max(80), direcao: z.enum(["asc", "desc"]) }).strict();
+const pedidoBase = z.object({
+  pergunta: perguntaSchema,
+  filtroDoPainel: filtroDoPainelSchema.optional(),
+  indicador: z.union([idDeMedida, idDeCalculado]),
+  ponto: pontoSchema.default({ variaveis: [] }),
+  colunas: z.array(z.string().max(80)).max(40).optional(),
+  ordem: ordemDoDetalhamento.optional(),
+});
+export const POR_PAGINA_DO_DETALHAMENTO = [10, 25, 50] as const;
+export const detalhamentoSchema = pedidoBase
+  .extend({
+    pagina: z.number().int().min(1).default(1),
+    porPagina: z.union([z.literal(10), z.literal(25), z.literal(50)]).default(10),
+  })
+  .strict()
+  .refine((d) => d.pagina * d.porPagina <= LINHAS_DO_DETALHAMENTO_MAX, "Página fora do teto.");
+export type Detalhamento = z.infer<typeof detalhamentoSchema>;
+export const detalhamentoParaCsvSchema = pedidoBase.strict();
+export type DetalhamentoParaCsv = z.infer<typeof detalhamentoParaCsvSchema>;
 
 export type CamposDaOrg = ReadonlyMap<string, CampoDinamico>;
 export type Validacao = { ok: true; assunto: Assunto } | { ok: false; erro: string };
@@ -211,8 +302,37 @@ export function validarPergunta(p: Pergunta, doOrg: CamposDaOrg = new Map()): Va
       }
     }
   }
-  if (p.ordem && p.ordem.por !== "tempo" && !p.indicadores.includes(p.ordem.por) && !p.variaveis.includes(p.ordem.por)) {
+  const idsDosCalculados = new Set(p.calculados.map((c) => c.id));
+  if (idsDosCalculados.size !== p.calculados.length) return falha("Os indicadores calculados precisam de ids únicos.");
+  if (p.indicadores.length + p.calculados.length > INDICADORES_POR_PERGUNTA_MAX) {
+    return falha(`Este gráfico aceita no máximo ${INDICADORES_POR_PERGUNTA_MAX} indicadores.`);
+  }
+  for (const c of p.calculados) {
+    for (const operando of [c.a, c.b]) {
+      if (medidaPorId(operando)?.assunto.id !== assunto.id) return falha(`Operando "${operando}" não é deste assunto.`);
+    }
+  }
+  for (const f of p.filtroQuantitativo) {
+    const valido = f.indicador.startsWith("calc:")
+      ? idsDosCalculados.has(f.indicador)
+      : medidaPorId(f.indicador)?.assunto.id === assunto.id;
+    if (!valido) return falha(`O filtro quantitativo usa "${f.indicador}", que não está na pergunta.`);
+  }
+  const ordenaPor = p.ordem?.por;
+  if (
+    ordenaPor &&
+    ordenaPor !== "tempo" &&
+    !p.indicadores.includes(ordenaPor) &&
+    !p.variaveis.includes(ordenaPor) &&
+    !idsDosCalculados.has(ordenaPor)
+  ) {
     return falha("A ordenação precisa usar um indicador ou variável da pergunta.");
+  }
+  if (p.comparacao && (!p.tempo || p.tempo.periodo.atalho === "tudo")) {
+    return falha("A comparação exige um campo de tempo com período definido.");
+  }
+  if (p.matrizDeTempo && (!p.tempo || p.variaveis.length > 0 || p.tempo.granularidade || p.comparacao)) {
+    return falha("A matriz dia × hora usa só o campo de tempo, sem variáveis, granularidade nem comparação.");
   }
   if (p.ordem?.por === "tempo" && !p.tempo) return falha("Ordenar por tempo exige um campo de tempo.");
 
@@ -221,6 +341,46 @@ export function validarPergunta(p: Pergunta, doOrg: CamposDaOrg = new Map()): Va
   for (const c of condicoes) {
     const erro = validarCondicao(assunto, c, doOrg);
     if (erro) return falha(erro);
+  }
+  return { ok: true, assunto };
+}
+
+export type ValidacaoDoDetalhamento =
+  | { ok: true; assunto: Assunto }
+  | { ok: false; erro: string; semDetalhe?: true };
+
+/** Fase 7E: o pedido de detalhamento aponta só para coisas do catálogo. */
+export function validarDetalhamento(
+  d: Detalhamento | DetalhamentoParaCsv,
+  doOrg: CamposDaOrg = new Map(),
+): ValidacaoDoDetalhamento {
+  const valida = validarPergunta(d.pergunta, doOrg);
+  if (!valida.ok) return valida;
+  const { assunto } = valida;
+  const falha = (erro: string): ValidacaoDoDetalhamento => ({ ok: false, erro });
+  const calculado = d.pergunta.calculados.find((c) => c.id === d.indicador);
+  if (d.indicador.startsWith("calc:") && !calculado) return falha(`Indicador "${d.indicador}" não existe neste gráfico.`);
+  const operandos = calculado ? [calculado.a, calculado.b] : [d.indicador];
+  for (const idDoOperando of operandos) {
+    const achada = medidaPorId(idDoOperando);
+    if (!achada || achada.assunto.id !== assunto.id) return falha(`Indicador "${idDoOperando}" não existe neste gráfico.`);
+    if (achada.medida.semDetalhe) return { ok: false, erro: "Essa métrica ainda não suporta detalhamento.", semDetalhe: true };
+  }
+  for (const v of d.ponto.variaveis) {
+    if (!d.pergunta.variaveis.includes(v.id)) return falha(`O ponto usa "${v.id}", que não é variável do gráfico.`);
+  }
+  if (d.ponto.t && !d.pergunta.tempo?.granularidade) return falha("O ponto de tempo exige uma granularidade.");
+  if ((d.ponto.diaDaSemana !== undefined || d.ponto.hora !== undefined) && !d.pergunta.matrizDeTempo) {
+    return falha("Dia da semana e hora só valem na matriz dia × hora.");
+  }
+  const chavesDoCatalogo = new Set(assunto.colunasDoDetalhamento.map((c) => c.chave));
+  const colunaServe = (chave: string): boolean => {
+    if (chavesDoCatalogo.has(chave)) return true;
+    const dinamico = lerCampoDinamico(chave);
+    return Boolean(dinamico && doOrg.has(chave) && assunto.camposPersonalizados[dinamico.objeto]);
+  };
+  for (const chave of [...(d.colunas ?? []), ...(d.ordem ? [d.ordem.coluna] : [])]) {
+    if (!colunaServe(chave)) return falha(`Coluna "${chave}" não existe neste assunto.`);
   }
   return { ok: true, assunto };
 }
