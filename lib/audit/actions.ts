@@ -1240,6 +1240,11 @@ export const AUDIT_ACTIONS = [
   // A marca foi removida: só limpa `ai_opt_out`; a conversa segue com a trava
   // de handoff de quem a pôs.
   "contacts.always_human_unmarked",
+  // FORK ESCALE · Fase 7B: painéis de Indicadores (criar, editar, duplicar, excluir).
+  "dashboard.created",
+  "dashboard.updated",
+  "dashboard.cloned",
+  "dashboard.deleted",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */
