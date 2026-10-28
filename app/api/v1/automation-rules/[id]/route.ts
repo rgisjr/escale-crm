@@ -1,5 +1,6 @@
 import { requireSupportWrite } from "@/lib/impersonate/support";
 /**
+ * GET    /api/v1/automation-rules/[id] — uma regra, lida na hora (o editor abre dela).
  * PATCH  /api/v1/automation-rules/[id] — atualiza campos (inclui is_active — switch da UI).
  * DELETE /api/v1/automation-rules/[id] — remove a regra.
  */
@@ -11,7 +12,11 @@ import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { autoriaDaMudanca } from "@/lib/operacao/autoria";
 import { updateAutomationRuleSchema } from "@/lib/schemas";
-import { acoesQueFechamLaco, MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
+import {
+  acoesQueFechamLaco,
+  MENSAGEM_DA_VERSAO_VELHA,
+  MENSAGEM_DO_LACO_DE_LEAD,
+} from "@/lib/schemas/webhooks";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptRuleActionSecrets } from "@/lib/webhooks/secrets";
@@ -21,6 +26,25 @@ export const dynamic = "force-dynamic";
 
 interface RouteCtx {
   params: Promise<{ id: string }>;
+}
+
+export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
+  const requestId = randomUUID();
+  const { id } = await ctx.params;
+  const authz = await requireRole("manager", { requestId, resource: "automation_rules" });
+  if (!authz.ok) return authz.response;
+  const t = (texto: string) => traduzir(texto, authz.user.idioma);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("automation_rules")
+    .select("*")
+    .eq("id", id)
+    .eq("organization_id", authz.org.orgId)
+    .maybeSingle();
+  if (error) return fail("internal_error", error.message, 500, { requestId });
+  if (!data) return fail("not_found", t("Regra não encontrada."), 404, { requestId });
+  return ok(data, { requestId });
 }
 
 export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> {
@@ -91,8 +115,9 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   // A autoria vai junto de TODA escrita, pelo mesmo helper que o agente usa: uma
   // regra ligada é o estado mais perigoso do sistema, e a tela precisa dizer
   // quem a ligou (migration 0101).
+  const { versao_lida: versaoLida, ...campos } = parsed.data;
   const patch: Record<string, unknown> = {
-    ...parsed.data,
+    ...campos,
     updated_at: new Date().toISOString(),
     ...autoriaDaMudanca({ type: "user", id: user.id, role: activeOrg.role }),
   };
@@ -109,15 +134,19 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     patch.actions = safeActions;
   }
 
-  const { data: updated, error: updErr } = await supabase
-    .from("automation_rules")
-    .update(patch)
-    .eq("id", id)
-    .select("*")
-    .single();
+  // Com a versão lida, o UPDATE só casa se a linha ainda for aquela: a checagem
+  // e a escrita são o mesmo comando, sem janela entre elas.
+  let escrita = supabase.from("automation_rules").update(patch).eq("id", id);
+  if (versaoLida !== undefined) escrita = escrita.eq("updated_at", versaoLida);
+  const { data: updated, error: updErr } = await escrita.select("*").maybeSingle();
   if (updErr) return fail("internal_error", updErr.message, 500, { requestId });
+  if (!updated) {
+    return versaoLida !== undefined
+      ? fail("state_conflict", t(MENSAGEM_DA_VERSAO_VELHA), 409, { requestId })
+      : fail("not_found", t("Regra não encontrada."), 404, { requestId });
+  }
 
-  const { actions: _actionsWithSecrets, ...auditableRule } = parsed.data;
+  const { actions: _actionsWithSecrets, ...auditableRule } = campos;
   void audit({
     action: "automation.rule_updated",
     actorUserId: user.id,

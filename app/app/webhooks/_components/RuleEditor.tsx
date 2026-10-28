@@ -416,7 +416,8 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
     }
     try {
       if (rule) {
-        await update.mutateAsync({ id: rule.id, ...parsed.data });
+        // A versão aberta vai junto: se outra tela salvou depois, a rota recusa em vez de apagar.
+        await update.mutateAsync({ id: rule.id, ...parsed.data, versao_lida: rule.updated_at });
         toast.success(t("Automação atualizada."));
       } else {
         await create.mutateAsync(parsed.data);

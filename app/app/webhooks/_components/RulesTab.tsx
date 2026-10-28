@@ -4,6 +4,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import {
 import { Robot, Plus, Trash, PencilSimple, FlowArrow } from "@/lib/ui/icons";
 import { SeloDeAutoria } from "@/components/operacao/SeloDeAutoria";
 import {
+  opcoesDaRegra,
   useAutomationRules,
   useUpdateAutomationRule,
   useDeleteAutomationRule,
@@ -69,9 +71,20 @@ export function RulesTab() {
     setEditorOpen(true);
   };
 
-  const openEdit = (rule: AutomationRuleRow) => {
-    setEditing(rule);
-    setEditorOpen(true);
+  // O editor abre da versão do banco, nunca da cópia da lista: ela pode estar
+  // velha, e salvar dela gravaria a versão antiga por cima da boa.
+  const [abrindo, setAbrindo] = React.useState<string | null>(null);
+  const openEdit = async (rule: AutomationRuleRow) => {
+    setAbrindo(rule.id);
+    try {
+      const fresca = await qc.fetchQuery(opcoesDaRegra(rule.id));
+      setEditing(fresca.data);
+      setEditorOpen(true);
+    } catch (err) {
+      showApiError(err);
+    } finally {
+      setAbrindo(null);
+    }
   };
 
   if (isLoading) {
@@ -179,7 +192,8 @@ export function RulesTab() {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={() => openEdit(r)}
+                  onClick={() => void openEdit(r)}
+                  disabled={abrindo === r.id}
                   aria-label={t("Editar automação")}
                 >
                   <PencilSimple />
