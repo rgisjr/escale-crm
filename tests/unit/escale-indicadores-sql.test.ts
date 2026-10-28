@@ -28,7 +28,7 @@ describe("montarSql", () => {
     const r = montarSql(pergunta(EXEMPLO), { usuarios: [USER] }, ctx());
     expect(plano(r.text)).toBe(
       plano(`select b.pipeline_id as v0, p.name as v0_rotulo,
-        date_trunc('month', (b.created_at at time zone $2)) as t,
+        to_char(date_trunc('month', (b.created_at at time zone $2)), 'YYYY-MM-DD"T"HH24:MI:SS') as t,
         count(*) filter (where b.status = 'won') as i0,
         sum(b.value_cents) / 100.0 as i1,
         count(distinct b.currency) as moedas

@@ -194,7 +194,7 @@ function validarCondicao(assunto: Assunto, c: Condicao, doOrg: CamposDaOrg): str
 
 export function validarPergunta(p: Pergunta, doOrg: CamposDaOrg = new Map()): Validacao {
   const falha = (erro: string): Validacao => ({ ok: false, erro });
-  const primeira = medidaPorId(p.indicadores[0]);
+  const primeira = medidaPorId(p.indicadores[0] ?? "");
   if (!primeira) return falha(`Indicador "${p.indicadores[0]}" não existe.`);
   const assunto = primeira.assunto;
   for (const idDoIndicador of p.indicadores) {

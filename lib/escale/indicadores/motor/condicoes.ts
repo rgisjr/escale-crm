@@ -70,20 +70,21 @@ export function condicaoSql(expr: string, tipo: TipoDeDimensao, c: Condicao, p: 
 
 function condicaoDeTexto(expr: string, c: Condicao, p: Parametros): string {
   const texto = comoLista(c.valor);
+  const primeiro = texto[0] ?? "";
   const like = (padrao: string) => `${expr} ilike ${p.add(padrao)} escape '\\'`;
   switch (c.op) {
     case "igual_a":
-      return Array.isArray(c.valor) ? `${expr} = any(${p.add(texto)}::text[])` : `${expr} = ${p.add(texto[0])}`;
+      return Array.isArray(c.valor) ? `${expr} = any(${p.add(texto)}::text[])` : `${expr} = ${p.add(primeiro)}`;
     case "diferente_de":
       return `(${expr} is null or ${expr} <> all(${p.add(texto)}::text[]))`;
     case "contem":
-      return like(`%${escaparLike(texto[0])}%`);
+      return like(`%${escaparLike(primeiro)}%`);
     case "nao_contem":
-      return `(${expr} is null or not (${like(`%${escaparLike(texto[0])}%`)}))`;
+      return `(${expr} is null or not (${like(`%${escaparLike(primeiro)}%`)}))`;
     case "comeca_com":
-      return like(`${escaparLike(texto[0])}%`);
+      return like(`${escaparLike(primeiro)}%`);
     case "termina_com":
-      return like(`%${escaparLike(texto[0])}`);
+      return like(`%${escaparLike(primeiro)}`);
     default:
       return invalido(c, "texto");
   }

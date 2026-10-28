@@ -35,7 +35,7 @@ describe("catálogo de indicadores", () => {
       const validos = aliasesDe(a);
       for (const sql of fragmentosDe(a)) {
         for (const achado of sql.matchAll(/\b([a-z]{1,3})\.[a-z_]+/g)) {
-          expect(validos.has(achado[1]), `${a.id}: alias ${achado[1]} em ${sql}`).toBe(true);
+          expect(validos.has(achado[1] as string), `${a.id}: alias ${achado[1]} em ${sql}`).toBe(true);
         }
       }
     }
@@ -124,8 +124,8 @@ describe("campos personalizados", () => {
   it("mapeia o tipo e as opções", () => {
     const [num, data, sel] = camposDinamicos("negocio", catalogo);
     expect(num).toMatchObject({ id: "campo:negocio:orcamento", tipo: "numero" });
-    expect(data.tipo).toBe("data");
-    expect(sel.opcoes).toHaveLength(1);
+    expect(data?.tipo).toBe("data");
+    expect(sel?.opcoes).toHaveLength(1);
   });
 
   it("lê só o formato válido", () => {

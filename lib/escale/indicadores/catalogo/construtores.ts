@@ -42,7 +42,7 @@ export function medida(
   };
 }
 
-interface ExtraDaDimensao extends Partial<Omit<Dimensao, "id" | "nome" | "tipo" | "sql">> {}
+type ExtraDaDimensao = Partial<Omit<Dimensao, "id" | "nome" | "tipo" | "sql">>;
 
 export function dimensao(
   assunto: string,

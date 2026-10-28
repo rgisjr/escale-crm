@@ -43,5 +43,5 @@ const FORMA_DO_CAMPO = /^campo:(negocio|contato|empresa):([a-z][a-z0-9_]{0,39})$
 
 export function lerCampoDinamico(id: string): { objeto: ObjetoDeCampoDoCatalogo; chave: string } | null {
   const achou = FORMA_DO_CAMPO.exec(id);
-  return achou ? { objeto: achou[1] as ObjetoDeCampoDoCatalogo, chave: achou[2] } : null;
+  return achou ? { objeto: achou[1] as ObjetoDeCampoDoCatalogo, chave: achou[2] as string } : null;
 }

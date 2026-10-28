@@ -116,7 +116,7 @@ class Montagem {
 
 const juntar = (modo: "todas" | "qualquer", partes: string[]): string => {
   if (partes.length === 0) return "";
-  return partes.length === 1 ? partes[0] : `(${partes.join(modo === "todas" ? " and " : " or ")})`;
+  return partes.length === 1 ? (partes[0] ?? "") : `(${partes.join(modo === "todas" ? " and " : " or ")})`;
 };
 
 function filtroSql(m: Montagem, filtro: Filtro): string | null {
@@ -164,8 +164,8 @@ function painelSql(m: Montagem, painel: FiltroDoPainel | undefined, ignorados: s
 }
 
 export function montarSql(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: Contexto): SqlMontado {
-  const primeira = medidaPorId(p.indicadores[0]);
-  if (!primeira) throw new ErroDoMotor("pergunta_invalida", `Indicador ${p.indicadores[0]} não existe.`);
+  const primeira = medidaPorId(p.indicadores[0] ?? "");
+  if (!primeira) throw new ErroDoMotor("pergunta_invalida", `Indicador ${p.indicadores[0] ?? ""} não existe.`);
   const assunto = primeira.assunto;
   const m = new Montagem(assunto, ctx);
   const alias = assunto.base.alias;
@@ -194,7 +194,10 @@ export function montarSql(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: 
   let temBucket = false;
   if (p.tempo?.granularidade && campoDeTempo) {
     m.usar(campoDeTempo.precisa);
-    selecao.push(`date_trunc('${TRUNC[p.tempo.granularidade]}', (${frag(campoDeTempo.sql)} at time zone $2)) as t`);
+    // Texto ISO sem fuso: o driver não reinterpreta o horário local do servidor.
+    selecao.push(
+      `to_char(date_trunc('${TRUNC[p.tempo.granularidade]}', (${frag(campoDeTempo.sql)} at time zone $2)), 'YYYY-MM-DD"T"HH24:MI:SS') as t`,
+    );
     colunas.push({ chave: "t", nome: campoDeTempo.nome, papel: "tempo" });
     temBucket = true;
   }
