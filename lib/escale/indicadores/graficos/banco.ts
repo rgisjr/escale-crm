@@ -132,3 +132,114 @@ export async function excluirGrafico(supabase: SupabaseClient, orgId: string, gr
   if (error) throw new Error(error.message);
   return (data ?? []).length > 0;
 }
+
+// ─── Editor de gráfico (Fase 7D) ───
+
+export type GraficoParaEditar = GraficoDoPainel & { painelId: string };
+export type NovoGrafico = {
+  painelId: string;
+  nome: string;
+  descricao?: string | null;
+  tipo: string;
+  pergunta: unknown;
+  opcoes: unknown;
+};
+export type EdicaoDoGrafico = Partial<NovoGrafico>;
+
+const COLUNAS_DO_EDITOR = "id, painel_id, nome, descricao, tipo, layout, pergunta, opcoes";
+
+/** Lê um gráfico vivo da organização com a sessão de quem olha; `null` = não existe ou a RLS esconde. */
+export async function lerGrafico(supabase: SupabaseClient, orgId: string, id: string): Promise<GraficoParaEditar | null> {
+  const { data, error } = await supabase
+    .from("crm_graficos")
+    .select(COLUNAS_DO_EDITOR)
+    .eq("id", id)
+    .eq("organization_id", orgId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const l = data as LinhaDoGrafico & { painel_id: string };
+  return { ...doBanco(l), painelId: l.painel_id };
+}
+
+/** Quantos gráficos vivos o painel tem (o limite de 30 ao mover, S16). */
+export async function contarGraficosVivos(supabase: SupabaseClient, orgId: string, painelId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("crm_graficos")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgId)
+    .eq("painel_id", painelId)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/** Os layouts dos gráficos vivos do painel, para achar o fim da grade. */
+export async function lerLayoutsDoPainel(supabase: SupabaseClient, orgId: string, painelId: string): Promise<LayoutDoGrafico[]> {
+  const { data, error } = await supabase
+    .from("crm_graficos")
+    .select("layout")
+    .eq("organization_id", orgId)
+    .eq("painel_id", painelId)
+    .is("deleted_at", null)
+    .limit(LIMITE_DA_LEITURA);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<{ layout: unknown }>).map((l) => layoutValido(l.layout));
+}
+
+export async function criarGrafico(
+  supabase: SupabaseClient,
+  orgId: string,
+  userId: string,
+  novo: NovoGrafico,
+  layout: LayoutDoGrafico,
+): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("crm_graficos")
+    .insert({
+      organization_id: orgId,
+      painel_id: novo.painelId,
+      nome: novo.nome,
+      descricao: novo.descricao ?? null,
+      tipo: novo.tipo,
+      layout,
+      pergunta: novo.pergunta,
+      opcoes: novo.opcoes,
+      criado_por: userId,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    if (error.message.includes("limite_de_graficos")) throw new ErroDoGrafico("limite");
+    throw new Error(error.message);
+  }
+  return { id: (data as { id: string }).id };
+}
+
+/** `false` = nada atualizado (gráfico de painel invisível ou papel sem direito: a RLS esconde). */
+export async function atualizarGrafico(
+  supabase: SupabaseClient,
+  orgId: string,
+  id: string,
+  edicao: EdicaoDoGrafico & { layout?: LayoutDoGrafico },
+): Promise<boolean> {
+  const colunas = {
+    ...(edicao.painelId !== undefined && { painel_id: edicao.painelId }),
+    ...(edicao.nome !== undefined && { nome: edicao.nome }),
+    ...(edicao.descricao !== undefined && { descricao: edicao.descricao }),
+    ...(edicao.tipo !== undefined && { tipo: edicao.tipo }),
+    ...(edicao.pergunta !== undefined && { pergunta: edicao.pergunta }),
+    ...(edicao.opcoes !== undefined && { opcoes: edicao.opcoes }),
+    ...(edicao.layout !== undefined && { layout: edicao.layout }),
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase
+    .from("crm_graficos")
+    .update(colunas)
+    .eq("id", id)
+    .eq("organization_id", orgId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
+}

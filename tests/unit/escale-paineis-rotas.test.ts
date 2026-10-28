@@ -133,6 +133,21 @@ describe("POST /paineis", () => {
     expect(vi.mocked(audit).mock.calls[0]?.[0]).toMatchObject({ action: "dashboard.created" });
   });
 
+  it("aceita o nome do painel criado pelo editor de gráfico (7D)", async () => {
+    autenticar("manager");
+    const db = banco();
+    const req = new NextRequest("http://localhost/x", { method: "POST", body: JSON.stringify({ nome: "Time SDR" }) });
+    expect((await POST(req)).status).toBe(201);
+    expect(db.chamadas.find((c) => c.metodo === "insert")?.args[0]).toMatchObject({ nome: "Time SDR" });
+  });
+
+  it("recusa nome vazio (7D)", async () => {
+    autenticar("manager");
+    banco();
+    const req = new NextRequest("http://localhost/x", { method: "POST", body: JSON.stringify({ nome: "" }) });
+    expect((await POST(req)).status).toBe(422);
+  });
+
   it("suporte somente leitura recebe a resposta da trava", async () => {
     vi.mocked(requireSupportWrite).mockResolvedValue(new Response(null, { status: 423 }) as never);
     expect((await POST()).status).toBe(423);
