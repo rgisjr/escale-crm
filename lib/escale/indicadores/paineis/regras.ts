@@ -32,9 +32,9 @@ export function ordenarPaineis<T extends { id: string; nome: string }>(paineis: 
 }
 
 /** "{nome} (cópia)", cortado para caber no limite do nome. */
-export function nomeDaCopia(nome: string): string {
+export function nomeDaCopia(nome: string, max = LIMITE_DO_NOME): string {
   const sufixo = " (cópia)";
-  return `${nome.slice(0, LIMITE_DO_NOME - sufixo.length)}${sufixo}`;
+  return `${nome.slice(0, max - sufixo.length)}${sufixo}`;
 }
 
 /** Quem grava continua vendo o painel com as listas novas? (Q5) */

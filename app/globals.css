@@ -254,6 +254,8 @@
   --color-casca-borda-msg: var(--color-border);
   --color-casca-busca: var(--color-surface-elevated);
   --color-casca-contador: var(--color-border);
+  --color-casca-data-aplicada: var(--color-success);
+  --color-casca-data-fixada: var(--color-info);
   --color-casca-cinza-selo: var(--color-border-strong);
   --color-casca-dia: var(--color-accent-soft);
   --color-casca-marca: var(--color-accent);
@@ -660,6 +662,8 @@
   --color-casca-borda-msg: var(--color-casca-borda-msg);
   --color-casca-busca: var(--color-casca-busca);
   --color-casca-contador: var(--color-casca-contador);
+  --color-casca-data-aplicada: var(--color-casca-data-aplicada);
+  --color-casca-data-fixada: var(--color-casca-data-fixada);
   --color-casca-cinza-selo: var(--color-casca-cinza-selo);
   --color-casca-dia: var(--color-casca-dia);
   --color-casca-marca: var(--color-casca-marca);

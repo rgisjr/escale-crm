@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Parametros, condicaoSql, tagsSql } from "@/lib/escale/indicadores/motor/condicoes";
+import { Parametros, camposDoPainelSql, condicaoSql, tagsDoPainelSql } from "@/lib/escale/indicadores/motor/condicoes";
 import type { Condicao } from "@/lib/escale/indicadores/pergunta";
 
 const rodar = (expr: string, tipo: Parameters<typeof condicaoSql>[1], c: Condicao) => {
@@ -49,16 +49,59 @@ describe("condicaoSql", () => {
   });
 });
 
-describe("tagsSql", () => {
-  const rodarTags = (t: Parameters<typeof tagsSql>[1]) => {
+describe("tagsDoPainelSql", () => {
+  it("usa a régua da lista de contatos (9102) com o filtro inteiro em jsonb", () => {
     const p = new Parametros("o", "f");
-    return { sql: tagsSql("b.tags", t, p), values: p.valores.slice(2) };
-  };
-  it("cobre as quatro formas", () => {
-    expect(rodarTags({ modo: "qualquer_tag", valores: [], operador: "ou" }).sql).toBe("coalesce(cardinality(b.tags), 0) > 0");
-    expect(rodarTags({ modo: "sem_tag", valores: [], operador: "ou" }).sql).toBe("coalesce(cardinality(b.tags), 0) = 0");
-    expect(rodarTags({ modo: "lista", valores: ["a"], operador: "ou" })).toEqual({ sql: "b.tags && $3::text[]", values: [["a"]] });
-    expect(rodarTags({ modo: "lista", valores: ["a"], operador: "e" }).sql).toBe("b.tags @> $3::text[]");
-    expect(rodarTags({ modo: "lista", valores: [], operador: "e" }).sql).toBeNull();
+    const tags = { combinar: "ou" as const, grupos: [{ modo: "e" as const, condicoes: [{ op: "possui" as const, tag: "vip" }] }] };
+    expect(tagsDoPainelSql("b.tags", tags, p)).toBe("public.fn_escale_tags_passam(b.tags, $3::jsonb)");
+    expect(p.valores[2]).toBe(JSON.stringify(tags));
+  });
+
+  it("tag com aspa vai só no parâmetro", () => {
+    const p = new Parametros("o", "f");
+    const sql = tagsDoPainelSql("b.tags", { combinar: "e", grupos: [{ modo: "e", condicoes: [{ op: "possui", tag: "a'b" }] }] }, p);
+    expect(sql).not.toContain("a'b");
+    expect(String(p.valores[2])).toContain("a'b");
+  });
+});
+
+describe("camposDoPainelSql", () => {
+  const cond = (alvo: "contato" | "negocio" | "empresa", chave: string, extra = {}) => ({
+    alvo,
+    chave,
+    tipo: "texto" as const,
+    op: "contem" as const,
+    valor: "@x",
+    padrao: "@x",
+    ...extra,
+  });
+  const valorDe = (alvo: string, chave: string) =>
+    alvo === "empresa" ? null : alvo === "contato" && chave === "email" ? "to_jsonb(c.email)" : `(c.custom_fields -> '${chave}')`;
+
+  it("cada condição vira fn_escale_passa_condicao com a condição inteira em jsonb", () => {
+    const p = new Parametros("o", "f");
+    const r = camposDoPainelSql({ combinar: "e", grupos: [{ modo: "e", condicoes: [cond("contato", "email")] }] }, valorDe, p);
+    expect(r).toEqual({ sql: "(public.fn_escale_passa_condicao(to_jsonb(c.email), $3::jsonb))", ignorado: false });
+    expect(JSON.parse(String(p.valores[2]))).toMatchObject({ chave: "email", op: "contem" });
+  });
+
+  it("junta grupos com `combinar` e condições com o modo do grupo", () => {
+    const p = new Parametros("o", "f");
+    const grupos = [
+      { modo: "ou" as const, condicoes: [cond("contato", "email"), cond("contato", "email")] },
+      { modo: "e" as const, condicoes: [cond("contato", "email")] },
+    ];
+    const e = camposDoPainelSql({ combinar: "e", grupos }, valorDe, p).sql ?? "";
+    expect(e).toMatch(/^\(\(.* or .*\) and \(.*\)\)$/);
+    expect(camposDoPainelSql({ combinar: "ou", grupos }, valorDe, new Parametros("o", "f")).sql).toMatch(/\) or \(/);
+  });
+
+  it("ignora a condição de um objeto que o assunto não tem", () => {
+    const p = new Parametros("o", "f");
+    expect(camposDoPainelSql({ combinar: "e", grupos: [{ modo: "e", condicoes: [cond("empresa", "cidade")] }] }, valorDe, p)).toEqual({
+      sql: null,
+      ignorado: true,
+    });
+    expect(p.valores).toHaveLength(2);
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { CampoDinamico } from "@/lib/escale/indicadores/catalogo/campos-personalizados";
-import { perguntaSchema, validarPergunta } from "@/lib/escale/indicadores/pergunta";
+import { filtroDoPainelSchema, perguntaSchema, validarPergunta } from "@/lib/escale/indicadores/pergunta";
 
 const base = {
   indicadores: ["negocio.ganhos", "negocio.soma_de_valores"],
@@ -33,6 +33,32 @@ describe("perguntaSchema", () => {
     const com = (op: string) => ler({ ...base, filtro: { condicoes: [{ campo: "negocio.etapa", op }] } }).success;
     expect(com("vazio")).toBe(true);
     expect(com("igual_a")).toBe(false);
+  });
+});
+
+describe("filtroDoPainelSchema (forma da 2B)", () => {
+  const ler2 = (o: unknown) => filtroDoPainelSchema.safeParse(o);
+  it("aceita tags e campos na forma da lista de contatos", () => {
+    expect(ler2({ tags: { combinar: "ou", grupos: [{ modo: "e", condicoes: [{ op: "nao_possui", tag: "vip" }] }] } }).success).toBe(true);
+    expect(
+      ler2({
+        campos: {
+          combinar: "e",
+          grupos: [{ modo: "e", condicoes: [{ alvo: "contato", chave: "email", tipo: "texto", op: "contem", valor: "@x" }] }],
+        },
+      }).success,
+    ).toBe(true);
+  });
+  it("recusa a forma antiga e chave que injeta SQL", () => {
+    expect(ler2({ tags: { modo: "lista", valores: [] } }).success).toBe(false);
+    expect(
+      ler2({
+        campos: {
+          combinar: "e",
+          grupos: [{ modo: "e", condicoes: [{ alvo: "contato", chave: "x'); drop table crm_leads; --", tipo: "texto", op: "igual", valor: "a" }] }],
+        },
+      }).success,
+    ).toBe(false);
   });
 });
 

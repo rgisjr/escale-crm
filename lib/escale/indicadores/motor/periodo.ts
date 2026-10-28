@@ -19,7 +19,12 @@ const emUtc = (dia: string): Date => new Date(`${dia}T00:00:00Z`);
 const comoTexto = (data: Date): string => data.toISOString().slice(0, 10);
 const somar = (dia: string, dias: number): string => comoTexto(new Date(emUtc(dia).getTime() + dias * DIA_EM_MS));
 const primeiroDoMes = (dia: string): string => `${dia.slice(0, 8)}01`;
-const segundaDaSemana = (dia: string): string => somar(dia, -((emUtc(dia).getUTCDay() + 6) % 7));
+/** A semana da casca vai de domingo a sábado (mesma regra de `lib/escale/ui/periodos`). */
+const domingoDaSemana = (dia: string): string => somar(dia, -emUtc(dia).getUTCDay());
+const ultimoDoMes = (dia: string): string => {
+  const d = emUtc(dia);
+  return comoTexto(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
+};
 
 /** `null` significa "tudo": sem limite de data. */
 export function resolverPeriodo(p: Periodo, agora: Date, fuso: string): IntervaloDeDias | null {
@@ -35,20 +40,22 @@ export function resolverPeriodo(p: Periodo, agora: Date, fuso: string): Interval
       return { de: somar(hoje, -14), ate: hoje };
     case "1_mes":
       return { de: somar(hoje, -29), ate: hoje };
-    case "esta_semana":
-      return { de: segundaDaSemana(hoje), ate: hoje };
+    case "esta_semana": {
+      const domingo = domingoDaSemana(hoje);
+      return { de: domingo, ate: somar(domingo, 6) };
+    }
     case "semana_passada": {
-      const segunda = segundaDaSemana(hoje);
-      return { de: somar(segunda, -7), ate: somar(segunda, -1) };
+      const domingo = domingoDaSemana(hoje);
+      return { de: somar(domingo, -7), ate: somar(domingo, -1) };
     }
     case "este_mes":
-      return { de: primeiroDoMes(hoje), ate: hoje };
+      return { de: primeiroDoMes(hoje), ate: ultimoDoMes(hoje) };
     case "mes_passado": {
       const fimDoAnterior = somar(primeiroDoMes(hoje), -1);
       return { de: primeiroDoMes(fimDoAnterior), ate: fimDoAnterior };
     }
     case "este_ano":
-      return { de: `${hoje.slice(0, 4)}-01-01`, ate: hoje };
+      return { de: `${hoje.slice(0, 4)}-01-01`, ate: `${hoje.slice(0, 4)}-12-31` };
     case "tudo":
       return null;
     case "personalizado":

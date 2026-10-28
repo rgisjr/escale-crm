@@ -139,6 +139,8 @@ body:has([data-escale-casca]) {
   --color-casca-borda-msg: #e3ebff;
   --color-casca-busca: #f6f8ff;
   --color-casca-contador: #e8e4f5;
+  --color-casca-data-aplicada: #22b573;
+  --color-casca-data-fixada: #2563eb;
   --color-casca-cinza-selo: #e0e0e0;
   --color-casca-novo: #597eff;
   --color-casca-alerta: #ff4b4c;
@@ -221,6 +223,8 @@ body:has([data-escale-casca]) {
   --color-casca-borda-msg: #30364b;
   --color-casca-busca: #202433;
   --color-casca-contador: #2a2f42;
+  --color-casca-data-aplicada: #4ade80;
+  --color-casca-data-fixada: #60a5fa;
   --color-casca-cinza-selo: #353b52;
   --color-casca-novo: #6f8fff;
   --color-casca-alerta: #ff5f60;
@@ -502,4 +506,21 @@ body:has([data-escale-casca]) {
   --escale-zap-fundo: #0b141a;
   --escale-zap-balao: #202c33;
   --escale-zap-visto: #53bdeb;
+}
+/* FORK ESCALE · Fase 7C: a grade do painel de Indicadores (react-grid-layout). Só na casca nova. */
+body:has([data-escale-casca]) .react-grid-placeholder {
+  background: var(--color-casca-marca-suave);
+  opacity: 1;
+  border-radius: 6px;
+}
+/* A alça de redimensionar só aparece com o mouse em cima do card (print 10-006), na cor cinza da casca. */
+body:has([data-escale-casca]) .react-grid-item > .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+body:has([data-escale-casca]) .react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}
+body:has([data-escale-casca]) .react-grid-item > .react-resizable-handle::after {
+  border-color: var(--color-casca-suave);
 }

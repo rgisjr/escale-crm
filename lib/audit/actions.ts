@@ -1244,6 +1244,8 @@ export const AUDIT_ACTIONS = [
   "dashboard.created",
   "dashboard.updated",
   "dashboard.cloned",
+  "dashboard.chart_cloned",
+  "dashboard.chart_deleted",
   "dashboard.deleted",
 ] as const;
 

@@ -55,3 +55,27 @@ describe("filtros salvos por lista (N11)", () => {
     expect(filtrosDasLinhas(linhas, "u")[1]!.criterios).toEqual({ telefone: "com" });
   });
 });
+
+describe("filtros salvos da lista 'paineis' (fase 7C)", () => {
+  const U1 = "11111111-1111-4111-8111-111111111111";
+  it("valida pelo filtro do painel e recusa critérios de contatos", () => {
+    const novo = novoFiltroSchema.parse({
+      lista: "paineis",
+      nome: "Time SDR",
+      compartilhado: false,
+      criterios: { periodo: { atalho: "mes_passado" }, usuarios: [U1] },
+    });
+    expect(enxugarCriterios(novo)).toEqual({ periodo: { atalho: "mes_passado" }, usuarios: [U1] });
+    expect(
+      novoFiltroSchema.safeParse({ lista: "paineis", nome: "x", compartilhado: false, criterios: { telefone: "com" } }).success,
+    ).toBe(false);
+  });
+  it("critério velho vira filtro vazio", () => {
+    const [f] = filtrosDasLinhas(
+      [{ id: "a", user_id: "u", nome: "n", compartilhado: false, criterios: { tags: { modo: "lista" } } }],
+      "u",
+      "paineis",
+    );
+    expect(f?.criterios).toEqual({});
+  });
+});

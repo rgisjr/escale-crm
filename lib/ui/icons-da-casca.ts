@@ -206,3 +206,6 @@ export {
 // FORK ESCALE · Fase 7B: os 4 logos do seletor de ícone vêm do Phosphor porque o
 // lucide 1.x tirou as marcas. O quadrado do painel os desenha com `weight="regular"`.
 export { FacebookLogo, InstagramLogo, LinkedinLogo, YoutubeLogo } from "@phosphor-icons/react/dist/ssr";
+
+// FORK ESCALE · Fase 7C: o painel aberto de Indicadores (carrossel do Número e "Recarregar" do card).
+export { RotateCw, Triangle } from "lucide-react";

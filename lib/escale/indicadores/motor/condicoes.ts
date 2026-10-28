@@ -2,6 +2,8 @@
  * Cada operador do filtro vira um fragmento SQL com parâmetros (Fase 7A). Nenhum valor do
  * cliente entra no texto: tudo vai por `$n`, e o `like` escapa `%`, `_` e `\`.
  */
+import type { FiltroCompilado } from "@/lib/escale/contatos/compilar-filtros";
+
 import type { TipoDeDimensao } from "../catalogo/tipos";
 import type { Condicao } from "../pergunta";
 import { ErroDoMotor } from "./erros";
@@ -90,19 +92,43 @@ function condicaoDeTexto(expr: string, c: Condicao, p: Parametros): string {
   }
 }
 
-export interface TagsDoPainel {
-  modo: "qualquer_tag" | "sem_tag" | "lista";
-  valores: string[];
-  operador: "e" | "ou";
+/**
+ * Tags do painel: a régua da lista de contatos, no banco (9102). `expr` é a coluna `text[]` de tags do
+ * assunto; `tags` chega já compilada (`compilarFiltros`: tags minúsculas), e vai inteira como jsonb.
+ */
+export function tagsDoPainelSql(expr: string, tags: FiltroCompilado["tags"] & object, p: Parametros): string {
+  return `public.fn_escale_tags_passam(${expr}, ${p.add(JSON.stringify(tags))}::jsonb)`;
 }
 
-/** Filtro de tags do painel sobre a coluna `text[]` do assunto; `null` = nada a filtrar. */
-export function tagsSql(coluna: string, tags: TagsDoPainel, p: Parametros): string | null {
-  if (tags.modo === "qualquer_tag") return `coalesce(cardinality(${coluna}), 0) > 0`;
-  if (tags.modo === "sem_tag") return `coalesce(cardinality(${coluna}), 0) = 0`;
-  if (tags.valores.length === 0) return null;
-  const operador = tags.operador === "e" ? "@>" : "&&";
-  return `${coluna} ${operador} ${p.add(tags.valores)}::text[]`;
+export type AlvoDoCampoDoPainel = "contato" | "negocio" | "empresa";
+
+/**
+ * Campos do painel: cada condição vira `fn_escale_passa_condicao(<valor jsonb>, <condição jsonb>)`.
+ * `valorDe` devolve a expressão jsonb do valor para o alvo e a chave (a chave sempre em parâmetro) ou
+ * `null` quando o assunto não tem aquele objeto: a condição é ignorada (a Clint não zera o gráfico).
+ */
+export function camposDoPainelSql(
+  campos: NonNullable<FiltroCompilado["campos"]>,
+  valorDe: (alvo: AlvoDoCampoDoPainel, chave: string) => string | null,
+  p: Parametros,
+): { sql: string | null; ignorado: boolean } {
+  let ignorado = false;
+  const porGrupo = campos.grupos
+    .map((grupo) => {
+      const partes = grupo.condicoes.flatMap((c) => {
+        const valor = valorDe(c.alvo, c.chave);
+        if (valor === null) {
+          ignorado = true;
+          return [];
+        }
+        return [`public.fn_escale_passa_condicao(${valor}, ${p.add(JSON.stringify(c))}::jsonb)`];
+      });
+      return partes.length ? `(${partes.join(grupo.modo === "ou" ? " or " : " and ")})` : null;
+    })
+    .filter((g): g is string => g !== null);
+  if (porGrupo.length === 0) return { sql: null, ignorado };
+  const sql = porGrupo.length === 1 ? (porGrupo[0] ?? "") : `(${porGrupo.join(campos.combinar === "ou" ? " or " : " and ")})`;
+  return { sql, ignorado };
 }
 
 /** Valor de um campo personalizado como texto, número ou data, a chave sempre em parâmetro. */

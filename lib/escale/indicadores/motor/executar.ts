@@ -25,7 +25,7 @@ export interface Resultado {
   linhas: Linha[];
   truncado: boolean;
   duracaoMs: number;
-  avisos: ("moedas_diferentes" | "filtro_do_painel_ignorado")[];
+  avisos: ("moedas_diferentes" | "filtro_do_painel_ignorado" | "granularidade_ajustada")[];
   ignorados: string[];
 }
 export interface DependenciasDoExecutor {
@@ -85,7 +85,11 @@ export async function consultar(
       linhas: tabela.linhas,
       truncado,
       duracaoMs: Date.now() - inicio,
-      avisos: [...tabela.avisos, ...(montado.ignorados.length ? (["filtro_do_painel_ignorado"] as const) : [])],
+      avisos: [
+        ...tabela.avisos,
+        ...(montado.ignorados.length ? (["filtro_do_painel_ignorado"] as const) : []),
+        ...(montado.granularidadeAjustada ? (["granularidade_ajustada"] as const) : []),
+      ],
       ignorados: montado.ignorados,
     };
   } catch (erro) {

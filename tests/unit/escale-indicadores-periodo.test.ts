@@ -15,11 +15,11 @@ describe("resolverPeriodo", () => {
     ["7_dias", { de: "2026-10-20", ate: "2026-10-26" }],
     ["15_dias", { de: "2026-10-12", ate: "2026-10-26" }],
     ["1_mes", { de: "2026-09-27", ate: "2026-10-26" }],
-    ["esta_semana", { de: "2026-10-26", ate: "2026-10-26" }],
-    ["semana_passada", { de: "2026-10-19", ate: "2026-10-25" }],
-    ["este_mes", { de: "2026-10-01", ate: "2026-10-26" }],
+    ["esta_semana", { de: "2026-10-25", ate: "2026-10-31" }],
+    ["semana_passada", { de: "2026-10-18", ate: "2026-10-24" }],
+    ["este_mes", { de: "2026-10-01", ate: "2026-10-31" }],
     ["mes_passado", { de: "2026-09-01", ate: "2026-09-30" }],
-    ["este_ano", { de: "2026-01-01", ate: "2026-10-26" }],
+    ["este_ano", { de: "2026-01-01", ate: "2026-12-31" }],
   ] as const)("%s", (atalho, esperado) => {
     expect(de(atalho)).toEqual(esperado);
   });

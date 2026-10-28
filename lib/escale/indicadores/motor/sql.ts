@@ -2,11 +2,28 @@
  * O tradutor: pergunta validada → uma consulta SQL parametrizada (fork Escale, Fase 7A).
  * Puro, sem banco. Nenhum identificador vem do cliente: os ids viram os fragmentos do catálogo.
  */
+import { compilarFiltros } from "@/lib/escale/contatos/compilar-filtros";
+
 import { dimensaoPorId, medidaPorId, tempoPorId } from "../catalogo";
 import { lerCampoDinamico, type CampoDinamico } from "../catalogo/campos-personalizados";
-import type { Assunto, TipoDeDimensao, Unidade } from "../catalogo/tipos";
-import type { Condicao, FiltroDoPainel, Filtro, Granularidade, Pergunta } from "../pergunta";
-import { Parametros, campoPersonalizadoSql, condicaoSql, tagsSql } from "./condicoes";
+import { DIAS_MAX_POR_HORA, type Assunto, type TipoDeDimensao, type Unidade } from "../catalogo/tipos";
+import {
+  diasDoPeriodo,
+  type Condicao,
+  type FiltroDoPainel,
+  type Filtro,
+  type Granularidade,
+  type Periodo,
+  type Pergunta,
+} from "../pergunta";
+import {
+  Parametros,
+  camposDoPainelSql,
+  campoPersonalizadoSql,
+  condicaoSql,
+  tagsDoPainelSql,
+  type AlvoDoCampoDoPainel,
+} from "./condicoes";
 import { ErroDoMotor } from "./erros";
 import { resolverPeriodo } from "./periodo";
 
@@ -31,6 +48,8 @@ export interface SqlMontado {
   temMoeda: boolean;
   /** Filtros do painel que o assunto não aceita (a Clint ignora em vez de zerar o gráfico). */
   ignorados: string[];
+  /** A granularidade `hora` virou `dia` porque o período do painel passa de 31 dias. */
+  granularidadeAjustada: boolean;
 }
 
 const TRUNC: Record<Granularidade, string> = {
@@ -105,6 +124,17 @@ class Montagem {
     };
   }
 
+  /** Expressão jsonb do valor de um campo do filtro do painel (2B), ou `null` se o assunto não tem o objeto. */
+  valorDoCampoDoPainel(alvo: AlvoDoCampoDoPainel, chave: string): string | null {
+    const origem = this.assunto.camposPersonalizados[alvo];
+    if (!origem) return null;
+    this.usar(origem.precisa);
+    const a = origem.sql.replace(/\.custom_fields$/, "");
+    const fixo = FIXOS_DO_PAINEL[alvo]?.[chave];
+    if (fixo) return fixo(a);
+    return `(${origem.sql} -> ${this.parametros.add(chave)})`;
+  }
+
   condicao(c: Condicao): string | null {
     const campo = this.campo(c.campo);
     if (!campo) return null;
@@ -113,6 +143,23 @@ class Montagem {
     return condicaoSql(expr, campo.tipo, c, this.parametros);
   }
 }
+
+/** Os campos fixos que a lista de contatos (9102, 9105) lê por coluna; o resto vem de `custom_fields`. */
+const FIXOS_DO_PAINEL: Partial<Record<AlvoDoCampoDoPainel, Record<string, (alias: string) => string>>> = {
+  contato: {
+    nome: (a) => `to_jsonb(coalesce(${a}.name, ${a}.display_name))`,
+    email: (a) => `to_jsonb(${a}.email)`,
+    telefone: (a) => `to_jsonb(${a}.phone_number)`,
+    nascimento: (a) => `to_jsonb(${a}.birthdate::text)`,
+  },
+  negocio: { valor: (a) => `to_jsonb(${a}.value_cents / 100.0)` },
+  empresa: {
+    nome: (a) => `to_jsonb(coalesce(nullif(btrim(${a}.trade_name), ''), ${a}.legal_name))`,
+    cidade: (a) => `to_jsonb(${a}.city)`,
+    estado: (a) => `to_jsonb(${a}.state)`,
+    cnpj: (a) => `to_jsonb(${a}.cnpj)`,
+  },
+};
 
 const juntar = (modo: "todas" | "qualquer", partes: string[]): string => {
   if (partes.length === 0) return "";
@@ -126,6 +173,13 @@ function filtroSql(m: Montagem, filtro: Filtro): string | null {
 }
 function nao_nulo<T>(v: T | null): v is T {
   return v !== null;
+}
+
+/** R4: qual período vale para a pergunta, e se o do painel foi ignorado (gráfico sem tempo). */
+export function periodoEfetivo(p: Pergunta, painel?: FiltroDoPainel): { periodo: Periodo | null; ignorado: boolean } {
+  if (!p.tempo) return { periodo: null, ignorado: Boolean(painel?.periodo) };
+  if (p.tempo.fixo || !painel?.periodo) return { periodo: p.tempo.periodo, ignorado: false };
+  return { periodo: painel.periodo, ignorado: false };
 }
 
 function painelSql(m: Montagem, painel: FiltroDoPainel | undefined, ignorados: string[]): string[] {
@@ -148,18 +202,20 @@ function painelSql(m: Montagem, painel: FiltroDoPainel | undefined, ignorados: s
     m.usar(regra.precisa);
     clausulas.push(`${regra.sql} = any(${parametros.add(lista)}::uuid[])`);
   }
-  if (painel.tags) {
+  const compilado = compilarFiltros({ tags: painel.tags, campos: painel.campos }, m.ctx.fuso);
+  if (compilado.tags) {
     const regra = assunto.filtroDoPainel.tags;
     if (!regra) ignorados.push("tags");
     else {
       m.usar(regra.precisa);
-      const sql = tagsSql(regra.sql, { ...painel.tags, valores: painel.tags.valores ?? [], operador: painel.tags.operador ?? "ou" }, parametros);
-      if (sql) clausulas.push(sql);
+      clausulas.push(tagsDoPainelSql(regra.sql, compilado.tags, parametros));
     }
   }
-  const campos = (painel.campos ?? []).map((c) => m.condicao(c));
-  if (campos.some((c) => c === null)) ignorados.push("campos");
-  clausulas.push(...campos.filter(nao_nulo));
+  if (compilado.campos) {
+    const { sql, ignorado } = camposDoPainelSql(compilado.campos, (alvo, chave) => m.valorDoCampoDoPainel(alvo, chave), parametros);
+    if (ignorado) ignorados.push("campos");
+    if (sql) clausulas.push(sql);
+  }
   return clausulas;
 }
 
@@ -186,17 +242,19 @@ export function montarSql(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: 
     return id;
   });
 
-  // Tempo: o bucket e/ou o período
-  const painelTemPeriodo = painel?.periodo !== undefined && !p.tempo?.fixo;
-  const padrao = assunto.tempos.find((t) => t.padrao);
-  const campoDeTempo = p.tempo ? tempoPorId(p.tempo.campo)?.tempo : painelTemPeriodo ? padrao : undefined;
+  // Tempo: o bucket e/ou o período (R4: gráfico sem tempo ignora o período do painel)
+  const efetivo = periodoEfetivo(p, painel);
+  const campoDeTempo = p.tempo ? tempoPorId(p.tempo.campo)?.tempo : undefined;
   if (p.tempo && !campoDeTempo) throw new ErroDoMotor("pergunta_invalida", `Tempo ${p.tempo.campo} não existe.`);
+  const dias = efetivo.periodo ? diasDoPeriodo(efetivo.periodo) : null;
+  const granularidadeAjustada = p.tempo?.granularidade === "hora" && (dias === null || dias > DIAS_MAX_POR_HORA);
+  const granularidade = granularidadeAjustada ? "dia" : p.tempo?.granularidade;
   let temBucket = false;
-  if (p.tempo?.granularidade && campoDeTempo) {
+  if (granularidade && campoDeTempo) {
     m.usar(campoDeTempo.precisa);
     // Texto ISO sem fuso: o driver não reinterpreta o horário local do servidor.
     selecao.push(
-      `to_char(date_trunc('${TRUNC[p.tempo.granularidade]}', (${frag(campoDeTempo.sql)} at time zone $2)), 'YYYY-MM-DD"T"HH24:MI:SS') as t`,
+      `to_char(date_trunc('${TRUNC[granularidade]}', (${frag(campoDeTempo.sql)} at time zone $2)), 'YYYY-MM-DD"T"HH24:MI:SS') as t`,
     );
     colunas.push({ chave: "t", nome: campoDeTempo.nome, papel: "tempo" });
     temBucket = true;
@@ -209,7 +267,7 @@ export function montarSql(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: 
     if (!achado || achado.assunto.id !== assunto.id) throw new ErroDoMotor("pergunta_invalida", `Indicador ${id} inválido.`);
     m.usar(achado.medida.precisa);
     selecao.push(`${frag(achado.medida.sql)} as i${i}`);
-    colunas.push({ chave: `i${i}`, nome: achado.medida.nome, papel: "indicador", unidade: achado.medida.unidade });
+    colunas.push({ chave: `i${i}`, nome: `${assunto.nome} ${achado.medida.nome}`, papel: "indicador", unidade: achado.medida.unidade });
     temMoeda ||= Boolean(achado.medida.moeda);
   });
   if (temMoeda) {
@@ -220,8 +278,7 @@ export function montarSql(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: 
   // Filtros
   const onde: string[] = [`${alias}.organization_id = $1`];
   if (assunto.base.condicaoFixa) onde.push(assunto.base.condicaoFixa);
-  const periodo = painelTemPeriodo ? painel!.periodo! : p.tempo?.periodo;
-  const intervalo = periodo && campoDeTempo ? resolverPeriodo(periodo, ctx.agora, ctx.fuso) : null;
+  const intervalo = efetivo.periodo && campoDeTempo ? resolverPeriodo(efetivo.periodo, ctx.agora, ctx.fuso) : null;
   if (intervalo && campoDeTempo) {
     m.usar(campoDeTempo.precisa);
     const expr = frag(campoDeTempo.sql);
@@ -232,7 +289,7 @@ export function montarSql(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: 
   }
   const doFiltro = filtroSql(m, p.filtro);
   if (doFiltro) onde.push(doFiltro);
-  const ignorados: string[] = [];
+  const ignorados: string[] = efetivo.ignorado ? ["periodo"] : [];
   onde.push(...painelSql(m, painel, ignorados));
 
   // Ordem e limite
@@ -249,7 +306,7 @@ export function montarSql(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: 
     `limit ${p.limite + 1}`,
   ];
 
-  return { text: corpo.join(" "), values: m.parametros.valores, colunas, assunto: assunto.id, temMoeda, ignorados };
+  return { text: corpo.join(" "), values: m.parametros.valores, colunas, assunto: assunto.id, temMoeda, ignorados, granularidadeAjustada };
 }
 
 function ordenacao(p: Pergunta, variaveis: string[], temBucket: boolean): string {

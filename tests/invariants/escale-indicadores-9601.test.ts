@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { CATALOGO } from "@/lib/escale/indicadores/catalogo";
 import type { Assunto } from "@/lib/escale/indicadores/catalogo/tipos";
 import { montarSql } from "@/lib/escale/indicadores/motor/sql";
-import { perguntaSchema } from "@/lib/escale/indicadores/pergunta";
+import { perguntaSchema, type FiltroDoPainel } from "@/lib/escale/indicadores/pergunta";
 
 import { inlinar } from "../helpers/sql-com-parametros";
 import {
@@ -45,8 +45,8 @@ const comoPapel = (userId: string, consulta: string): string[] =>
     .split("\n")
     .filter((linha) => linha.includes("|"));
 
-function rodarPergunta(userId: string, pergunta: unknown): string[] {
-  const montado = montarSql(perguntaSchema.parse(pergunta), undefined, {
+function rodarPergunta(userId: string, pergunta: unknown, painel?: FiltroDoPainel): string[] {
+  const montado = montarSql(perguntaSchema.parse(pergunta), painel, {
     orgId: GOV_ORG,
     fuso: FUSO,
     agora: AGORA,
@@ -260,5 +260,49 @@ describe("o tradutor como cada papel", () => {
       expect(Number(conv?.[1]), `conversas de ${usuario}`).toBe(Number(conversas));
       if (ttfr) expect(Math.round(Number(conv?.[2])), `1ª resposta de ${usuario}`).toBe(Number(ttfr));
     }
+  });
+});
+
+describe("o filtro do painel no banco (fase 7C)", () => {
+  const MES = { atalho: "este_mes" as const };
+  const QUANTIDADE = { indicadores: ["negocio.quantidade"] };
+  const contar = (painel?: FiltroDoPainel, pergunta: unknown = QUANTIDADE) =>
+    Number(rodarPergunta(GOV_MANAGER, pergunta, painel)[0]?.split("|")[0] ?? 0);
+
+  beforeAll(() => {
+    sql(`
+      delete from public.crm_leads where title like 'ind7c %';
+      insert into public.crm_leads (organization_id, pipeline_id, stage_id, title, status, owner_user_id, tags, value_cents, created_at) values
+        ('${GOV_ORG}', 'cccccccc-5555-4000-8000-000000000001', 'cccccccc-5555-4000-8000-000000000002', 'ind7c vip', 'open', '${GOV_AGENT_A}', '{vip}', 150000, now()),
+        ('${GOV_ORG}', 'cccccccc-5555-4000-8000-000000000001', 'cccccccc-5555-4000-8000-000000000002', 'ind7c sem', 'open', '${GOV_AGENT_A}', '{}', 5000, now()),
+        ('${GOV_ORG}', 'cccccccc-5555-4000-8000-000000000001', 'cccccccc-5555-4000-8000-000000000002', 'ind7c antigo', 'open', '${GOV_AGENT_A}', '{vip}', 5000, now() - interval '400 days');
+    `);
+  });
+
+  const tituloIgual = { campo: "negocio.titulo", op: "contem" as const, valor: "ind7c" };
+  const soDoTeste = { ...QUANTIDADE, filtro: { condicoes: [tituloIgual] } };
+  const tags = (op: "possui" | "sem") => ({
+    combinar: "e" as const,
+    grupos: [{ modo: "e" as const, condicoes: [op === "possui" ? { op, tag: "vip" } : { op }] }],
+  });
+
+  it("tags: possui vip acha o com tag; sem tag acha o sem tag", () => {
+    expect(contar({ tags: tags("possui") }, { ...soDoTeste, tempo: { campo: "negocio.criado_em", periodo: { atalho: "tudo" } } })).toBe(2);
+    expect(contar({ tags: tags("sem") }, { ...soDoTeste, tempo: { campo: "negocio.criado_em", periodo: { atalho: "tudo" } } })).toBe(1);
+  });
+
+  it("campos do negócio: valor maior que 1000 acha só o de R$ 1.500", () => {
+    const campos = {
+      combinar: "e" as const,
+      grupos: [{ modo: "e" as const, condicoes: [{ alvo: "negocio" as const, chave: "valor", tipo: "numero" as const, op: "maior" as const, valor: "1000" }] }],
+    };
+    expect(contar({ campos }, { ...soDoTeste, tempo: { campo: "negocio.criado_em", periodo: { atalho: "tudo" } } })).toBe(1);
+  });
+
+  it("o período do painel vale para o gráfico com tempo; o fixo ignora; sem tempo ignora", () => {
+    const comTempo = (fixo: boolean) => ({ ...soDoTeste, tempo: { campo: "negocio.criado_em", periodo: { atalho: "tudo" }, fixo } });
+    expect(contar({ periodo: MES }, comTempo(false))).toBe(2);
+    expect(contar({ periodo: MES }, comTempo(true))).toBe(3);
+    expect(contar({ periodo: MES }, soDoTeste)).toBe(3);
   });
 });

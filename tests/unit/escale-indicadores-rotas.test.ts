@@ -63,6 +63,17 @@ describe("POST consultar", () => {
     expect(mocks.consultar.mock.calls[0]?.[1]).toEqual({ orgId: ORG, userId: USER, fuso: "America/Sao_Paulo" });
   });
 
+  it("`fresco` pula o cache e grava a resposta nova; chave desconhecida é 422", async () => {
+    await POST(requisicao({ pergunta: PERGUNTA }));
+    await POST(requisicao({ pergunta: PERGUNTA }));
+    expect(mocks.consultar).toHaveBeenCalledTimes(1);
+    await POST(requisicao({ pergunta: PERGUNTA, fresco: true }));
+    expect(mocks.consultar).toHaveBeenCalledTimes(2);
+    await POST(requisicao({ pergunta: PERGUNTA }));
+    expect(mocks.consultar).toHaveBeenCalledTimes(2);
+    expect((await POST(requisicao({ pergunta: PERGUNTA, outra: 1 }))).status).toBe(422);
+  });
+
   it("422 para corpo inválido e para pergunta sem sentido", async () => {
     expect((await POST(requisicao({ pergunta: { indicadores: [] } }))).status).toBe(422);
     expect((await POST(requisicao({ pergunta: { indicadores: ["negocio.ganhos", "conversa.iniciadas"] } }))).status).toBe(422);

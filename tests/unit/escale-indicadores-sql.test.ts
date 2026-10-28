@@ -43,7 +43,7 @@ describe("montarSql", () => {
       order by t asc, i0 desc
       limit 1001`),
     );
-    expect(r.values).toEqual([ORG, "America/Sao_Paulo", "2026-10-01", "2026-10-26", ["e1"], [USER]]);
+    expect(r.values).toEqual([ORG, "America/Sao_Paulo", "2026-10-01", "2026-10-31", ["e1"], [USER]]);
     expect(r.temMoeda).toBe(true);
     expect(r.colunas.map((c) => c.chave)).toEqual(["v0", "v0_rotulo", "t", "i0", "i1", "moedas"]);
   });
@@ -95,6 +95,72 @@ describe("montarSql", () => {
     expect(montarSql(pergunta(fixo), painel, ctx()).values).toContain("2026-10-26");
   });
 
+  it("gráfico sem tempo ignora o período do painel e avisa", () => {
+    const r = montarSql(pergunta({ indicadores: ["negocio.ganhos"] }), { periodo: { atalho: "ontem" } }, ctx());
+    expect(r.ignorados).toEqual(["periodo"]);
+    expect(r.text).not.toContain("::date");
+  });
+
+  it("período do painel sobrepõe o do gráfico, e o fixo ganha do painel", () => {
+    const base = { indicadores: ["negocio.ganhos"], tempo: { campo: "negocio.criado_em", periodo: { atalho: "mes_passado" } } };
+    const painel: FiltroDoPainel = { periodo: { atalho: "este_mes" } };
+    expect(montarSql(pergunta(base), painel, ctx()).values).toEqual(expect.arrayContaining(["2026-10-01", "2026-10-31"]));
+    const fixo = { ...base, tempo: { ...base.tempo, fixo: true } };
+    expect(montarSql(pergunta(fixo), painel, ctx()).values).toEqual(expect.arrayContaining(["2026-09-01", "2026-09-30"]));
+  });
+
+  it("hora com o período do painel acima de 31 dias vira dia e avisa", () => {
+    const hora = { indicadores: ["negocio.ganhos"], tempo: { campo: "negocio.criado_em", granularidade: "hora", periodo: { atalho: "hoje" } } };
+    const r = montarSql(pergunta(hora), { periodo: { atalho: "este_ano" } }, ctx());
+    expect(r.text).toContain("date_trunc('day'");
+    expect(r.granularidadeAjustada).toBe(true);
+    expect(montarSql(pergunta(hora), undefined, ctx()).granularidadeAjustada).toBe(false);
+  });
+
+  it("tags do painel usam fn_escale_tags_passam sobre a coluna do assunto", () => {
+    const tags = { combinar: "ou" as const, grupos: [{ modo: "e" as const, condicoes: [{ op: "possui" as const, tag: "VIP" }] }] };
+    const r = montarSql(pergunta({ indicadores: ["negocio.ganhos"] }), { tags }, ctx());
+    expect(r.text).toContain("public.fn_escale_tags_passam(b.tags, $3::jsonb)");
+    expect(JSON.parse(String(r.values[2])).grupos[0].condicoes[0].tag).toBe("vip");
+  });
+
+  it("campos do painel: fixo por coluna, personalizado com a chave em parâmetro", () => {
+    const campos = {
+      combinar: "e" as const,
+      grupos: [
+        {
+          modo: "e" as const,
+          condicoes: [
+            { alvo: "contato" as const, chave: "email", tipo: "texto" as const, op: "contem" as const, valor: "@x" },
+            { alvo: "contato" as const, chave: "cargo", tipo: "texto" as const, op: "igual" as const, valor: "dono" },
+            { alvo: "negocio" as const, chave: "valor", tipo: "numero" as const, op: "maior" as const, valor: "10" },
+          ],
+        },
+      ],
+    };
+    const r = montarSql(pergunta({ indicadores: ["negocio.ganhos"] }), { campos }, ctx());
+    expect(r.text).toContain("fn_escale_passa_condicao(to_jsonb(c.email), ");
+    expect(r.text).toContain("(c.custom_fields -> $");
+    expect(r.text).toContain("to_jsonb(b.value_cents / 100.0)");
+    expect(r.text).not.toContain("cargo");
+    expect(r.values).toContain("cargo");
+    expect(r.text).toContain("left join public.contacts c");
+  });
+
+  it("campo de empresa num assunto sem empresa é ignorado", () => {
+    const campos = {
+      combinar: "e" as const,
+      grupos: [{ modo: "e" as const, condicoes: [{ alvo: "empresa" as const, chave: "cidade", tipo: "texto" as const, op: "igual" as const, valor: "SP" }] }],
+    };
+    const r = montarSql(pergunta({ indicadores: ["negocio.ganhos"] }), { campos }, ctx());
+    expect(r.ignorados).toContain("campos");
+  });
+
+  it("o nome do indicador leva o assunto, como a legenda da Clint", () => {
+    const r = montarSql(pergunta({ indicadores: ["negocio.quantidade"] }), undefined, ctx());
+    expect(r.colunas.find((c) => c.papel === "indicador")?.nome).toBe("Negócio Quantidade");
+  });
+
   it("campo personalizado usa a chave como parâmetro", () => {
     const campo: CampoDinamico = { id: "campo:negocio:valor_do_imovel", nome: "Valor do imóvel", objeto: "negocio", chave: "valor_do_imovel", tipo: "texto" };
     const r = montarSql(
@@ -119,7 +185,7 @@ describe("montarSql", () => {
           ],
         },
       }),
-      { tags: { modo: "lista", valores: [veneno], operador: "ou" } },
+      { tags: { combinar: "ou", grupos: [{ modo: "e", condicoes: [{ op: "possui", tag: veneno }] }] } },
       ctx(),
     );
     expect(r.text.toLowerCase()).not.toContain("drop");
