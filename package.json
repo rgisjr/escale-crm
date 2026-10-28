@@ -95,6 +95,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-grid-layout": "2.2.4",
     "react-hook-form": "^7.89.0",
     "react-hotkeys-hook": "^5.3.3",
     "recharts": "^3.10.1",
