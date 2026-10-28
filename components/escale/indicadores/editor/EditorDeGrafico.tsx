@@ -5,7 +5,7 @@ import { useCatalogoDeIndicadores } from "@/hooks/escale/useCatalogoDeIndicadore
 import { useRascunhoDoGrafico } from "@/hooks/escale/useRascunhoDoGrafico";
 import { useResultadoDoGrafico } from "@/hooks/escale/useResultadoDoGrafico";
 import type { Role } from "@/lib/auth/types";
-import { perguntaDoRascunho, rascunhoDoGrafico } from "@/lib/escale/indicadores/editor/pergunta-do-rascunho";
+import { perguntaOuDivisor, rascunhoDoGrafico } from "@/lib/escale/indicadores/editor/pergunta-do-rascunho";
 import { rascunhoNovo } from "@/lib/escale/indicadores/editor/rascunho";
 import type { GraficoParaEditar } from "@/lib/escale/indicadores/graficos/banco";
 import type { PainelDaLista } from "@/lib/escale/indicadores/paineis/tipos";
@@ -52,17 +52,22 @@ export function EditorDeGrafico({ modo, grafico, painelDeOrigem }: Props) {
     }
   }, [modo, catalogo.data, executar]);
 
-  const etapas = useMemo(
-    () =>
-      rascunho.tipo === "funil" && resultado.data
-        ? resultado.data.linhas.map((l) => ({ valor: String(l.v0 ?? ""), rotulo: String(l.v0_rotulo ?? l.v0 ?? "") }))
-        : [],
-    [rascunho.tipo, resultado.data],
-  );
+  const etapas = useMemo(() => {
+    if (!resultado.data) return [];
+    if (rascunho.tipo === "funil") {
+      return resultado.data.linhas.map((l) => ({ valor: String(l.v0 ?? ""), rotulo: String(l.v0_rotulo ?? l.v0 ?? "") }));
+    }
+    if (rascunho.tipo === "ranking") {
+      // As faixas do ranking são os valores da 2ª variável (guardados pelo rótulo, como o desenho compara).
+      const rotulos = [...new Set(resultado.data.linhas.map((l) => String(l.v1_rotulo ?? l.v1 ?? "")))].filter(Boolean);
+      return rotulos.map((r) => ({ valor: r, rotulo: r }));
+    }
+    return [];
+  }, [rascunho.tipo, resultado.data]);
 
   function conteudo(): ConteudoDoGrafico | null {
     if (!catalogo.data) return null;
-    const res = perguntaDoRascunho(rascunho, catalogo.data);
+    const res = perguntaOuDivisor(rascunho, catalogo.data);
     return res.ok ? { tipo: rascunho.tipo, pergunta: res.pergunta, opcoes: rascunho.opcoes } : null;
   }
 
@@ -85,6 +90,7 @@ export function EditorDeGrafico({ modo, grafico, painelDeOrigem }: Props) {
           erros={erros}
           mudar={mudar}
           etapasDoResultado={etapas}
+          resultado={resultado.data}
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <FaixaDoEditor rascunho={rascunho} catalogo={catalogo.data} mudar={mudar} pendente={pendente} aoExecutar={executar} />

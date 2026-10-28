@@ -8,7 +8,11 @@ import type { FormatoDaColuna } from "../catalogo/tipos";
 import type { Resultado } from "../motor/executar";
 import type { Pergunta, Ponto } from "../pergunta";
 import { rotuloDaVariavel } from "./dados";
+import { tagDeIdioma } from "@/lib/i18n/datas";
+
 import { formatarDuracao } from "./formatos";
+
+const TAG_PADRAO = tagDeIdioma("pt-BR");
 
 export type ColunaDoDetalhamentoNaTela = { chave: string; nome: string; formato?: FormatoDaColuna | null; padrao: boolean };
 type ColunaComFormato = { chave: string; nome: string; formato?: FormatoDaColuna | null };
@@ -29,11 +33,11 @@ const comoNumero = (v: unknown): number | null => {
 };
 
 /** "28/09/2026, 13:56" no fuso da organização; inválida vira vazio. */
-export function formatarDataHora(valor: unknown, fuso: string): string {
+export function formatarDataHora(valor: unknown, fuso: string, tag: string = TAG_PADRAO): string {
   if (valor === null || valor === undefined) return "";
   const d = valor instanceof Date ? valor : new Date(String(valor));
   if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(tag, {
     timeZone: fuso,
     day: "2-digit",
     month: "2-digit",
@@ -45,7 +49,13 @@ export function formatarDataHora(valor: unknown, fuso: string): string {
 }
 
 /** O texto que a tela mostra para uma célula; nulo = "—". */
-export function textoDaCelula(valor: unknown, formato: FormatoDaColuna | null | undefined, fuso: string, t: (s: string) => string = (s) => s): string {
+export function textoDaCelula(
+  valor: unknown,
+  formato: FormatoDaColuna | null | undefined,
+  fuso: string,
+  t: (s: string) => string = (s) => s,
+  tag: string = TAG_PADRAO,
+): string {
   if (valor === null || valor === undefined || valor === "") return "—";
   switch (formato) {
     case "valor": {
@@ -61,7 +71,7 @@ export function textoDaCelula(valor: unknown, formato: FormatoDaColuna | null | 
       return n === null ? "—" : formatarDuracao(n);
     }
     case "data":
-      return formatarDataHora(valor, fuso) || "—";
+      return formatarDataHora(valor, fuso, tag) || "—";
     case "status_do_negocio":
       return t(ROTULO_DO_STATUS_DO_NEGOCIO[String(valor)] ?? String(valor));
     case "status_da_conversa":
@@ -72,13 +82,13 @@ export function textoDaCelula(valor: unknown, formato: FormatoDaColuna | null | 
 }
 
 /** O valor que o CSV leva: número BR para valor/número/duração (em segundos), texto para o resto. */
-function valorDoCsv(valor: unknown, formato: FormatoDaColuna | null | undefined, fuso: string, t: (s: string) => string): unknown {
+function valorDoCsv(valor: unknown, formato: FormatoDaColuna | null | undefined, fuso: string, t: (s: string) => string, tag: string): unknown {
   if (valor === null || valor === undefined) return "";
   if (formato === "valor" || formato === "numero" || formato === "duracao") {
     const n = comoNumero(valor);
     return n === null ? "" : numeroBr(n.toFixed(2).replace(".", ","));
   }
-  const texto = textoDaCelula(valor, formato, fuso, t);
+  const texto = textoDaCelula(valor, formato, fuso, t, tag);
   return texto === "—" ? "" : texto;
 }
 
@@ -87,9 +97,10 @@ export function csvDoDetalhamento(
   linhas: readonly LinhaDoDetalhamento[],
   fuso: string,
   t: (s: string) => string = (s) => s,
+  tag: string = TAG_PADRAO,
 ): string {
   const cabecalho = colunas.map((c) => c.nome);
-  const corpo = linhas.map((l) => colunas.map((c) => valorDoCsv(l[c.chave], c.formato, fuso, t)));
+  const corpo = linhas.map((l) => colunas.map((c) => valorDoCsv(l[c.chave], c.formato, fuso, t, tag)));
   return `${[cabecalho, ...corpo].map((l) => l.map(celula).join(",")).join("\r\n")}\r\n`;
 }
 

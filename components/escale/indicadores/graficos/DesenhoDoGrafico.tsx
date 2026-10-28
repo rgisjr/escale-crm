@@ -1,5 +1,6 @@
 "use client";
 import type { Clique } from "@/lib/escale/indicadores/graficos/detalhamento";
+import { opcoesComMetasPorChave } from "@/lib/escale/indicadores/graficos/metas";
 import type { OpcoesDoGrafico } from "@/lib/escale/indicadores/graficos/opcoes";
 import type { TipoDeGrafico } from "@/lib/escale/indicadores/graficos/tipos";
 import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
@@ -31,7 +32,9 @@ export type PropsDoDesenho = {
 };
 
 /** Escolhe o desenho pelo tipo. O card do painel e a prévia do editor (7D) usam o mesmo. */
-export function DesenhoDoGrafico({ tipo, resultado, pergunta, opcoes, altura, aoClicarNoPonto, nome }: PropsDoDesenho) {
+export function DesenhoDoGrafico({ tipo, resultado, pergunta, opcoes: opcoesGravadas, altura, aoClicarNoPonto, nome }: PropsDoDesenho) {
+  // As metas ficam gravadas por id do indicador; o desenho as lê pela chave da coluna (i0, c0).
+  const opcoes = opcoesComMetasPorChave(opcoesGravadas, pergunta);
   switch (tipo) {
     case "linha":
     case "area":

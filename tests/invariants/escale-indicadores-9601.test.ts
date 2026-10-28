@@ -2,8 +2,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { CATALOGO } from "@/lib/escale/indicadores/catalogo";
 import type { Assunto } from "@/lib/escale/indicadores/catalogo/tipos";
+import { montarSqlDoDetalhamento } from "@/lib/escale/indicadores/motor/detalhamento";
 import { montarSql } from "@/lib/escale/indicadores/motor/sql";
-import { perguntaSchema, type FiltroDoPainel } from "@/lib/escale/indicadores/pergunta";
+import { detalhamentoSchema, perguntaSchema, type FiltroDoPainel } from "@/lib/escale/indicadores/pergunta";
 
 import { inlinar } from "../helpers/sql-com-parametros";
 import {
@@ -342,5 +343,108 @@ describe("a etapa na ordem do quadro (fase 7D)", () => {
     });
     const nomes = linhas.map((l) => l.split("|")[1]);
     expect(nomes).toEqual(["ind7d primeira", "ind7d segunda", "ind7d terceira"]);
+  });
+});
+
+describe("recursos avançados no banco (fase 7E)", () => {
+  const ORIGEM_A = "cccccccc-5555-4000-8000-000000000001";
+  const ETAPA = "cccccccc-5555-4000-8000-000000000002";
+  const hoje = new Date();
+  const doMesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 15, 12).toISOString();
+  const doMes = new Date(hoje.getFullYear(), hoje.getMonth(), Math.min(hoje.getDate(), 15), 12).toISOString();
+
+  beforeAll(() => {
+    sql(`
+      delete from public.crm_leads where title like 'ind7e %';
+      insert into public.crm_leads (organization_id, pipeline_id, stage_id, title, status, owner_user_id, value_cents, created_at, closed_at) values
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a1', 'won', '${GOV_AGENT_A}', 150000, '${doMes}', '${doMes}'),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a2', 'won', '${GOV_AGENT_A}', 50000, '${doMes}', '${doMes}'),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a3', 'won', '${GOV_AGENT_A}', 10000, '${doMesPassado}', '${doMesPassado}'),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a4', 'lost', '${GOV_AGENT_A}', 10000, '${doMes}', '${doMes}'),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e b1', 'won', '${GOV_AGENT_B}', 20000, '${doMes}', '${doMes}'),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e b2', 'open', '${GOV_AGENT_B}', 20000, '${doMes}', null);
+    `);
+  });
+
+  const SO_DO_TESTE = { campo: "negocio.titulo", op: "contem" as const, valor: "ind7e" };
+  const contexto = { orgId: GOV_ORG, fuso: FUSO, agora: new Date(), camposDaOrg: new Map() };
+  const rodarDetalhe = (userId: string, pedido: unknown) => {
+    const montado = montarSqlDoDetalhamento(detalhamentoSchema.parse(pedido), contexto);
+    return comoPapel(userId, `${inlinar(montado.text, montado.values)};`);
+  };
+  const PEDIDO_GANHOS = {
+    pergunta: { indicadores: ["negocio.ganhos"], filtro: { condicoes: [SO_DO_TESTE] } },
+    indicador: "negocio.ganhos",
+    porPagina: 50,
+  };
+
+  it("(a) o detalhamento lista os ganhos que o papel enxerga e o total vem da RLS", () => {
+    const gerente = rodarDetalhe(GOV_MANAGER, PEDIDO_GANHOS);
+    expect(gerente).toHaveLength(4);
+    const doAgenteA = rodarDetalhe(GOV_AGENT_A, PEDIDO_GANHOS);
+    expect(doAgenteA.length).toBeLessThanOrEqual(gerente.length);
+    expect(doAgenteA.every((l) => l.endsWith(`|${doAgenteA.length}`))).toBe(true);
+    expect(rodarDetalhe(GOV_VIEWER, PEDIDO_GANHOS)).toHaveLength(0);
+  });
+
+  it("(b) a comparação traz o ramo atual e o anterior com as contagens certas", () => {
+    const montado = montarSql(
+      perguntaSchema.parse({
+        indicadores: ["negocio.ganhos"],
+        filtro: { condicoes: [SO_DO_TESTE] },
+        tempo: { campo: "negocio.criado_em", periodo: { atalho: "este_mes" } },
+        comparacao: { modo: "mes_anterior" },
+      }),
+      undefined,
+      { ...contexto, agora: hoje },
+    );
+    const linhas = comoPapel(GOV_MANAGER, `${inlinar(montado.text, montado.values)};`);
+    const soma = (ramo: string) => linhas.filter((l) => l.startsWith(ramo)).reduce((n, l) => n + Number(l.split("|")[1]), 0);
+    expect(soma("atual")).toBe(3);
+    expect(soma("anterior")).toBe(1);
+  });
+
+  it("(c) o calculado ganhos ÷ perdidos devolve null com divisor zero", () => {
+    const linhas = rodarPergunta(GOV_MANAGER, {
+      indicadores: ["negocio.ganhos"],
+      variaveis: ["negocio.dono"],
+      filtro: { condicoes: [SO_DO_TESTE] },
+      calculados: [{ id: "calc:razao", nome: "Razão", a: "negocio.ganhos", op: "divisao", b: "negocio.perdidos", formato: "numero" }],
+    });
+    expect(linhas.find((l) => l.startsWith(GOV_AGENT_A))?.split("|").at(-1)).toBe("3");
+    expect(linhas.find((l) => l.startsWith(GOV_AGENT_B))?.split("|").at(-1)).toBe("");
+  });
+
+  it("(d) o filtro quantitativo (having) deixa só quem passa do limite", () => {
+    const linhas = rodarPergunta(GOV_MANAGER, {
+      indicadores: ["negocio.ganhos"],
+      variaveis: ["negocio.dono"],
+      filtro: { condicoes: [SO_DO_TESTE] },
+      filtroQuantitativo: [{ indicador: "negocio.ganhos", op: "maior_que", valor: 2 }],
+    });
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]).toMatch(new RegExp(`^${GOV_AGENT_A}`));
+  });
+
+  it("(e) a matriz dia × hora usa o fuso da organização (23h30 não vira o dia seguinte)", () => {
+    sql(`
+      delete from public.messages where conversation_id = '${CONV_A}' and type = 'text' and direction = 'outbound' and sent_by_user_id is null;
+      insert into public.messages (organization_id, conversation_id, channel_session_id, contact_id, type, direction, sent_via, sent_at) values
+        ('${GOV_ORG}', '${CONV_A}', '${GOV_SESSION}', '${GOV_CONTACT_PROBE}', 'text', 'outbound', 'crm', '2026-03-10 02:30:00+00'),
+        ('${GOV_ORG}', '${CONV_A}', '${GOV_SESSION}', '${GOV_CONTACT_PROBE}', 'text', 'outbound', 'crm', '2026-03-10 17:00:00+00');
+    `);
+    const linhas = rodarPergunta(GOV_MANAGER, {
+      indicadores: ["mensagem.total"],
+      tempo: { campo: "mensagem.enviada_em", periodo: { atalho: "personalizado", de: "2026-03-10", ate: "2026-03-10" } },
+      matrizDeTempo: true,
+    });
+    // 02:30 UTC = 23:30 de 09/03 em São Paulo (segunda = 1); 17:00 UTC = 14:00 de 10/03 (terça = 2).
+    expect(linhas.some((l) => l.startsWith("1|23|"))).toBe(false);
+    expect(linhas.some((l) => l.startsWith("2|14|"))).toBe(true);
+  });
+
+  it("(f) o total do detalhamento é só o que a RLS deixa ver, não a tabela inteira", () => {
+    const comoViewer = rodarDetalhe(GOV_VIEWER, { ...PEDIDO_GANHOS, pergunta: { indicadores: ["negocio.quantidade"] }, indicador: "negocio.quantidade" });
+    expect(comoViewer.length).toBeLessThanOrEqual(1);
   });
 });

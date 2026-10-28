@@ -21,7 +21,8 @@ import {
   type RascunhoDoGrafico,
 } from "@/lib/escale/indicadores/editor/rascunho";
 import { usaTotais } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
-import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
+import { toast } from "sonner";
+import type { TipoDeGrafico } from "@/lib/escale/indicadores/graficos/tipos";
 import type { Granularidade } from "@/lib/escale/indicadores/pergunta";
 import { Play } from "@/lib/ui/icons-da-casca";
 
@@ -44,13 +45,15 @@ const SEM_CATALOGO: CatalogoDaTela = { assuntos: [], camposPersonalizados: { neg
 /** A faixa de controles (10-012, 10-037, 10-048, 10-054): tipo, totais, período, fixar, agrupamento e Executar. */
 export function FaixaDoEditor({ rascunho, catalogo, mudar, pendente, aoExecutar }: Props) {
   const t = useT();
-  const [excedente, setExcedente] = useState<{ tipo: TipoPrincipal; limite: number } | null>(null);
+  const [excedente, setExcedente] = useState<{ tipo: TipoDeGrafico; limite: number } | null>(null);
   const { periodo, granularidade, campo } = rascunho.tempo;
 
-  function escolherTipo(tipo: TipoPrincipal) {
+  function escolherTipo(tipo: TipoDeGrafico) {
     const res = trocarTipo(rascunho, tipo);
     if ("excede" in res) setExcedente({ tipo, limite: res.excede.limite });
-    else mudar(() => res.rascunho);
+    else if ("calculadoIncompativel" in res) {
+      toast.error(t("Em gráfico de pizza, a conta precisa somar ou multiplicar para as fatias representarem partes do todo."));
+    } else mudar(() => res.rascunho);
   }
 
   return (
@@ -85,7 +88,7 @@ export function FaixaDoEditor({ rascunho, catalogo, mudar, pendente, aoExecutar 
             aria-label={t("Agrupamento por")}
             className="h-8 bg-casca-busca"
             valor={granularidade ?? NENHUMA}
-            desabilitado={!campo}
+            desabilitado={!campo || rascunho.tipo === "heatmap"}
             opcoes={granularidadesDisponiveis(periodo).map(({ g, ligada }) => ({
               valor: g ?? NENHUMA,
               rotulo: t(ROTULO_DA_GRANULARIDADE[g ?? NENHUMA]),

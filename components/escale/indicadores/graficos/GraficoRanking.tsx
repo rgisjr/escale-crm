@@ -9,8 +9,6 @@ import { formatarPercentual, formatarValor } from "@/lib/escale/indicadores/graf
 import type { OpcoesDoGrafico } from "@/lib/escale/indicadores/graficos/opcoes";
 import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
 
-const ROTULO_DA_UNIDADE = { contagem: "quantidade", valor: "", percentual: "", duracao: "" } as const;
-
 /** Ranking de distribuição (print 10-045): posição, avatar, nome, barra e valor; mostra 5 e "Ver todos". */
 export function GraficoRanking({
   resultado,
@@ -52,7 +50,7 @@ export function GraficoRanking({
               </div>
             </div>
             <span className="shrink-0 text-right text-[13px] text-casca-texto">
-              {formatarValor(l.valor, l.unidade)} {t(ROTULO_DA_UNIDADE[l.unidade])}
+              {formatarValor(l.valor, l.unidade)}{l.unidade === "contagem" ? ` ${t("quantidade")}` : ""}
               {l.foraDaMeta !== null ? (
                 <span className="block text-[12px] text-casca-alerta">
                   {t("{pct}% fora da meta").replace("{pct}", formatarPercentual(l.foraDaMeta, 0).replace("%", ""))}

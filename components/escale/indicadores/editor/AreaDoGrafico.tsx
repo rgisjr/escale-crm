@@ -6,7 +6,8 @@ import { MoedasDiferentes, VazioDoGrafico } from "@/components/escale/indicadore
 import { useT } from "@/hooks/i18n/useT";
 import { ApiError } from "@/lib/api/types";
 import type { OpcoesDoGrafico } from "@/lib/escale/indicadores/graficos/opcoes";
-import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
+import type { TipoDeGrafico } from "@/lib/escale/indicadores/graficos/tipos";
+import { GraficoDivisor } from "@/components/escale/indicadores/graficos/GraficoDivisor";
 import { semDados } from "@/lib/escale/indicadores/graficos/dados";
 import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
 import type { Pergunta } from "@/lib/escale/indicadores/pergunta";
@@ -18,7 +19,7 @@ import { IlustracaoDoEditor } from "./IlustracaoDoEditor";
 const ALTURA_PADRAO = 400;
 
 type Props = {
-  tipo: TipoPrincipal;
+  tipo: TipoDeGrafico;
   /** A pergunta do último Executar; `null` = nunca executou. */
   foto: Pergunta | null;
   opcoes: OpcoesDoGrafico;
@@ -56,7 +57,10 @@ export function AreaDoGrafico({ tipo, foto, opcoes, resultado, carregando, erro,
   }, []);
 
   let conteudo;
-  if (erro && !resultado) {
+  if (tipo === "divisor") {
+    // T15: o Divisor não consulta; a prévia mostra o nome "Divisor".
+    conteudo = <GraficoDivisor nome={t("Divisor")} />;
+  } else if (erro && !resultado) {
     conteudo = (
       <div role="alert" className="flex flex-col items-center gap-1 pt-2 text-center">
         <p className="text-[12px] font-semibold text-casca-texto">{t("Erro ao carregar os dados")}</p>
@@ -88,7 +92,7 @@ export function AreaDoGrafico({ tipo, foto, opcoes, resultado, carregando, erro,
     );
   } else if (resultado.avisos.includes("moedas_diferentes")) {
     conteudo = <MoedasDiferentes />;
-  } else if (semDados(resultado) && tipo !== "numero" && tipo !== "painel_de_kpi") {
+  } else if (semDados(resultado) && tipo !== "numero" && tipo !== "painel_de_kpi" && tipo !== "numero_avancado") {
     conteudo = <VazioDoGrafico altura={altura} comPeriodo />;
   } else {
     conteudo = (

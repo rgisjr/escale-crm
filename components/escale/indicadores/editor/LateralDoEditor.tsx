@@ -8,9 +8,11 @@ import type { CatalogoDaTela } from "@/lib/escale/indicadores/editor/catalogo-da
 import type { ErroDoRascunho } from "@/lib/escale/indicadores/editor/pergunta-do-rascunho";
 import { gravarLargura, lerLargura, LARGURA_MAX, LARGURA_MIN, LARGURA_PADRAO, recortarLargura } from "@/lib/escale/indicadores/editor/preferencias";
 import type { RascunhoDoGrafico } from "@/lib/escale/indicadores/editor/rascunho";
+import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
 
 import { AbaOpcoesDoEditor } from "./AbaOpcoesDoEditor";
 import { SecaoFiltroDoEditor } from "./SecaoFiltroDoEditor";
+import { SecaoFiltroQuantitativo } from "./SecaoFiltroQuantitativo";
 import { SecoesDoEditor } from "./SecoesDoEditor";
 
 const PASSO_DO_TECLADO = 16;
@@ -23,10 +25,12 @@ type Props = {
   erros: readonly ErroDoRascunho[];
   mudar: (f: (r: RascunhoDoGrafico) => RascunhoDoGrafico) => void;
   etapasDoResultado: ReadonlyArray<{ valor: string; rotulo: string }>;
+  /** O resultado do último Executar (a prévia do indicador calculado). */
+  resultado?: Resultado | undefined;
 };
 
 /** A lateral redimensionável (10-012, 10-015): abas Filtros e Opções, largura de 240 a 500 px guardada no navegador. */
-export function LateralDoEditor({ rascunho, catalogo, erroDoCatalogo, aoTentarOCatalogo, erros, mudar, etapasDoResultado }: Props) {
+export function LateralDoEditor({ rascunho, catalogo, erroDoCatalogo, aoTentarOCatalogo, erros, mudar, etapasDoResultado, resultado }: Props) {
   const t = useT();
   const [aba, setAba] = useState<"filtros" | "opcoes">("filtros");
   // A largura guardada só é lida depois de montar (o servidor não a conhece; ler no useState divergiria na hidratação).
@@ -73,16 +77,22 @@ export function LateralDoEditor({ rascunho, catalogo, erroDoCatalogo, aoTentarOC
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-6">
+        {rascunho.tipo === "divisor" ? (
+          <p className="mb-4 text-[13px] text-casca-suave">{t("O divisor não usa indicadores.")}</p>
+        ) : null}
+        <div className={rascunho.tipo === "divisor" ? "pointer-events-none opacity-50" : undefined}>
         {erroDoCatalogo ? (
           <ErroDaLista mensagem={t("Não foi possível consultar os indicadores agora.")} aoTentar={aoTentarOCatalogo} />
         ) : aba === "filtros" ? (
           <>
-            <SecoesDoEditor rascunho={rascunho} catalogo={catalogo} erros={erros} mudar={mudar} />
+            <SecoesDoEditor rascunho={rascunho} catalogo={catalogo} erros={erros} mudar={mudar} resultado={resultado} />
             <SecaoFiltroDoEditor rascunho={rascunho} catalogo={catalogo} erros={erros} mudar={mudar} />
+            <SecaoFiltroQuantitativo rascunho={rascunho} catalogo={catalogo} erros={erros} mudar={mudar} />
           </>
         ) : (
           <AbaOpcoesDoEditor rascunho={rascunho} catalogo={catalogo} mudar={mudar} etapasDoResultado={etapasDoResultado} />
         )}
+        </div>
       </div>
       <div
         role="separator"

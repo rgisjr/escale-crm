@@ -87,7 +87,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const orgId = authz.org.orgId;
   try {
     const supabase = await createClient();
-    if (edicao.pergunta) {
+    if (edicao.pergunta && !("divisor" in edicao.pergunta)) {
       const camposDaOrg = await camposDaOrganizacao(supabase, orgId, objetosCitados(edicao.pergunta));
       const validada = validarPergunta(edicao.pergunta, camposDaOrg);
       if (!validada.ok) {

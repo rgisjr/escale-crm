@@ -7,10 +7,10 @@ import { DialogTitle } from "@/components/ui/dialog";
 import { useT } from "@/hooks/i18n/useT";
 import { nomeDoChip, type CatalogoDaTela } from "@/lib/escale/indicadores/editor/catalogo-da-tela";
 import { ROTULO_DO_TIPO_DO_GRAFICO } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
-import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
+import type { TipoDeGrafico } from "@/lib/escale/indicadores/graficos/tipos";
 
 type Props = {
-  tipo: TipoPrincipal;
+  tipo: TipoDeGrafico;
   limite: number;
   indicadores: readonly string[];
   catalogo: CatalogoDaTela;

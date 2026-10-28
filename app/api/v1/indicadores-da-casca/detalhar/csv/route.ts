@@ -14,6 +14,7 @@ import { detalharParaCsv } from "@/lib/escale/indicadores/motor/executar";
 import { comVaga } from "@/lib/escale/indicadores/motor/fila";
 import { detalhamentoParaCsvSchema, validarDetalhamento } from "@/lib/escale/indicadores/pergunta";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { tagDeIdioma } from "@/lib/i18n/datas";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const hoje = new Date();
     const dia = (n: number) => String(n).padStart(2, "0");
     const nome = `${t("Detalhamento")} - ${pedido.indicador} - ${dia(hoje.getDate())}-${dia(hoje.getMonth() + 1)}-${hoje.getFullYear()}.csv`;
-    return new Response(csvDoDetalhamento(resumo.colunas, linhas, fuso, t), {
+    return new Response(csvDoDetalhamento(resumo.colunas, linhas, fuso, t, tagDeIdioma(authz.user.idioma)), {
       status: 200,
       headers: {
         "content-type": "text/csv; charset=utf-8",

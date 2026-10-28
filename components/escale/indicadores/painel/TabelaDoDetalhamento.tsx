@@ -1,4 +1,5 @@
 "use client";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { textoDaCelula } from "@/lib/escale/indicadores/graficos/detalhamento";
 import type { ColunaDaPagina } from "@/lib/escale/indicadores/motor/detalhamento";
@@ -24,6 +25,7 @@ export function TabelaDoDetalhamento({
   carregando: boolean;
 }) {
   const t = useT();
+  const tag = useTagDeIdioma();
   return (
     <div className="min-h-0 flex-1 overflow-auto" aria-busy={carregando}>
       <table className="w-full border-collapse text-left">
@@ -64,7 +66,7 @@ export function TabelaDoDetalhamento({
                       key={c.chave}
                       className={`px-2 whitespace-nowrap ${c.formato && NUMERICOS.has(c.formato) ? "text-right" : ""}`}
                     >
-                      {textoDaCelula(linha[c.chave], c.formato, fuso, t)}
+                      {textoDaCelula(linha[c.chave], c.formato, fuso, t, tag)}
                     </td>
                   ))}
                 </tr>

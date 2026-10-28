@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import type { CatalogoDaTela } from "@/lib/escale/indicadores/editor/catalogo-da-tela";
-import { perguntaDoRascunho, type ErroDoRascunho } from "@/lib/escale/indicadores/editor/pergunta-do-rascunho";
+import { perguntaOuDivisor, type ErroDoRascunho } from "@/lib/escale/indicadores/editor/pergunta-do-rascunho";
 import type { RascunhoDoGrafico } from "@/lib/escale/indicadores/editor/rascunho";
 import type { Pergunta } from "@/lib/escale/indicadores/pergunta";
 
@@ -28,12 +28,14 @@ export function useRascunhoDoGrafico(inicial: RascunhoDoGrafico, catalogo: Catal
   }, []);
 
   const executar = useCallback((): boolean => {
-    const res = perguntaDoRascunho(rascunho, cat);
+    const res = perguntaOuDivisor(rascunho, cat);
     if (!res.ok) {
       setErros(res.erros);
       return false;
     }
     setErros([]);
+    // O Divisor não consulta (T15): não há pergunta para a foto.
+    if ("divisor" in res) return true;
     setFoto(res.pergunta);
     setRodada((r) => r + 1);
     return true;
@@ -41,7 +43,7 @@ export function useRascunhoDoGrafico(inicial: RascunhoDoGrafico, catalogo: Catal
 
   /** Só confere o rascunho e marca os erros das seções (o "Adicionar ao dashboard" sem consultar). */
   const validar = useCallback((): boolean => {
-    const res = perguntaDoRascunho(rascunho, cat);
+    const res = perguntaOuDivisor(rascunho, cat);
     setErros(res.ok ? [] : res.erros);
     return res.ok;
   }, [rascunho, cat]);
@@ -49,7 +51,7 @@ export function useRascunhoDoGrafico(inicial: RascunhoDoGrafico, catalogo: Catal
   /** Mudou algo que muda a consulta desde o último Executar (opções visuais e tipo redesenham sem consultar). */
   const pendente = useMemo(() => {
     if (!foto) return false;
-    const agora = perguntaDoRascunho(rascunho, cat);
+    const agora = perguntaOuDivisor(rascunho, cat);
     return !agora.ok || JSON.stringify(agora.pergunta) !== JSON.stringify(foto);
   }, [foto, rascunho, cat]);
 

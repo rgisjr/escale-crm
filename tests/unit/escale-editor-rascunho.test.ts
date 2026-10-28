@@ -177,6 +177,6 @@ describe("pergunta do rascunho", () => {
 
   it("pergunta salva inválida → rascunho novo com o tipo gravado; tipo desconhecido → linha", () => {
     expect(rascunhoDoGrafico({ tipo: "funil", pergunta: { lixo: 1 }, opcoes: {} })).toMatchObject({ tipo: "funil", indicadores: [] });
-    expect(rascunhoDoGrafico({ tipo: "sankey", pergunta: { lixo: 1 }, opcoes: {} }).tipo).toBe("linha");
+    expect(rascunhoDoGrafico({ tipo: "tipo_que_nao_existe", pergunta: { lixo: 1 }, opcoes: {} }).tipo).toBe("linha");
   });
 });

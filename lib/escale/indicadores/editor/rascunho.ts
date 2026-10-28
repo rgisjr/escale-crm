@@ -7,18 +7,20 @@ import { randomId } from "@/lib/random-id";
 
 import { VARIAVEIS_POR_PERGUNTA_MAX } from "../catalogo/tipos";
 import { opcoesDoGraficoNovo, type OpcoesDoGrafico } from "../graficos/opcoes";
-import type { TipoPrincipal } from "../graficos/tipos";
-import type { Granularidade, Operador, Periodo } from "../pergunta";
+import type { TipoDeGrafico } from "../graficos/tipos";
+import type { Calculado, Granularidade, ModoDeComparacao, Operador, OperadorQuantitativo, Periodo } from "../pergunta";
 import { assuntoDoRascunho, tipoDoCampo, type CatalogoDaTela } from "./catalogo-da-tela";
+import { calculadoServeAoTipo, idDoCalculado } from "./calculado";
 import { operadoresDoTipo, precisaDeValor } from "./operadores";
 import { horaDisponivel, periodoPadrao } from "./periodo-do-editor";
-import { limiteDoTipo, TIPO_PADRAO } from "./tipos-de-grafico";
+import { limiteDoTipo, suportaMetas, TIPO_PADRAO } from "./tipos-de-grafico";
 
 export type ValorDaCondicao = string | number | boolean | string[];
 export type CondicaoDoRascunho = { chave: string; campo: string | null; op: Operador; valor?: ValorDaCondicao };
 export type CaixaDoFiltro = { chave: string; modo: "todas" | "qualquer"; condicoes: readonly CondicaoDoRascunho[] };
+export type FiltroQuantitativoDoRascunho = { chave: string; indicador: string | null; op: OperadorQuantitativo; valor: number | null };
 export type RascunhoDoGrafico = {
-  tipo: TipoPrincipal;
+  tipo: TipoDeGrafico;
   indicadores: readonly string[];
   variaveis: readonly string[];
   tempo: { campo: string | null; granularidade: Granularidade | null; periodo: Periodo; fixo: boolean };
@@ -26,6 +28,11 @@ export type RascunhoDoGrafico = {
   filtro: readonly CaixaDoFiltro[];
   ordem: { por: string | null; direcao: "asc" | "desc" };
   opcoes: OpcoesDoGrafico;
+  /** Fase 7E: indicadores calculados (A op B), filtro quantitativo e comparação com o período anterior. */
+  calculados: readonly Calculado[];
+  filtroQuantitativo: readonly FiltroQuantitativoDoRascunho[];
+  comparar: boolean;
+  comparacao: ModoDeComparacao | null;
 };
 
 /** A caixa principal e até 3 grupos (a 7A aceita 3 `grupos`; com a principal em "qualquer" ela também vira grupo). */
@@ -39,7 +46,7 @@ export function definirGeradorDeChave(g: (() => string) | null): void {
 }
 const caixaVazia = (): CaixaDoFiltro => ({ chave: geradorDeChave(), modo: "todas", condicoes: [] });
 
-export function rascunhoNovo(tipo: TipoPrincipal = TIPO_PADRAO): RascunhoDoGrafico {
+export function rascunhoNovo(tipo: TipoDeGrafico = TIPO_PADRAO): RascunhoDoGrafico {
   return {
     tipo,
     indicadores: [],
@@ -48,17 +55,22 @@ export function rascunhoNovo(tipo: TipoPrincipal = TIPO_PADRAO): RascunhoDoGrafi
     filtro: [caixaVazia()],
     ordem: { por: null, direcao: "asc" },
     opcoes: opcoesDoGraficoNovo(),
+    calculados: [],
+    filtroQuantitativo: [],
+    comparar: false,
+    comparacao: null,
   };
 }
 
 export { assuntoDoRascunho };
 
 function ordemSemOQueSaiu(r: RascunhoDoGrafico, indicadores: readonly string[], variaveis: readonly string[]): RascunhoDoGrafico["ordem"] {
-  return r.ordem.por && ![...indicadores, ...variaveis].includes(r.ordem.por) ? { ...r.ordem, por: null } : r.ordem;
+  const validos = [...indicadores, ...variaveis, ...r.calculados.map((c) => c.id)];
+  return r.ordem.por && !validos.includes(r.ordem.por) ? { ...r.ordem, por: null } : r.ordem;
 }
 
 export function adicionarIndicador(r: RascunhoDoGrafico, id: string, cat: CatalogoDaTela): RascunhoDoGrafico {
-  if (r.indicadores.includes(id) || r.indicadores.length >= limiteDoTipo(r.tipo)) return r;
+  if (r.indicadores.includes(id) || r.indicadores.length + r.calculados.length >= limiteDoTipo(r.tipo)) return r;
   const comIndicador = { ...r, indicadores: [...r.indicadores, id] };
   if (r.tempo.campo) return comIndicador;
   // S21: o primeiro indicador sem tempo traz o campo de tempo padrão do assunto, agrupado por dia (S12).
@@ -68,9 +80,70 @@ export function adicionarIndicador(r: RascunhoDoGrafico, id: string, cat: Catalo
   return { ...comIndicador, tempo: { ...r.tempo, campo: padrao.id, granularidade: "dia" } };
 }
 
-export function removerIndicador(r: RascunhoDoGrafico, id: string): RascunhoDoGrafico {
+/** Tira o calculado do rascunho e de tudo que o citava (ordem, filtro quantitativo e metas). */
+export function removerCalculado(r: RascunhoDoGrafico, id: string): RascunhoDoGrafico {
+  const calculados = r.calculados.filter((c) => c.id !== id);
+  const semEle = { ...r, calculados };
+  return {
+    ...semEle,
+    ordem: ordemSemOQueSaiu(semEle, r.indicadores, r.variaveis),
+    filtroQuantitativo: r.filtroQuantitativo.filter((f) => f.indicador !== id),
+    opcoes: { ...r.opcoes, metas: { ...r.opcoes.metas, itens: r.opcoes.metas.itens.filter((m) => m.indicador !== id) } },
+  };
+}
+
+/** Tira o indicador; os calculados que o usam como A ou B saem junto e vêm em `removidos` (para o aviso). */
+export function removerIndicadorComAviso(
+  r: RascunhoDoGrafico,
+  id: string,
+): { rascunho: RascunhoDoGrafico; removidos: string[] } {
   const indicadores = r.indicadores.filter((x) => x !== id);
-  return { ...r, indicadores, ordem: ordemSemOQueSaiu(r, indicadores, r.variaveis) };
+  const dependentes = r.calculados.filter((c) => c.a === id || c.b === id);
+  let proximo: RascunhoDoGrafico = { ...r, indicadores };
+  for (const c of dependentes) proximo = removerCalculado(proximo, c.id);
+  return {
+    rascunho: { ...proximo, ordem: ordemSemOQueSaiu(proximo, indicadores, r.variaveis) },
+    removidos: dependentes.map((c) => c.nome),
+  };
+}
+
+export function removerIndicador(r: RascunhoDoGrafico, id: string): RascunhoDoGrafico {
+  return removerIndicadorComAviso(r, id).rascunho;
+}
+
+/** Cria o calculado (id pelo nome) se couber no limite do tipo. */
+export function adicionarCalculado(r: RascunhoDoGrafico, c: Omit<Calculado, "id">): RascunhoDoGrafico {
+  if (r.indicadores.length + r.calculados.length >= limiteDoTipo(r.tipo)) return r;
+  const id = idDoCalculado(c.nome, r.calculados.map((x) => x.id));
+  return { ...r, calculados: [...r.calculados, { ...c, id }] };
+}
+
+export function editarCalculado(r: RascunhoDoGrafico, id: string, c: Omit<Calculado, "id">): RascunhoDoGrafico {
+  return { ...r, calculados: r.calculados.map((x) => (x.id === id ? { ...c, id } : x)) };
+}
+
+export function adicionarFiltroQuantitativo(r: RascunhoDoGrafico, indicador: string): RascunhoDoGrafico {
+  return {
+    ...r,
+    filtroQuantitativo: [...r.filtroQuantitativo, { chave: geradorDeChave(), indicador, op: "maior_que", valor: null }],
+  };
+}
+
+export function mudarFiltroQuantitativo(
+  r: RascunhoDoGrafico,
+  chave: string,
+  mudanca: Partial<Omit<FiltroQuantitativoDoRascunho, "chave">>,
+): RascunhoDoGrafico {
+  return { ...r, filtroQuantitativo: r.filtroQuantitativo.map((f) => (f.chave === chave ? { ...f, ...mudanca } : f)) };
+}
+
+export function removerFiltroQuantitativo(r: RascunhoDoGrafico, chave: string): RascunhoDoGrafico {
+  return { ...r, filtroQuantitativo: r.filtroQuantitativo.filter((f) => f.chave !== chave) };
+}
+
+/** Ligar sem modo vale "equivalente". */
+export function mudarComparacao(r: RascunhoDoGrafico, ligada: boolean, modo?: ModoDeComparacao): RascunhoDoGrafico {
+  return { ...r, comparar: ligada, comparacao: ligada ? (modo ?? r.comparacao ?? "equivalente") : r.comparacao };
 }
 
 export function adicionarVariavel(r: RascunhoDoGrafico, id: string): RascunhoDoGrafico {
@@ -154,17 +227,39 @@ export function novoGrupo(r: RascunhoDoGrafico): RascunhoDoGrafico {
 
 export function trocarTipo(
   r: RascunhoDoGrafico,
-  tipo: TipoPrincipal,
-): { rascunho: RascunhoDoGrafico } | { excede: { limite: number; indicadores: readonly string[] } } {
+  tipo: TipoDeGrafico,
+):
+  | { rascunho: RascunhoDoGrafico }
+  | { excede: { limite: number; indicadores: readonly string[] } }
+  | { calculadoIncompativel: true } {
   const limite = limiteDoTipo(tipo);
-  if (r.indicadores.length > limite) return { excede: { limite, indicadores: r.indicadores } };
-  return { rascunho: { ...r, tipo } };
+  if (r.calculados.some((c) => !calculadoServeAoTipo(c, tipo))) return { calculadoIncompativel: true };
+  if (r.indicadores.length + r.calculados.length > limite && tipo !== "divisor") {
+    return { excede: { limite, indicadores: r.indicadores } };
+  }
+  let proximo: RascunhoDoGrafico = { ...r, tipo };
+  if (tipo === "divisor") return { rascunho: { ...rascunhoNovo("divisor"), opcoes: r.opcoes } };
+  if (!suportaMetas(tipo) && proximo.opcoes.metas.ligadas) {
+    proximo = { ...proximo, opcoes: { ...proximo.opcoes, metas: { ...proximo.opcoes.metas, ligadas: false } } };
+  }
+  // O heatmap usa só o campo de tempo (T7): sem variáveis nem granularidade.
+  if (tipo === "heatmap") {
+    proximo = {
+      ...proximo,
+      variaveis: [],
+      comparar: false,
+      tempo: { ...proximo.tempo, granularidade: null },
+      ordem: ordemSemOQueSaiu(proximo, proximo.indicadores, []),
+    };
+  }
+  return { rascunho: proximo };
 }
 
 /** Depois do modal "Limite de indicadores" (S14). */
-export function manterIndicadores(r: RascunhoDoGrafico, tipo: TipoPrincipal, escolhidos: readonly string[]): RascunhoDoGrafico {
+export function manterIndicadores(r: RascunhoDoGrafico, tipo: TipoDeGrafico, escolhidos: readonly string[]): RascunhoDoGrafico {
   const indicadores = r.indicadores.filter((x) => escolhidos.includes(x)).slice(0, limiteDoTipo(tipo));
-  return { ...r, tipo, indicadores, ordem: ordemSemOQueSaiu(r, indicadores, r.variaveis) };
+  const calculados = r.calculados.slice(0, Math.max(limiteDoTipo(tipo) - indicadores.length, 0));
+  return { ...r, tipo, indicadores, calculados, ordem: ordemSemOQueSaiu(r, indicadores, r.variaveis) };
 }
 
 export function mudarOrdem(r: RascunhoDoGrafico, ordem: Partial<RascunhoDoGrafico["ordem"]>): RascunhoDoGrafico {
@@ -177,6 +272,7 @@ export function mudarOpcoes(r: RascunhoDoGrafico, f: (o: OpcoesDoGrafico) => Opc
 
 const semChaves = (r: RascunhoDoGrafico) => ({
   ...r,
+  filtroQuantitativo: r.filtroQuantitativo.map(({ chave: _q, ...f }) => f),
   filtro: r.filtro.map(({ chave: _c, ...caixa }) => ({
     ...caixa,
     condicoes: caixa.condicoes.map(({ chave: _k, ...x }) => x),

@@ -24,3 +24,29 @@ export function faixaDeSaude(
   if (pct >= faixas.saudavel) return "saudavel";
   return pct >= faixas.alerta ? "alerta" : "critico";
 }
+
+/** A chave da coluna do motor (`i0`, `c0`) de um indicador ou calculado da pergunta, ou `null` se não está nela. */
+export function chaveDoIndicador(
+  pergunta: { indicadores: readonly string[]; calculados: ReadonlyArray<{ id: string }> },
+  id: string,
+): string | null {
+  const i = pergunta.indicadores.indexOf(id);
+  if (i >= 0) return `i${i}`;
+  const c = pergunta.calculados.findIndex((x) => x.id === id);
+  return c >= 0 ? `c${c}` : null;
+}
+
+/** As metas guardadas por id (estável) viram metas por chave de coluna, que é o que o desenho consulta. */
+export function opcoesComMetasPorChave(
+  opcoes: OpcoesDoGrafico,
+  pergunta: { indicadores: readonly string[]; calculados: ReadonlyArray<{ id: string }> },
+): OpcoesDoGrafico {
+  if (opcoes.metas.itens.length === 0) return opcoes;
+  return {
+    ...opcoes,
+    metas: {
+      ...opcoes.metas,
+      itens: opcoes.metas.itens.map((m) => ({ ...m, indicador: chaveDoIndicador(pergunta, m.indicador) ?? m.indicador })),
+    },
+  };
+}
