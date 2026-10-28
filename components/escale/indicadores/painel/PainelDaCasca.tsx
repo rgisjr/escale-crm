@@ -52,7 +52,7 @@ export function PainelDaCasca({
       />
       <BarraDeFiltrosDoPainel prefs={prefs} opcoes={opcoesDoFiltro} />
       <div className="min-h-0 flex-1 overflow-y-auto bg-surface">
-        {graficos.isPending ? (
+        {graficos.isPending || !prefs.pronto ? (
           <div className="mx-[11px] mt-3 flex flex-col gap-3" aria-busy="true">
             {Array.from({ length: ESQUELETOS }, (_, i) => (
               <div key={i} data-testid="esqueleto" className="h-[200px] animate-pulse rounded-[6px] bg-casca-raia" />

@@ -10,7 +10,9 @@ export type Intervalo = (typeof INTERVALOS)[number];
 
 export type EstadoGuardado = { versao: 1; filtro: FiltroDoPainel; filtroSalvoId: string | null; faixaAberta: boolean };
 
-const padrao = (): EstadoGuardado => ({ versao: 1, filtro: FILTRO_PADRAO, filtroSalvoId: null, faixaAberta: false });
+/** O estado de quem nunca mexeu: o primeiro render do cliente (igual ao do servidor) e o que vale se o navegador falhar. */
+export const ESTADO_PADRAO: EstadoGuardado = { versao: 1, filtro: FILTRO_PADRAO, filtroSalvoId: null, faixaAberta: false };
+const padrao = (): EstadoGuardado => ESTADO_PADRAO;
 
 function armazenamentoDoNavegador(): Storage | null {
   try {

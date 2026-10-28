@@ -107,7 +107,7 @@ export function periodoDoCalendario(de: string, ate: string, hoje: Date): Period
   return atalho ? { atalho: DA_CASCA_PARA_O_MOTOR[atalho] } : { atalho: "personalizado", de, ate };
 }
 
-const ROTULO_DO_ATALHO: Record<AtalhoDoMotor, string> = {
+const ROTULO_DO_ATALHO: Record<Exclude<AtalhoDoMotor, "personalizado">, string> = {
   hoje: "Hoje",
   ontem: "Ontem",
   "7_dias": "Últimos 7 dias",
@@ -119,11 +119,10 @@ const ROTULO_DO_ATALHO: Record<AtalhoDoMotor, string> = {
   mes_passado: "Mês passado",
   este_ano: "Esse ano",
   tudo: "Todo o período",
-  personalizado: "",
 };
 
 export function textoDoPeriodoDoPainel(p: Periodo, t: (s: string) => string): string {
-  if (p.atalho === "personalizado" && p.de && p.ate) return `${formatarDataBr(p.de)} – ${formatarDataBr(p.ate)}`;
+  if (p.atalho === "personalizado") return p.de && p.ate ? `${formatarDataBr(p.de)} – ${formatarDataBr(p.ate)}` : "";
   return t(ROTULO_DO_ATALHO[p.atalho]);
 }
 

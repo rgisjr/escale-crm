@@ -13,6 +13,7 @@ vi.mock("@/hooks/escale/useGraficosDoPainel", () => ({ useGraficosDoPainel: () =
 vi.mock("@/hooks/escale/usePaineisDaCasca", () => ({ usePaineis: () => mocks.paineis.valor }));
 vi.mock("@/hooks/escale/usePreferenciasDoPainel", () => ({
   usePreferenciasDoPainel: () => ({
+    pronto: true,
     filtro: { periodo: { atalho: "este_mes" } },
     filtroSalvoId: null,
     faixaAberta: false,
