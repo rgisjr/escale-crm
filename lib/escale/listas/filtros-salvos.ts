@@ -12,6 +12,8 @@ import {
   filtrosDaFilaSchema,
   type FiltrosDoPainel,
 } from "@/lib/escale/conversas/filtros-da-fila";
+import { enxugarFiltroDoPainel } from "@/lib/escale/indicadores/painel/filtro";
+import { filtroDoPainelSchema, type FiltroDoPainel } from "@/lib/escale/indicadores/pergunta";
 
 /**
  * OS FILTROS SALVOS DAS LISTAS (fork Escale, Fase 2B; migration 9102; Clint
@@ -20,14 +22,15 @@ import {
  * pessoa (sem caixa), o compartilhado visível a toda a organização, só quem
  * criou escreve (a RLS garante; a rota só dá a mensagem certa antes).
  */
-export const LISTAS_COM_FILTROS = ["contatos", "conversas"] as const;
+export const LISTAS_COM_FILTROS = ["contatos", "conversas", "paineis"] as const;
 export type ListaComFiltros = (typeof LISTAS_COM_FILTROS)[number];
 export const listaSchema = z.enum(LISTAS_COM_FILTROS);
 export const FILTROS_DA_LISTA_MAX = 20;
 export const NOME_DO_FILTRO_MAX = 60;
 
 /** FORK ESCALE · Fase 3D: cada lista tem a forma dos seus critérios (N11). */
-type CriteriosPorLista = { contatos: FiltrosDeContatos; conversas: FiltrosDoPainel };
+/** FORK ESCALE · Fase 7C: `paineis` = o filtro do painel aberto de Indicadores (vale para todos os painéis da pessoa). */
+type CriteriosPorLista = { contatos: FiltrosDeContatos; conversas: FiltrosDoPainel; paineis: FiltroDoPainel };
 export type CriteriosDaLista<L extends ListaComFiltros> = CriteriosPorLista[L];
 
 export type FiltroDaLista<L extends ListaComFiltros = "contatos"> = {
@@ -46,10 +49,14 @@ export const novoFiltroSchema = z.discriminatedUnion("lista", [
   z
     .object({ lista: z.literal("conversas"), ...baseDoNovo, criterios: filtrosDaFilaSchema })
     .strict(),
+  z
+    .object({ lista: z.literal("paineis"), ...baseDoNovo, criterios: filtroDoPainelSchema })
+    .strict(),
 ]);
 export type NovoFiltroDaLista = z.infer<typeof novoFiltroSchema>;
 
 export function enxugarCriterios(novo: NovoFiltroDaLista): CriteriosDaLista<ListaComFiltros> {
+  if (novo.lista === "paineis") return enxugarFiltroDoPainel(novo.criterios);
   return novo.lista === "conversas"
     ? enxugarFiltrosDoPainel(novo.criterios)
     : enxugarFiltros(novo.criterios);
@@ -104,6 +111,10 @@ function criteriosDaLinha(
   if (lista === "conversas") {
     const lido = filtrosDaFilaSchema.safeParse(bruto);
     return lido.success ? enxugarFiltrosDoPainel(lido.data) : {};
+  }
+  if (lista === "paineis") {
+    const lido = filtroDoPainelSchema.safeParse(bruto);
+    return lido.success ? enxugarFiltroDoPainel(lido.data) : {};
   }
   const lido = filtrosDeContatosSchema.safeParse(bruto);
   return lido.success ? enxugarFiltros(lido.data) : {};

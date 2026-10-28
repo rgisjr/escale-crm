@@ -19,10 +19,13 @@ export function ControleDosFiltros({
   faixaAberta,
   quantos,
   aoAlternarFaixa,
+  variante = "lista",
 }: {
   faixaAberta: boolean;
   quantos: number;
   aoAlternarFaixa: () => void;
+  /** `painel` (Indicadores, 10-006): o ícone na cor da marca e o selo cinza. */
+  variante?: "lista" | "painel";
 }) {
   const t = useT();
   if (faixaAberta) {
@@ -36,10 +39,15 @@ export function ControleDosFiltros({
     <span className="flex">
       <PopoverTrigger asChild>
         <button type="button" className={cn(BOTAO_DA_BARRA, "rounded-r-none")}>
-          <Funnel size={15} aria-hidden />
+          <Funnel size={15} aria-hidden className={variante === "painel" ? "text-casca-marca" : undefined} />
           {t("Filtros")}
           {quantos > 0 ? (
-            <span className="grid size-[18px] place-items-center rounded-full bg-casca-marca text-[10px] font-semibold text-white">
+            <span
+              className={cn(
+                "grid size-[18px] place-items-center rounded-full text-[10px] font-semibold",
+                variante === "painel" ? "bg-casca-contador text-casca-suave" : "bg-casca-marca text-white",
+              )}
+            >
               {quantos}
             </span>
           ) : null}
