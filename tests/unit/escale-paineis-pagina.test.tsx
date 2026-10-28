@@ -21,6 +21,9 @@ vi.mock("next/navigation", () => ({ redirect: (u: string) => h.redirect(u) }));
 vi.mock("@/lib/auth/server", () => ({ requireAuth: async () => ({ id: "u1" }), resolveActiveOrg: h.resolveActiveOrg }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({}) }));
 vi.mock("@/lib/escale/indicadores/paineis/banco", () => ({ lerPainel: h.lerPainel }));
+vi.mock("@/lib/escale/contatos/origens-da-pagina", () => ({
+  origensDaPagina: async () => ({ origens: [], papel: "agent", opcoesDoFiltro: { origens: [] } }),
+}));
 vi.mock("@/components/escale/indicadores/lista/IndicadoresDaCasca", () => ({ IndicadoresDaCasca: () => null }));
 vi.mock("@/components/escale/indicadores/painel/PainelDaCasca", () => ({ PainelDaCasca: () => null }));
 vi.mock("@/app/app/metrics/_components/PaginaDeDesempenho", () => ({ PaginaDeDesempenho: () => null }));
@@ -80,7 +83,13 @@ describe("/app/metrics/[id]", () => {
     lerPainel.mockResolvedValue(painel);
     const el = await abrir(P1);
     expect(el.type).toBe(PainelDaCasca);
-    expect(el.props).toEqual({ painel });
+    expect(el.props).toEqual({
+      painel,
+      papel: "agent",
+      fuso: "America/Recife",
+      userId: "u1",
+      opcoesDoFiltro: { origens: [] },
+    });
     expect(lerPainel).toHaveBeenCalledWith({}, "org-1", P1, false);
   });
 
