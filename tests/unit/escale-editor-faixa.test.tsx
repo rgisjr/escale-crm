@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { FaixaDoEditor } from "@/components/escale/indicadores/editor/FaixaDoEditor";
@@ -10,7 +10,9 @@ import { CATALOGO_FALSO as CAT } from "@/tests/helpers/catalogo-da-tela";
 let ultimo: RascunhoDoGrafico;
 function Montar({ inicial = rascunhoNovo(), pendente = false, aoExecutar = () => undefined }: { inicial?: RascunhoDoGrafico; pendente?: boolean; aoExecutar?: () => void }) {
   const [r, setR] = useState(inicial);
-  ultimo = r;
+  useEffect(() => {
+    ultimo = r;
+  });
   return <FaixaDoEditor rascunho={r} catalogo={CAT} mudar={(f) => setR(f)} pendente={pendente} aoExecutar={aoExecutar} />;
 }
 const tres = () => {

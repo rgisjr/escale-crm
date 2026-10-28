@@ -6,7 +6,7 @@ import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { DialogTitle } from "@/components/ui/dialog";
 import { useT } from "@/hooks/i18n/useT";
 import { nomeDoChip, type CatalogoDaTela } from "@/lib/escale/indicadores/editor/catalogo-da-tela";
-import { rotuloDoTipo } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
+import { ROTULO_DO_TIPO_DO_GRAFICO } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
 import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
 
 type Props = {
@@ -37,7 +37,7 @@ export function JanelaLimiteDeIndicadores({ tipo, limite, indicadores, catalogo,
       <div className="px-5 py-4">
         <p className="text-[13px] text-casca-suave">
           {t("Gráfico do tipo {tipo} aceita apenas {limite} indicador(es). Escolha quais ficam.")
-            .replace("{tipo}", t(rotuloDoTipo(tipo)))
+            .replace("{tipo}", t(ROTULO_DO_TIPO_DO_GRAFICO[tipo]))
             .replace("{limite}", String(limite))}
         </p>
         <ul className="mt-3 flex flex-col gap-2">

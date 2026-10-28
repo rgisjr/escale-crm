@@ -3,6 +3,8 @@
  * (condição sem valor, sem tempo); `perguntaDoRascunho` converte para a pergunta do motor. Toda função
  * devolve uma cópia — o rascunho nunca é mutado.
  */
+import { randomId } from "@/lib/random-id";
+
 import { VARIAVEIS_POR_PERGUNTA_MAX } from "../catalogo/tipos";
 import { opcoesDoGraficoNovo, type OpcoesDoGrafico } from "../graficos/opcoes";
 import type { TipoPrincipal } from "../graficos/tipos";
@@ -29,7 +31,7 @@ export type RascunhoDoGrafico = {
 /** A caixa principal e até 3 grupos (a 7A aceita 3 `grupos`; com a principal em "qualquer" ela também vira grupo). */
 export const CAIXAS_MAX = 4;
 
-const chaveAleatoria = (): string => globalThis.crypto.randomUUID();
+const chaveAleatoria = (): string => randomId();
 let geradorDeChave: () => string = chaveAleatoria;
 /** Só os testes trocam. */
 export function definirGeradorDeChave(g: (() => string) | null): void {

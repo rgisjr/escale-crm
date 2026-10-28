@@ -20,7 +20,20 @@ export const TIPOS_DO_EDITOR: ReadonlyArray<{ tipo: TipoPrincipal; rotulo: strin
 ];
 export const TIPO_PADRAO: TipoPrincipal = "linha";
 
-export const rotuloDoTipo = (t: TipoPrincipal): string => TIPOS_DO_EDITOR.find((x) => x.tipo === t)?.rotulo ?? t;
+/** Os rótulos como tabela, para o `t()` da tela achar o espanhol de cada um. */
+export const ROTULO_DO_TIPO_DO_GRAFICO: Record<TipoPrincipal, string> = {
+  linha: "Linha",
+  area: "Área",
+  barra: "Barra",
+  barra_empilhada: "Barra Empilhada",
+  pizza: "Pizza",
+  donut: "Donut",
+  funil: "Funil",
+  tabela: "Tabela",
+  numero: "Número",
+  painel_de_kpi: "Painel de KPI",
+};
+export const rotuloDoTipo = (t: TipoPrincipal): string => ROTULO_DO_TIPO_DO_GRAFICO[t];
 
 /** S14: Pizza, Donut, Funil e Painel de KPI = 1; Número = 2; os outros = o teto da pergunta. */
 export function limiteDoTipo(t: TipoPrincipal): number {

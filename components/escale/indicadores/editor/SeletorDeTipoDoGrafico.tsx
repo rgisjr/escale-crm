@@ -6,7 +6,7 @@ import { PainelSuspenso } from "@/components/escale/ui/PainelSuspenso";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/hooks/i18n/useT";
 import type { TipoPrincipal } from "@/lib/escale/indicadores/graficos/tipos";
-import { rotuloDoTipo, TIPO_PADRAO, TIPOS_DO_EDITOR } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
+import { ROTULO_DO_TIPO_DO_GRAFICO, TIPO_PADRAO, TIPOS_DO_EDITOR } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
 import {
   ChartArea,
   ChartColumnStacked,
@@ -65,7 +65,7 @@ export function SeletorDeTipoDoGrafico({ tipo, aoEscolher }: { tipo: TipoPrincip
             aria-expanded={aberto}
             className="min-w-0 flex-1 truncate text-left outline-hidden"
           >
-            {t(rotuloDoTipo(tipo))}
+            {t(ROTULO_DO_TIPO_DO_GRAFICO[tipo])}
           </button>
           <button
             type="button"
@@ -88,7 +88,7 @@ export function SeletorDeTipoDoGrafico({ tipo, aoEscolher }: { tipo: TipoPrincip
         style={SOMBRA_DO_MENU}
       >
         <ul role="listbox" aria-label={t("Selecione o tipo de gráfico exibido")}>
-          {TIPOS_DO_EDITOR.map(({ tipo: valor, rotulo }) => {
+          {TIPOS_DO_EDITOR.map(({ tipo: valor }) => {
             const ativo = valor === tipo;
             return (
               <li key={valor} role="option" aria-selected={ativo}>
@@ -104,7 +104,7 @@ export function SeletorDeTipoDoGrafico({ tipo, aoEscolher }: { tipo: TipoPrincip
                   )}
                 >
                   <IconeDoTipo tipo={valor} className={ativo ? "text-casca-marca" : "text-casca-escuro"} />
-                  <span className="flex-1">{t(rotulo)}</span>
+                  <span className="flex-1">{t(ROTULO_DO_TIPO_DO_GRAFICO[valor])}</span>
                   {ativo ? <Check size={14} aria-hidden /> : null}
                 </button>
               </li>

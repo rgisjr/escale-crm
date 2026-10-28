@@ -6,6 +6,8 @@
  *  - caixa principal "todas" → ela vira as `condicoes`, as demais caixas viram `grupos`;
  *  - caixa principal "qualquer" (com mais caixas) → todas viram `grupos` e as `condicoes` ficam vazias.
  */
+import { randomId } from "@/lib/random-id";
+
 import { opcoesComPadrao } from "../graficos/opcoes";
 import { ehTipoPrincipal } from "../graficos/tipos";
 import { perguntaSchema, type Condicao, type Pergunta } from "../pergunta";
@@ -101,7 +103,7 @@ export function perguntaDoRascunho(r: RascunhoDoGrafico, cat: CatalogoDaTela): R
 }
 
 const comChave = (c: Condicao): CondicaoDoRascunho => ({
-  chave: globalThis.crypto.randomUUID(),
+  chave: randomId(),
   campo: c.campo,
   op: c.op,
   ...(c.valor !== undefined ? { valor: c.valor } : {}),
@@ -115,10 +117,10 @@ export function rascunhoDoGrafico(g: { tipo: string; pergunta: unknown; opcoes: 
   const p = lida.data;
   const caixas: CaixaDoFiltro[] =
     p.filtro.condicoes.length === 0 && p.filtro.grupos.length > 0
-      ? p.filtro.grupos.map((x) => ({ chave: globalThis.crypto.randomUUID(), modo: x.modo, condicoes: x.condicoes.map(comChave) }))
+      ? p.filtro.grupos.map((x) => ({ chave: randomId(), modo: x.modo, condicoes: x.condicoes.map(comChave) }))
       : [
-          { chave: globalThis.crypto.randomUUID(), modo: p.filtro.modo, condicoes: p.filtro.condicoes.map(comChave) },
-          ...p.filtro.grupos.map((x) => ({ chave: globalThis.crypto.randomUUID(), modo: x.modo, condicoes: x.condicoes.map(comChave) })),
+          { chave: randomId(), modo: p.filtro.modo, condicoes: p.filtro.condicoes.map(comChave) },
+          ...p.filtro.grupos.map((x) => ({ chave: randomId(), modo: x.modo, condicoes: x.condicoes.map(comChave) })),
         ];
   return {
     tipo,

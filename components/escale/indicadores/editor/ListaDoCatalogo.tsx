@@ -31,10 +31,10 @@ type Props = {
 function Selos({ item }: { item: ItemDoCatalogo }) {
   const t = useT();
   const selo = "rounded-[4px] border border-casca-borda px-1.5 text-[11px] text-casca-suave";
-  const rotulo = item.unidade ? ROTULO_DA_UNIDADE[item.unidade] : item.tipo ? ROTULO_DO_TIPO[item.tipo] : null;
+  const rotulo = item.unidade ? t(ROTULO_DA_UNIDADE[item.unidade]) : item.tipo ? t(ROTULO_DO_TIPO[item.tipo]) : null;
   return (
     <span className="mt-1 flex flex-wrap items-center gap-1.5">
-      {rotulo ? <span className={selo}>{t(rotulo)}</span> : null}
+      {rotulo ? <span className={selo}>{rotulo}</span> : null}
     </span>
   );
 }

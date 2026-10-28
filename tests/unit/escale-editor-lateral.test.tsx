@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/escale/useOpcoesDaDimensao", () => ({
@@ -14,7 +14,6 @@ import {
   adicionarCondicao,
   adicionarIndicador,
   adicionarVariavel,
-  definirTempo,
   rascunhoNovo,
   type RascunhoDoGrafico,
 } from "@/lib/escale/indicadores/editor/rascunho";
@@ -23,7 +22,9 @@ import { CATALOGO_FALSO as CAT } from "@/tests/helpers/catalogo-da-tela";
 let ultimo: RascunhoDoGrafico;
 function Montar({ inicial = rascunhoNovo(), erros = [] as ErroDoRascunho[] }: { inicial?: RascunhoDoGrafico; erros?: ErroDoRascunho[] }) {
   const [r, setR] = useState(inicial);
-  ultimo = r;
+  useEffect(() => {
+    ultimo = r;
+  });
   return (
     <LateralDoEditor
       rascunho={r}

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import { AbaOpcoesDoEditor } from "@/components/escale/indicadores/editor/AbaOpcoesDoEditor";
@@ -11,7 +11,9 @@ import { CATALOGO_FALSO as CAT } from "@/tests/helpers/catalogo-da-tela";
 let ultimo: RascunhoDoGrafico;
 function Montar({ tipo = "linha", etapas = [] as Array<{ valor: string; rotulo: string }> }: { tipo?: TipoPrincipal; etapas?: Array<{ valor: string; rotulo: string }> }) {
   const [r, setR] = useState(() => adicionarVariavel(adicionarIndicador(rascunhoNovo(tipo), "negocio.quantidade", CAT), "negocio.origem"));
-  ultimo = r;
+  useEffect(() => {
+    ultimo = r;
+  });
   return <AbaOpcoesDoEditor rascunho={r} catalogo={CAT} mudar={(f) => setR(f)} etapasDoResultado={etapas} />;
 }
 

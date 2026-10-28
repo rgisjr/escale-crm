@@ -18,7 +18,7 @@ import {
   type ItemDoCatalogo,
 } from "@/lib/escale/indicadores/editor/catalogo-da-tela";
 import type { RascunhoDoGrafico } from "@/lib/escale/indicadores/editor/rascunho";
-import { limiteDoTipo, rotuloDoTipo } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
+import { limiteDoTipo, ROTULO_DO_TIPO_DO_GRAFICO } from "@/lib/escale/indicadores/editor/tipos-de-grafico";
 import { Briefcase, ListChecks, ListFilter, Megaphone, MessageSquare, Phone, Search } from "@/lib/ui/icons-da-casca";
 import type { LucideIcon } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
@@ -33,13 +33,21 @@ const TITULO_DO_ALVO: Record<AlvoDoCatalogo, string> = {
   filtro: "Adicionar Filtro",
 };
 /** Sem "Meta" (decisão 2). */
-const CATEGORIAS: ReadonlyArray<{ valor: Categoria | "todos"; rotulo: string; Icone: LucideIcon }> = [
-  { valor: "todos", rotulo: "Todos", Icone: ListFilter },
-  { valor: "negocios", rotulo: "Negócios", Icone: Briefcase },
-  { valor: "atividades", rotulo: "Atividades", Icone: ListChecks },
-  { valor: "conversas", rotulo: "Conversas", Icone: MessageSquare },
-  { valor: "ligacoes", rotulo: "Ligações", Icone: Phone },
-  { valor: "campanhas", rotulo: "Campanhas", Icone: Megaphone },
+const ROTULO_DA_CATEGORIA: Record<Categoria | "todos", string> = {
+  todos: "Todos",
+  negocios: "Negócios",
+  atividades: "Atividades",
+  conversas: "Conversas",
+  ligacoes: "Ligações",
+  campanhas: "Campanhas",
+};
+const CATEGORIAS: ReadonlyArray<{ valor: Categoria | "todos"; Icone: LucideIcon }> = [
+  { valor: "todos", Icone: ListFilter },
+  { valor: "negocios", Icone: Briefcase },
+  { valor: "atividades", Icone: ListChecks },
+  { valor: "conversas", Icone: MessageSquare },
+  { valor: "ligacoes", Icone: Phone },
+  { valor: "campanhas", Icone: Megaphone },
 ];
 const ESPERA_DA_BUSCA_MS = 150;
 
@@ -76,7 +84,7 @@ export function CatalogoDoEditor({ alvo, catalogo, rascunho, aberto, aoMudarAber
     }
     if (estado === "no_limite" && alvo === "indicador") {
       return t("Gráfico do tipo {tipo} aceita apenas {limite} indicador(es).")
-        .replace("{tipo}", t(rotuloDoTipo(rascunho.tipo)))
+        .replace("{tipo}", t(ROTULO_DO_TIPO_DO_GRAFICO[rascunho.tipo]))
         .replace("{limite}", String(limiteDoTipo(rascunho.tipo)));
     }
     return null;
@@ -122,7 +130,7 @@ export function CatalogoDoEditor({ alvo, catalogo, rascunho, aberto, aoMudarAber
         ) : (
           <div className="mt-3 flex min-h-0 flex-1">
             <ul aria-label={t("Categorias")} className="w-[170px] shrink-0">
-              {CATEGORIAS.map(({ valor, rotulo, Icone }) => {
+              {CATEGORIAS.map(({ valor, Icone }) => {
                 const ativa = categoria === valor;
                 return (
                   <li key={valor}>
@@ -137,7 +145,7 @@ export function CatalogoDoEditor({ alvo, catalogo, rascunho, aberto, aoMudarAber
                     >
                       {ativa ? <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-casca-marca" /> : null}
                       <Icone size={14} aria-hidden />
-                      {t(rotulo)}
+                      {t(ROTULO_DA_CATEGORIA[valor])}
                     </button>
                   </li>
                 );

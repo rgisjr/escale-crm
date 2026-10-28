@@ -1,12 +1,12 @@
 "use client";
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 
 import { AbasDaCasca } from "@/components/escale/ui/AbasDaCasca";
 import { ErroDaLista } from "@/components/escale/ui/ErroDaLista";
 import { useT } from "@/hooks/i18n/useT";
 import type { CatalogoDaTela } from "@/lib/escale/indicadores/editor/catalogo-da-tela";
 import type { ErroDoRascunho } from "@/lib/escale/indicadores/editor/pergunta-do-rascunho";
-import { gravarLargura, lerLargura, LARGURA_MAX, LARGURA_MIN, recortarLargura } from "@/lib/escale/indicadores/editor/preferencias";
+import { gravarLargura, lerLargura, LARGURA_MAX, LARGURA_MIN, LARGURA_PADRAO, recortarLargura } from "@/lib/escale/indicadores/editor/preferencias";
 import type { RascunhoDoGrafico } from "@/lib/escale/indicadores/editor/rascunho";
 
 import { AbaOpcoesDoEditor } from "./AbaOpcoesDoEditor";
@@ -29,7 +29,11 @@ type Props = {
 export function LateralDoEditor({ rascunho, catalogo, erroDoCatalogo, aoTentarOCatalogo, erros, mudar, etapasDoResultado }: Props) {
   const t = useT();
   const [aba, setAba] = useState<"filtros" | "opcoes">("filtros");
-  const [largura, setLargura] = useState(() => lerLargura());
+  // A largura guardada só é lida depois de montar (o servidor não a conhece; ler no useState divergiria na hidratação).
+  const [largura, setLargura] = useState(LARGURA_PADRAO);
+  useEffect(() => {
+    setLargura(lerLargura());
+  }, []);
   const arrastando = useRef<{ x: number; largura: number } | null>(null);
 
   const definir = (v: number, gravar: boolean) => {
