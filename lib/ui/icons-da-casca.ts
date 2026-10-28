@@ -209,3 +209,17 @@ export { FacebookLogo, InstagramLogo, LinkedinLogo, YoutubeLogo } from "@phospho
 
 // FORK ESCALE · Fase 7C: o painel aberto de Indicadores (carrossel do Número e "Recarregar" do card).
 export { RotateCw, Triangle } from "lucide-react";
+
+// FORK ESCALE · Fase 7D: o editor de gráfico (seções da lateral, catálogo, abas Opções e os tipos de gráfico).
+export { ArrowDownAZ, ChartArea, ChartColumnStacked, Gauge, LayoutList, ListFilter, Table } from "lucide-react";
+
+// FORK ESCALE · Fase 7D: os ícones sólidos dos tipos de gráfico (react-icons da Clint) vêm do Phosphor com `weight="fill"`.
+export {
+  ChartBar as TipoBarra,
+  ChartDonut as TipoDonut,
+  ChartLine as TipoLinha,
+  ChartPie as TipoPizza,
+  DotsNine as TipoPainelDeKpi,
+  Funnel as TipoFunil,
+  NumberSquareOne as TipoNumero,
+} from "@phosphor-icons/react/dist/ssr";

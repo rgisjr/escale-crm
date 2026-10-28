@@ -1,17 +1,30 @@
 "use client";
 import { etapasDoFunil } from "@/lib/escale/indicadores/graficos/dados";
 import { formatarValor } from "@/lib/escale/indicadores/graficos/formatos";
+import type { OpcoesDoGrafico } from "@/lib/escale/indicadores/graficos/opcoes";
+import { temOrdemNatural } from "@/lib/escale/indicadores/graficos/ordem-natural";
 import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
+import type { Pergunta } from "@/lib/escale/indicadores/pergunta";
 
 const ALTURA_MAXIMA_DA_ETAPA = 46;
 const BASE_DA_ULTIMA = 0.7;
 
 /**
  * Funil em SVG próprio (R15, print 10-043): nomes à esquerda, trapézios com o valor dentro e o
- * percentual sobre a primeira etapa à direita. As cores em degradê da marca são provisórias (7D).
+ * percentual à direita (o cálculo vem de `opcoes.funil`, D17). As cores em degradê da marca são provisórias (7E).
  */
-export function GraficoFunil({ resultado, altura }: { resultado: Resultado; altura: number }) {
-  const etapas = etapasDoFunil(resultado);
+export function GraficoFunil({
+  resultado,
+  altura,
+  opcoes,
+  pergunta,
+}: {
+  resultado: Resultado;
+  altura: number;
+  opcoes?: OpcoesDoGrafico;
+  pergunta?: Pergunta;
+}) {
+  const etapas = etapasDoFunil(resultado, opcoes?.funil, temOrdemNatural(pergunta?.variaveis[0]));
   if (etapas.length === 0) return null;
   const maior = Math.max(...etapas.map((e) => e.valor), 1);
   const alturaDaEtapa = Math.min(ALTURA_MAXIMA_DA_ETAPA, altura / etapas.length);

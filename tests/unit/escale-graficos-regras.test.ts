@@ -75,8 +75,9 @@ describe("cores e opções", () => {
   });
   it("padrão das opções", () => {
     expect(opcoesComPadrao(undefined)).toEqual({
-      visualizacao: { valores: false, legendas: true, grade: true },
+      visualizacao: { valores: false, legendas: true, grade: true, linhaDeMedia: false, linhaDeMediana: false },
       tabela: { totais: false },
+      funil: { primeiraEtapa: null, calculo: "automatico" },
     });
     expect(opcoesComPadrao({ visualizacao: { valores: true }, funil: { x: 1 } }).visualizacao.valores).toBe(true);
     expect(opcoesComPadrao("lixo").visualizacao.legendas).toBe(true);

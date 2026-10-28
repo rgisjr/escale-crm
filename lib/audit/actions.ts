@@ -1246,6 +1246,9 @@ export const AUDIT_ACTIONS = [
   "dashboard.cloned",
   "dashboard.chart_cloned",
   "dashboard.chart_deleted",
+  // FORK ESCALE · Fase 7D: o editor de gráfico (criar e atualizar/mover).
+  "dashboard.chart_created",
+  "dashboard.chart_updated",
   "dashboard.deleted",
 ] as const;
 

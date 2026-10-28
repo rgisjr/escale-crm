@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 
+import type { NextRequest } from "next/server";
+
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { roleAtLeast } from "@/lib/auth/types";
 import { criarPainelEmBranco, lerPaineis } from "@/lib/escale/indicadores/paineis/banco";
+import { nomeDoPainelSchema } from "@/lib/escale/indicadores/paineis/schema";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createClient } from "@/lib/supabase/server";
@@ -34,18 +37,24 @@ export async function GET(): Promise<Response> {
 }
 
 /** POST /api/v1/indicadores-da-casca/paineis — cria um painel em branco. Gerente para cima. */
-export async function POST(): Promise<Response> {
+export async function POST(req?: NextRequest): Promise<Response> {
   const negado = await requireSupportWrite();
   if (negado) return negado;
   const requestId = randomUUID();
   const authz = await requireRole("manager", { requestId, resource: "indicadores" });
   if (!authz.ok) return authz.response;
+  // Corpo vazio vale (nome padrão); com `nome` (o editor de gráfico cria o painel na hora, 7D) ele é validado.
+  const corpo = await req?.json().catch(() => ({}));
+  const lido = nomeDoPainelSchema.safeParse(corpo ?? {});
+  if (!lido.success) {
+    return fail("validation_failed", traduzir("Falha na validação dos dados!", authz.user.idioma), 422, { requestId });
+  }
   try {
     const { id } = await criarPainelEmBranco(
       await createClient(),
       authz.org.orgId,
       authz.user.id,
-      traduzir("Novo dashboard", authz.user.idioma),
+      lido.data.nome ?? traduzir("Novo dashboard", authz.user.idioma),
     );
     void audit({
       action: "dashboard.created",

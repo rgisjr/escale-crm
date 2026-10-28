@@ -60,6 +60,10 @@ export interface Dimensao {
   multivalorada?: boolean;
   /** A chave é uuid: a comparação do filtro vai por `::text` para um id inválido nunca derrubar a consulta. */
   uuid?: boolean;
+  /** Fase 7D (S10): expressão da ordem natural (ex.: "s.position"); só aliases de `precisa`. Nunca sai para o navegador. */
+  ordemNatural?: string;
+  /** Fase 7D (S6): texto do detalhe no catálogo (vazio até a 7G). */
+  descricao?: string;
 }
 export interface CampoDeTempo {
   id: string;
@@ -68,6 +72,8 @@ export interface CampoDeTempo {
   sql: string;
   padrao?: boolean;
   precisa?: readonly string[];
+  /** Fase 7D (S6): texto do detalhe no catálogo (vazio até a 7G). */
+  descricao?: string;
 }
 export interface ColunaDoDetalhamento {
   chave: string;

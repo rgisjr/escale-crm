@@ -4,7 +4,7 @@ import type { Assunto } from "../tipos";
 const A = "negocio";
 const m = (...a: Parameters<typeof medida> extends [string, ...infer R] ? R : never) => medida(A, ...a);
 const d = (...a: Parameters<typeof dimensao> extends [string, ...infer R] ? R : never) => dimensao(A, ...a);
-const t = (...a: Parameters<typeof tempo> extends [string, ...infer R] ? R : never) => tempo(A, ...a);
+const tp = (...a: Parameters<typeof tempo> extends [string, ...infer R] ? R : never) => tempo(A, ...a);
 
 const PARADO = (dias: number) =>
   `count(*) filter (where b.status = 'open' and coalesce(b.last_activity_at, b.created_at) < now() - interval '${dias} days')`;
@@ -119,13 +119,13 @@ export const NEGOCIO: Assunto = {
     }),
   ],
   dimensoes: [
-    d("etapa", "Etapa", "texto", "b.stage_id", { rotuloSql: "s.name", precisa: ["s"], opcoes: "etapas", uuid: true }),
+    d("etapa", "Etapa", "texto", "b.stage_id", { rotuloSql: "s.name", precisa: ["s"], opcoes: "etapas", uuid: true, ordemNatural: "s.position" }),
     d("origem", "Origem", "texto", "b.pipeline_id", { rotuloSql: "p.name", opcoes: "origens", uuid: true, precisa: ["p"] }),
     d("grupo_de_origem", "Grupo de origem", "texto", "p.group_id", { rotuloSql: "g.name", precisa: ["p", "g"], opcoes: "grupos_de_origem", uuid: true }),
     d("dono", "Dono", "texto", "b.owner_user_id", { opcoes: "usuarios", uuid: true }),
     d("status", "Status", "texto", "b.status", { opcoes: "status_do_negocio" }),
     d("motivo_de_perda", "Motivo de perda", "texto", "b.lost_reason", { opcoes: "motivos_de_perda" }),
-    d("etapa_da_perda", "Etapa da perda", "texto", "b.lost_from_stage_id", { rotuloSql: "sp.name", precisa: ["sp"], opcoes: "etapas", uuid: true }),
+    d("etapa_da_perda", "Etapa da perda", "texto", "b.lost_from_stage_id", { rotuloSql: "sp.name", precisa: ["sp"], opcoes: "etapas", uuid: true, ordemNatural: "sp.position" }),
     d("moeda", "Moeda", "texto", "b.currency", { opcoes: "moedas" }),
     d("fonte", "Fonte", "texto", "b.source", { opcoes: "fontes" }),
     d("tag", "Tag", "texto", "tg.tag", { precisa: ["tg"], multivalorada: true, opcoes: "tags" }),
@@ -134,13 +134,13 @@ export const NEGOCIO: Assunto = {
     d("titulo", "Título", "texto", "b.title"),
   ],
   tempos: [
-    t("criado_em", "Data de criação", "b.created_at", { padrao: true }),
-    t("fechado_em", "Data de fechamento", "b.closed_at"),
-    t("ganho_em", "Data do ganho", "case when b.status = 'won' then b.closed_at end"),
-    t("perdido_em", "Data da perda", "case when b.status = 'lost' then b.closed_at end"),
-    t("previsao_de_fechamento", "Previsão de fechamento", "b.expected_close_date::timestamptz"),
-    t("entrou_na_etapa_em", "Entrada na etapa atual", "coalesce(b.stage_changed_at, b.created_at)"),
-    t("ultima_atividade_em", "Última atividade", "b.last_activity_at"),
+    tp("criado_em", "Data de criação", "b.created_at", { padrao: true }),
+    tp("fechado_em", "Data de fechamento", "b.closed_at"),
+    tp("ganho_em", "Data do ganho", "case when b.status = 'won' then b.closed_at end"),
+    tp("perdido_em", "Data da perda", "case when b.status = 'lost' then b.closed_at end"),
+    tp("previsao_de_fechamento", "Previsão de fechamento", "b.expected_close_date::timestamptz"),
+    tp("entrou_na_etapa_em", "Entrada na etapa atual", "coalesce(b.stage_changed_at, b.created_at)"),
+    tp("ultima_atividade_em", "Última atividade", "b.last_activity_at"),
   ],
   filtroDoPainel: {
     usuario: { sql: "b.owner_user_id" },

@@ -316,5 +316,8 @@ function ordenacao(p: Pergunta, variaveis: string[], temBucket: boolean): string
       por === "tempo" ? "t" : p.indicadores.includes(por) ? `i${p.indicadores.indexOf(por)}` : `v${variaveis.indexOf(por)}`;
     if (por === "tempo" ? temBucket : true) return `order by ${coluna} ${p.ordem.direcao}`;
   }
-  return `order by ${temBucket ? "t asc, " : ""}i0 desc`;
+  // Fase 7D (S10): sem ordem pedida, a 1ª variável com ordem natural (etapa) sai na ordem do quadro.
+  const natural = variaveis[0] ? dimensaoPorId(variaveis[0])?.dimensao.ordemNatural : undefined;
+  const aposOTempo = natural ? `min(${frag(natural)}) asc nulls last, ` : "";
+  return `order by ${temBucket ? "t asc, " : ""}${aposOTempo}i0 desc`;
 }

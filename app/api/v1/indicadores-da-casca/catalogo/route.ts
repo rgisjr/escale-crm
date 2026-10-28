@@ -39,8 +39,16 @@ export async function GET(): Promise<Response> {
         perguntas: m.perguntas,
         antesDeUsar: m.antesDeUsar ?? null,
       })),
-      variaveis: a.dimensoes.map((d) => ({ id: d.id, nome: d.nome, tipo: d.tipo, opcoes: d.opcoes ?? null })),
-      tempos: a.tempos.map((x) => ({ id: x.id, nome: x.nome, padrao: Boolean(x.padrao) })),
+      variaveis: a.dimensoes.map((d) => ({
+        id: d.id,
+        nome: d.nome,
+        tipo: d.tipo,
+        opcoes: d.opcoes ?? null,
+        descricao: d.descricao ?? null,
+        // Só o aviso de que existe; o fragmento SQL nunca sai.
+        ordemNatural: Boolean(d.ordemNatural),
+      })),
+      tempos: a.tempos.map((x) => ({ id: x.id, nome: x.nome, padrao: Boolean(x.padrao), descricao: x.descricao ?? null })),
       filtroDoPainel: Object.keys(a.filtroDoPainel),
       camposPersonalizados: Object.keys(a.camposPersonalizados),
       colunasDoDetalhamento: a.colunasDoDetalhamento.map((c) => ({ chave: c.chave, nome: c.nome })),

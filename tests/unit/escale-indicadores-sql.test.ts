@@ -214,3 +214,23 @@ describe("joins das condições", () => {
     expect(grupo.text).not.toContain("crm_pipeline_groups g");
   });
 });
+
+describe("ordem natural da etapa (fase 7D)", () => {
+  const base = { indicadores: ["negocio.quantidade"], variaveis: ["negocio.etapa"] };
+  it("sem ordem, a etapa sai na ordem do quadro", () => {
+    expect(plano(montarSql(pergunta(base), undefined, ctx()).text)).toContain("order by min(s.position) asc nulls last, i0 desc");
+  });
+  it("com tempo, o tempo vem antes", () => {
+    const comTempo = { ...base, tempo: { campo: "negocio.criado_em", granularidade: "dia", periodo: { atalho: "este_mes" } } };
+    expect(plano(montarSql(pergunta(comTempo), undefined, ctx()).text)).toContain("order by t asc, min(s.position) asc nulls last, i0 desc");
+  });
+  it("com ordem pedida, vale a ordem pedida", () => {
+    const sql = plano(montarSql(pergunta({ ...base, ordem: { por: "negocio.quantidade", direcao: "asc" } }), undefined, ctx()).text);
+    expect(sql).toContain("order by i0 asc");
+    expect(sql).not.toContain("min(s.position)");
+  });
+  it("variável sem ordem natural (origem) segue a 7A", () => {
+    const sql = plano(montarSql(pergunta({ ...base, variaveis: ["negocio.origem"] }), undefined, ctx()).text);
+    expect(sql).toContain("order by i0 desc");
+  });
+});

@@ -86,7 +86,7 @@ export const filtroSchema = z
   .object({
     modo: modo.default("todas"),
     condicoes: z.array(condicaoSchema).max(CONDICOES_MAX).default([]),
-    grupos: z.array(grupoDeCondicoesSchema).max(3).default([]),
+    grupos: z.array(grupoDeCondicoesSchema).max(4).default([]),
   })
   .strict();
 export type Filtro = z.infer<typeof filtroSchema>;

@@ -6,7 +6,7 @@ import type { Assunto } from "@/lib/escale/indicadores/catalogo/tipos";
 
 const fragmentosDe = (a: Assunto): string[] => [
   ...a.medidas.map((m) => m.sql),
-  ...a.dimensoes.flatMap((d) => [d.sql, d.rotuloSql ?? ""]),
+  ...a.dimensoes.flatMap((d) => [d.sql, d.rotuloSql ?? "", d.ordemNatural ?? ""]),
   ...a.tempos.map((t) => t.sql),
   ...a.colunasDoDetalhamento.map((c) => c.sql),
   ...Object.values(a.filtroDoPainel).map((f) => f!.sql),

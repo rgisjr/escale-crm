@@ -7,14 +7,17 @@ export function AbasDaCasca<V extends string>({
   valor,
   aoMudar,
   "aria-label": rotulo,
+  semBorda = false,
 }: {
   abas: { valor: V; rotulo: string }[];
   valor: V;
   aoMudar: (v: V) => void;
   "aria-label": string;
+  /** Fase 7D (10-012): as abas da lateral do editor não têm a linha de baixo. */
+  semBorda?: boolean;
 }) {
   return (
-    <div role="tablist" aria-label={rotulo} className="flex gap-0 border-b border-casca-borda">
+    <div role="tablist" aria-label={rotulo} className={cn("flex gap-0", !semBorda && "border-b border-casca-borda")}>
       {abas.map((a) => {
         const ativa = a.valor === valor;
         return (

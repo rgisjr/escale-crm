@@ -31,7 +31,8 @@ export function useAcoesDosPaineis() {
   const caminho = (id: string) => `${BASE}/${encodeURIComponent(id)}`;
 
   const criar = useMutation({
-    mutationFn: async () => (await apiClient.post<ComId>(BASE, {})).data,
+    // O editor de gráfico (7D) cria o painel já com o nome digitado.
+    mutationFn: async (a?: { nome?: string }) => (await apiClient.post<ComId>(BASE, a?.nome ? { nome: a.nome } : {})).data,
     onSuccess: aoTerminar,
   });
   const editar = useMutation({

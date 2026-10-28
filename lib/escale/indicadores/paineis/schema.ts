@@ -17,3 +17,6 @@ export const edicaoDoPainelSchema = z
   .refine((o) => Object.keys(o).length > 0);
 
 export type CorpoDaEdicao = z.infer<typeof edicaoDoPainelSchema>;
+
+/** O corpo do POST de painéis: vazio, ou só o nome (fase 7D). */
+export const nomeDoPainelSchema = z.object({ nome: z.string().trim().min(1).max(80) }).partial().strict();
