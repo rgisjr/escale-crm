@@ -530,7 +530,7 @@ function exigirConfigDoGatilhoDeData(
 
 /** A recusa do salvar feito de uma versão que outra tela já trocou (409). */
 export const MENSAGEM_DA_VERSAO_VELHA =
-  "Esta automação foi salva por outra tela depois que você a abriu. Feche e abra de novo para ver a versão atual antes de salvar.";
+  "Esta automação mudou depois que você a abriu (outra tela salvou, ou um salvar seu não respondeu a tempo). Feche e abra de novo para ver a versão atual antes de salvar.";
 
 export const updateAutomationRuleSchema = z
   .object({

@@ -92,6 +92,9 @@ export function useUpdateAutomationRule() {
       qc.setQueryData<{ data: AutomationRuleRow[] }>(RULES_KEY, (velho) =>
         velho ? { data: velho.data.map((r) => (r.id === resposta.data.id ? resposta.data : r)) } : velho,
       );
+      // E na leitura que o designer tem aberta: o próximo salvar parte da
+      // versão gravada (o trigger_config preservado sai dela), não da que abriu.
+      qc.setQueryData(opcoesDaRegra(resposta.data.id).queryKey, resposta);
       return qc.invalidateQueries({ queryKey: RULES_KEY });
     },
   });
