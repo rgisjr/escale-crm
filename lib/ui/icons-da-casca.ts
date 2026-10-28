@@ -177,3 +177,32 @@ export { BatteryMedium, Signal, Video, Wifi } from "lucide-react";
 
 // FORK ESCALE · Fase 8C: a prévia do celular (009); Signal, Video e Wifi já vieram com a 8B.
 export { BatteryFull } from "lucide-react";
+
+// FORK ESCALE · Fase 7B: os 42 ícones do seletor de ícone do painel (IconPicker da Clint)
+// que ainda faltavam, o gráfico do vazio e o "sem ícone".
+export {
+  Ban,
+  BatteryCharging,
+  Book,
+  Cast,
+  ChartNoAxesColumn,
+  CircleAlert,
+  Coffee,
+  Compass,
+  Film,
+  GitBranch,
+  Globe,
+  Heart,
+  Layers,
+  Map,
+  Monitor,
+  Music,
+  PenTool,
+  ShoppingCart,
+  ThumbsUp,
+  Wrench,
+} from "lucide-react";
+
+// FORK ESCALE · Fase 7B: os 4 logos do seletor de ícone vêm do Phosphor porque o
+// lucide 1.x tirou as marcas. O quadrado do painel os desenha com `weight="regular"`.
+export { FacebookLogo, InstagramLogo, LinkedinLogo, YoutubeLogo } from "@phosphor-icons/react/dist/ssr";
