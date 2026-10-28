@@ -23,12 +23,12 @@ describe("<MarcaNoTopo>", () => {
     expect(link.querySelector("img")).toBeNull();
   });
 
-  it("com logo, mostra a logo e o nome ao lado", () => {
+  it("com logo, mostra só a logo; o nome fica no rótulo do link", () => {
     estado.instalacao = { ...estado.instalacao, logoUrl: "https://cdn.exemplo/logo.png" };
     render(<MarcaNoTopo />);
     const link = screen.getByRole("link", { name: "Escale OS" });
     expect(link.querySelector("img")).toHaveAttribute("src", "https://cdn.exemplo/logo.png");
-    expect(link).toHaveTextContent("Escale OS");
+    expect(link).not.toHaveTextContent("Escale OS");
   });
 
   it("o nome e a logo da organização vencem os da instalação", () => {
@@ -37,6 +37,6 @@ describe("<MarcaNoTopo>", () => {
     render(<MarcaNoTopo />);
     const link = screen.getByRole("link", { name: "Acme" });
     expect(link.querySelector("img")).toHaveAttribute("src", "https://cdn.exemplo/acme.png");
-    expect(link).toHaveTextContent("Acme");
+    expect(link).not.toHaveTextContent("Acme");
   });
 });
