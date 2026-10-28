@@ -75,3 +75,22 @@ export function rotuloDoTempo(iso: string, granularidade: Granularidade | undefi
       return diaMes;
   }
 }
+
+const PERCENTUAL = (casas: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+
+/** Fase 7E: "+12,5%", "−3,2%", "0%". */
+export function formatarVariacao(pct: number): string {
+  if (pct === 0) return "0%";
+  const texto = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(Math.abs(pct));
+  return `${pct > 0 ? "+" : "−"}${texto}%`;
+}
+
+/** Fase 7E: compacto "1,2 mil", "R$ 1,2 mi" (o formato dos números do funil). */
+export function formatarCompacto(v: number, unidade: Unidade = "contagem"): string {
+  return formatarEixo(v, unidade);
+}
+
+/** Fase 7E: percentual com `casas` decimais fixas ("39%", "39,4%", "39,41%"). */
+export function formatarPercentual(v: number, casas = 0): string {
+  return `${PERCENTUAL(casas).format(v)}%`;
+}

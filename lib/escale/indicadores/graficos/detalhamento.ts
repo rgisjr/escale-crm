@@ -5,6 +5,9 @@
 import { celula, numeroBr } from "@/lib/escale/exportar/csv-do-quadro";
 
 import type { FormatoDaColuna } from "../catalogo/tipos";
+import type { Resultado } from "../motor/executar";
+import type { Pergunta, Ponto } from "../pergunta";
+import { rotuloDaVariavel } from "./dados";
 import { formatarDuracao } from "./formatos";
 
 export type ColunaDoDetalhamentoNaTela = { chave: string; nome: string; formato?: FormatoDaColuna | null; padrao: boolean };
@@ -143,4 +146,34 @@ export function colunasDoDetalhamento(
     ...doCatalogo.map((c) => ({ ...c, padrao: true })),
     ...camposPersonalizados.map((c) => ({ chave: c.id, nome: c.nome, padrao: false })),
   ];
+}
+
+type Clique = { rotulo?: string; t?: string; serie?: string; dsem?: number; hora?: number };
+
+/**
+ * O ponto que o clique define (T19): as variáveis que o clique fixa (o rótulo do eixo X sem tempo; o nome da
+ * série com tempo ou além da 1ª variável), o bucket de tempo ou a célula do heatmap. Sem clique, o total.
+ */
+export function pontoDoClique(r: Resultado, pergunta: Pergunta, clique: Clique = {}): Ponto {
+  if (clique.dsem !== undefined && clique.hora !== undefined) return { variaveis: [], diaDaSemana: clique.dsem, hora: clique.hora };
+  const comTempo = r.colunas.some((c) => c.papel === "tempo");
+  const nVariaveis = pergunta.variaveis.length;
+  const primeiraDeSerie = comTempo ? 0 : 1;
+  const candidatas = r.linhas.filter((l) => {
+    if (clique.t && String(l.t) !== clique.t) return false;
+    if (!comTempo && clique.rotulo !== undefined && rotuloDaVariavel(l, 0) !== clique.rotulo) return false;
+    if (clique.serie !== undefined && nVariaveis > primeiraDeSerie) {
+      const nome = Array.from({ length: nVariaveis - primeiraDeSerie }, (_, k) => rotuloDaVariavel(l, primeiraDeSerie + k)).join(", ");
+      if (!clique.serie.startsWith(nome) && !clique.serie.endsWith(nome)) return false;
+    }
+    return true;
+  });
+  const linha = candidatas[0];
+  const fixas: number[] = [];
+  if (!comTempo && nVariaveis > 0 && clique.rotulo !== undefined) fixas.push(0);
+  if (clique.serie !== undefined) for (let i = primeiraDeSerie; i < nVariaveis; i++) fixas.push(i);
+  const variaveis = linha
+    ? fixas.map((i) => ({ id: pergunta.variaveis[i] as string, valor: linha[`v${i}`] === null || linha[`v${i}`] === undefined ? null : String(linha[`v${i}`]) }))
+    : [];
+  return { variaveis, ...(clique.t ? { t: clique.t } : {}) };
 }

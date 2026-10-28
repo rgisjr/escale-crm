@@ -15,6 +15,15 @@ export type TipoPrincipal = (typeof TIPOS_PRINCIPAIS)[number];
 export const ehTipoPrincipal = (tipo: string): tipo is TipoPrincipal =>
   (TIPOS_PRINCIPAIS as readonly string[]).includes(tipo);
 
+/** Fase 7E (T6): os seis tipos que a 7C/7D não desenhavam. */
+export const TIPOS_AVANCADOS = ["ranking", "barra_100", "numero_avancado", "heatmap", "sankey", "divisor"] as const;
+export type TipoAvancado = (typeof TIPOS_AVANCADOS)[number];
+export const TIPOS_DE_GRAFICO = [...TIPOS_PRINCIPAIS, ...TIPOS_AVANCADOS] as const;
+export type TipoDeGrafico = (typeof TIPOS_DE_GRAFICO)[number];
+export const ehTipoDeGrafico = (tipo: string): tipo is TipoDeGrafico => (TIPOS_DE_GRAFICO as readonly string[]).includes(tipo);
+/** T15: o Divisor nasce com a largura toda e duas linhas. */
+export const TAMANHO_DO_DIVISOR = { w: 24, h: 2 } as const;
+
 export const GRAFICOS_POR_PAINEL_MAX = 30;
 export const COLUNAS_DA_GRADE = 24;
 export const ALTURA_DA_LINHA = 40;

@@ -3,9 +3,12 @@ import type { Unidade } from "../catalogo/tipos";
 import type { Resultado } from "../motor/executar";
 import type { Coluna } from "../motor/sql";
 import type { Granularidade } from "../pergunta";
+import { rotuloDoAnterior } from "./comparacao";
 import { coresDoFunil, corDaSerie } from "./cores";
-import { rotuloDoTempo } from "./formatos";
-import type { CalculoDoFunil } from "./opcoes";
+import { formatarCompacto, rotuloDoTempo } from "./formatos";
+import { metaDoIndicador } from "./metas";
+import type { CalculoDoFunil, OpcoesDoGrafico } from "./opcoes";
+import { projetar } from "./projecao";
 import type { TipoPrincipal } from "./tipos";
 
 type Linha = Record<string, unknown>;
@@ -13,7 +16,7 @@ type Linha = Record<string, unknown>;
 /** Texto da Clint para valor nulo. */
 export const ROTULO_VAZIO = "Vazio";
 
-export type Serie = { chave: string; nome: string; unidade: Unidade; cor: string };
+export type Serie = { chave: string; nome: string; unidade: Unidade; cor: string; tracejada?: boolean };
 export type DadosCartesianos = {
   /** Cada ponto leva `rotulo` (o texto do eixo X), `t` (só com tempo) e um número por série (`s0`, `s1`…). */
   pontos: Array<Record<string, string | number | null>>;
@@ -22,8 +25,22 @@ export type DadosCartesianos = {
   granularidade?: Granularidade;
 };
 export type Fatia = { nome: string; valor: number; cor: string };
-export type EtapaDoFunil = { chave: string; nome: string; valor: number; percentual: number; cor: string };
+export type EtapaDoFunil = {
+  chave: string;
+  nome: string;
+  valor: number;
+  percentual: number;
+  cor: string;
+  /** Fase 7E: a etapa que menos avança (destacar maior queda). */
+  pior?: boolean;
+  /** Fase 7E: razão sobre a etapa anterior abaixo da taxa mínima. */
+  abaixo?: boolean;
+  /** O texto do número dentro da barra. */
+  rotuloDoValor?: string;
+  rotuloDoPercentual?: string;
+};
 export type ColunaDaTabela = { chave: string; nome: string; unidade?: Unidade; tipo?: string };
+export type OpcoesDosDados = { opcoes?: OpcoesDoGrafico; t?: (s: string) => string };
 
 const indicadoresDe = (r: Resultado): Coluna[] => r.colunas.filter((c) => c.papel === "indicador");
 const variaveisDe = (r: Resultado): Coluna[] => r.colunas.filter((c) => c.papel === "variavel");
@@ -35,7 +52,7 @@ const numero = (v: unknown): number | null => {
 };
 
 /** O rótulo da variável `i` na linha: o nome (rótulo do catálogo) ou a própria chave; nulo vira "Vazio". */
-function rotuloDaVariavel(linha: Linha, i: number): string {
+export function rotuloDaVariavel(linha: Linha, i: number): string {
   const texto = linha[`v${i}_rotulo`] ?? linha[`v${i}`];
   return texto === null || texto === undefined || String(texto) === "" ? ROTULO_VAZIO : String(texto);
 }
@@ -47,7 +64,12 @@ export const semDados = (r: Resultado): boolean => r.linhas.length === 0;
 
 type Celula = { rotulo: string; t?: string; valores: Map<string, number | null> };
 
-export function dadosCartesianos(r: Resultado, granularidade?: Granularidade, tipo?: TipoPrincipal): DadosCartesianos {
+export function dadosCartesianos(
+  r: Resultado,
+  granularidade?: Granularidade,
+  tipo?: TipoPrincipal,
+  extra: OpcoesDosDados = {},
+): DadosCartesianos {
   const indicadores = indicadoresDe(r);
   const nVariaveis = variaveisDe(r).length;
   const comTempo = r.colunas.some((c) => c.papel === "tempo");
@@ -57,6 +79,7 @@ export function dadosCartesianos(r: Resultado, granularidade?: Granularidade, ti
   const primeiraDeSerie = comTempo ? 0 : 1;
   const series: Serie[] = [];
   const indiceDaSerie = new Map<string, string>();
+  const origemDaSerie = new Map<string, { indicador: string; variavel: string | null }>();
   const acharSerie = (chave: string, nome: string, unidade: Unidade): string => {
     const achada = indiceDaSerie.get(chave);
     if (achada !== undefined) return achada;
@@ -78,6 +101,7 @@ export function dadosCartesianos(r: Resultado, granularidade?: Granularidade, ti
       const nome =
         nomeDaVariavel === null ? ind.nome : indicadores.length > 1 ? `${nomeDaVariavel}, ${ind.nome}` : nomeDaVariavel;
       const chave = acharSerie(`${nomeDaVariavel ?? ""}|${ind.chave}`, nome, ind.unidade ?? "contagem");
+      origemDaSerie.set(chave, { indicador: ind.chave, variavel: nomeDaVariavel });
       ponto.valores.set(chave, numero(linha[ind.chave]));
     }
   }
@@ -90,7 +114,77 @@ export function dadosCartesianos(r: Resultado, granularidade?: Granularidade, ti
     ...(p.t !== undefined ? { t: p.t } : {}),
     ...Object.fromEntries(series.map((s) => [s.chave, p.valores.get(s.chave) ?? ausente])),
   }));
-  return { pontos, series, eixoX: comTempo ? "tempo" : "variavel", ...(granularidade ? { granularidade } : {}) };
+  const saida: DadosCartesianos = {
+    pontos,
+    series,
+    eixoX: comTempo ? "tempo" : "variavel",
+    ...(granularidade ? { granularidade } : {}),
+  };
+  return acrescentarComparacaoEProjecao(r, saida, origemDaSerie, extra, variosDias);
+}
+
+const maisClara = (cor: string, pct: number): string => `color-mix(in oklab, ${cor} ${pct}%, white)`;
+
+/** Fase 7E: série tracejada do período anterior (T3) e da projeção (T10), sobre os pontos já montados. */
+function acrescentarComparacaoEProjecao(
+  r: Resultado,
+  d: DadosCartesianos,
+  origem: Map<string, { indicador: string; variavel: string | null }>,
+  extra: OpcoesDosDados,
+  variosDias: boolean,
+): DadosCartesianos {
+  const t = extra.t ?? ((s: string) => s);
+  let { pontos, series } = d;
+  const comTempo = d.eixoX === "tempo";
+  if (r.comparacao && comTempo) {
+    const instantes = [...new Set(r.comparacao.linhas.map((l) => String(l.t ?? "")))].sort();
+    const valores = new Map<string, number | null>();
+    const nVariaveis = variaveisDe(r).length;
+    for (const linha of r.comparacao.linhas) {
+      const nomeDaVariavel = nVariaveis > 0 ? juntarRotulos(linha, 0, nVariaveis) : null;
+      const indice = instantes.indexOf(String(linha.t ?? ""));
+      for (const ind of indicadoresDe(r)) valores.set(`${indice}|${nomeDaVariavel ?? ""}|${ind.chave}`, numero(linha[ind.chave]));
+    }
+    const anteriores = series.map((s): Serie => ({
+      ...s,
+      chave: `${s.chave}_anterior`,
+      nome: rotuloDoAnterior(s.nome, t),
+      cor: maisClara(s.cor, 60),
+      tracejada: true,
+    }));
+    pontos = pontos.map((p, i) => ({
+      ...p,
+      ...Object.fromEntries(
+        series.map((s) => {
+          const o = origem.get(s.chave);
+          return [`${s.chave}_anterior`, valores.get(`${i}|${o?.variavel ?? ""}|${o?.indicador ?? ""}`) ?? null];
+        }),
+      ),
+    }));
+    series = [...series, ...anteriores];
+  }
+  const o = extra.opcoes;
+  const modo = o?.visualizacao.projecaoDiasUteis ? "dias_uteis" : o?.visualizacao.projecaoNormal ? "normal" : null;
+  const primeira = series[0];
+  const origemDaPrimeira = primeira ? origem.get(primeira.chave) : undefined;
+  if (modo && comTempo && primeira && origemDaPrimeira && !origemDaPrimeira.variavel) {
+    const g = d.granularidade ?? "dia";
+    const proj = projetar(r, { chave: origemDaPrimeira.indicador, unidade: primeira.unidade }, modo, g);
+    if (proj && proj.buckets.length) {
+      const futuros = proj.buckets.map((b) => ({
+        rotulo: rotuloDoTempo(b.t, d.granularidade, variosDias),
+        t: b.t,
+        ...Object.fromEntries(series.map((s) => [s.chave, null])),
+        projecao: b.valor,
+      }));
+      pontos = [...pontos.map((p) => ({ ...p, projecao: null })), ...futuros];
+      series = [
+        ...series,
+        { chave: "projecao", nome: `${primeira.nome} (${t("Projeção")})`, unidade: primeira.unidade, cor: maisClara(primeira.cor, 40), tracejada: true },
+      ];
+    }
+  }
+  return { ...d, pontos, series };
 }
 
 export function fatias(r: Resultado): { fatias: Fatia[]; unidade: Unidade } {
@@ -113,7 +207,7 @@ export function fatias(r: Resultado): { fatias: Fatia[]; unidade: Unidade } {
  */
 export function etapasDoFunil(
   r: Resultado,
-  funil?: { primeiraEtapa: string | null; calculo: CalculoDoFunil },
+  funil?: Partial<OpcoesDoGrafico["funil"]>,
   temOrdemNatural = false,
 ): EtapaDoFunil[] {
   const ind = indicadoresDe(r)[0];
@@ -123,9 +217,18 @@ export function etapasDoFunil(
     nome: rotuloDaVariavel(linha, 0),
     valor: numero(linha[ind.chave]) ?? 0,
   }));
+  // Fase 7E: etapas ocultas não entram no cálculo; a última etapa corta o fim do funil.
+  if (funil?.etapasExibidas) {
+    const exibidas = new Set(funil.etapasExibidas);
+    brutas = brutas.filter((e) => exibidas.has(e.chave));
+  }
+  if (funil?.ultimaEtapa) {
+    const fim = brutas.findIndex((e) => e.chave === funil.ultimaEtapa);
+    if (fim >= 0) brutas = brutas.slice(0, fim + 1);
+  }
   const fixada = funil?.primeiraEtapa ? brutas.findIndex((e) => e.chave === funil.primeiraEtapa) : -1;
   if (fixada > 0) brutas = [brutas[fixada] as (typeof brutas)[number], ...brutas.filter((_, i) => i !== fixada)];
-  const calculo: Exclude<CalculoDoFunil, "automatico"> = !funil
+  const calculo: Exclude<CalculoDoFunil, "automatico"> = !funil?.calculo
     ? "primeira_etapa"
     : funil.calculo === "automatico"
       ? temOrdemNatural
@@ -135,10 +238,29 @@ export function etapasDoFunil(
   const total = brutas.reduce((n, e) => n + e.valor, 0);
   const divisor = (i: number): number =>
     calculo === "primeira_etapa" ? (brutas[0]?.valor ?? 0) : calculo === "etapa_anterior" ? (brutas[i - 1]?.valor ?? brutas[i]?.valor ?? 0) : total;
-  const cores = coresDoFunil(brutas.length);
+  const cores = coresDoFunil(brutas.length, funil?.cores ?? "degrade", funil?.ultimaEmVerde ?? false);
+  const casas = funil?.casasDecimais ?? 0;
+  const compacto = funil?.formatoDosNumeros === "compacto";
+  const razao = (i: number): number | null => {
+    const antes = brutas[i - 1]?.valor;
+    return i === 0 || !antes ? null : ((brutas[i]?.valor ?? 0) / antes) * 100;
+  };
+  const razoes = brutas.map((_, i) => razao(i));
+  const menor = funil?.destacarMaiorQueda ? Math.min(...razoes.filter((x): x is number => x !== null)) : null;
+  const taxaMinima = funil?.metaDeConversao?.ligada ? (funil.metaDeConversao.taxaMinima ?? 0) : null;
   return brutas.map((e, i) => {
     const base = divisor(i);
-    return { ...e, percentual: base === 0 ? 0 : (100 * e.valor) / base, cor: cores[i] ?? "#16A34A" };
+    const percentual = base === 0 ? 0 : (100 * e.valor) / base;
+    const r2 = razoes[i] ?? null;
+    return {
+      ...e,
+      percentual,
+      cor: cores[i] ?? "#16A34A",
+      ...(menor !== null && r2 !== null && r2 === menor ? { pior: true } : {}),
+      ...(taxaMinima !== null && r2 !== null && r2 < taxaMinima ? { abaixo: true } : {}),
+      rotuloDoPercentual: `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas }).format(percentual)}%`,
+      ...(compacto ? { rotuloDoValor: formatarCompacto(e.valor, ind.unidade ?? "contagem") } : {}),
+    };
   });
 }
 
@@ -172,6 +294,7 @@ export function numeros(r: Resultado): Array<{ nome: string; valor: number; unid
 export function linhasDaTabela(
   r: Resultado,
   assunto?: string,
+  opcoes?: OpcoesDoGrafico,
 ): { colunas: ColunaDaTabela[]; linhas: Array<Record<string, unknown>> } {
   const colunas: ColunaDaTabela[] = r.colunas
     .filter((c) => c.papel === "variavel" || c.papel === "tempo" || c.papel === "indicador")
@@ -189,5 +312,18 @@ export function linhasDaTabela(
     }
     return saida;
   });
+  // Fase 7E (T11): a coluna META do 1º indicador que tem meta visível.
+  const indicador = indicadoresDe(r).find((c) => opcoes && metaDoIndicador(opcoes, c.chave)?.visivel);
+  const meta = indicador && opcoes ? metaDoIndicador(opcoes, indicador.chave) : null;
+  if (indicador && meta) {
+    colunas.push({ chave: `meta_${indicador.chave}`, nome: "META", tipo: "meta", ...(indicador.unidade ? { unidade: indicador.unidade } : {}) });
+    return {
+      colunas,
+      linhas: linhas.map((l) => ({
+        ...l,
+        [`meta_${indicador.chave}`]: { valor: meta.valor, atingiu: (numero(l[indicador.chave]) ?? 0) >= meta.valor },
+      })),
+    };
+  }
   return { colunas, linhas };
 }
