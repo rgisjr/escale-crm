@@ -14566,6 +14566,12 @@ export const DICIONARIO: Traducoes = {
   "Payload inválido.": { es: "Payload inválido." },
   "Produto não encontrado.": { es: "Producto no encontrado." },
   "Query inválida.": { es: "Query inválida." },
+  // FORK ESCALE · Fase 7A: rotas de Indicadores.
+  "A consulta demorou mais de 8 segundos. Tente um período menor.": { es: "La consulta tardó más de 8 segundos. Prueba con un período menor." },
+  "Muitas consultas ao mesmo tempo. Aguarde um instante.": { es: "Demasiadas consultas al mismo tiempo. Espera un momento." },
+  "Pergunta inválida.": { es: "Pregunta inválida." },
+  "Não foi possível consultar os indicadores agora.": { es: "No fue posible consultar los indicadores ahora." },
+  "Os indicadores estão indisponíveis neste ambiente.": { es: "Los indicadores no están disponibles en este entorno." },
   "Responsável não é um atendente ativo desta organização.": { es: "El responsable no es un asesor activo de esta organización." },
   "Retomada de contato descartada — decisão registrada": { es: "Reanudación de contacto descartada — decisión registrada" },
   "Salve este token agora — ele não será mostrado novamente.": { es: "Guarda este token ahora — no se mostrará de nuevo." },
