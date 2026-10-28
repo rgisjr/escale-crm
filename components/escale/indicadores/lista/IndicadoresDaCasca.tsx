@@ -52,7 +52,7 @@ export function IndicadoresDaCasca({ papel, fuso }: { papel: Role; fuso: string 
     <div className="flex min-h-0 flex-1 flex-col bg-surface">
       <CabecalhoDosIndicadores podeGerir={podeGerir} aoNovoDashboard={() => setNovoAberto(true)} />
       <BuscaDosPaineis valor={busca} aoMudar={setBusca} />
-      <main className="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto px-11 pt-4 pb-8">{conteudo()}</main>
+      <div className="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto px-11 pt-4 pb-8">{conteudo()}</div>
       {podeGerir ? <JanelaNovoDashboard aberta={novoAberto} aoFechar={() => setNovoAberto(false)} /> : null}
       {editando ? (
         <JanelaInformacoesDoPainel key={editando.id} painel={editando} aoFechar={() => setEditando(null)} />
