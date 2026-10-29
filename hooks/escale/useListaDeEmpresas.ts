@@ -5,11 +5,13 @@ import { useMemo } from "react";
 
 import type { PaginaDeEmpresas } from "@/lib/escale/empresas/banco";
 import type { EscopoDeEmpresas } from "@/lib/escale/empresas/regras";
+import { fetchComTempoMaximo } from "@/lib/escale/fetch-com-tempo-maximo";
 
 export interface ConsultaDaTelaDeEmpresas { q?: string; e: EscopoDeEmpresas; p: number; n: number; f?: string }
 
+// Tempo máximo (Frente F, 29/10/2026): ver lib/escale/fetch-com-tempo-maximo.ts.
 async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, init);
+  const r = await fetchComTempoMaximo(url, init);
   const corpo = await r.json().catch(() => null);
   if (!r.ok) throw new Error(corpo?.error?.message ?? "Não foi possível completar a ação.");
   return corpo.data as T;

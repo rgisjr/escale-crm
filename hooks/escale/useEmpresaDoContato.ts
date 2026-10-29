@@ -3,9 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { EmpresaDoContato } from "@/lib/escale/empresas/banco";
+import { fetchComTempoMaximo } from "@/lib/escale/fetch-com-tempo-maximo";
 
+// Tempo máximo (Frente F, 29/10/2026): ver lib/escale/fetch-com-tempo-maximo.ts.
 async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, init);
+  const r = await fetchComTempoMaximo(url, init);
   const corpo = await r.json().catch(() => null);
   if (!r.ok) throw new Error(corpo?.error?.message ?? "Não foi possível completar a ação.");
   return corpo.data as T;
