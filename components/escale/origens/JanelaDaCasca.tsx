@@ -29,11 +29,14 @@ import { cn } from "@/lib/utils";
 export function JanelaDaCasca({
   aberta,
   onFechar,
+  ocupado = false,
   children,
   className,
 }: {
   aberta: boolean;
   onFechar: () => void;
+  /** Gravando: Esc, clique fora e o X não fecham (mesma regra da JanelaDeConfirmacao). */
+  ocupado?: boolean;
   children: ReactNode;
   /** Largura (ou outro ajuste) da caixa; vem depois das classes padrão para vencer. */
   className?: string;
@@ -43,7 +46,7 @@ export function JanelaDaCasca({
     <DialogPrimitive.Root
       open={aberta}
       onOpenChange={(aberto) => {
-        if (!aberto) onFechar();
+        if (!aberto && !ocupado) onFechar();
       }}
     >
       <DialogPortal>
@@ -57,6 +60,7 @@ export function JanelaDaCasca({
           {children}
           <DialogPrimitive.Close
             aria-label={t("Fechar")}
+            disabled={ocupado}
             className="absolute top-4 right-4 grid size-6 place-items-center rounded-casca-gatilho text-casca-suave transition-colors hover:text-casca-texto focus-visible:outline-2 focus-visible:outline-casca-marca"
           >
             <X size={16} aria-hidden />

@@ -1639,6 +1639,7 @@ export const DICIONARIO: Traducoes = {
   "Perfil atualizado.": { es: "Perfil actualizado." },
   "Organização atualizada.": { es: "Organización actualizada." },
   "Salvando…": { es: "Guardando…" },
+  "Demorou demais. Confira a lista e tente de novo.": { es: "Tardó demasiado. Revisa la lista e inténtalo de nuevo." },
   "Nome completo": { es: "Nombre completo" },
   "Trocar email — em breve.": { es: "Cambiar email — próximamente." },
   "Fuso horário": { es: "Zona horaria" },
