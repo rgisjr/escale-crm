@@ -113,7 +113,7 @@ export async function editarPainel(
   if (error) throw new Error(error.message);
 }
 
-function falhaDaFuncao(mensagem: string): Error {
+export function falhaDaFuncao(mensagem: string): Error {
   if (mensagem.includes("painel_protegido")) return new FalhaDoPainel("painel_protegido");
   if (mensagem.includes("painel_nao_encontrado")) return new FalhaDoPainel("nao_encontrado");
   if (mensagem.includes("sem_permissao") || mensagem.includes("row-level security"))
