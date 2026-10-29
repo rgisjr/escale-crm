@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { BotaoDaJanela, CabecaDaJanela, Campo, CampoDeTexto, JanelaDaCasca, RodapeDaJanela } from "@/components/escale/origens/JanelaDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
+import { ErroDoCatalogoNoCliente } from "@/hooks/escale/useCatalogoDeCampos";
 import { useT } from "@/hooks/i18n/useT";
 import type { NovoCampo } from "@/lib/escale/campos/banco";
 import {
@@ -83,7 +84,13 @@ export function FormularioDeCampo(p: FormularioDeCampoProps) {
     try {
       await p.aoSalvar({ objeto, nome: nome.trim(), grupo_id: grupoId, tipo, opcoes: precisaDeOpcoes ? opcoesValidas : undefined });
     } catch (e) {
-      setErro(e instanceof Error ? e.message : t("Ocorreu um erro ao salvar"));
+      setErro(
+        e instanceof ErroDoCatalogoNoCliente && e.tempoEsgotado
+          ? t("Demorou demais. Confira a lista e tente de novo.")
+          : e instanceof Error
+            ? e.message
+            : t("Ocorreu um erro ao salvar"),
+      );
     } finally {
       setSalvando(false);
     }
@@ -102,7 +109,7 @@ export function FormularioDeCampo(p: FormularioDeCampoProps) {
   };
 
   return (
-    <JanelaDaCasca aberta onFechar={p.aoFechar} className="w-[min(640px,100%)]">
+    <JanelaDaCasca aberta onFechar={p.aoFechar} ocupado={salvando} className="w-[min(640px,100%)]">
       <CabecaDaJanela titulo={editando ? t("Editar nome do campo") : t("Adicionar campo")} />
       <div className="flex flex-col gap-5 px-6 py-4">
         {!editando && (
@@ -195,8 +202,10 @@ export function FormularioDeCampo(p: FormularioDeCampoProps) {
         {erro && <p className="text-[12px] text-casca-alerta">{erro}</p>}
       </div>
       <RodapeDaJanela>
-        <BotaoDaJanela variante="cancelar" onClick={p.aoFechar}>{t("Cancelar")}</BotaoDaJanela>
-        <BotaoDaJanela variante="salvar" onClick={salvar} disabled={!podeSalvar} title={!podeSalvar ? t("Preencha nome, grupo e tipo.") : undefined}>{t("Salvar")}</BotaoDaJanela>
+        <BotaoDaJanela variante="cancelar" onClick={p.aoFechar} disabled={salvando}>{t("Cancelar")}</BotaoDaJanela>
+        <BotaoDaJanela variante="salvar" onClick={salvar} disabled={!podeSalvar} title={!podeSalvar && !salvando ? t("Preencha nome, grupo e tipo.") : undefined}>
+          {salvando ? t("Salvando…") : t("Salvar")}
+        </BotaoDaJanela>
       </RodapeDaJanela>
     </JanelaDaCasca>
   );
