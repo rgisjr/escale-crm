@@ -12,6 +12,21 @@ function porta() {
 }
 
 describe("comVaga", () => {
+  it("teto global: no máximo 4 consultas ao mesmo tempo no processo, de pessoas diferentes", async () => {
+    const { fechada, abrir } = porta();
+    const iniciadas: string[] = [];
+    const tarefa = (n: string) => () => {
+      iniciadas.push(n);
+      return fechada;
+    };
+    const todas = ["g1", "g2", "g3", "g4", "g5", "g6"].map((n) => comVaga(`pessoa-${n}`, tarefa(n)));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(iniciadas).toEqual(["g1", "g2", "g3", "g4"]);
+    abrir();
+    await Promise.all(todas);
+    expect(iniciadas).toHaveLength(6);
+  });
+
   it("a 4ª chamada da mesma chave só começa quando uma termina", async () => {
     const { fechada, abrir } = porta();
     const iniciadas: number[] = [];
