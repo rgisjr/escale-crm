@@ -10,7 +10,7 @@ import { randomId } from "@/lib/random-id";
 
 import { opcoesComPadrao } from "../graficos/opcoes";
 import { ehTipoDeGrafico } from "../graficos/tipos";
-import { perguntaSchema, type Condicao, type Pergunta, type PerguntaDoDivisor } from "../pergunta";
+import { perguntaSchema, type Condicao, type FiltroFixo, type Pergunta, type PerguntaDoDivisor } from "../pergunta";
 import { tipoDoCampo, type CatalogoDaTela } from "./catalogo-da-tela";
 import { precisaDeValor, textoDoNumeroBr } from "./operadores";
 import {
@@ -64,6 +64,15 @@ function condicoesDaCaixa(
   return saida;
 }
 
+/** Só as chaves preenchidas; nenhuma → undefined. */
+function filtroFixoPreenchido(f: FiltroFixo | undefined): FiltroFixo | undefined {
+  if (!f) return undefined;
+  const limpo = Object.fromEntries(
+    Object.entries(f).filter(([chave, v]) => (chave === "tags" ? Boolean(v) : Array.isArray(v) && v.length > 0)),
+  ) as FiltroFixo;
+  return Object.keys(limpo).length ? limpo : undefined;
+}
+
 export function perguntaDoRascunho(r: RascunhoDoGrafico, cat: CatalogoDaTela): ResultadoDaPergunta {
   if (r.tipo === "divisor") return { ok: false, erros: [] };
   const erros: ErroDoRascunho[] = [];
@@ -115,6 +124,7 @@ export function perguntaDoRascunho(r: RascunhoDoGrafico, cat: CatalogoDaTela): R
           }
         : {}),
       filtro,
+      ...(filtroFixoPreenchido(r.filtroFixo) ? { filtroFixo: filtroFixoPreenchido(r.filtroFixo) } : {}),
       ...(ordemValida ? { ordem: { por: r.ordem.por, direcao: r.ordem.direcao } } : {}),
     }),
   };
@@ -158,5 +168,6 @@ export function rascunhoDoGrafico(g: { tipo: string; pergunta: unknown; opcoes: 
     filtroQuantitativo: p.filtroQuantitativo.map((f) => ({ chave: randomId(), indicador: f.indicador, op: f.op, valor: f.valor })),
     comparar: Boolean(p.comparacao),
     comparacao: p.comparacao?.modo ?? null,
+    ...(filtroFixoPreenchido(p.filtroFixo) ? { filtroFixo: filtroFixoPreenchido(p.filtroFixo) } : {}),
   };
 }

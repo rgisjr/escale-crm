@@ -8,7 +8,7 @@ import { randomId } from "@/lib/random-id";
 import { VARIAVEIS_POR_PERGUNTA_MAX } from "../catalogo/tipos";
 import { opcoesDoGraficoNovo, type OpcoesDoGrafico } from "../graficos/opcoes";
 import type { TipoDeGrafico } from "../graficos/tipos";
-import type { Calculado, Granularidade, ModoDeComparacao, Operador, OperadorQuantitativo, Periodo } from "../pergunta";
+import type { Calculado, FiltroFixo, Granularidade, ModoDeComparacao, Operador, OperadorQuantitativo, Periodo } from "../pergunta";
 import { assuntoDoRascunho, tipoDoCampo, type CatalogoDaTela } from "./catalogo-da-tela";
 import { calculadoServeAoTipo, idDoCalculado } from "./calculado";
 import { operadoresDoTipo, precisaDeValor } from "./operadores";
@@ -33,6 +33,8 @@ export type RascunhoDoGrafico = {
   filtroQuantitativo: readonly FiltroQuantitativoDoRascunho[];
   comparar: boolean;
   comparacao: ModoDeComparacao | null;
+  /** Fase 7F: filtros fixos vindos de um modelo; só se tiram no editor (quem quer filtrar usa a seção Filtro). */
+  filtroFixo?: FiltroFixo;
 };
 
 /** A caixa principal e até 3 grupos (a 7A aceita 3 `grupos`; com a principal em "qualquer" ela também vira grupo). */
@@ -144,6 +146,14 @@ export function removerFiltroQuantitativo(r: RascunhoDoGrafico, chave: string): 
 /** Ligar sem modo vale "equivalente". */
 export function mudarComparacao(r: RascunhoDoGrafico, ligada: boolean, modo?: ModoDeComparacao): RascunhoDoGrafico {
   return { ...r, comparar: ligada, comparacao: ligada ? (modo ?? r.comparacao ?? "equivalente") : r.comparacao };
+}
+
+/** Fase 7F: tira uma chave do filtro fixo; sem nenhuma chave sobrando, o filtro some. */
+export function tirarDoFiltroFixo(r: RascunhoDoGrafico, chave: keyof FiltroFixo): RascunhoDoGrafico {
+  if (!r.filtroFixo) return r;
+  const { [chave]: _tirada, ...resto } = r.filtroFixo;
+  const { filtroFixo: _antigo, ...semFixo } = r;
+  return Object.keys(resto).length ? { ...semFixo, filtroFixo: resto } : semFixo;
 }
 
 export function adicionarVariavel(r: RascunhoDoGrafico, id: string): RascunhoDoGrafico {

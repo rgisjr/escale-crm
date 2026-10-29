@@ -18826,6 +18826,12 @@ export const DICIONARIO: Traducoes = {
   "Sankey de fluxo": { es: "Sankey de flujo" },
   "Divisor": { es: "Divisor" },
   "quantidade": { es: "cantidad" },
+  "Filtros do modelo": { es: "Filtros del modelo" },
+  "Aplicados sempre, junto com os filtros do dashboard.": { es: "Se aplican siempre, junto con los filtros del dashboard." },
+  "Usuário ({n})": { es: "Usuario ({n})" },
+  "Grupo de origem ({n})": { es: "Grupo de origen ({n})" },
+  "Origem ({n})": { es: "Origen ({n})" },
+  "Tags ({n})": { es: "Etiquetas ({n})" },
 };
 
 /**
