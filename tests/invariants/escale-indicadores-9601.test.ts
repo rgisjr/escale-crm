@@ -266,7 +266,8 @@ describe("o tradutor como cada papel", () => {
 
 describe("o filtro do painel no banco (fase 7C)", () => {
   const MES = { atalho: "este_mes" as const };
-  const QUANTIDADE = { indicadores: ["negocio.quantidade"] };
+  // Dois indicadores: com uma coluna só a linha não tem "|" e o `comoPapel` a descarta.
+  const QUANTIDADE = { indicadores: ["negocio.quantidade", "negocio.ganhos"] };
   const contar = (painel?: FiltroDoPainel, pergunta: unknown = QUANTIDADE) =>
     Number(rodarPergunta(GOV_MANAGER, pergunta, painel)[0]?.split("|")[0] ?? 0);
 
@@ -356,13 +357,13 @@ describe("recursos avançados no banco (fase 7E)", () => {
   beforeAll(() => {
     sql(`
       delete from public.crm_leads where title like 'ind7e %';
-      insert into public.crm_leads (organization_id, pipeline_id, stage_id, title, status, owner_user_id, value_cents, created_at, closed_at) values
-        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a1', 'won', '${GOV_AGENT_A}', 150000, '${doMes}', '${doMes}'),
-        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a2', 'won', '${GOV_AGENT_A}', 50000, '${doMes}', '${doMes}'),
-        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a3', 'won', '${GOV_AGENT_A}', 10000, '${doMesPassado}', '${doMesPassado}'),
-        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a4', 'lost', '${GOV_AGENT_A}', 10000, '${doMes}', '${doMes}'),
-        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e b1', 'won', '${GOV_AGENT_B}', 20000, '${doMes}', '${doMes}'),
-        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e b2', 'open', '${GOV_AGENT_B}', 20000, '${doMes}', null);
+      insert into public.crm_leads (organization_id, pipeline_id, stage_id, title, status, owner_user_id, value_cents, created_at, closed_at, lost_reason) values
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a1', 'won', '${GOV_AGENT_A}', 150000, '${doMes}', '${doMes}', null),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a2', 'won', '${GOV_AGENT_A}', 50000, '${doMes}', '${doMes}', null),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a3', 'won', '${GOV_AGENT_A}', 10000, '${doMesPassado}', '${doMesPassado}', null),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e a4', 'lost', '${GOV_AGENT_A}', 10000, '${doMes}', '${doMes}', 'other'),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e b1', 'won', '${GOV_AGENT_B}', 20000, '${doMes}', '${doMes}', null),
+        ('${GOV_ORG}', '${ORIGEM_A}', '${ETAPA}', 'ind7e b2', 'open', '${GOV_AGENT_B}', 20000, '${doMes}', null, null);
     `);
   });
 
@@ -384,7 +385,10 @@ describe("recursos avançados no banco (fase 7E)", () => {
     const doAgenteA = rodarDetalhe(GOV_AGENT_A, PEDIDO_GANHOS);
     expect(doAgenteA.length).toBeLessThanOrEqual(gerente.length);
     expect(doAgenteA.every((l) => l.endsWith(`|${doAgenteA.length}`))).toBe(true);
-    expect(rodarDetalhe(GOV_VIEWER, PEDIDO_GANHOS)).toHaveLength(0);
+    // O viewer lê negócios (papel só de leitura): o que a RLS mostra a ele nunca passa do que o gerente vê, e o total acompanha.
+    const doViewer = rodarDetalhe(GOV_VIEWER, PEDIDO_GANHOS);
+    expect(doViewer.length).toBeLessThanOrEqual(gerente.length);
+    expect(doViewer.every((l) => l.endsWith(`|${doViewer.length}`))).toBe(true);
   });
 
   it("(b) a comparação traz o ramo atual e o anterior com as contagens certas", () => {
@@ -445,7 +449,8 @@ describe("recursos avançados no banco (fase 7E)", () => {
 
   it("(f) o total do detalhamento é só o que a RLS deixa ver, não a tabela inteira", () => {
     const comoViewer = rodarDetalhe(GOV_VIEWER, { ...PEDIDO_GANHOS, pergunta: { indicadores: ["negocio.quantidade"] }, indicador: "negocio.quantidade" });
-    expect(comoViewer.length).toBeLessThanOrEqual(1);
+    const comoGerente = rodarDetalhe(GOV_MANAGER, { ...PEDIDO_GANHOS, pergunta: { indicadores: ["negocio.quantidade"] }, indicador: "negocio.quantidade" });
+    expect(comoViewer.length).toBeLessThanOrEqual(comoGerente.length);
   });
 });
 
@@ -456,7 +461,7 @@ describe("o filtro fixo do gráfico no banco (fase 7F)", () => {
     Number(
       rodarPergunta(
         GOV_MANAGER,
-        { indicadores: ["negocio.quantidade"], tempo: TODO_O_TEMPO, filtro: { condicoes: [SO_DO_TESTE] }, filtroFixo },
+        { indicadores: ["negocio.quantidade", "negocio.ganhos"], tempo: TODO_O_TEMPO, filtro: { condicoes: [SO_DO_TESTE] }, filtroFixo },
         painel,
       )[0]?.split("|")[0] ?? 0,
     );

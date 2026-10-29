@@ -67,6 +67,27 @@ const ANON_PERMITIDO: readonly Excecao[] = [];
  */
 const AUTHENTICATED_PERMITIDO: readonly Excecao[] = [
   {
+    fn: "fn_escale_excluir_painel(uuid)",
+    razao:
+      "POST/DELETE app/api/v1/indicadores-da-casca/paineis/[id]/route.ts e modelos/[id]/route.ts, com createClient de " +
+      "lib/supabase/server (sessão). Definer só para gravar deleted_at por cima da policy de delete (que recusa padrão/modelo); " +
+      "a função confere organização (fn_user_org_ids), visibilidade (fn_escale_pode_ver_painel), papel gerente " +
+      "(fn_role_at_least), a trava do suporte (fn_support_write_allowed) e padrão/modelo. Provada em escale-paineis-9602.test.ts.",
+  },
+  {
+    fn: "fn_escale_limite_de_graficos()",
+    razao:
+      "Função de GATILHO (before insert em crm_graficos): o Postgres a chama pelo trigger, sem EXECUTE do chamador, e uma " +
+      "função que devolve `trigger` não pode ser chamada por RPC. Definer para contar os gráficos do painel sem a RLS do " +
+      "gerente atrapalhar e serializar por advisory lock. Provada em escale-indicadores-9601.test.ts (31º gráfico falha).",
+  },
+  {
+    fn: "fn_escale_tag_gravar(uuid,text,text,text)",
+    razao:
+      "app/api/v1/tags (Tags da casca, migration 9502), com o client de sessão. Definer porque grava em " +
+      "organizations.settings.tags, que o gerente não escreve direto; o portão é fn_role_at_least(manager) dentro da função.",
+  },
+  {
     fn: "encrypt_cpf(text)",
     razao:
       "POST/PATCH app/api/v1/contacts/route.ts e app/api/v1/contacts/[id]/route.ts, " +
