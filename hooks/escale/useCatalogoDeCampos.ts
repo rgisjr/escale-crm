@@ -21,6 +21,7 @@ export const CHAVE_DO_CATALOGO = (objeto: ObjetoDeCampo) => ["catalogo-de-campos
  */
 export const TEMPO_MAXIMO_MS = 20_000;
 const TEMPO_MAXIMO_DO_GET_MS = 10_000;
+const MENSAGEM_DE_TEMPO_ESGOTADO = "Demorou demais. Confira a lista e tente de novo.";
 
 export class ErroDoCatalogoNoCliente extends Error {
   constructor(message: string, readonly tempoEsgotado: boolean) {
@@ -35,13 +36,17 @@ async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
   const relogio = setTimeout(() => controle.abort(), mutante ? TEMPO_MAXIMO_MS : TEMPO_MAXIMO_DO_GET_MS);
   try {
     const r = await fetch(url, { ...init, signal: controle.signal, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-    const corpo = await r.json().catch(() => null);
+    const corpo = await r.json().catch(() => {
+      // Cortou no meio da leitura: é tempo esgotado, não corpo inválido.
+      if (controle.signal.aborted) throw new ErroDoCatalogoNoCliente(MENSAGEM_DE_TEMPO_ESGOTADO, true);
+      return null;
+    });
     if (!r.ok) throw new ErroDoCatalogoNoCliente(corpo?.error?.message ?? "Ocorreu um erro ao salvar", false);
     return corpo.data as T;
   } catch (e) {
     // DOMException nem sempre é `instanceof Error` (jsdom, Safari antigo): compara pelo nome.
     if ((e as { name?: string } | null)?.name === "AbortError") {
-      throw new ErroDoCatalogoNoCliente("Demorou demais. Confira a lista e tente de novo.", true);
+      throw new ErroDoCatalogoNoCliente(MENSAGEM_DE_TEMPO_ESGOTADO, true);
     }
     throw e;
   } finally {
@@ -54,6 +59,8 @@ export function useCatalogoDeCampos(objeto: ObjetoDeCampo, ativo = true) {
     queryKey: CHAVE_DO_CATALOGO(objeto),
     queryFn: () => pedir<Catalogo>(`/api/v1/campos-do-crm?objeto=${objeto}`),
     enabled: ativo,
+    // Com o corte de 10 s o padrão (3 tentativas) viraria 4 pedidos sobre um banco já lento.
+    retry: 1,
     staleTime: 60_000,
   });
   return { catalogo: q.data ?? CATALOGO_VAZIO, carregando: q.isLoading, erro: q.isError };
@@ -63,14 +70,20 @@ export function useMudarCatalogo(objeto: ObjetoDeCampo) {
   const qc = useQueryClient();
   // `alvo` é o objeto do catálogo mexido: o da aba, ou o escolhido no formulário de novo campo.
   //
-  // Frente E (29/10/2026): não recarrega mais `["board"]` nem `["contact"]`. Quem
-  // desenha rótulo e tipo lê o catálogo; valor de campo novo não existe em negócio
-  // nenhum, e valor órfão de campo excluído ninguém desenha. Recarregar o quadro
-  // inteiro e todos os contatos em memória era rajada sobre o banco já engasgado.
-  // `["pipelines"]` fica: a tela de funis lista os campos obrigatórios por etapa.
+  // Frente E (29/10/2026): não recarrega mais `["contact"]` — quem desenha campo de
+  // contato e de empresa lê o catálogo, e valor de campo novo não existe em
+  // contato nenhum. `["board"]` e `["pipelines"]` ficam para o NEGÓCIO: a definição
+  // do campo de negócio vem de `pipeline.settings.fields` (cópia do catálogo,
+  // migration 9006), que chega dentro do cache do quadro (`camposDoFunil` na ficha,
+  // no Kanban, na aba de atividades). Sem isso o campo novo só aparece quando o
+  // quadro recarregar por outro motivo. `invalidateQueries` só refaz na hora o que
+  // está na tela, então o custo é o quadro aberto, não todos.
   const depoisEm = (alvo: ObjetoDeCampo) => {
     void qc.invalidateQueries({ queryKey: CHAVE_DO_CATALOGO(alvo) });
-    if (alvo === "negocio") void qc.invalidateQueries({ queryKey: ["pipelines"] });
+    if (alvo === "negocio") {
+      void qc.invalidateQueries({ queryKey: ["board"] });
+      void qc.invalidateQueries({ queryKey: ["pipelines"] });
+    }
   };
   const depois = () => depoisEm(objeto);
   // Estourou o tempo: o servidor pode ter gravado. Recarrega o catálogo do alvo

@@ -82,7 +82,7 @@ describe("catálogo de campos por objeto (B3-4)", () => {
     expect(espia.mock.calls.map((c) => c[0]?.queryKey)).toContainEqual(["catalogo-de-campos", "negocio"]);
   });
 
-  it("criar campo de negócio recarrega o catálogo e os funis, não o quadro nem os contatos (Frente E)", async () => {
+  it("criar campo de negócio recarrega catálogo, funis e quadro (a definição vem do pipeline), não os contatos (Frente E)", async () => {
     const { useMudarCatalogo } = await import("@/hooks/escale/useCatalogoDeCampos");
     const { espia, wrapper } = montar();
     const { result } = renderHook(() => useMudarCatalogo("negocio"), { wrapper });
@@ -92,7 +92,7 @@ describe("catálogo de campos por objeto (B3-4)", () => {
     const filtros = espia.mock.calls.map((c) => c[0]?.queryKey);
     expect(filtros).toContainEqual(["catalogo-de-campos", "negocio"]);
     expect(filtros).toContainEqual(["pipelines"]);
-    expect(filtros).not.toContainEqual(["board"]);
+    expect(filtros).toContainEqual(["board"]);
     expect(filtros).not.toContainEqual(["contact"]);
   });
 });
