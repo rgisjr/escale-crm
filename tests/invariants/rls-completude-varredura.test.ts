@@ -76,6 +76,20 @@ interface Excecao {
  */
 const PROVA_PROPRIA: readonly Excecao[] = [
   {
+    tabela: "crm_paineis",
+    razao:
+      "tests/invariants/escale-indicadores-9601.test.ts e escale-paineis-9602.test.ts — fork Escale (migrations 9601/9602): " +
+      "visibilidade por papel e por usuário via JWT (viewer nunca, agent só o permitido, admin tudo), gerente escreve, " +
+      "agent não, e a exclusão suave confere organização; escale-modelos-de-painel.test.ts prova os templates.",
+  },
+  {
+    tabela: "crm_graficos",
+    razao:
+      "tests/invariants/escale-indicadores-9601.test.ts e escale-modelos-de-painel.test.ts — fork Escale (migration 9601): " +
+      "o gráfico só é visível quando o painel é visível (RLS do painel na subconsulta), escrita só de gerente, " +
+      "limite de 30 por painel no gatilho e exclusão em cascata com o painel.",
+  },
+  {
     tabela: "crm_pipeline_groups",
     razao:
       "tests/invariants/escale-grupos-de-funis-rls.test.ts — fork Escale (migration 9001): dois tenants reais por JWT " +

@@ -297,7 +297,7 @@ describe("G4-04 — métricas por responsável (números exatos)", () => {
   it("EXPLAIN won/lost usa índice sob agent E manager (sem seq scan em tabela grande)", () => {
     for (const actor of [AGENT_A, MANAGER]) {
       const plan = explainAs(actor, Q_WON_LOST);
-      expect(plan).toMatch(/idx_crm_leads_org_status_closed_owner/);
+      expect(plan).toMatch(/idx_crm_leads_org_status_closed_owner|idx_escale_ind_leads_org_fechado/);
       expect(plan).not.toMatch(BIG);
     }
   });
