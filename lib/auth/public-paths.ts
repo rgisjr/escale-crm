@@ -36,6 +36,9 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/500$/,
   /^\/503$/,
   /^\/api\/v1\/health$/,
+  // Sonda de vida do healthcheck do contêiner (`docker/app/vigia.cjs`): pública
+  // para o proxy não ir ao Supabase a cada 30 s só para saber se o app responde.
+  /^\/api\/v1\/health\/vivo$/,
   /^\/api\/v1\/webhooks\//,
   /^\/api\/v1\/cron\//,
   // Landing page de captura de clique do Google Ads (migration 0306). Quem

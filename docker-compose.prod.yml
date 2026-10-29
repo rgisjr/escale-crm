@@ -69,13 +69,20 @@ services:
         condition: service_started
       waha:
         condition: service_started
+    # O servidor não é o PID 1: a vigia do healthcheck consegue derrubá-lo, o
+    # `docker-init` sai junto e o `restart` traz o app de volta.
+    init: true
     healthcheck:
-      # Probe TCP puro (node existe na imagem; curl/nc não). NÃO usar /api/v1/health:
-      # ele dá 503 se WAHA/Redis caem, o que deixaria o app "unhealthy" e derrubaria
-      # o Caddy junto (blackout total por uma dependência secundária).
-      test: ["CMD", "node", "-e", "require('net').connect(3000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      # Sonda HTTP em /api/v1/health/vivo, que não depende de banco, fila nem
+      # WhatsApp. NÃO usar /api/v1/health: ele dá 503 se WAHA/Redis caem, o que
+      # deixaria o app "unhealthy" e derrubaria o Caddy junto (blackout total
+      # por uma dependência secundária). E não voltar à sonda TCP: em 29/10/2026
+      # o Next travou com a CPU em 100% por quase uma hora e seguiu "healthy",
+      # porque quem aceita a conexão é o kernel. Depois de 4 sondas seguidas sem
+      # resposta a vigia derruba o servidor (ver docker/app/vigia.cjs).
+      test: ["CMD", "node", "vigia.cjs"]
       interval: 30s
-      timeout: 5s
+      timeout: 15s
       retries: 5
       start_period: 40s
     logging: *default-logging
