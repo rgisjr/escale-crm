@@ -158,7 +158,7 @@ export function JanelaNovoContato({
   }
 
   return (
-    <JanelaDaCasca aberta={aberta} onFechar={fechar}>
+    <JanelaDaCasca aberta={aberta} onFechar={fechar} ocupado={gravando}>
       <CabecaDaJanela titulo={t("Informações do contato")} />
       <form
         className="grid gap-4"
@@ -229,11 +229,12 @@ export function JanelaNovoContato({
           </p>
         )}
         <RodapeDaJanela>
-          <BotaoDaJanela variante="cancelar" onClick={fechar}>
+          <BotaoDaJanela variante="cancelar" onClick={fechar} disabled={gravando}>
             {t("Cancelar")}
           </BotaoDaJanela>
+          {/* "Salvando…" enquanto grava (Frente F, 29/10/2026): o botão só desbotado parecia travado, e o duplo clique criava dois contatos. */}
           <BotaoDaJanela variante="salvar" enviar disabled={gravando}>
-            {t("Adicionar contato")}
+            {gravando ? t("Salvando…") : t("Adicionar contato")}
           </BotaoDaJanela>
         </RodapeDaJanela>
       </form>
