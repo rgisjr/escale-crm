@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JanelaNovaEmpresa } from "@/components/escale/empresas/JanelaNovaEmpresa";
 
@@ -26,7 +26,15 @@ vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
   return new Response("{}", { status: 404 });
 }));
 
-const montar = () => render(<QueryClientProvider client={new QueryClient()}><JanelaNovaEmpresa aberta aoFechar={vi.fn()} /></QueryClientProvider>);
+const montar = (aoFechar: () => void = vi.fn()) => render(<QueryClientProvider client={new QueryClient()}><JanelaNovaEmpresa aberta aoFechar={aoFechar} /></QueryClientProvider>);
+
+/** O POST /empresas nunca responde; o resto segue o stub do arquivo (Frente F). */
+function empresaQueNuncaResponde() {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, init) =>
+    url === "/api/v1/empresas" ? new Promise<Response>(() => {}) : original(url, init));
+  return () => vi.mocked(fetch).mockImplementation(original);
+}
 
 describe("JanelaNovaEmpresa (OrganizationCreateWizard da Clint)", () => {
   beforeEach(() => {
@@ -101,5 +109,41 @@ describe("JanelaNovaEmpresa (OrganizationCreateWizard da Clint)", () => {
     fireEvent.change(screen.getByPlaceholderText("Digite o nome do contato"), { target: { value: "Bia" } });
     fireEvent.click(screen.getByRole("button", { name: "Criar empresa" }));
     expect(await screen.findByText("Não foi possível criar a empresa. Tente novamente.")).toBeInTheDocument();
+  });
+
+  describe("enquanto a empresa grava (Frente F)", () => {
+    let restaurar: () => void = () => {};
+    afterEach(() => { restaurar(); vi.useRealTimers(); });
+
+    async function ateCriarEmpresa(aoFechar: () => void) {
+      montar(aoFechar);
+      fireEvent.change(screen.getByPlaceholderText("Ex.: Atlas Distribuidora"), { target: { value: "Atlas" } });
+      fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+      fireEvent.change(screen.getByPlaceholderText("Buscar contato por nome, telefone ou e-mail"), { target: { value: "Ale" } });
+      fireEvent.click(await screen.findByRole("option", { name: /Alex/ }));
+    }
+
+    it("Esc não fecha e Voltar fica desabilitado", async () => {
+      restaurar = empresaQueNuncaResponde();
+      const aoFechar = vi.fn();
+      await ateCriarEmpresa(aoFechar);
+      fireEvent.click(screen.getByRole("button", { name: "Criar empresa" }));
+      expect(await screen.findByRole("button", { name: "Criando…" })).toBeDisabled();
+      for (const voltar of screen.getAllByRole("button", { name: /Voltar/ })) expect(voltar).toBeDisabled();
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      expect(aoFechar).not.toHaveBeenCalled();
+    });
+
+    it("POST que estoura o tempo mostra a mensagem e mantém a janela", async () => {
+      restaurar = empresaQueNuncaResponde();
+      const aoFechar = vi.fn();
+      await ateCriarEmpresa(aoFechar);
+      vi.useFakeTimers();
+      fireEvent.click(screen.getByRole("button", { name: "Criar empresa" }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(20_001); });
+      expect(screen.getByText("Demorou demais. Confira a lista e tente de novo.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Criar empresa" })).toBeEnabled();
+      expect(aoFechar).not.toHaveBeenCalled();
+    });
   });
 });

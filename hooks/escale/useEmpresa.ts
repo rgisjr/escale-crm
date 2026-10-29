@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { ContatoDaEmpresa, FichaDaEmpresa, NegocioDaEmpresa } from "@/lib/escale/empresas/banco";
+import { fetchComTempoMaximo } from "@/lib/escale/fetch-com-tempo-maximo";
 
 /** Erro da API com o status, para a ficha separar "não achei" de "falhou". */
 export class ErroDaApiDaEmpresa extends Error {
@@ -14,8 +15,11 @@ export class ErroDaApiDaEmpresa extends Error {
   }
 }
 
+// `fetchComTempoMaximo` (Frente F, 29/10/2026): com o banco engasgado a ficha ficava
+// presa sem fim; agora a leitura desiste em 10 s e a escrita em 20 s, e o erro
+// chega com a mensagem de tela. 404 continua ErroDaApiDaEmpresa com status.
 async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, init);
+  const r = await fetchComTempoMaximo(url, init);
   const corpo = await r.json().catch(() => null);
   if (!r.ok) throw new ErroDaApiDaEmpresa(corpo?.error?.message ?? "Não foi possível completar a ação.", r.status);
   return corpo.data as T;

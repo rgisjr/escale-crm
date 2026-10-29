@@ -117,4 +117,16 @@ describe("JanelaNovoContato (C1)", () => {
       source: "manual",
     });
   });
+
+  it("enquanto grava: 'Salvando…', Cancelar desabilitado e Esc não fecha (Frente F)", async () => {
+    vi.mocked(apiClient.post).mockImplementation(() => new Promise(() => {}));
+    const aoFechar = vi.fn();
+    envolver(<JanelaNovoContato aberta aoFechar={aoFechar} origens={ORIGENS} />);
+    fireEvent.change(screen.getByPlaceholderText("Digite o nome do contato"), { target: { value: "Ana" } });
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar contato" }));
+    expect(await screen.findByRole("button", { name: "Salvando…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    expect(aoFechar).not.toHaveBeenCalled();
+  });
 });

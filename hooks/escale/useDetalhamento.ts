@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import { HEADER_ORG_DA_ABA, orgDaAba } from "@/lib/auth/org-da-aba";
+import { fetchComTempoMaximo } from "@/lib/escale/fetch-com-tempo-maximo";
 import type { ColunaDaPagina } from "@/lib/escale/indicadores/motor/detalhamento";
 import type { Detalhamento, DetalhamentoParaCsv } from "@/lib/escale/indicadores/pergunta";
 import { comVagaNoNavegador } from "@/lib/escale/indicadores/painel/fila-do-navegador";
@@ -39,7 +40,7 @@ export function useDetalhamento(a: { graficoId: string; pedido: Detalhamento | n
 /** Pede o CSV na hora e devolve o texto; `truncado` vem do cabeçalho `x-escale-truncado`. */
 export async function pedirCsvDoDetalhamento(pedido: DetalhamentoParaCsv): Promise<{ texto: string; truncado: boolean }> {
   const aba = orgDaAba();
-  const resposta = await fetch(`${ROTA}/csv`, {
+  const resposta = await fetchComTempoMaximo(`${ROTA}/csv`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json", ...(aba?.orgId ? { [HEADER_ORG_DA_ABA]: aba.orgId } : {}) },
