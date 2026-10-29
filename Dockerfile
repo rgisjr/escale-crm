@@ -127,6 +127,9 @@ ENV APP_VERSION=$APP_VERSION
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
+# Healthcheck do contêiner (docker-compose.prod.yml): sonda HTTP que derruba o
+# servidor travado para o contêiner reiniciar.
+COPY --chown=nextjs:nodejs docker/app/vigia.cjs ./vigia.cjs
 USER nextjs
 EXPOSE 3000
 # server.js é o entrypoint gerado pelo output standalone.
