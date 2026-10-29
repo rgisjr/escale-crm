@@ -1252,6 +1252,10 @@ export const AUDIT_ACTIONS = [
   // FORK ESCALE · Fase 7E: o CSV do detalhamento de um gráfico.
   "dashboard.chart_drilldown_exported",
   "dashboard.deleted",
+  // FORK ESCALE · Fase 7F: modelos de painel (usar modelo, tornar e excluir template).
+  "dashboard.created_from_template",
+  "dashboard.template_created",
+  "dashboard.template_deleted",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

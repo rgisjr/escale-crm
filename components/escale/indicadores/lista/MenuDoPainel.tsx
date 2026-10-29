@@ -12,25 +12,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAcoesDosModelos } from "@/hooks/escale/useModelosDeIndicadores";
 import { useAcoesDosPaineis } from "@/hooks/escale/usePaineisDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { ApiError } from "@/lib/api/types";
 import type { PainelDaLista } from "@/lib/escale/indicadores/paineis/tipos";
-import { Copy, EllipsisVertical, Pencil, Trash2 } from "@/lib/ui/icons-da-casca";
+import { Copy, EllipsisVertical, Pencil, SquareDashed, Trash2 } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 /**
- * O ⋮ DO PAINEL (10-002): Duplicar, Editar, divisor, Excluir. Só aparece no hover
+ * O ⋮ DO PAINEL (10-002): Tornar template, Duplicar, Editar, divisor, Excluir. Só aparece no hover
  * do card (ou no foco, pelo teclado). Painel padrão não tem Excluir; "Tornar
- * template" entra na 7F. `modal={false}`: a janela que o item abre não herda o
+ * template" é o primeiro item (7F). `modal={false}`: a janela que o item abre não herda o
  * bloqueio de clique do menu. Duplicar e excluir não mostram toast de sucesso
  * (a Clint não revela texto): o resultado aparece na lista.
  */
 export function MenuDoPainel({ painel, aoEditar }: { painel: PainelDaLista; aoEditar: (p: PainelDaLista) => void }) {
   const t = useT();
   const { duplicar, excluir } = useAcoesDosPaineis();
+  const { tornarTemplate } = useAcoesDosModelos();
   const [confirmando, setConfirmando] = useState(false);
   const falhou = (err: unknown) => (err instanceof ApiError ? showApiError(err) : toast.error(t("Erro inesperado.")));
+
+  function tornar() {
+    tornarTemplate.mutate(painel.id, {
+      onSuccess: () => toast.success(t("Template criado com sucesso!")),
+      onError: () => toast.error(t("Falha na criação do template.")),
+    });
+  }
 
   function confirmarExclusao() {
     excluir.mutate(painel.id, {
@@ -59,6 +68,10 @@ export function MenuDoPainel({ painel, aoEditar }: { painel: PainelDaLista; aoEd
           className={cn(CONTEUDO_DO_MENU, "min-w-[200px]")}
           style={SOMBRA_DO_MENU}
         >
+          <DropdownMenuItem className={ITEM_DO_MENU} onSelect={tornar}>
+            <SquareDashed size={14} aria-hidden />
+            {t("Tornar template")}
+          </DropdownMenuItem>
           <DropdownMenuItem className={ITEM_DO_MENU} onSelect={() => duplicar.mutate(painel.id, { onError: falhou })}>
             <Copy size={14} aria-hidden />
             {t("Duplicar")}

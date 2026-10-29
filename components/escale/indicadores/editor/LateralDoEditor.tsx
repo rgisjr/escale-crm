@@ -12,6 +12,7 @@ import type { Resultado } from "@/lib/escale/indicadores/motor/executar";
 
 import { AbaOpcoesDoEditor } from "./AbaOpcoesDoEditor";
 import { SecaoFiltroDoEditor } from "./SecaoFiltroDoEditor";
+import { FiltrosDoModeloNoEditor } from "./FiltrosDoModeloNoEditor";
 import { SecaoFiltroQuantitativo } from "./SecaoFiltroQuantitativo";
 import { SecoesDoEditor } from "./SecoesDoEditor";
 
@@ -88,6 +89,7 @@ export function LateralDoEditor({ rascunho, catalogo, erroDoCatalogo, aoTentarOC
             <SecoesDoEditor rascunho={rascunho} catalogo={catalogo} erros={erros} mudar={mudar} resultado={resultado} />
             <SecaoFiltroDoEditor rascunho={rascunho} catalogo={catalogo} erros={erros} mudar={mudar} />
             <SecaoFiltroQuantitativo rascunho={rascunho} catalogo={catalogo} erros={erros} mudar={mudar} />
+            <FiltrosDoModeloNoEditor rascunho={rascunho} mudar={mudar} />
           </>
         ) : (
           <AbaOpcoesDoEditor rascunho={rascunho} catalogo={catalogo} mudar={mudar} etapasDoResultado={etapasDoResultado} />

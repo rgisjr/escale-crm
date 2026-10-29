@@ -108,6 +108,13 @@ export const filtroDoPainelSchema = z
   .strict();
 export type FiltroDoPainel = z.infer<typeof filtroDoPainelSchema>;
 
+/** Fase 7F: os "filtros fixos" do gráfico (passo "Configure filtros" dos modelos), na forma do filtro do painel. */
+export const filtroFixoSchema = filtroDoPainelSchema
+  .pick({ usuarios: true, gruposDeOrigem: true, origens: true, tags: true })
+  .partial()
+  .strict();
+export type FiltroFixo = z.infer<typeof filtroFixoSchema>;
+
 /** Fase 7E: indicador calculado (A op B), comparação de períodos e filtro quantitativo. */
 export const OPERACOES = ["soma", "subtracao", "multiplicacao", "divisao"] as const;
 export type Operacao = (typeof OPERACOES)[number];
@@ -174,6 +181,8 @@ export const perguntaSchema = z
     comparacao: z.object({ modo: z.enum(MODOS_DE_COMPARACAO) }).strict().optional(),
     /** Heatmap dia × hora: agrupa por dia da semana e hora do campo de tempo (T7). */
     matrizDeTempo: z.boolean().default(false),
+    /** Fase 7F: aplicado sempre, somado ao filtro do painel. */
+    filtroFixo: filtroFixoSchema.optional(),
   })
   .strict();
 export type Pergunta = z.infer<typeof perguntaSchema>;

@@ -227,3 +227,6 @@ export {
 // FORK ESCALE · Fase 7E: indicador calculado, heatmap, divisor e os tipos novos do seletor de gráfico.
 export { Calculator, ChartBarBig, ChartLine, Grid3x3, SeparatorHorizontal } from "lucide-react";
 export { ChartBarHorizontal as TipoBarra100, FlowArrow as TipoSankey } from "@phosphor-icons/react/dist/ssr";
+
+// Fase 7F (modelos de painel): quadrado tracejado do "Tornar template" e o cartão-modelo do vazio.
+export { LayoutTemplate, SquareDashed } from "lucide-react";

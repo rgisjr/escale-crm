@@ -124,6 +124,37 @@ describe("montarSql", () => {
     expect(JSON.parse(String(r.values[2])).grupos[0].condicoes[0].tag).toBe("vip");
   });
 
+  describe("filtro fixo do gráfico (7F)", () => {
+    const U2 = "33333333-3333-4333-8333-333333333333";
+    const U1 = "22222222-2222-4222-8222-222222222222";
+    it("aplica usuários depois das condições e antes do filtro do painel, com `and`", () => {
+      const p = pergunta({ indicadores: ["negocio.ganhos"], filtroFixo: { usuarios: [U1] } });
+      const so = montarSql(p, undefined, ctx());
+      expect(plano(so.text)).toContain("b.owner_user_id = any($3::uuid[])");
+      expect(so.values[2]).toEqual([U1]);
+      const dois = montarSql(p, { usuarios: [U2] }, ctx());
+      expect(plano(dois.text)).toContain("b.owner_user_id = any($3::uuid[]) and b.owner_user_id = any($4::uuid[])");
+      expect(dois.values.slice(2)).toEqual([[U1], [U2]]);
+    });
+    it("chave que o assunto não aceita é ignorada e volta como fixo:<chave>", () => {
+      const r = montarSql(pergunta({ indicadores: ["conversa.iniciadas"], filtroFixo: { origens: [U1] } }), undefined, ctx());
+      expect(r.ignorados).toContain("fixo:origens");
+      expect(r.text).not.toContain("any($3::uuid[])");
+    });
+    it("tags usam fn_escale_tags_passam com o JSON em values", () => {
+      const tags = { combinar: "ou" as const, grupos: [{ modo: "e" as const, condicoes: [{ op: "possui" as const, tag: "VIP" }] }] };
+      const r = montarSql(pergunta({ indicadores: ["negocio.ganhos"], filtroFixo: { tags } }), undefined, ctx());
+      expect(r.text).toContain("public.fn_escale_tags_passam(b.tags, $3::jsonb)");
+    });
+    it("injeção em tags[].tag nunca chega ao texto do SQL", () => {
+      const tag = "x'); drop table crm_leads; --";
+      const tags = { combinar: "ou" as const, grupos: [{ modo: "e" as const, condicoes: [{ op: "possui" as const, tag }] }] };
+      const r = montarSql(pergunta({ indicadores: ["negocio.ganhos"], filtroFixo: { tags } }), undefined, ctx());
+      expect(r.text).not.toContain("drop table");
+      expect(JSON.stringify(r.values)).toContain("drop table");
+    });
+  });
+
   it("campos do painel: fixo por coluna, personalizado com a chave em parâmetro", () => {
     const campos = {
       combinar: "e" as const,

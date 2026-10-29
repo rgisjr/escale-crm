@@ -29,6 +29,16 @@ vi.mock("@/hooks/escale/usePaineisDaCasca", () => ({
   }),
 }));
 
+const tornar = vi.fn();
+vi.mock("@/hooks/escale/useModelosDeIndicadores", () => ({
+  useModelos: () => ({ isLoading: false, isError: false, data: [], refetch: () => undefined }),
+  useAcoesDosModelos: () => ({
+    tornarTemplate: { mutate: tornar, isPending: false },
+    usar: { mutate: vi.fn(), isPending: false },
+    excluirTemplate: { mutate: vi.fn(), isPending: false },
+  }),
+}));
+
 import { toast } from "sonner";
 
 const SP = "America/Sao_Paulo";
@@ -110,15 +120,30 @@ describe("lista de painéis (10-001)", () => {
 });
 
 describe("menu ⋮ (10-002)", () => {
-  it("tem Duplicar, Editar e Excluir, nessa ordem, sem Tornar template", async () => {
+  it("tem Tornar template, Duplicar, Editar e Excluir, nessa ordem", async () => {
     const user = userEvent.setup();
     comLista([painel()]);
     render(<IndicadoresDaCasca papel="manager" fuso={SP} />);
     await user.click(screen.getByRole("button", { name: "Opções do dashboard" }));
-    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Duplicar", "Editar", "Excluir"]);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Tornar template", "Duplicar", "Editar", "Excluir"]);
     await user.click(screen.getByRole("menuitem", { name: "Duplicar" }));
     expect(duplicar).toHaveBeenCalledWith("p1", expect.anything());
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("Tornar template chama a ação e mostra o toast de sucesso ou de falha", async () => {
+    const user = userEvent.setup();
+    comLista([painel()]);
+    render(<IndicadoresDaCasca papel="manager" fuso={SP} />);
+    tornar.mockImplementationOnce((_id: string, o: { onSuccess: () => void }) => o.onSuccess());
+    await user.click(screen.getByRole("button", { name: "Opções do dashboard" }));
+    await user.click(screen.getByRole("menuitem", { name: "Tornar template" }));
+    expect(tornar).toHaveBeenCalledWith("p1", expect.anything());
+    expect(toast.success).toHaveBeenCalledWith("Template criado com sucesso!");
+    tornar.mockImplementationOnce((_id: string, o: { onError: () => void }) => o.onError());
+    await user.click(screen.getByRole("button", { name: "Opções do dashboard" }));
+    await user.click(screen.getByRole("menuitem", { name: "Tornar template" }));
+    expect(toast.error).toHaveBeenCalledWith("Falha na criação do template.");
   });
 
   it("painel padrão não tem Excluir", async () => {

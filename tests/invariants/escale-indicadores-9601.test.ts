@@ -448,3 +448,41 @@ describe("recursos avançados no banco (fase 7E)", () => {
     expect(comoViewer.length).toBeLessThanOrEqual(1);
   });
 });
+
+describe("o filtro fixo do gráfico no banco (fase 7F)", () => {
+  const TODO_O_TEMPO = { campo: "negocio.criado_em", periodo: { atalho: "tudo" as const } };
+  const SO_DO_TESTE = { campo: "negocio.titulo", op: "contem" as const, valor: "ind7f" };
+  const contarComFixo = (filtroFixo: unknown, painel?: FiltroDoPainel): number =>
+    Number(
+      rodarPergunta(
+        GOV_MANAGER,
+        { indicadores: ["negocio.quantidade"], tempo: TODO_O_TEMPO, filtro: { condicoes: [SO_DO_TESTE] }, filtroFixo },
+        painel,
+      )[0]?.split("|")[0] ?? 0,
+    );
+
+  beforeAll(() => {
+    sql(`
+      delete from public.crm_leads where title like 'ind7f %';
+      insert into public.crm_leads (organization_id, pipeline_id, stage_id, title, status, owner_user_id, tags, value_cents, created_at) values
+        ('${GOV_ORG}', 'cccccccc-5555-4000-8000-000000000001', 'cccccccc-5555-4000-8000-000000000002', 'ind7f a vip', 'open', '${GOV_AGENT_A}', '{vip}', 1000, now()),
+        ('${GOV_ORG}', 'cccccccc-5555-4000-8000-000000000001', 'cccccccc-5555-4000-8000-000000000002', 'ind7f a sem', 'open', '${GOV_AGENT_A}', '{}', 1000, now()),
+        ('${GOV_ORG}', 'cccccccc-5555-4000-8000-000000000001', 'cccccccc-5555-4000-8000-000000000002', 'ind7f b vip', 'open', '${GOV_AGENT_B}', '{vip}', 1000, now());
+    `);
+  });
+
+  it("usuarios: só os negócios do usuário escolhido", () => {
+    expect(contarComFixo({ usuarios: [GOV_AGENT_A] })).toBe(2);
+    expect(contarComFixo({ usuarios: [GOV_AGENT_B] })).toBe(1);
+  });
+
+  it("tags: usa a mesma régua do filtro do painel (possui vip)", () => {
+    const tags = { combinar: "e" as const, grupos: [{ modo: "ou" as const, condicoes: [{ op: "possui" as const, tag: "vip" }] }] };
+    expect(contarComFixo({ tags })).toBe(2);
+  });
+
+  it("é somado ao filtro do painel (E): usuário A no fixo e tag vip no painel acha 1", () => {
+    const tags = { combinar: "e" as const, grupos: [{ modo: "e" as const, condicoes: [{ op: "possui" as const, tag: "vip" }] }] };
+    expect(contarComFixo({ usuarios: [GOV_AGENT_A] }, { tags })).toBe(1);
+  });
+});
