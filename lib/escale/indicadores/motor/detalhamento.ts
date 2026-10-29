@@ -12,7 +12,7 @@ import {
 } from "../catalogo/tipos";
 import type { Detalhamento, DetalhamentoParaCsv } from "../pergunta";
 import { ErroDoMotor } from "./erros";
-import { filtroSql, frag, intervaloEfetivo, Montagem, painelSql, type Contexto } from "./sql";
+import { filtroFixoSql, filtroSql, frag, intervaloEfetivo, Montagem, painelSql, type Contexto } from "./sql";
 import { lerCampoDinamico } from "../catalogo/campos-personalizados";
 
 const TRUNC = { hora: "hour", dia: "day", semana: "week", mes: "month", trimestre: "quarter", ano: "year" } as const;
@@ -96,6 +96,7 @@ export function montarSqlDoDetalhamento(
   }
   const doFiltro = filtroSql(m, d.pergunta.filtro);
   if (doFiltro) onde.push(doFiltro);
+  onde.push(...filtroFixoSql(m, d.pergunta, []));
   onde.push(...painelSql(m, d.filtroDoPainel, []));
 
   const predicado = predicadoDoIndicador(d);

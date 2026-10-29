@@ -15,6 +15,20 @@ const validar = (o: unknown, doOrg = new Map<string, CampoDinamico>()) => {
   return validarPergunta(lida, doOrg);
 };
 
+describe("filtroFixo (7F)", () => {
+  const base = { indicadores: ["negocio.ganhos"] };
+  it("aceita as 4 chaves", () => {
+    const u = "22222222-2222-4222-8222-222222222222";
+    const tags = { combinar: "ou", grupos: [{ modo: "e", condicoes: [{ op: "possui", tag: "vip" }] }] };
+    expect(ler({ ...base, filtroFixo: { usuarios: [u], gruposDeOrigem: [u], origens: [u], tags } }).success).toBe(true);
+  });
+  it("recusa chave extra e uuid inválido", () => {
+    expect(ler({ ...base, filtroFixo: { periodo: { atalho: "hoje" } } }).success).toBe(false);
+    expect(ler({ ...base, filtroFixo: { campos: { combinar: "e", grupos: [] } } }).success).toBe(false);
+    expect(ler({ ...base, filtroFixo: { usuarios: ["nao-uuid"] } }).success).toBe(false);
+  });
+});
+
 describe("perguntaSchema", () => {
   it("aceita o exemplo", () => expect(ler(base).success).toBe(true));
 

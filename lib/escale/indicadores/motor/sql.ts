@@ -229,6 +229,15 @@ export function painelSql(m: Montagem, painel: FiltroDoPainel | undefined, ignor
   return clausulas;
 }
 
+/** Fase 7F: o filtro fixo do gráfico usa as mesmas regras do filtro do painel; as chaves ignoradas voltam como `fixo:<chave>`. */
+export function filtroFixoSql(m: Montagem, p: Pergunta, ignorados: string[]): string[] {
+  if (!p.filtroFixo) return [];
+  const locais: string[] = [];
+  const clausulas = painelSql(m, p.filtroFixo, locais);
+  ignorados.push(...locais.map((c) => `fixo:${c}`));
+  return clausulas;
+}
+
 const OPERADOR_QUANTITATIVO = {
   igual_a: "=",
   diferente_de: "<>",
@@ -346,6 +355,7 @@ function montarRamo(p: Pergunta, painel: FiltroDoPainel | undefined, ctx: Contex
   const doFiltro = filtroSql(m, p.filtro);
   if (doFiltro) onde.push(doFiltro);
   const ignorados: string[] = efetivo.ignorado ? ["periodo"] : [];
+  onde.push(...filtroFixoSql(m, p, ignorados));
   onde.push(...painelSql(m, painel, ignorados));
 
   // Filtro quantitativo (T5): `having` sobre o fragmento agregado, valor em `$n`.

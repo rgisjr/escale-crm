@@ -186,6 +186,16 @@ describe("montarSqlDoDetalhamento", () => {
     expect(r.colunas[7]).toMatchObject({ chave: "valor", formato: "valor" });
   });
 
+  it("aplica o filtro fixo da pergunta junto com o do painel (7F)", () => {
+    const U = "22222222-2222-4222-8222-222222222222";
+    const r = montarSqlDoDetalhamento(
+      pedido({ pergunta: { indicadores: ["negocio.ganhos"], tempo: TEMPO, filtroFixo: { usuarios: [U] } }, ponto: { variaveis: [] } }),
+      ctx(),
+    );
+    expect(plano(r.text)).toContain("b.owner_user_id = any(");
+    expect(JSON.stringify(r.values)).toContain(U);
+  });
+
   it("ponto nulo vira is null; ponto de tempo e de heatmap viram igualdades parametrizadas", () => {
     const nulo = montarSqlDoDetalhamento(pedido({ ponto: { variaveis: [{ id: "negocio.origem", valor: null }], t: "2026-10-05T00:00:00" } }), ctx());
     expect(nulo.text).toContain("b.pipeline_id is null");
