@@ -42,7 +42,8 @@ export async function fetchComTempoMaximo(url: string, init?: RequestInit, ms?: 
     return await Promise.race([fetch(url, { ...init, signal: controle.signal }), estourou]);
   } catch (e) {
     if (e instanceof ErroDeTempoEsgotado) throw e;
-    if (e instanceof Error && e.name === "AbortError") throw new ErroDeTempoEsgotado();
+    // Compara pelo nome: DOMException nem sempre é `instanceof Error` (jsdom, Safari antigo).
+    if ((e as { name?: string } | null)?.name === "AbortError") throw new ErroDeTempoEsgotado();
     throw e;
   } finally {
     clearTimeout(relogio);
