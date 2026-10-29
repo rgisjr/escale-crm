@@ -3,22 +3,30 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { GradeDeModelos } from "@/components/escale/indicadores/modelos/GradeDeModelos";
+import {
+  FILTROS_VAZIOS,
+  PassoConfigureFiltros,
+  useCriarDashboardDoModelo,
+} from "@/components/escale/indicadores/modelos/PassoConfigureFiltros";
 import { JanelaDaCasca } from "@/components/escale/origens/JanelaDaCasca";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { DialogTitle } from "@/components/ui/dialog";
 import { useAcoesDosPaineis } from "@/hooks/escale/usePaineisDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { ApiError } from "@/lib/api/types";
+import type { FiltrosDoModelo } from "@/lib/escale/indicadores/modelos/regras";
+import type { ModeloNaLista } from "@/lib/escale/indicadores/modelos/tipos";
 import { rotaDoPainel } from "@/lib/escale/indicadores/rotas";
-import { Search } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 type Categoria = "todos" | "meus";
+type Passo = { tipo: "grade" } | { tipo: "filtros"; modelo: ModeloNaLista };
 
 /**
- * O MODAL "NOVO DASHBOARD" (10-005): categorias à esquerda, "Selecione um modelo"
- * com a busca à direita e "+ Novo dashboard em branco" no rodapé. Os modelos
- * entram na 7F sem mudar a casca; a categoria "Meta" não entra (decisão 2).
+ * O MODAL "NOVO DASHBOARD" (10-005, 10-017, 10-020): categorias à esquerda e, à direita, a grade de modelos
+ * ("Selecione um modelo") ou o passo "Configure filtros". O rodapé traz "+ Novo dashboard em branco" na grade
+ * e "Criar dashboard" no passo. A categoria "Meta" não entra (decisão 2).
  */
 export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoFechar: () => void }) {
   const t = useT();
@@ -26,10 +34,16 @@ export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoF
   const { criar } = useAcoesDosPaineis();
   const [categoria, setCategoria] = useState<Categoria>("todos");
   const [busca, setBusca] = useState("");
+  const [passo, setPasso] = useState<Passo>({ tipo: "grade" });
+  const [filtros, setFiltros] = useState<FiltrosDoModelo>(FILTROS_VAZIOS);
   const categorias: { valor: Categoria; rotulo: string }[] = [
     { valor: "todos", rotulo: t("Todos os modelos") },
     { valor: "meus", rotulo: t("Meus templates") },
   ];
+  const { criar: criarDoModelo, ocupado } = useCriarDashboardDoModelo((id) => {
+    aoFechar();
+    router.push(rotaDoPainel(id));
+  });
 
   function criarEmBranco() {
     criar.mutate(undefined, {
@@ -39,6 +53,16 @@ export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoF
       },
       onError: (err) => (err instanceof ApiError ? showApiError(err) : toast.error(t("Erro inesperado."))),
     });
+  }
+
+  function escolherCategoria(c: Categoria) {
+    setCategoria(c);
+    setPasso({ tipo: "grade" });
+  }
+
+  function usarModelo(modelo: ModeloNaLista) {
+    setFiltros(FILTROS_VAZIOS);
+    setPasso({ tipo: "filtros", modelo });
   }
 
   return (
@@ -54,7 +78,7 @@ export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoF
                 <button
                   type="button"
                   aria-current={categoria === c ? "true" : undefined}
-                  onClick={() => setCategoria(c)}
+                  onClick={() => escolherCategoria(c)}
                   className={cn(
                     "w-full rounded-[4px] border-l-2 px-2 py-1.5 text-left text-[13px]",
                     categoria === c
@@ -69,34 +93,33 @@ export function JanelaNovoDashboard({ aberta, aoFechar }: { aberta: boolean; aoF
           </ul>
         </nav>
         <section className="flex min-w-0 flex-1 flex-col p-6">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-[13px] text-casca-texto">{t("Selecione um modelo")}</p>
-            <label className="relative w-[150px]">
-              <span className="sr-only">{t("Buscar")}</span>
-              <input
-                type="search"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder={t("Buscar")}
-                className="h-8 w-full rounded-[6px] border-0 bg-casca-raia pr-8 pl-3 text-[13px] text-casca-texto outline-hidden placeholder:text-casca-suave"
-              />
-              <Search size={16} aria-hidden className="pointer-events-none absolute top-2 right-2.5 text-casca-suave" />
-            </label>
-          </div>
-          <div className="grid flex-1 place-items-center">
-            <p className="text-[13px] text-casca-suave">{t("Nenhum template encontrado")}</p>
-          </div>
+          {passo.tipo === "grade" ? (
+            <GradeDeModelos categoria={categoria} busca={busca} aoBuscar={setBusca} aoUsar={usarModelo} />
+          ) : (
+            <PassoConfigureFiltros filtros={filtros} aoMudar={setFiltros} />
+          )}
         </section>
       </div>
       <div className="flex h-16 items-center justify-end border-t border-casca-divisoria px-5">
-        <button
-          type="button"
-          onClick={criarEmBranco}
-          disabled={criar.isPending}
-          className="inline-flex h-8 items-center rounded-casca-gatilho border border-casca-borda bg-surface px-3.5 text-[13px] text-casca-texto transition-colors hover:bg-casca-raia disabled:opacity-50"
-        >
-          {t("+ Novo dashboard em branco")}
-        </button>
+        {passo.tipo === "grade" ? (
+          <button
+            type="button"
+            onClick={criarEmBranco}
+            disabled={criar.isPending}
+            className="inline-flex h-8 items-center rounded-casca-gatilho border border-casca-borda bg-surface px-3.5 text-[13px] text-casca-texto transition-colors hover:bg-casca-raia disabled:opacity-50"
+          >
+            {t("+ Novo dashboard em branco")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => criarDoModelo(passo.modelo, filtros)}
+            disabled={ocupado}
+            className="inline-flex h-8 items-center rounded-[6px] bg-casca-marca px-4 text-[13px] font-medium text-white transition-colors hover:bg-casca-marca-forte disabled:opacity-50"
+          >
+            {t("Criar dashboard")}
+          </button>
+        )}
       </div>
     </JanelaDaCasca>
   );

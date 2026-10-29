@@ -23,6 +23,15 @@ vi.mock("@/hooks/team/useTeamMembers", () => ({
 const estado = vi.hoisted(() => ({ criarPendente: false }));
 const criar = vi.fn();
 const editar = vi.fn();
+vi.mock("@/hooks/escale/useModelosDeIndicadores", () => ({
+  useModelos: () => ({ isLoading: false, isError: false, data: [], refetch: () => undefined }),
+  useAcoesDosModelos: () => ({
+    tornarTemplate: { mutate: vi.fn(), isPending: false },
+    usar: { mutate: vi.fn(), isPending: false },
+    excluirTemplate: { mutate: vi.fn(), isPending: false },
+  }),
+}));
+vi.mock("@/hooks/escale/useOpcoesDaDimensao", () => ({ useOpcoesDaDimensao: () => ({ data: [] }) }));
 vi.mock("@/hooks/escale/usePaineisDaCasca", () => ({
   useAcoesDosPaineis: () => ({
     criar: { mutate: criar, isPending: estado.criarPendente },
