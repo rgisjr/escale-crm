@@ -140,7 +140,8 @@ export class Montagem {
     if (!origem) return null;
     this.usar(origem.precisa);
     const a = origem.sql.replace(/\.custom_fields$/, "");
-    const fixo = FIXOS_DO_PAINEL[alvo]?.[chave];
+    const fixos = FIXOS_DO_PAINEL[alvo];
+    const fixo = fixos && Object.hasOwn(fixos, chave) ? fixos[chave] : undefined;
     if (fixo) return fixo(a);
     return `(${origem.sql} -> ${this.parametros.add(chave)})`;
   }
