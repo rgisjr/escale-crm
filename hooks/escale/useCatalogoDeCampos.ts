@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { ErroDeTempoEsgotado, fetchComTempoMaximo, TEMPO_MAXIMO_DA_ESCRITA_MS } from "@/lib/escale/fetch-com-tempo-maximo";
 import type { NovoCampo, OrdemDoCatalogo, PatchDoCampo } from "@/lib/escale/campos/banco";
 import { CATALOGO_VAZIO, type Catalogo, type ObjetoDeCampo } from "@/lib/escale/campos/regras";
 
@@ -18,10 +19,10 @@ export const CHAVE_DO_CATALOGO = (objeto: ObjetoDeCampo) => ["catalogo-de-campos
  * `lib/api/client.ts`): o campo pode ter sido gravado DEPOIS do corte. Por isso
  * quem estoura o tempo recarrega o catálogo antes de avisar — a pessoa vê o
  * campo na lista (ou não) em vez de tentar de novo e levar "nome repetido".
+ *
+ * O relógio vive em `lib/escale/fetch-com-tempo-maximo.ts` (Frente F).
  */
-export const TEMPO_MAXIMO_MS = 20_000;
-const TEMPO_MAXIMO_DO_GET_MS = 10_000;
-const MENSAGEM_DE_TEMPO_ESGOTADO = "Demorou demais. Confira a lista e tente de novo.";
+export const TEMPO_MAXIMO_MS = TEMPO_MAXIMO_DA_ESCRITA_MS;
 
 export class ErroDoCatalogoNoCliente extends Error {
   constructor(message: string, readonly tempoEsgotado: boolean) {
@@ -31,27 +32,16 @@ export class ErroDoCatalogoNoCliente extends Error {
 }
 
 async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
-  const mutante = Boolean(init?.method && init.method !== "GET");
-  const controle = new AbortController();
-  const relogio = setTimeout(() => controle.abort(), mutante ? TEMPO_MAXIMO_MS : TEMPO_MAXIMO_DO_GET_MS);
+  let r: Response;
   try {
-    const r = await fetch(url, { ...init, signal: controle.signal, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-    const corpo = await r.json().catch(() => {
-      // Cortou no meio da leitura: é tempo esgotado, não corpo inválido.
-      if (controle.signal.aborted) throw new ErroDoCatalogoNoCliente(MENSAGEM_DE_TEMPO_ESGOTADO, true);
-      return null;
-    });
-    if (!r.ok) throw new ErroDoCatalogoNoCliente(corpo?.error?.message ?? "Ocorreu um erro ao salvar", false);
-    return corpo.data as T;
+    r = await fetchComTempoMaximo(url, { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
   } catch (e) {
-    // DOMException nem sempre é `instanceof Error` (jsdom, Safari antigo): compara pelo nome.
-    if ((e as { name?: string } | null)?.name === "AbortError") {
-      throw new ErroDoCatalogoNoCliente(MENSAGEM_DE_TEMPO_ESGOTADO, true);
-    }
+    if (e instanceof ErroDeTempoEsgotado) throw new ErroDoCatalogoNoCliente(e.message, true);
     throw e;
-  } finally {
-    clearTimeout(relogio);
   }
+  const corpo = await r.json().catch(() => null);
+  if (!r.ok) throw new ErroDoCatalogoNoCliente(corpo?.error?.message ?? "Ocorreu um erro ao salvar", false);
+  return corpo.data as T;
 }
 
 export function useCatalogoDeCampos(objeto: ObjetoDeCampo, ativo = true) {
