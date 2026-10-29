@@ -53,6 +53,9 @@ it("todo handler mutante do app declara guarda de suporte ou é infraestrutura i
   // Só LÊ: o POST existe porque o público (ids e filtro) não cabe na URL. Não há efeito
   // a bloquear em support_readonly; a rota segue atrás de requireRole("manager").
   if(path==="app/api/v1/campanhas-da-casca/publico/route.ts")continue;
+  // Indicadores (7A/7E): só LEEM — a pergunta/ponto clicado não cabe na URL, daí o POST. Rodam com a sessão de quem pede
+  // (RLS) e atrás de requireRole; não há efeito a bloquear em support_readonly (o acompanhamento precisa ver os painéis).
+  if(["consultar","detalhar","detalhar/csv"].some(r=>path==="app/api/v1/indicadores-da-casca/"+r+"/route.ts"))continue;
   // Frente V: só LEEM (o texto com as variáveis trocadas e os valores do modelo
   // para o contato da conversa); POST porque o texto não cabe na URL. Atrás de
   // requireRole("agent") e da RLS da conversa; não há efeito a bloquear.
