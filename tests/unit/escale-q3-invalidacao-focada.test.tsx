@@ -81,4 +81,18 @@ describe("catálogo de campos por objeto (B3-4)", () => {
     expect(corpo).toEqual({ objeto: "negocio", nome: "G" });
     expect(espia.mock.calls.map((c) => c[0]?.queryKey)).toContainEqual(["catalogo-de-campos", "negocio"]);
   });
+
+  it("criar campo de negócio recarrega o catálogo e os funis, não o quadro nem os contatos (Frente E)", async () => {
+    const { useMudarCatalogo } = await import("@/hooks/escale/useCatalogoDeCampos");
+    const { espia, wrapper } = montar();
+    const { result } = renderHook(() => useMudarCatalogo("negocio"), { wrapper });
+    await act(async () => {
+      await result.current.criarCampo.mutateAsync({ objeto: "negocio", nome: "X", grupo_id: "g", tipo: "TEXT" } as never);
+    });
+    const filtros = espia.mock.calls.map((c) => c[0]?.queryKey);
+    expect(filtros).toContainEqual(["catalogo-de-campos", "negocio"]);
+    expect(filtros).toContainEqual(["pipelines"]);
+    expect(filtros).not.toContainEqual(["board"]);
+    expect(filtros).not.toContainEqual(["contact"]);
+  });
 });
