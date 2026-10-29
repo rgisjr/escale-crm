@@ -60,4 +60,24 @@ describe("hooks de Empresas com tempo máximo (Frente F)", () => {
     expect(a.result.current.isError).toBe(true);
     expect(b.result.current.isError).toBe(true);
   });
+
+  it("useSalvarVariaveisDoModelo: PATCH que não responde rejeita em 20 s com a mensagem de tempo esgotado", async () => {
+    const { useSalvarVariaveisDoModelo } = await import("@/hooks/escale/useModelosDaConta");
+    const { TEMPO_MAXIMO_DA_ESCRITA_MS, MENSAGEM_DE_TEMPO_ESGOTADO } = await import("@/lib/escale/fetch-com-tempo-maximo");
+    const { wrapper } = embrulho();
+    const { result } = renderHook(() => useSalvarVariaveisDoModelo(), { wrapper });
+    const promessa = result.current.mutateAsync({ name: "m", language: "pt_BR", variaveis: {} as never });
+    const rejeicao = expect(promessa).rejects.toThrow(MENSAGEM_DE_TEMPO_ESGOTADO);
+    await act(async () => { await vi.advanceTimersByTimeAsync(TEMPO_MAXIMO_DA_ESCRITA_MS + 1); });
+    await rejeicao;
+  });
+
+  it("pedirCsvDoDetalhamento: POST que não responde rejeita em 20 s", async () => {
+    const { pedirCsvDoDetalhamento } = await import("@/hooks/escale/useDetalhamento");
+    const { TEMPO_MAXIMO_DA_ESCRITA_MS } = await import("@/lib/escale/fetch-com-tempo-maximo");
+    const promessa = pedirCsvDoDetalhamento({} as never);
+    const rejeicao = expect(promessa).rejects.toMatchObject({ tempoEsgotado: true });
+    await vi.advanceTimersByTimeAsync(TEMPO_MAXIMO_DA_ESCRITA_MS + 1);
+    await rejeicao;
+  });
 });

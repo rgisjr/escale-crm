@@ -1,14 +1,16 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { fetchComTempoMaximo } from "@/lib/escale/fetch-com-tempo-maximo";
 import type { ModeloDaConta } from "@/lib/escale/conversas/modelos";
 import type { MapeamentoDoModelo } from "@/lib/variaveis/mapeamento";
 
 const ROTA = "/api/v1/channels/templates";
 export const CHAVE_DOS_MODELOS_DA_CONTA = ["modelos-da-conta"] as const;
 
+// Tempo máximo (Frente F, 29/10/2026): ver lib/escale/fetch-com-tempo-maximo.ts.
 async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
+  const r = await fetchComTempoMaximo(url, { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
   const corpo = await r.json().catch(() => null);
   if (!r.ok) {
     const erro = new Error(corpo?.error?.message ?? "Erro ao salvar as variáveis.") as Error & {

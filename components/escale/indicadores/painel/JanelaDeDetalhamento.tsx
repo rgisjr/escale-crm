@@ -11,6 +11,7 @@ import { pedirCsvDoDetalhamento, useDetalhamento } from "@/hooks/escale/useDetal
 import { useT } from "@/hooks/i18n/useT";
 import { ApiError } from "@/lib/api/types";
 import { baixarCsv } from "@/lib/escale/exportar/baixar";
+import { ErroDeTempoEsgotado } from "@/lib/escale/fetch-com-tempo-maximo";
 import {
   nomeDoCsvDoDetalhamento,
   type ColunaDoDetalhamentoNaTela,
@@ -87,8 +88,8 @@ export function JanelaDeDetalhamento({ alvo, aoFechar }: { alvo: AlvoDoDetalhame
       const { texto, truncado } = await pedirCsvDoDetalhamento(base as never);
       baixarCsv(nomeDoCsvDoDetalhamento(alvo.nomeDoGrafico, alvo.nomeDoIndicador, dataParaNome()), texto);
       toast.success(truncado ? t("Exportados os primeiros 20.000 registros.") : t("Exportação concluída com sucesso!"));
-    } catch {
-      toast.error(t("Erro ao exportar dados"));
+    } catch (e) {
+      toast.error(e instanceof ErroDeTempoEsgotado ? t("Demorou demais. Confira a lista e tente de novo.") : t("Erro ao exportar dados"));
     } finally {
       setExportando(false);
     }
