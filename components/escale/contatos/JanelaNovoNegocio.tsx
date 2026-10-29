@@ -72,7 +72,7 @@ export function JanelaNovoNegocio({
   }
 
   return (
-    <JanelaDaCasca aberta={contato !== null} onFechar={fechar}>
+    <JanelaDaCasca aberta={contato !== null} onFechar={fechar} ocupado={gravando}>
       <CabecaDaJanela titulo={t("Novo negócio")} descricao={titulo} />
       <div className="grid gap-4">
         <CamposDaOportunidade
@@ -83,15 +83,16 @@ export function JanelaNovoNegocio({
         />
       </div>
       <RodapeDaJanela>
-        <BotaoDaJanela variante="cancelar" onClick={fechar}>
+        <BotaoDaJanela variante="cancelar" onClick={fechar} disabled={gravando}>
           {t("Cancelar")}
         </BotaoDaJanela>
+        {/* "Salvando…" enquanto grava (Frente F, 29/10/2026): ver JanelaNovoContato. */}
         <BotaoDaJanela
           variante="salvar"
           onClick={() => void criar()}
           disabled={gravando || !destino.etapaId}
         >
-          {t("Criar negócio")}
+          {gravando ? t("Salvando…") : t("Criar negócio")}
         </BotaoDaJanela>
       </RodapeDaJanela>
     </JanelaDaCasca>
