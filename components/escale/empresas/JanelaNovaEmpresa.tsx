@@ -9,6 +9,7 @@ import { BotaoDaJanela, CabecaDaJanela, Campo, CampoDeTexto, JanelaDaCasca, Roda
 import { useT } from "@/hooks/i18n/useT";
 import { telefoneE164 } from "@/lib/escale/contatos/regras";
 import { lerCnpj, mascaraDeCnpj } from "@/lib/escale/empresas/regras";
+import { ErroDeTempoEsgotado, fetchComTempoMaximo } from "@/lib/escale/fetch-com-tempo-maximo";
 import { ArrowLeft, ChevronRight } from "@/lib/ui/icons-da-casca";
 
 import { type EscolhaDoContato, PassoContatoDaEmpresa } from "./PassoContatoDaEmpresa";
@@ -64,7 +65,7 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
     if (contato.modo === "existente") return contato.contato;
     if (contatoCriado.current) return contatoCriado.current;
     const telefone = contato.telefone.trim() ? telefoneE164(contato.ddi, contato.telefone) : null;
-    const r = await fetch("/api/v1/contacts", {
+    const r = await fetchComTempoMaximo("/api/v1/contacts", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ source: "manual", name: contato.nome.trim(), ...(telefone ? { phone_number: telefone } : {}), ...(contato.email.trim() ? { email: contato.email.trim() } : {}) }),
@@ -85,7 +86,7 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
     try {
       const escolhido = await resolverContato();
       if (!escolhido) return;
-      const r = await fetch("/api/v1/empresas", {
+      const r = await fetchComTempoMaximo("/api/v1/empresas", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ nome: nome.trim(), cnpj: cnpj.trim(), site: site.trim(), contato_id: escolhido.id }),
@@ -100,18 +101,20 @@ export function JanelaNovaEmpresa({ aberta, aoFechar }: { aberta: boolean; aoFec
       void qc.invalidateQueries({ queryKey: ["contacts"] });
       aoFechar();
       router.push(`/app/companies/${corpo.data.id}`);
-    } catch {
-      setErro(t("Não foi possível criar a empresa. Tente novamente."));
+    } catch (e) {
+      // Estourou o tempo: o servidor pode ter criado a empresa depois do corte.
+      // A janela fica aberta e a mensagem manda conferir a lista (Frente F).
+      setErro(e instanceof ErroDeTempoEsgotado ? t(e.message) : t("Não foi possível criar a empresa. Tente novamente."));
     } finally {
       setCriando(false);
     }
   };
 
   return (
-    <JanelaDaCasca aberta={aberta} onFechar={aoFechar} className="w-[min(640px,100%)]">
+    <JanelaDaCasca aberta={aberta} onFechar={aoFechar} ocupado={criando} className="w-[min(640px,100%)]">
       <div className="flex items-center gap-3 pr-6">
         {passo === "contato" && (
-          <button type="button" aria-label={t("Voltar")} onClick={() => setPasso("empresa")} className="ml-6 rounded-[6px] p-1 text-casca-suave hover:bg-casca-raia"><ArrowLeft size={16} /></button>
+          <button type="button" aria-label={t("Voltar")} onClick={() => setPasso("empresa")} disabled={criando} className="ml-6 rounded-[6px] p-1 text-casca-suave hover:bg-casca-raia"><ArrowLeft size={16} /></button>
         )}
         <CabecaDaJanela
           titulo={passo === "empresa" ? t("Nova empresa") : t("Contato da empresa")}
