@@ -18886,7 +18886,6 @@ export const DICIONARIO: Traducoes = {
   "Falha na exclusão do template.": { es: "Error al eliminar la plantilla." },
   "Template não encontrado. Recarregue e tente novamente.": { es: "Plantilla no encontrada. Recargue e intente nuevamente." },
   "Falha ao criar dashboard a partir do template.": { es: "Error al crear el dashboard a partir de la plantilla." },
-  "Buscar": { es: "Buscar" },
 };
 
 /**

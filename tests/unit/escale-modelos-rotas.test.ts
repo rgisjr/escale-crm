@@ -7,11 +7,11 @@ vi.mock("@/lib/impersonate/support", () => ({ requireSupportWrite: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn() }));
 vi.mock("@/lib/escale/indicadores/graficos/banco", () => ({ lerGraficos: vi.fn() }));
 vi.mock("@/lib/escale/indicadores/paineis/banco", async (importar) => ({
-  ...(await importar<typeof import("@/lib/escale/indicadores/paineis/banco")>()),
+  ...(await importar<Record<string, unknown>>()),
   lerPainel: vi.fn(),
 }));
 vi.mock("@/lib/escale/indicadores/modelos/banco", async (importar) => ({
-  ...(await importar<typeof import("@/lib/escale/indicadores/modelos/banco")>()),
+  ...(await importar<Record<string, unknown>>()),
   lerTemplatesDaOrganizacao: vi.fn(),
   lerTemplate: vi.fn(),
   criarPainelComGraficos: vi.fn(),
@@ -46,7 +46,7 @@ function autenticar(papel: Role): void {
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
 const usar = (corpo: unknown) =>
   USAR(new NextRequest(new URL("http://x/api/v1/indicadores-da-casca/modelos/usar"), { method: "POST", body: JSON.stringify(corpo) }));
-const resposta = async (r: Response) => (await r.json()) as { data?: Record<string, unknown>; error?: { message: string } };
+const resposta = async (r: Response | { json: () => Promise<unknown> }) => (await r.json()) as { data?: Record<string, unknown>; error?: { message: string } };
 const VAZIOS = { gruposDeOrigem: [], origens: [], usuarios: [], tags: [] };
 
 beforeEach(() => {
@@ -120,7 +120,7 @@ describe("POST usar", () => {
     const falhou = await usar({ modelo: { origem: "sistema", id: "atendimentos" }, filtros: VAZIOS });
     expect(falhou.status).toBe(500);
     expect((await resposta(falhou)).error?.message).toBe("Falha ao criar dashboard a partir do template.");
-    vi.mocked(requireSupportWrite).mockResolvedValueOnce(new Response(null, { status: 403 }));
+    vi.mocked(requireSupportWrite).mockResolvedValueOnce(new Response(null, { status: 403 }) as never);
     expect((await usar({ modelo: { origem: "sistema", id: "atendimentos" }, filtros: VAZIOS })).status).toBe(403);
   });
 
