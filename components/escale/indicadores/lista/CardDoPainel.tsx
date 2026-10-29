@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import type { PainelDaLista } from "@/lib/escale/indicadores/paineis/tipos";
 import { rotaDoPainel } from "@/lib/escale/indicadores/rotas";
@@ -9,8 +10,8 @@ import { MenuDoPainel } from "./MenuDoPainel";
 import { QuadradoDoPainel } from "./QuadradoDoPainel";
 
 /** "dd/mm/aaaa" no fuso da organização (a Clint mostra DD/MM/AA; regra 5 do CLAUDE.md). */
-export function dataDoCard(iso: string, fuso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: fuso, day: "2-digit", month: "2-digit", year: "numeric" }).format(
+export function dataDoCard(iso: string, fuso: string, tag: string): string {
+  return new Intl.DateTimeFormat(tag, { timeZone: fuso, day: "2-digit", month: "2-digit", year: "numeric" }).format(
     new Date(iso),
   );
 }
@@ -32,6 +33,7 @@ export function CardDoPainel({
   aoEditar: (p: PainelDaLista) => void;
 }) {
   const t = useT();
+  const tag = useTagDeIdioma();
   return (
     <div className="group relative flex h-[85px] items-center rounded-[6px] border border-casca-borda bg-surface pr-3 shadow-xs transition-shadow hover:shadow-md">
       <Link
@@ -42,7 +44,7 @@ export function CardDoPainel({
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="truncate text-[13px] font-medium text-casca-texto">{painel.nome}</span>
           <span className="text-[11px] text-casca-suave">
-            {t("Criado em {data}").replace("{data}", dataDoCard(painel.criadoEm, fuso))}
+            {t("Criado em {data}").replace("{data}", dataDoCard(painel.criadoEm, fuso, tag))}
           </span>
         </span>
       </Link>
