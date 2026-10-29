@@ -89,7 +89,7 @@ export function JanelaDeDetalhamento({ alvo, aoFechar }: { alvo: AlvoDoDetalhame
       baixarCsv(nomeDoCsvDoDetalhamento(alvo.nomeDoGrafico, alvo.nomeDoIndicador, dataParaNome()), texto);
       toast.success(truncado ? t("Exportados os primeiros 20.000 registros.") : t("Exportação concluída com sucesso!"));
     } catch (e) {
-      toast.error(e instanceof ErroDeTempoEsgotado ? t("Demorou demais. Confira a lista e tente de novo.") : t("Erro ao exportar dados"));
+      toast.error(e instanceof ErroDeTempoEsgotado ? t(e.message) : t("Erro ao exportar dados"));
     } finally {
       setExportando(false);
     }
