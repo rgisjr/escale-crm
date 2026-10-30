@@ -2,7 +2,8 @@
 
 import { Toaster } from "sonner";
 
-import { useT } from "@/hooks/i18n/useT";
+import { traduzir } from "@/lib/i18n/dicionario";
+import { idiomaAtual } from "@/lib/i18n/IdiomaProvider";
 import { useCascaLigada } from "@/lib/escale/casca-ligada";
 
 import { iconesDoAviso } from "./IconesDoAviso";
@@ -21,13 +22,14 @@ const RODAPE_DO_CELULAR = "calc(0.5rem + max(0.5rem, env(safe-area-inset-bottom,
  * largura do conteúdo, ícone, texto, ação verde e "Fechar" na cor da marca,
  * nessa ordem. O sonner desenha o "Fechar" antes de tudo no DOM; `order`
  * devolve ele para o fim, como na Clint. `left-1/2 -translate-x-1/2` centra a
- * barra (no Tailwind 4 é a propriedade `translate`, que não briga com o
- * `transform` com que o sonner empilha os avisos).
+ * barra no desktop (no Tailwind 4 é a propriedade `translate`, que não briga
+ * com o `transform` do sonner). Até 600px o CSS do sonner (sem layer) manda
+ * `left:0` + largura cheia, então a centralização só vale de 601px para cima.
  */
 const CLASSES_DO_AVISO = {
   toast:
-    "pointer-events-auto left-1/2 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-row flex-wrap items-center gap-3 rounded-[0.375rem] bg-[var(--escale-aviso-fundo)] px-3 py-2 text-white shadow-[var(--escale-aviso-sombra)] min-[62em]:px-8 min-[62em]:py-3",
-  icon: "order-1 flex shrink-0 items-center",
+    "pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-row font-[family-name:var(--font-atkinson)] min-[601px]:left-1/2 min-[601px]:w-max min-[601px]:-translate-x-1/2 flex-wrap items-center gap-3 rounded-[0.375rem] bg-[var(--escale-aviso-fundo)] px-3 py-2 text-white shadow-[var(--escale-aviso-sombra)] min-[62em]:px-8 min-[62em]:py-3",
+  icon: "relative order-1 flex min-h-5 min-w-5 shrink-0 items-center justify-center",
   content: "order-2 flex min-w-0 max-w-full flex-1 flex-col gap-1",
   title: "text-[12px] font-medium",
   description: "text-[11px] opacity-80",
@@ -49,7 +51,6 @@ const CLASSES_DO_AVISO = {
  */
 export function ToasterDoApp() {
   const casca = useCascaLigada();
-  const t = useT();
 
   if (!casca) {
     return (
@@ -63,7 +64,8 @@ export function ToasterDoApp() {
     );
   }
 
-  const fechar = t("Fechar");
+  // O Toaster fica no layout raiz, fora do IdiomaProvider: `useT` daria sempre o padrão.
+  const fechar = traduzir("Fechar", idiomaAtual());
   return (
     <Toaster
       position="bottom-center"

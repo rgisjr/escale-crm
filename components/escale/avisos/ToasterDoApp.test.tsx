@@ -1,12 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { ATRIBUTO_DA_CASCA } from "@/lib/escale/casca-ligada";
 
 import { ToasterDoApp } from "./ToasterDoApp";
-
-vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 
 function lista(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-sonner-toaster]");
