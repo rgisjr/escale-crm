@@ -13,6 +13,7 @@ import { estiloDaReserva, useOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
 // Fork Escale: casca nova (menu no topo + tema), ligada por pessoa.
 import { MenuDoTopo } from "@/components/escale/menu/MenuDoTopo";
 import { ConversasFlutuante } from "@/components/escale/ConversasFlutuante";
+import { useMarcarCascaNoDocumento } from "@/lib/escale/casca-ligada";
 import type { PreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu";
 import { useTelaGrande } from "@/lib/escale/usa-tela-grande";
 
@@ -37,6 +38,9 @@ export function AppShell({ sidebarCollapsed, podeAtender, menu = "lateral", chil
   useInboundCallAlerts();
   useCrmAlerts();
   useNotifyOpenFromServiceWorker();
+  // Fork Escale: o Toaster e o `entregarAviso` ficam fora deste componente e
+  // precisam saber se a casca está ligada (avisos iguais aos da Clint).
+  useMarcarCascaNoDocumento(menu === "topo");
   // O SINAL DE PRESENÇA (issue #996) sai daqui porque presença é "esta aba
   // está aberta" — não "a pessoa está na tela Equipe". Quem atende passa o dia
   // no Inbox e na Agenda; um emissor amarrado à tela de gestão diria que só o
