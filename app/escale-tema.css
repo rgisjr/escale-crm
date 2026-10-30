@@ -445,6 +445,33 @@ body:has([data-escale-casca]) {
   }
 }
 
+/* ─── FORK ESCALE · Fase 5A (editor de automação em formulário) ───
+   O RuleEditor do original aberto pela lista da casca (data-escale-editor-de-automacao):
+   campos, caixas de seleção e rótulos com o desenho dos campos da casca. A lista
+   aberta da caixa de seleção mora num portal, por isso o seletor pelo body. */
+body:has([data-escale-casca]) [data-escale-editor-de-automacao] :is(input, textarea, [role="combobox"]) {
+  background-color: var(--color-casca-raia);
+  border-color: transparent;
+  border-radius: 4px;
+  font-size: 13px;
+}
+body:has([data-escale-casca]) [data-escale-editor-de-automacao] :is(input, textarea, [role="combobox"]):focus-visible {
+  border-color: var(--color-casca-marca);
+  box-shadow: none;
+}
+body:has([data-escale-casca]) [data-escale-editor-de-automacao] label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-casca-texto);
+}
+body:has([data-escale-editor-de-automacao]) [role="listbox"] [role="option"] {
+  font-size: 12px;
+  min-height: 34px;
+}
+body:has([data-escale-editor-de-automacao]) [role="listbox"] [role="option"][data-highlighted] {
+  background-color: var(--color-casca-marca-suave);
+}
+
 /* ─── FORK ESCALE · Fase 8B (assistente de campanha) ───
    A prévia do celular (amostra de pixel no 09-018 e 09-025: as cores são do
    WhatsApp, não da Clint nem da marca), o balão da prévia do modal "Escolher

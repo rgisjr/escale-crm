@@ -1,5 +1,5 @@
 "use client";
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import { ChevronDown } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
@@ -22,10 +22,12 @@ export type GatilhoDeFiltroProps = {
   rotulo: string;
   contagem?: number;
   aberto?: boolean;
+  /** Fase 5A: ícone antes do rótulo (o robô do filtro Agente das automações). */
+  icone?: ReactNode;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const GatilhoDeFiltro = forwardRef<HTMLButtonElement, GatilhoDeFiltroProps>(function GatilhoDeFiltro(
-  { rotulo, contagem, aberto, className, type = "button", ...resto },
+  { rotulo, contagem, aberto, icone, className, type = "button", ...resto },
   ref,
 ) {
   const expandido = resto["aria-expanded"];
@@ -45,6 +47,7 @@ export const GatilhoDeFiltro = forwardRef<HTMLButtonElement, GatilhoDeFiltroProp
       )}
       {...resto}
     >
+      {icone}
       <span>{rotulo}</span>
       {temContagem ? (
         <>

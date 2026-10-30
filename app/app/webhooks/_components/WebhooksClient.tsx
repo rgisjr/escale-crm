@@ -12,7 +12,8 @@ import { useT } from "@/hooks/i18n/useT";
 const ABAS = { receber: "sources", leads: "capturas", automacoes: "rules", atividade: "activity" } as const;
 export type AbaDosWebhooks = keyof typeof ABAS;
 
-export function WebhooksClient({ abaInicial }: { abaInicial?: AbaDosWebhooks }) {
+// FORK ESCALE · Fase 5A: `semAutomacoes` (casca ligada) tira a aba Automações, que virou a página /app/automacoes.
+export function WebhooksClient({ abaInicial, semAutomacoes = false }: { abaInicial?: AbaDosWebhooks; semAutomacoes?: boolean }) {
   const t = useT();
   // Radix Tabs gera ids via useId; com SSR streamado (Next 15) os ids divergem
   // entre server e client e o React acusa hydration mismatch. Nenhuma outra
@@ -43,12 +44,12 @@ export function WebhooksClient({ abaInicial }: { abaInicial?: AbaDosWebhooks }) 
       <TabsList>
         <TabsTrigger value="sources">{t("Receber dados")}</TabsTrigger>
         <TabsTrigger value="capturas">{t("Leads recebidos")}</TabsTrigger>
-        <TabsTrigger value="rules">{t("Automações")}</TabsTrigger>
+        {!semAutomacoes && <TabsTrigger value="rules">{t("Automações")}</TabsTrigger>}
         <TabsTrigger value="activity">{t("Atividade")}</TabsTrigger>
       </TabsList>
       <TabsContent value="sources"><SourcesTab /></TabsContent>
       <TabsContent value="capturas"><CapturasTab /></TabsContent>
-      <TabsContent value="rules"><RulesTab /></TabsContent>
+      {!semAutomacoes && <TabsContent value="rules"><RulesTab /></TabsContent>}
       <TabsContent value="activity"><ActivityTab /></TabsContent>
     </Tabs>
   );

@@ -159,3 +159,17 @@ describe("Indicadores por papel (Fase 7B)", () => {
     expect(secao?.itens.map((d) => d.href)).toContain("/app/ai/desempenho");
   });
 });
+
+describe("Automações do topo (Fase 5A)", () => {
+  it("abre a lista da casca e fica ativo também no fluxo", () => {
+    const item = montarMenuDoTopo(ADMIN).topo.find((i) => i.rotulo === "Automações");
+    expect(item?.href).toBe("/app/automacoes");
+    expect(item?.ativoEm).toContain("/app/webhooks/automacoes");
+  });
+
+  it("some para o atendente (minRole do catálogo) e o interruptor da IA continua no Mais", () => {
+    expect(montarMenuDoTopo(AGENT).topo.some((i) => i.rotulo === "Automações")).toBe(false);
+    const noMais = montarMenuDoTopo(ADMIN).mais.flatMap((g) => g.secoes.flatMap((s) => s.itens.map((d) => d.href)));
+    expect(noMais).toContain("/app/settings/automacoes");
+  });
+});

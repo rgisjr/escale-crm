@@ -12,6 +12,7 @@
  * `EllipsisVertical`, que é o que a V3 e a V4 importam. Ícone novo da casca
  * entra AQUI.
  */
+import { createLucideIcon } from "lucide-react";
 export {
   CalendarCheck,
   CalendarClock,
@@ -230,3 +231,16 @@ export { ChartBarHorizontal as TipoBarra100, FlowArrow as TipoSankey } from "@ph
 
 // Fase 7F (modelos de painel): quadrado tracejado do "Tornar template" e o cartão-modelo do vazio.
 export { LayoutTemplate, SquareDashed } from "lucide-react";
+
+// Fase 5A (lista de automações): pastas do trilho e o "Mover para pasta"; "Sem pasta" é a pasta riscada da Clint.
+export { Folder, FolderInput } from "lucide-react";
+export const FolderOff = createLucideIcon("FolderOff", [
+  [
+    "path",
+    {
+      d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z",
+      key: "pasta",
+    },
+  ],
+  ["path", { d: "m2 2 20 20", key: "risco" }],
+]);

@@ -51,6 +51,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rule: AutomationRuleRow | null;
+  // FORK ESCALE · Fase 5A: o nome vindo do modal "Criar nova automação", o aviso depois de criar (grava pasta e forma) e a marca do visual da casca.
+  nomeInicial?: string;
+  aoCriar?: (regra: AutomationRuleRow) => void | Promise<void>;
+  daCasca?: boolean;
 }
 
 export type Op = "eq" | "neq" | "contains";
@@ -233,7 +237,7 @@ interface ConfigDoTempo {
 
 const QUALQUER_FONTE = "__qualquer_fonte__";
 
-export function RuleEditor({ open, onOpenChange, rule }: Props) {
+export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daCasca }: Props) {
   const t = useT();
   const isEdit = !!rule;
   const [name, setName] = React.useState("");
@@ -273,7 +277,7 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
 
   React.useEffect(() => {
     if (!open) return;
-    setName(rule?.name ?? "");
+    setName(rule?.name ?? nomeInicial ?? ""); // FORK ESCALE · Fase 5A: nome do modal de criar
     setTriggerEvent((rule?.trigger_event as TriggerEvent) ?? "");
     setConditions(
       rule?.conditions.map((c) => ({ field: c.field, op: c.op, value: c.value })) ?? [],
@@ -307,7 +311,7 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
       pipeline_id: tempoGuardado?.pipeline_id ?? "",
       stage_id: etapaGuardada?.stage_id ?? "",
     });
-  }, [open, rule]);
+  }, [open, rule, nomeInicial]);
 
   const curatedFields = triggerEvent ? CURATED_FIELDS[triggerEvent] : [];
   const ehGatilhoDeData = triggerEvent === GATILHO_DE_DATA_DO_FUNIL;
@@ -420,7 +424,8 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
         await update.mutateAsync({ id: rule.id, ...parsed.data, versao_lida: rule.updated_at });
         toast.success(t("Automação atualizada."));
       } else {
-        await create.mutateAsync(parsed.data);
+        const criada = await create.mutateAsync(parsed.data);
+        await aoCriar?.(criada.data); // FORK ESCALE · Fase 5A: grava pasta e forma
         toast.success(t("Automação criada — ligue quando estiver pronta."));
       }
       onOpenChange(false);
@@ -431,7 +436,10 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
+      <SheetContent
+        className="w-full overflow-y-auto sm:max-w-3xl"
+        data-escale-editor-de-automacao={daCasca ? "" : undefined} // FORK ESCALE · Fase 5A
+      >
         <SheetHeader>
           <SheetTitle>{isEdit ? t("Editar automação") : t("Nova automação")}</SheetTitle>
           <SheetDescription>

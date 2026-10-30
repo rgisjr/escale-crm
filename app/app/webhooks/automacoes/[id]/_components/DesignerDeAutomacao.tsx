@@ -5,6 +5,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOrganizarAoCriar } from "@/hooks/escale/useAutomacoesDaCasca"; // FORK ESCALE · Fase 5A
 import { useT } from "@/hooks/i18n/useT";
 import { useAutomationRule } from "@/hooks/webhooks/useAutomationRules";
 import { ApiError } from "@/lib/api/types";
@@ -18,8 +19,18 @@ import { CanvasDaAutomacao } from "./CanvasDaAutomacao";
  * canvas, que monta o desenho uma vez só, mostrava a versão de antes do salvar.
  * Grava pelas mesmas mutações do editor em lista.
  */
-export function DesignerDeAutomacao({ id }: { id: string }) {
+// FORK ESCALE · Fase 5A: `nomeInicial` e `pastaInicial` vêm do modal "Criar nova automação" (só valem no fluxo novo).
+export function DesignerDeAutomacao({
+  id,
+  nomeInicial,
+  pastaInicial = null,
+}: {
+  id: string;
+  nomeInicial?: string;
+  pastaInicial?: string | null;
+}) {
   const t = useT();
+  const organizarAoCriar = useOrganizarAoCriar();
   const nova = id === "nova";
   const { data, isPending, isError, error } = useAutomationRule(nova ? null : id);
   // 404 é "não existe"; qualquer outra falha é leitura que não deu certo.
@@ -53,7 +64,16 @@ export function DesignerDeAutomacao({ id }: { id: string }) {
   return (
     <ReactFlowProvider>
       {/* A chave remonta o canvas quando a automação nova vira gravada (o id muda). */}
-      <CanvasDaAutomacao key={regra?.id ?? "nova"} regra={regra} />
+      <CanvasDaAutomacao
+        key={regra?.id ?? "nova"}
+        regra={regra}
+        nomeInicial={nomeInicial}
+        aoCriar={
+          nomeInicial !== undefined
+            ? (novaId) => organizarAoCriar(novaId, { pasta_id: pastaInicial, forma: "fluxo" })
+            : undefined
+        }
+      />
     </ReactFlowProvider>
   );
 }
