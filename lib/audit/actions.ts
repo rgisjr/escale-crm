@@ -1009,6 +1009,12 @@ export const AUDIT_ACTIONS = [
   "companies.contact_linked",
   "companies.contact_unlinked",
   "companies.primary_changed",
+  // FORK ESCALE · Fase 5A: pastas e organização da lista de automações (migration 9701).
+  "automation.folder_created",
+  "automation.folder_updated",
+  "automation.folder_deleted",
+  "automation.rule_moved",
+  "automation.rule_cloned",
   // FORK ESCALE · Fase 2E: as notas do contato (migration 9106). O texto da nota nunca vai ao metadata.
   "contact.note_added",
   "contact.note_edited",

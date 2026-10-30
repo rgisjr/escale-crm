@@ -121,11 +121,11 @@ describe("ordenarAutomacoes", () => {
   });
   it("status asc põe as ativas primeiro", () => {
     const lista = [auto({ id: "p", ativa: false }), auto({ id: "a", ativa: true })];
-    expect(ordenarAutomacoes(lista, { coluna: "status", direcao: "asc" })[0].id).toBe("a");
+    expect(ordenarAutomacoes(lista, { coluna: "status", direcao: "asc" })[0]?.id).toBe("a");
   });
   it("atualizada desc põe a mais recente primeiro", () => {
     const lista = [auto({ id: "v", atualizadaEm: "2026-01-01T00:00:00Z" }), auto({ id: "n", atualizadaEm: "2026-09-01T00:00:00Z" })];
-    expect(ordenarAutomacoes(lista, { coluna: "atualizada", direcao: "desc" })[0].id).toBe("n");
+    expect(ordenarAutomacoes(lista, { coluna: "atualizada", direcao: "desc" })[0]?.id).toBe("n");
   });
 });
 
