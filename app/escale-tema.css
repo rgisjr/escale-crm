@@ -524,3 +524,25 @@ body:has([data-escale-casca]) .react-grid-item:hover > .react-resizable-handle {
 body:has([data-escale-casca]) .react-grid-item > .react-resizable-handle::after {
   border-color: var(--color-casca-suave);
 }
+
+/* ─── FORK ESCALE · avisos (pop-ups) iguais aos da Clint ───
+   Renderizador `FYt` da Clint: fundo rgb(49,49,49) nos dois temas, sombra "md"
+   do Chakra, ação em clint.green (#35efb3) e o spinner em blue.solid. O
+   "Fechar" é clint.purpleLight na Clint, a cor da marca dela: aqui entra a
+   marca da organização (--color-accent), clareada no mesmo peso. Lidas por
+   valor arbitrário, como as da V3 e da 1F. */
+body:has([data-escale-casca]) {
+  --escale-aviso-fundo: rgb(49 49 49);
+  --escale-aviso-sombra: 0 4px 8px rgb(24 24 27 / 0.1), 0 0 1px rgb(24 24 27 / 0.3);
+  --escale-aviso-acao: #35efb3;
+  --escale-aviso-fechar: color-mix(in oklab, var(--color-accent) 45%, white);
+  --escale-aviso-carregando: #2563eb;
+}
+
+[data-theme="dark"] body:has([data-escale-casca]) {
+  --escale-aviso-fundo: rgb(49 49 49);
+  --escale-aviso-sombra: 0 4px 8px rgb(0 0 0 / 0.45), 0 0 1px rgb(0 0 0 / 0.6);
+  --escale-aviso-acao: #35efb3;
+  --escale-aviso-fechar: color-mix(in oklab, var(--color-accent) 30%, white);
+  --escale-aviso-carregando: #60a5fa;
+}

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { headers } from "next/headers";
-import { Toaster } from "sonner";
+import { ToasterDoApp } from "@/components/escale/avisos/ToasterDoApp";
 import { coresDaBarraDoNavegador } from "@/lib/branding/barra-do-navegador";
 import { MarcaDaInstalacaoProvider } from "@/lib/branding/contexto";
 import { cssDaMarca } from "@/lib/branding/css";
@@ -379,18 +379,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             que o `<main>` desconta, então os dois nunca discordam. Quando não
             há barra, o `max()` cai na área segura do iOS (ou nos 8px).
           */}
-          <Toaster
-            position="bottom-right"
-            richColors
-            closeButton
-            duration={4000}
-            mobileOffset={{
-              bottom:
-                "calc(0.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px), var(--rodape-ocupado, 0px)))",
-              left: "0.75rem",
-              right: "0.75rem",
-            }}
-          />
+          {/* Fork Escale: fora da casca é exatamente o Toaster acima; na casca, o aviso da Clint. */}
+          <ToasterDoApp />
         </Providers>
       </body>
     </html>
