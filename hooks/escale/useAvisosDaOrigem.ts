@@ -1,7 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef } from "react";
-import { toast } from "sonner";
 
 import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
@@ -28,34 +27,22 @@ function lados(payload: unknown): {
 }
 
 /**
- * Como o `entregarAviso` do original, com o botão "Abrir negócio" (o original
- * escreve "Abrir conversa" em todo aviso com destino). Respeita as preferências
- * de canal da pessoa (N23: novo = lead_assigned, ganho = lead_won, perda = lead_lost).
+ * Como na Clint, o aviso da origem (novo negócio, ganho, perda) não vira pop-up
+ * na tela: ela leva esses eventos para a central de notificações, nunca para um
+ * toast (código `vha`: DEAL_CREATED, DEAL_STATUS_CHANGED). Fica a notificação
+ * do sistema, que respeita a preferência de push da pessoa
+ * (N23: novo = lead_assigned, ganho = lead_won, perda = lead_lost).
  */
-function entregar(aviso: EntregarAvisoInput) {
-  const idioma = idiomaAtual();
-  const title = traduzir(aviso.title, idioma);
-  if (canalLigado(aviso.category, "in_app")) {
-    toast(title, {
-      description: aviso.body,
-      action: aviso.href
-        ? {
-            label: traduzir("Abrir negócio", idioma),
-            onClick: () => window.location.assign(aviso.href!),
-          }
-        : undefined,
-    });
-  }
-  if (canalLigado(aviso.category, "push")) {
-    emitNotification({
-      kind: aviso.kind,
-      title,
-      body: aviso.body,
-      tag: aviso.tag,
-      href: aviso.href,
-      force: true,
-    });
-  }
+export function entregarAvisoDaOrigem(aviso: EntregarAvisoInput): void {
+  if (!canalLigado(aviso.category, "push")) return;
+  emitNotification({
+    kind: aviso.kind,
+    title: traduzir(aviso.title, idiomaAtual()),
+    body: aviso.body,
+    tag: aviso.tag,
+    href: aviso.href,
+    force: true,
+  });
 }
 
 /**
@@ -97,7 +84,7 @@ export function useAvisosDaOrigem(): void {
         { tipo, novo, antigo, origem, eu: user.id },
         jaAvisados.current,
       );
-      if (aviso) entregar(aviso);
+      if (aviso) entregarAvisoDaOrigem(aviso);
     },
     [porId, user.id],
   );

@@ -4,6 +4,7 @@ vi.mock("sonner", () => ({ toast: vi.fn() }));
 vi.mock("./emit", () => ({ emitNotification: vi.fn() }));
 
 import { toast } from "sonner";
+import { ATRIBUTO_DA_CASCA } from "@/lib/escale/casca-ligada";
 import { entregarAviso } from "./deliver";
 import { emitNotification } from "./emit";
 import { gravarCanal } from "./prefs";
@@ -74,5 +75,38 @@ describe("entregarAviso", () => {
 
     const [, opcoes] = vi.mocked(toast).mock.calls.at(-1)!;
     expect(opcoes?.action).toBeUndefined();
+  });
+});
+
+describe("entregarAviso na casca nova (igual à Clint)", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute(ATRIBUTO_DA_CASCA);
+    window.localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ["lead_assigned", "lead_assigned"],
+    ["lead_won", "lead_won"],
+    ["lead_lost", "lead_lost"],
+    ["message", "message_inbound"],
+    ["mention", "mention"],
+  ] as const)("%s não vira pop-up, mas o push continua", (category, kind) => {
+    document.documentElement.setAttribute(ATRIBUTO_DA_CASCA, "");
+    entregarAviso({ category, kind, title: "Aviso", body: "corpo" });
+    expect(toast).not.toHaveBeenCalled();
+    expect(emitNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("a ligação recebida continua virando pop-up", () => {
+    document.documentElement.setAttribute(ATRIBUTO_DA_CASCA, "");
+    entregarAviso({
+      category: "call_inbound",
+      kind: "call_inbound",
+      title: "Ligação recebida",
+      body: "Maria · +55 62 99999-0000",
+      href: "/app/calls",
+    });
+    expect(toast).toHaveBeenCalledTimes(1);
   });
 });
