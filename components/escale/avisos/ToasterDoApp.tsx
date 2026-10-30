@@ -44,7 +44,7 @@ const CLASSES_DO_AVISO = {
  *
  * Fora da casca é o Toaster do original, sem mudar nada. Na casca é o da
  * Clint: centro de baixo, um embaixo do outro (sem sobrepor, 16px entre eles,
- * até 24), 6,5 s, pausa com a aba oculta. As cerca de 700 chamadas `toast.*`
+ * até 24), 6,5 s (o sonner já pausa com a aba oculta e com o mouse em cima). As cerca de 700 chamadas `toast.*`
  * do app não mudam: a aparência é toda daqui.
  */
 export function ToasterDoApp() {
@@ -72,7 +72,6 @@ export function ToasterDoApp() {
       gap={16}
       offset="1rem"
       duration={DURACAO_DO_AVISO}
-      pauseWhenPageIsHidden
       closeButton
       icons={iconesDoAviso(fechar)}
       mobileOffset={{ bottom: RODAPE_DO_CELULAR, left: "1rem", right: "1rem" }}
