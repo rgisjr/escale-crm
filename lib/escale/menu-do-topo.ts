@@ -37,7 +37,8 @@ export const ITENS_DO_TOPO: readonly ItemDoTopo[] = [
   { href: "/app/tasks", rotulo: "Atividades", ativoEm: ["/app/tasks"] },
   // "Atendimento" na Clint é o nosso Conversas (Inbox), com o contador da fila.
   { href: "/app/inbox", rotulo: "Atendimento", contador: "fila", ativoEm: ["/app/inbox"] },
-  { href: "/app/settings/automacoes", rotulo: "Automações", ativoEm: ["/app/settings/automacoes"] },
+  // FORK ESCALE · Fase 5A: o topo abre a lista de automações da casca (PRD 5, A1).
+  { href: "/app/automacoes", rotulo: "Automações", ativoEm: ["/app/automacoes", "/app/webhooks/automacoes"] },
   // FORK ESCALE · Fase 8A: a Prospecção é uma aba de Campanhas.
   { href: "/app/campaigns", rotulo: "Campanhas", ativoEm: ["/app/campaigns", "/app/prospecting"] },
   { href: "/app/metrics", rotulo: "Indicadores", ativoEm: ["/app/metrics"] },

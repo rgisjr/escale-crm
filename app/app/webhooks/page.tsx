@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers"; // FORK ESCALE · Fase 5A
 import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu"; // FORK ESCALE · Fase 5A
 import { traduzir } from "@/lib/i18n/dicionario";
 import { WebhooksClient, type AbaDosWebhooks } from "./_components/WebhooksClient";
 
@@ -22,6 +24,9 @@ export default async function WebhooksPage({
   const idioma = user.idioma;
   const pedida = (await searchParams).aba;
   const abaInicial = ABAS.find((a) => a === pedida);
+  // FORK ESCALE · Fase 5A: com a casca, as automações moram em /app/automacoes e a aba some daqui.
+  const daCasca = lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo";
+  if (daCasca && pedida === "automacoes") redirect("/app/automacoes");
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -34,7 +39,7 @@ export default async function WebhooksPage({
           )}
         </p>
       </header>
-      <WebhooksClient abaInicial={abaInicial} />
+      <WebhooksClient abaInicial={abaInicial} semAutomacoes={daCasca} />
     </div>
   );
 }

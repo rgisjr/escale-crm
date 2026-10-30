@@ -251,6 +251,16 @@ export const NAV_CATALOG = [
     // campanha é montada de vez em quando, não aberta todo dia.
   },
   {
+    // FORK ESCALE · Fase 5A: a lista de automações da casca (sem a casca, a página manda para Webhooks).
+    href: "/app/automacoes",
+    label: "Automações",
+    description: "Quando algo acontece, o sistema faz por você: move o negócio, põe tag, manda a mensagem.",
+    icon: "FlowArrow",
+    group: "crm",
+    section: "O dia a dia da venda",
+    minRole: "manager",
+  },
+  {
     href: "/app/contacts",
     label: "Contatos",
     description: "As pessoas do outro lado da conversa e seu histórico.",

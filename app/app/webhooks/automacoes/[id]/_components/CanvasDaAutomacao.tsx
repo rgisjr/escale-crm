@@ -110,9 +110,12 @@ function regraGravadaDe(regra: AutomationRuleRow | null): RegraGravada | null {
 
 interface Props {
   regra: AutomationRuleRow | null;
+  // FORK ESCALE · Fase 5A: o nome do modal de criar e o aviso depois de criar (grava pasta e forma).
+  nomeInicial?: string;
+  aoCriar?: (id: string) => Promise<void>;
 }
 
-export function CanvasDaAutomacao({ regra }: Props) {
+export function CanvasDaAutomacao({ regra, nomeInicial, aoCriar }: Props) {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
@@ -126,7 +129,7 @@ export function CanvasDaAutomacao({ regra }: Props) {
   );
   const [nos, setNos, onNodesChange] = useNodesState<NoDaAutomacao>(paraNos(inicial));
   const [ligacoes, setLigacoes, onEdgesChange] = useEdgesState<Edge>(paraLigacoes(inicial));
-  const [nome, setNome] = useState(regra?.name ?? "");
+  const [nome, setNome] = useState(regra?.name ?? nomeInicial ?? ""); // FORK ESCALE · Fase 5A
   const [salvo, setSalvo] = useState(() => retrato(regra?.name ?? "", inicial));
   const [ativo, setAtivo] = useState(regra?.is_active ?? false);
   // A versão do banco sobre a qual este desenho foi feito: vai em cada salvar, e
@@ -311,6 +314,7 @@ export function CanvasDaAutomacao({ regra }: Props) {
         qc.setQueryData<{ data: AutomationRuleRow[] }>(["automation-rules"], (velho) =>
           velho ? { data: [...velho.data.filter((r) => r.id !== criada.data.id), criada.data] } : { data: [criada.data] },
         );
+        await aoCriar?.(criada.data.id); // FORK ESCALE · Fase 5A: pasta e forma, antes de trocar de tela
         router.replace(`/app/webhooks/automacoes/${criada.data.id}`);
       }
     } catch {
