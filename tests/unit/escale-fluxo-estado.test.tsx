@@ -142,7 +142,7 @@ describe("useFluxo", () => {
 
   it("trocar o gatilho para outro evento apaga as condições; para o mesmo só troca a tela", () => {
     const { result } = montar(regra());
-    const tela = (result.current.desenho.caixas[0]!.data as { tela: never }).tela;
+    const tela = (result.current.desenho.caixas[0]!.data as unknown as { tela: never }).tela;
     act(() => result.current.trocarGatilho("contact.tag_added", tela));
     const linhas = () =>
       (result.current.desenho.caixas.find((c) => c.data.kind === "condicoes")!.data as { linhas: unknown[] }).linhas;
@@ -176,7 +176,7 @@ describe("useFluxo", () => {
       result.current.aplicarNoNo("gatilho", {
         kind: "gatilho",
         evento: "contact.tag_added",
-        tela: (result.current.desenho.caixas[0]!.data as { tela: never }).tela,
+        tela: (result.current.desenho.caixas[0]!.data as unknown as { tela: never }).tela,
       });
     });
     act(() => result.current.adicionar("add_tag"));
