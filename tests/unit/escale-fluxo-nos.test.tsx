@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactFlowProvider } from "@xyflow/react";
+import { ReactFlowProvider, type NodeProps } from "@xyflow/react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
@@ -19,6 +19,7 @@ vi.mock("@/hooks/channels/useChannelSessions", () => ({
 vi.mock("@/hooks/ai/useAgents", () => ({ useAgentsList: () => ({ data: [] }) }));
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({ useAssignableMembers: () => ({ data: [] }) }));
 
+import type { NoDaAutomacao } from "@/app/app/webhooks/automacoes/[id]/_components/CaixaDaAutomacao";
 import { AcoesDoNoContext } from "@/components/escale/automacoes/fluxo/BarraDoNo";
 import { NoDoFluxo } from "@/components/escale/automacoes/fluxo/NoDoFluxo";
 import type { DadosDaCaixa, TelaDoGatilho } from "@/lib/automation/desenho-da-regra";
@@ -31,11 +32,11 @@ const TELA: TelaDoGatilho = {
 
 function montar(id: string, data: DadosDaCaixa, over: { selected?: boolean; evento?: string } = {}) {
   const acoes = { duplicar: vi.fn(), remover: vi.fn() };
-  const props = {
+  const props: NodeProps<NoDaAutomacao> = {
     id,
     data: { ...data, eventoDaRegra: over.evento ?? "contact.tag_added" },
     selected: over.selected ?? false,
-  } as never;
+  } as unknown as NodeProps<NoDaAutomacao>;
   render(
     <QueryClientProvider client={new QueryClient()}>
       <ReactFlowProvider>
