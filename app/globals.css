@@ -258,6 +258,17 @@
   --color-casca-data-fixada: var(--color-info);
   --color-casca-cinza-selo: var(--color-border-strong);
   --color-casca-dia: var(--color-accent-soft);
+  /* FORK ESCALE · Fase 5B: fluxo de automação (07-013) */
+  --color-casca-fluxo: var(--color-bg);
+  --color-casca-fluxo-aresta: var(--color-border-strong);
+  --color-casca-fluxo-gatilho: var(--color-info);
+  --color-casca-fluxo-gatilho-suave: var(--color-info-bg);
+  --color-casca-fluxo-whatsapp: var(--color-success);
+  --color-casca-fluxo-whatsapp-suave: var(--color-success-bg);
+  --color-casca-fluxo-canal: var(--color-info);
+  --color-casca-fluxo-canal-suave: var(--color-info-bg);
+  --color-casca-fluxo-acoes: var(--color-warning);
+  --color-casca-fluxo-acoes-suave: var(--color-warning-bg);
   --color-casca-marca: var(--color-accent);
   --color-casca-marca-forte: var(--color-accent-hover);
   --color-casca-marca-suave: var(--color-accent-soft);
@@ -666,6 +677,17 @@
   --color-casca-data-fixada: var(--color-casca-data-fixada);
   --color-casca-cinza-selo: var(--color-casca-cinza-selo);
   --color-casca-dia: var(--color-casca-dia);
+  /* FORK ESCALE · Fase 5B: fluxo de automação (07-013) */
+  --color-casca-fluxo: var(--color-casca-fluxo);
+  --color-casca-fluxo-aresta: var(--color-casca-fluxo-aresta);
+  --color-casca-fluxo-gatilho: var(--color-casca-fluxo-gatilho);
+  --color-casca-fluxo-gatilho-suave: var(--color-casca-fluxo-gatilho-suave);
+  --color-casca-fluxo-whatsapp: var(--color-casca-fluxo-whatsapp);
+  --color-casca-fluxo-whatsapp-suave: var(--color-casca-fluxo-whatsapp-suave);
+  --color-casca-fluxo-canal: var(--color-casca-fluxo-canal);
+  --color-casca-fluxo-canal-suave: var(--color-casca-fluxo-canal-suave);
+  --color-casca-fluxo-acoes: var(--color-casca-fluxo-acoes);
+  --color-casca-fluxo-acoes-suave: var(--color-casca-fluxo-acoes-suave);
   --color-casca-marca: var(--color-casca-marca);
   --color-casca-marca-forte: var(--color-casca-marca-forte);
   --color-casca-marca-suave: var(--color-casca-marca-suave);

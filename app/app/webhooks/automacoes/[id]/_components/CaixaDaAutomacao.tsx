@@ -83,7 +83,8 @@ function DescricaoDoPlano({ config }: { config: Record<string, unknown> }) {
   return <>{plano ? plano.nome : t("Escolha o plano de tarefas")}</>;
 }
 
-function DescricaoDaAcao({ tipo, config }: { tipo: string; config: Record<string, unknown> }) {
+// FORK ESCALE · Fase 5B: o nó da casca mostra a mesma descrição.
+export function DescricaoDaAcao({ tipo, config }: { tipo: string; config: Record<string, unknown> }) {
   const t = useT();
   switch (tipo as ActionType) {
     case "create_or_move_lead":
