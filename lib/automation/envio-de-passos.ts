@@ -11,6 +11,8 @@
  */
 import { z } from "zod";
 
+import { interativoSchema, type Interativo } from "@/lib/channels/interativo";
+
 export const REFERENCIA_DE_ATIVO = /^([0-9a-f-]{36}|var:[a-z][a-z0-9_]{0,39})$/;
 
 export const passoTextoSchema = z.strictObject({
@@ -24,8 +26,14 @@ export const passoMidiaSchema = z.strictObject({
   legenda: z.string().max(1024).optional(),
 });
 
+/** Botões ou lista do WhatsApp; fora da API oficial sai como texto numerado. */
+export const passoInterativoSchema = z.strictObject({
+  tipo: z.literal("interativo"),
+  interativo: interativoSchema,
+});
+
 export const passosSchema = z
-  .array(z.discriminatedUnion("tipo", [passoTextoSchema, passoMidiaSchema]))
+  .array(z.discriminatedUnion("tipo", [passoTextoSchema, passoMidiaSchema, passoInterativoSchema]))
   .min(1)
   .max(5);
 
@@ -34,6 +42,7 @@ export type PassoDeEnvio = z.infer<typeof passosSchema>[number];
 export interface EnviadorDePassos {
   texto(corpo: string, chave: string): Promise<void>;
   midia(m: { assetId: string; legenda?: string }, chave: string): Promise<void>;
+  interativo(i: Interativo, chave: string): Promise<void>;
 }
 
 export type ResultadoDosPassos = { ok: true; enviados: number } | { ok: false; enviados: number; erro: string };
@@ -44,7 +53,23 @@ export function resolverReferenciaDeAtivo(ref: string, ativosDoCanal: Record<str
   return Object.hasOwn(ativosDoCanal, chave) ? (ativosDoCanal[chave] ?? null) : null;
 }
 
-type PassoPronto = { tipo: "texto"; corpo: string } | { tipo: "midia"; assetId: string; legenda?: string };
+type PassoPronto =
+  | { tipo: "texto"; corpo: string }
+  | { tipo: "midia"; assetId: string; legenda?: string }
+  | { tipo: "interativo"; interativo: Interativo };
+
+/** Renderiza o corpo e os títulos (o `{{canal.*}}` vale em todos). */
+function renderizarInterativo(i: Interativo, renderizar: (texto: string) => string): Interativo {
+  const corpo = renderizar(i.corpo).trim();
+  if (i.tipo === "botoes") {
+    return { ...i, corpo, botoes: i.botoes.map((b) => ({ ...b, titulo: renderizar(b.titulo).trim() })) };
+  }
+  return {
+    ...i,
+    corpo,
+    linhas: i.linhas.map((l) => ({ ...l, titulo: renderizar(l.titulo).trim() })),
+  };
+}
 
 function preparar(
   passos: readonly PassoDeEnvio[],
@@ -57,6 +82,12 @@ function preparar(
       const corpo = renderizar(p.texto).trim();
       if (corpo === "") return { erro: `texto_vazio:${i}` };
       prontos.push({ tipo: "texto", corpo });
+      continue;
+    }
+    if (p.tipo === "interativo") {
+      const interativo = renderizarInterativo(p.interativo, renderizar);
+      if (interativo.corpo === "") return { erro: `texto_vazio:${i}` };
+      prontos.push({ tipo: "interativo", interativo });
       continue;
     }
     const assetId = resolverReferenciaDeAtivo(p.asset, ativosDoCanal);
@@ -83,6 +114,7 @@ export async function enviarPassos(
     const chave = `${deps.chaveBase}:${i}`;
     try {
       if (p.tipo === "texto") await deps.enviador.texto(p.corpo, chave);
+      else if (p.tipo === "interativo") await deps.enviador.interativo(p.interativo, chave);
       else await deps.enviador.midia({ assetId: p.assetId, ...(p.legenda ? { legenda: p.legenda } : {}) }, chave);
       enviados += 1;
     } catch (err) {

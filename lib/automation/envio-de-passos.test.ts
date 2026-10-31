@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
+import type { Interativo } from "@/lib/channels/interativo";
 import { enviarPassos, passosSchema, resolverReferenciaDeAtivo, type EnviadorDePassos } from "@/lib/automation/envio-de-passos";
 
 const ATIVO = "11111111-1111-4111-8111-111111111111";
@@ -17,6 +18,9 @@ function enviador(falharNo?: number): EnviadorDePassos & { chamadas: string[] } 
     chamadas,
     texto: vi.fn(async (corpo: string, chave: string) => registrar(`texto:${corpo}:${chave}`)),
     midia: vi.fn(async (m: { assetId: string }, chave: string) => registrar(`midia:${m.assetId}:${chave}`)),
+    interativo: vi.fn(async (i: { corpo: string; tipo: string }, chave: string) =>
+      registrar(`interativo:${i.tipo}:${i.corpo}:${chave}`),
+    ),
   };
 }
 
@@ -84,5 +88,31 @@ describe("enviarPassos", () => {
     const e = enviador();
     const r = await enviarPassos([{ tipo: "texto", texto: "{{canal.x}}" }], { ...deps(e), renderizar: () => "  " });
     expect(r).toEqual({ ok: false, enviados: 0, erro: "texto_vazio:0" });
+  });
+});
+
+describe("passo interativo", () => {
+  const lista: Interativo = {
+    tipo: "lista",
+    corpo: "Aparelho de {{canal.marca}}?",
+    botaoDaLista: "Escolher",
+    linhas: [{ id: "a", titulo: "TV" }],
+  };
+
+  it("o schema aceita lista válida e recusa lista com 11 linhas", () => {
+    expect(passosSchema.safeParse([{ tipo: "interativo", interativo: lista }]).success).toBe(true);
+    const linhas = Array.from({ length: 11 }, (_, i) => ({ id: `l${i}`, titulo: `L${i}` }));
+    expect(passosSchema.safeParse([{ tipo: "interativo", interativo: { ...lista, linhas } }]).success).toBe(false);
+  });
+  it("chama o enviador na posição certa, com o corpo renderizado", async () => {
+    const e = enviador();
+    const r = await enviarPassos([{ tipo: "texto", texto: "oi" }, { tipo: "interativo", interativo: lista }], {
+      enviador: e,
+      ativosDoCanal: {},
+      renderizar: (t) => t.replace("{{canal.marca}}", "Samsung"),
+      chaveBase: "job-1",
+    });
+    expect(r).toEqual({ ok: true, enviados: 2 });
+    expect(e.chamadas[1]).toBe("interativo:lista:Aparelho de Samsung?:job-1:1");
   });
 });

@@ -22,6 +22,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { metaContactsPayload } from "@/lib/channels/meta/contact-card";
 import { graphBaseUrl } from "@/lib/channels/meta/graph-base";
+import { montarInterativo } from "@/lib/channels/interativo";
 import { resolveMetaCreds } from "../meta/credentials";
 import type {
   ChannelAdapter,
@@ -336,6 +337,9 @@ export const metaCloudAdapter: ChannelAdapter = {
     }
 
     const corpo =
+      (envelope.interativo
+        ? { type: "interactive", interactive: montarInterativo(envelope.interativo) }
+        : null) ??
       contactPayload(envelope) ??
       mediaPayload(envelope) ??
       { type: "text", text: { body: envelope.body ?? "" } };

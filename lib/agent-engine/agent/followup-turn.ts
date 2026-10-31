@@ -21,6 +21,8 @@ import { OrgNaoOperanteError } from "@/lib/organizacao/operante";
  * NUNCA do payload do modelo — o cron só carrega o snapshot da promessa (F3-02).
  */
 import { z } from 'zod';
+import { passosSchema, type PassoDeEnvio } from '@/lib/automation/envio-de-passos';
+import { enviarPassosDoWorker } from './passos-do-worker';
 import type pg from 'pg';
 
 import { withFields } from '../obs/logger';
@@ -100,6 +102,8 @@ export const followupTurnPayloadSchema = z
     prompt_hint: z.string().optional(),
     /** action mode `text` — enviado pela cadeia de guardrails, sem LLM. */
     fixed_body: z.string().min(1).max(4000).optional(),
+    /** action mode `steps` — sequência de texto, mídia e botões, textos já renderizados no enfileiramento. */
+    fixed_steps: passosSchema.optional(),
     /** action mode `template` — `message_templates` (texto) ou `meta_templates` (modelo aprovado do canal). */
     template_id: z.string().uuid().optional(),
     /** action mode `ai_message` — modelo aprovado que sai no lugar da IA com a janela de 24 h fechada. */
@@ -631,6 +635,7 @@ export function createFollowupTurnHandler(deps: FollowupTurnDeps) {
           purpose: payload.purpose,
           promptHint: payload.prompt_hint,
           fixedBody: payload.fixed_body,
+          fixedSteps: payload.fixed_steps,
           templateId: payload.template_id,
           fallbackTemplateId: payload.fallback_template_id,
           voltaIndex: payload.volta_index,
@@ -720,6 +725,7 @@ async function runFlowDrivenTurn(
     purpose: 'send_message' | 'classify' | 'plan_timing' | undefined;
     promptHint: string | undefined;
     fixedBody: string | undefined;
+    fixedSteps: PassoDeEnvio[] | undefined;
     templateId: string | undefined;
     fallbackTemplateId: string | undefined;
     voltaIndex: number | undefined;
@@ -740,6 +746,24 @@ async function runFlowDrivenTurn(
   }
   const { enrollmentId, nodeId } = input;
   const runLog = withFields(deps.log, { job_id: job.id, tenant_id: target.tenantId, lead_id: target.leadId, enrollment_id: enrollmentId });
+
+  if (input.purpose === 'send_message' && input.fixedSteps !== undefined) {
+    const desfecho = await enviarPassosDoWorker(input.fixedSteps, {
+      admin: deps.crmCfg.supabase,
+      organizationId: target.tenantId,
+      conversationId: target.conversationId,
+      channelSessionId: target.channelSessionId,
+      enviarFixo: (body, extra) => sendFixedOutbound(deps, job, pool, ctx, clock, target, body, false, undefined, extra),
+    });
+    const result =
+      desfecho.kind === 'sent'
+        ? ({ kind: 'sent' } as const)
+        : desfecho.kind === 'skipped'
+          ? ({ kind: 'skipped', reason: 'O envio foi recusado pelas regras do atendimento.' } as const)
+          : ({ kind: 'deferred', until: desfecho.until, reason: desfecho.reason } as const);
+    await complete(pool, { jobId: job.id, jobClaim: claimOfJob(job), organizationId: target.tenantId, enrollmentId, nodeId, result });
+    return;
+  }
 
   if (input.purpose === 'send_message') {
     let passo = await resolveFlowSendBody(pool, target.tenantId, target.channelSessionId, target.leadId, input);
@@ -1172,6 +1196,8 @@ async function sendFixedOutbound(
    * passar, que é o que um modelo aprovado é — como no `send_template` do agente.
    */
   modelo?: { name: string; language: string; values: Record<string, string> },
+  /** Passo de uma sequência: posição própria no ledger (`seq`), mídia e metadados (ex.: botões). */
+  extra?: { seq: number; media?: { storagePath: string; mime: string }; metadata?: Record<string, unknown> },
 ): Promise<EnvioFixoDesfecho> {
   const { tenantId, leadId, channelSessionId, conversationId } = target;
   const runLog = withFields(deps.log, { job_id: job.id, tenant_id: tenantId, lead_id: leadId });
@@ -1232,8 +1258,10 @@ async function sendFixedOutbound(
       : {}),
     send: (finalBody) =>
       channel.send({
-        tenantId, leadId, jobId: job.id, jobClaim: claimOfJob(job), seq: 1, conversationId, body: finalBody,
+        tenantId, leadId, jobId: job.id, jobClaim: claimOfJob(job), seq: extra?.seq ?? 1, conversationId, body: finalBody,
         ...(modelo !== undefined ? { template: modelo } : {}),
+        ...(extra?.media !== undefined ? { media: extra.media } : {}),
+        ...(extra?.metadata !== undefined ? { metadata: extra.metadata } : {}),
       }),
   });
 

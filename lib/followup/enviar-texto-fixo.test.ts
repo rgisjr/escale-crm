@@ -5,7 +5,7 @@
  * follow-up com nó de texto fixo mandaria mensagem para uma conversa que o gate
  * `allowlist` barra.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMessageHandler = vi.fn(async (..._a: unknown[]) => ({ id: "msg-1",status:"sent" }));
 const decidir = vi.fn();
@@ -23,6 +23,7 @@ vi.mock("@/lib/followup/turn-bridge", () => ({
   completeTurnForEnrollment: (...a: unknown[]) => completeTurnForEnrollment(...a),
 }));
 vi.mock("@/lib/followup/engine", () => ({ createSupabaseAdminClient: () => ({}) }));
+vi.mock("@/lib/canais/ativos-do-canal", () => ({ lerAtivosDoCanal: async () => ({}) }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { enviarTextoFixoPendente } from "./enviar-texto-fixo";
@@ -325,5 +326,44 @@ describe("enviarTextoFixoPendente · janela de disparo (#2658)", () => {
 
     expect(enviados).toBe(1);
     expect(sendMessageHandler).toHaveBeenCalledOnce();
+  });
+});
+
+describe("enviarTextoFixoPendente · sequência (fixed_steps)", () => {
+  const original = JOB.payload;
+  afterEach(() => {
+    JOB.payload = original;
+  });
+
+  it("envia cada passo na ordem, com chave por passo, e conclui o turno uma vez", async () => {
+    JOB.payload = {
+      service_boundary: boundary,
+      followup_enrollment_id: "enr-1",
+      node_id: "node-1",
+      fixed_steps: [
+        { tipo: "texto", texto: "Primeiro" },
+        { tipo: "texto", texto: "Segundo" },
+      ],
+    } as never;
+    decidir.mockResolvedValue({ permite: true });
+    expect(await enviarTextoFixoPendente(admin())).toBe(1);
+    const corpos = sendMessageHandler.mock.calls.map((c) => c[2] as { body: string; metadata: { idempotency_key: string } });
+    expect(corpos.map((c) => c.body)).toEqual(["Primeiro", "Segundo"]);
+    expect(corpos.map((c) => c.metadata.idempotency_key)).toEqual(["job-1:0", "job-1:1"]);
+    expect(completeTurnForEnrollment).toHaveBeenCalledOnce();
+  });
+
+  it("falha num passo: não conclui o turno e o job volta para pending", async () => {
+    JOB.payload = {
+      service_boundary: boundary,
+      followup_enrollment_id: "enr-1",
+      node_id: "node-1",
+      fixed_steps: [{ tipo: "texto", texto: "Primeiro" }],
+    } as never;
+    decidir.mockResolvedValue({ permite: true });
+    sendMessageHandler.mockResolvedValueOnce({ id: "m", status: "failed" } as never);
+    expect(await enviarTextoFixoPendente(admin())).toBe(0);
+    expect(completeTurnForEnrollment).not.toHaveBeenCalled();
+    expect(statusUpdates).toContain("pending");
   });
 });

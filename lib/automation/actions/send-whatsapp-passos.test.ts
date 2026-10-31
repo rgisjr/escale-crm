@@ -5,7 +5,7 @@ import type { ActionCtx } from "@/lib/automation/types";
 
 const { sendMessageHandler, enviador, lerAtivos } = vi.hoisted(() => ({
   sendMessageHandler: vi.fn(),
-  enviador: { texto: vi.fn(), midia: vi.fn() },
+  enviador: { texto: vi.fn(), midia: vi.fn(), interativo: vi.fn() },
   lerAtivos: vi.fn(),
 }));
 

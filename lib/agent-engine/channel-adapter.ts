@@ -46,6 +46,8 @@ export interface ChannelSendInput {
    * URL curta para o canal é o handler de mensagens, como em toda mídia.
    */
   media?: { storagePath: string; mime: string };
+  /** Metadados extras da mensagem (ex.: `interativo`). */
+  metadata?: Record<string, unknown>;
 }
 
 /**

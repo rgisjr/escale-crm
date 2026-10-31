@@ -60,4 +60,19 @@ describe("enviadorPeloHandler", () => {
     sendMessageHandler.mockResolvedValue({ id: "m1", status: "failed", error_code: "meta_131026" });
     await expect(montar().texto("oi", "k:0")).rejects.toThrow("envio_falhou:meta_131026");
   });
+  it("interativo: texto numerado de reserva e a lista em metadata", async () => {
+    const lista = {
+      tipo: "lista" as const,
+      corpo: "Qual aparelho?",
+      botaoDaLista: "Escolher",
+      linhas: [{ id: "a", titulo: "TV" }],
+    };
+    await montar().interativo(lista, "k:2");
+    expect(sendMessageHandler).toHaveBeenCalledWith(admin, contexto, {
+      conversation_id: CONV,
+      type: "text",
+      body: "Qual aparelho?\n\n1 - TV",
+      metadata: { idempotency_key: "k:2", interativo: lista },
+    });
+  });
 });

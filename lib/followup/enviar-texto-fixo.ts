@@ -16,6 +16,10 @@ import type { EnrollmentRow } from "@/lib/followup/node-handlers";
 import { completeTurnForEnrollment, type TurnBridgeAdminClient } from "@/lib/followup/turn-bridge";
 import { logger } from "@/lib/logger";
 import { OrgNaoOperanteError } from "@/lib/organizacao/operante";
+import { enviarPassos, passosSchema } from "@/lib/automation/envio-de-passos";
+import { enviadorPeloHandler } from "@/lib/automation/passos-pelo-handler";
+import { canalDaConversaOuDoContato } from "@/lib/canais/canal-da-conversa";
+import { lerAtivosDoCanal } from "@/lib/canais/ativos-do-canal";
 
 function ponteSupabase(admin: SupabaseClient): TurnBridgeAdminClient {
   const base = createSupabaseAdminClient(admin);
@@ -86,10 +90,12 @@ export async function enviarTextoFixoPendente(
   for (const job of jobs ?? []) {
     const payload = (job.payload ?? {}) as FollowupJobRequest["payload"];
     const body = payload.fixed_body;
+    const passos = passosSchema.safeParse(payload.fixed_steps);
     const enrollmentId = payload.followup_enrollment_id;
     const nodeId = payload.node_id;
     const contactId = job.contact_id as string | null;
-    if (typeof body !== "string" || !body || !enrollmentId || !nodeId || !contactId) continue;
+    const temTexto = typeof body === "string" && body !== "";
+    if ((!temTexto && !passos.success) || !enrollmentId || !nodeId || !contactId) continue;
     if (somenteContactIds && !somenteContactIds.includes(contactId)) continue;
 
     const { data: claimed, error: claimErr } = await admin
@@ -190,10 +196,37 @@ export async function enviarTextoFixoPendente(
 
       const proactiveContext={organizationId:job.organization_id as string,contactId,enrollmentId,nodeId,jobId:job.id,jobClaim};
       await assertAgendaEffectSupabase(admin,proactiveContext);
-      const resultado=await sendWithLedger(supabaseSendLedger(admin),{tenantId:job.organization_id,leadId:contactId,jobId:job.id,seq:1,body},async(key,messageId)=>sendMessageHandler(
+      if (passos.success) {
+        // Sequência (áudio, texto, botões): o mesmo orquestrador do worker; a chave de idempotência por passo
+        // é `<job>:<posição>` e o espaçamento anti-ban do número separa as mensagens.
+        const organizationId = job.organization_id as string;
+        const resultadoDosPassos = await enviarPassos(passos.data, {
+          enviador: enviadorPeloHandler(admin, {
+            organizationId,
+            conversationId,
+            contexto: {
+              organization_id: organizationId,
+              actor: { type: "webhook_source", id: enrollmentId },
+              serviceBoundary: boundary,
+              proactiveContext,
+              requestId: `${job.id}`,
+            },
+            espacar: async () => {},
+          }),
+          ativosDoCanal: await lerAtivosDoCanal(admin, organizationId, await canalDaConversaOuDoContato(admin, organizationId, { conversationId })),
+          renderizar: (t) => t, // já renderizado no enfileiramento
+          chaveBase: `${job.id}`,
+        });
+        if (!resultadoDosPassos.ok) throw new Error(resultadoDosPassos.erro);
+        enviados++;
+        await completeTurnForEnrollment(ponte, job.organization_id, enrollmentId, nodeId, { kind: "sent" }, undefined, job.id, jobClaim);
+        await settle(job.organization_id, job.id, jobClaim.acquired_at, true);
+        continue;
+      }
+      const resultado=await sendWithLedger(supabaseSendLedger(admin),{tenantId:job.organization_id,leadId:contactId,jobId:job.id,seq:1,body:body as string},async(key,messageId)=>sendMessageHandler(
         admin,
         {organization_id:job.organization_id,actor:{type:"webhook_source",id:enrollmentId},serviceBoundary:boundary,proactiveContext,internalMessageId:messageId,requestId:key},
-        {conversation_id:conversationId,type:"text",body,metadata:{idempotency_key:key}},
+        {conversation_id:conversationId,type:"text",body:body as string,metadata:{idempotency_key:key}},
       ));
       if(resultado.kind!=="sent" && resultado.kind!=="already_sent") throw new Error(`message_${resultado.kind}`);
       enviados++;

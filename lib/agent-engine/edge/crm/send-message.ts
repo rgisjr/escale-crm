@@ -29,6 +29,7 @@ import { sendWithLedger, pgSendLedger, type SendOutcome } from './send-ledger';
 export type { SendOutcome, SendLedgerStatus } from './send-ledger';
 
 import { ApiError } from '@/lib/api/types';
+import { tipoDaMidia } from '@/lib/midia/ativos';
 import { sendMessageHandler } from '@/app/api/v1/messages/_handler';
 import type { Message } from '@/lib/types/messaging';
 
@@ -62,8 +63,10 @@ export interface SendMessageInput {
    * colidirem no ledger e o segundo virar `already_sent` sem ter saído.
    */
   template?: { name: string; language: string; values: Record<string, string> };
-  /** Presente = imagem da pasta da conversa em `whatsapp-media`; `body` é a legenda. */
+  /** Presente = mídia (imagem, áudio, vídeo ou arquivo) da pasta da conversa em `whatsapp-media`; `body` é a legenda. */
   media?: { storagePath: string; mime: string };
+  /** Metadados extras da mensagem (ex.: `interativo` — botões/lista). A chave de idempotência é sempre a do ledger. */
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -86,14 +89,14 @@ export function corpoDoEnvio(
         }
       : input.media
         ? {
-            type: 'image' as const,
+            type: tipoDaMidia(input.media.mime),
             media_storage_path: input.media.storagePath,
             media_mime: input.media.mime,
           }
         : { type: 'text' as const }),
     // Foto sem legenda vai sem `body`: o schema do envio pede corpo não vazio.
     ...(input.body !== '' || !input.media ? { body: input.body } : {}),
-    metadata: { idempotency_key: idempotencyKey },
+    metadata: { ...(input.metadata ?? {}), idempotency_key: idempotencyKey },
   };
 }
 

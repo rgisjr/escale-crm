@@ -63,6 +63,7 @@ import { anexarCanalAoContexto } from "@/lib/canais/anexar-ao-contexto";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { quandoDoRetornoVivo, reavaliarDepoisDoRetorno } from "./retorno-segura-o-fluxo";
 import { triggerConfigSchema } from "./api-schemas";
+import type { PassoDeEnvio } from "@/lib/automation/envio-de-passos";
 
 const MAX_STEPS = 80;
 const CLAIM_LEASE_SECONDS = 120;
@@ -104,6 +105,8 @@ export interface FollowupJobRequest {
     fallback_template_id?: string;
     /** action (mode 'text') — corpo pronto; o turno envia sem chamar o modelo. */
     fixed_body?: string;
+    /** action (mode 'steps') — sequência pronta (textos já renderizados); o turno envia sem chamar o modelo. */
+    fixed_steps?: PassoDeEnvio[];
     /**
      * action (mode 'template') — id em `message_templates` (texto pronto) OU em
      * `meta_templates` (modelo aprovado do canal, o único que sai com a janela de 24 h
@@ -349,6 +352,17 @@ function turnPayloadExtras(
   }
   if (node.type === "action" && node.config.mode === "text") {
     return { fixed_body: interpolarVolta(node.config.body, events, contexto) };
+  }
+  if (node.type === "action" && node.config.mode === "steps") {
+    return {
+      fixed_steps: node.config.passos.map((p) =>
+        p.tipo === "texto"
+          ? { ...p, texto: interpolarVolta(p.texto, events, contexto) }
+          : p.tipo === "midia" && p.legenda
+            ? { ...p, legenda: interpolarVolta(p.legenda, events, contexto) }
+            : p,
+      ),
+    };
   }
   if (node.type === "action" && node.config.mode === "template") {
     const volta = latestRepeatIndex(events);
@@ -951,7 +965,9 @@ async function processEnrollment(
   // (`enviar-texto-fixo.ts`), que não tem segunda passada. Só o nó que manda
   // texto paga a leitura — os demais não renderizam nada.
   const contexto =
-    result.kind === "enqueue_turn" && node.type === "action" && node.config.mode === "text"
+    result.kind === "enqueue_turn" &&
+    node.type === "action" &&
+    (node.config.mode === "text" || node.config.mode === "steps")
       ? await db.loadRenderContext?.(enrollment.organization_id, enrollment.contact_id, enrollment.conversation_id)
       : null;
 

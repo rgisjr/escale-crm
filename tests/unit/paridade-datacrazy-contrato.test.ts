@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { matchReplyConfigSchema } from "@/lib/followup/graph-schema";
+import { flowGraphSchema, matchReplyConfigSchema } from "@/lib/followup/graph-schema";
 import { createAutomationRuleSchema } from "@/lib/schemas/webhooks";
 
 const MIN = 60_000;
@@ -63,5 +63,53 @@ describe("uma automação, N canais", () => {
       actions: [{ type: "add_tag", config: { tags: ["a"] } }],
     });
     expect(r.success).toBe(false);
+  });
+});
+
+describe("áudio, lista de aparelhos e áudio, e depois esperar qualquer resposta", () => {
+  it("um nó steps seguido de match_reply com a saída 'qualquer resposta' e a de sem resposta é um grafo válido", () => {
+    const pos = { x: 0, y: 0 };
+    const r = flowGraphSchema.safeParse({
+      nodes: [
+        { id: "t1", type: "trigger", label: "Início", position: pos, config: {} },
+        {
+          id: "a1",
+          type: "action",
+          label: "Boas-vindas",
+          position: pos,
+          config: {
+            mode: "steps",
+            passos: [
+              { tipo: "midia", asset: "var:bv1" },
+              {
+                tipo: "interativo",
+                interativo: {
+                  tipo: "lista",
+                  corpo: "Aonde você quer fazer o teste?",
+                  botaoDaLista: "Escolher aparelho",
+                  linhas: Array.from({ length: 9 }, (_, i) => ({ id: `ap${i}`, titulo: `Aparelho ${i + 1}` })),
+                },
+              },
+              { tipo: "midia", asset: "var:bv2" },
+            ],
+          },
+        },
+        {
+          id: "m1",
+          type: "match_reply",
+          label: "Escolheu",
+          position: pos,
+          config: { branches: [{ id: "tv", label: "TV", op: "contains", pattern: "tv" }], grace_timeout_ms: 30 * MIN },
+        },
+        { id: "e1", type: "end", label: "Fim", position: pos, config: { outcome: "exhausted" } },
+      ],
+      edges: [
+        { id: "e-t1-a1", source: "t1", target: "a1", condition: { type: "always" } },
+        { id: "e-a1-m1", source: "a1", target: "m1", condition: { type: "always" } },
+        { id: "e-m1-else", source: "m1", target: "e1", condition: { type: "always" } },
+        { id: "e-m1-nr", source: "m1", target: "e1", condition: { type: "branch", branch_id: "no_reply" } },
+      ],
+    });
+    expect(r.success, JSON.stringify(r.success ? "" : r.error.issues)).toBe(true);
   });
 });

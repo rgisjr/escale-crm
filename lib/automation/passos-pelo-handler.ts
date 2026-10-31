@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import type { EnviadorDePassos } from "@/lib/automation/envio-de-passos";
+import { textoNumeradoDeReserva } from "@/lib/channels/interativo";
 import { copiarAtivoParaConversa } from "@/lib/midia/ativos-banco";
 
 type ContextoDoEnvio = Parameters<typeof sendMessageHandler>[1];
@@ -28,6 +29,14 @@ export function enviadorPeloHandler(
         type: "text",
         body,
         metadata: { idempotency_key: chave },
+      } as CorpoDoEnvio),
+    // A decisão nativo-vs-texto é do `_handler`, pela capacidade do canal: aqui vai o texto numerado + metadata.
+    interativo: (i, chave) =>
+      enviar({
+        conversation_id: entrada.conversationId,
+        type: "text",
+        body: textoNumeradoDeReserva(i),
+        metadata: { idempotency_key: chave, interativo: i },
       } as CorpoDoEnvio),
     midia: async ({ assetId, legenda }, chave) => {
       const copia = await copiarAtivoParaConversa(admin, {

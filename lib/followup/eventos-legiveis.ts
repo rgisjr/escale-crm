@@ -204,7 +204,9 @@ export function resumoDoNo(node: FlowNode): NoDoDossie {
             ? "o agente escreve e envia a mensagem"
             : node.config.mode === "text"
               ? "envia um texto fixo"
-              : "envia uma mensagem de modelo pronto",
+              : node.config.mode === "steps"
+                ? `envia uma sequência de ${node.config.passos.length} mensagens (áudio, texto…)`
+                : "envia uma mensagem de modelo pronto",
       };
     case "internal_task": {
       const prazo = node.config.vence_em_dias === 0 ? "hoje" : `em ${node.config.vence_em_dias} dia(s)`;

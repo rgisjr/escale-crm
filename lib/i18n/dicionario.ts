@@ -5758,6 +5758,11 @@ export const DICIONARIO: Traducoes = {
     es: "Secuencia de mensajes configurada por el MCP. Edítala desde el asistente.",
   },
   "mensagens em sequência": { es: "mensajes en secuencia" },
+  "Sequência": { es: "Secuencia" },
+  "Sequência de mensagens": { es: "Secuencia de mensajes" },
+  "Sequência configurada pelo MCP. Edite pelo assistente.": {
+    es: "Secuencia configurada por el MCP. Edítala desde el asistente.",
+  },
   "Escreva pelo menos uma tag": { es: "Escribe al menos una etiqueta" },
   "Informe o endereço": { es: "Indica la dirección" },
   "Sem título": { es: "Sin título" },

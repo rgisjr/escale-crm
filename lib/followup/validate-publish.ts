@@ -43,6 +43,8 @@ export const PUBLISH_ERROR_CODES = [
   'motivo_da_perda_ausente',
   'motivo_da_perda_invalido',
   'tag_ausente',
+  // Sequência de mensagens (nó `steps`): o áudio/arquivo citado tem de existir na organização.
+  'ativo_inexistente',
 ] as const;
 export type PublishErrorCode = (typeof PUBLISH_ERROR_CODES)[number];
 
@@ -83,6 +85,11 @@ export interface ContextoDoPublish {
    * canal não os tem. Ausente = exige (o comportamento de antes).
    */
   exigeModeloForaDaJanela?: boolean;
+  /**
+   * Biblioteca de mídia da organização: ids dos arquivos e chaves de variável que apontam para arquivo
+   * (`var:<chave>`). ausente = a conferência dos passos de mídia não roda.
+   */
+  ativos?: { ids: ReadonlySet<string>; chaves: ReadonlySet<string> };
 }
 
 /**
@@ -584,6 +591,27 @@ function conferirTags(
   }
 }
 
+/** Passo de mídia que cita arquivo (ou variável de arquivo) que a organização não tem: o envio falharia no primeiro disparo. */
+function conferirAtivos(
+  node: Extract<FlowNode, { type: 'action' }>,
+  ativos: NonNullable<ContextoDoPublish['ativos']>,
+  errors: PublishValidationError[]
+): void {
+  if (node.config.mode !== 'steps') return;
+  for (const passo of node.config.passos) {
+    if (passo.tipo !== 'midia') continue;
+    const existe = passo.asset.startsWith('var:')
+      ? ativos.chaves.has(passo.asset.slice(4))
+      : ativos.ids.has(passo.asset);
+    if (existe) continue;
+    errors.push({
+      node_id: node.id,
+      code: 'ativo_inexistente',
+      message: `A caixa "${node.label}" usa o arquivo "${passo.asset}", que não existe na biblioteca de mídia desta empresa.`,
+    });
+  }
+}
+
 /**
  * Uma regra de condição que não pode decidir nada. O rascunho aceita todas estas
  * formas — trabalho pela metade precisa salvar —, mas publicada cada uma é uma
@@ -772,6 +800,7 @@ export function validateFlowForPublish(
   for (const node of [...nodes].sort(byId)) {
     if (node.type === 'move_lead') conferirEtapaDestino(node, contexto, errors);
     if (node.type === 'edit_lead_tag') conferirTags(node, errors);
+    if (node.type === 'action' && contexto.ativos !== undefined) conferirAtivos(node, contexto.ativos, errors);
   }
 
   for (const node of [...nodes].sort(byId)) {

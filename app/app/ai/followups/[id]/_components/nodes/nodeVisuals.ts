@@ -276,6 +276,7 @@ export function describeNodeConfig(
       const c = config as ConfigOf<"action">;
       if (c.mode === "ai_message") return c.prompt_hint;
       if (c.mode === "text") return c.body;
+      if (c.mode === "steps") return `${t("Sequência")}: ${c.passos.length}`;
       return t("Template fixo");
     }
     case "internal_task": {

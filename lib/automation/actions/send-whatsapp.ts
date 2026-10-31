@@ -18,7 +18,12 @@ import { lerAtivosDoCanal } from "@/lib/canais/ativos-do-canal";
 
 /** Os textos da sequência (texto e legenda), para a leitura das fontes de variáveis. */
 function textosDosPassos(passos: readonly PassoDeEnvio[]): string[] {
-  return passos.flatMap((p) => (p.tipo === "texto" ? [p.texto] : p.legenda ? [p.legenda] : []));
+  return passos.flatMap((p) => {
+    if (p.tipo === "texto") return [p.texto];
+    if (p.tipo === "midia") return p.legenda ? [p.legenda] : [];
+    const itens = p.interativo.tipo === "botoes" ? p.interativo.botoes : p.interativo.linhas;
+    return [p.interativo.corpo, ...itens.map((i) => i.titulo)];
+  });
 }
 
 async function postponeUntil(ctx: ActionCtx, config: Record<string, unknown>): Promise<string | null> {
