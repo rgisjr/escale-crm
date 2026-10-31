@@ -16,11 +16,37 @@ function conferir(mensagem: unknown): void {
 /** Envia cada passo pelo `sendMessageHandler` (a cadeia de sempre: ledger, janela, guardas do canal). */
 export function enviadorPeloHandler(
   admin: SupabaseClient,
-  entrada: { organizationId: string; conversationId: string; contexto: ContextoDoEnvio; espacar: () => Promise<void> },
+  entrada: {
+    organizationId: string;
+    conversationId: string;
+    contexto: ContextoDoEnvio;
+    espacar: () => Promise<void>;
+    /**
+     * Idempotência por passo. Quando informado, cada envio passa por aqui com o texto do passo e uma função que
+     * faz o envio de fato (`key` e `messageId` do ledger): quem chama usa `sendWithLedger` e, numa nova tentativa do
+     * job, o passo que já saiu volta como `already_sent` em vez de sair de novo.
+     */
+    executar?: (
+      texto: string,
+      enviar: (key: string, messageId: string) => Promise<unknown>,
+    ) => Promise<void>;
+  },
 ): EnviadorDePassos {
-  const enviar = async (corpo: CorpoDoEnvio): Promise<void> => {
+  const enviar = async (corpo: CorpoDoEnvio, textoDoLedger: string): Promise<void> => {
     await entrada.espacar();
-    conferir(await sendMessageHandler(admin, entrada.contexto, corpo));
+    if (!entrada.executar) {
+      conferir(await sendMessageHandler(admin, entrada.contexto, corpo));
+      return;
+    }
+    await entrada.executar(textoDoLedger, async (key, messageId) => {
+      const mensagem = await sendMessageHandler(
+        admin,
+        { ...entrada.contexto, internalMessageId: messageId, requestId: key },
+        { ...corpo, metadata: { ...((corpo as { metadata?: Record<string, unknown> }).metadata ?? {}), idempotency_key: key } } as CorpoDoEnvio,
+      );
+      conferir(mensagem);
+      return mensagem;
+    });
   };
   return {
     texto: (body, chave) =>
@@ -29,7 +55,7 @@ export function enviadorPeloHandler(
         type: "text",
         body,
         metadata: { idempotency_key: chave },
-      } as CorpoDoEnvio),
+      } as CorpoDoEnvio, body),
     // A decisão nativo-vs-texto é do `_handler`, pela capacidade do canal: aqui vai o texto numerado + metadata.
     interativo: (i, chave) =>
       enviar({
@@ -37,7 +63,7 @@ export function enviadorPeloHandler(
         type: "text",
         body: textoNumeradoDeReserva(i),
         metadata: { idempotency_key: chave, interativo: i },
-      } as CorpoDoEnvio),
+      } as CorpoDoEnvio, textoNumeradoDeReserva(i)),
     midia: async ({ assetId, legenda }, chave) => {
       const copia = await copiarAtivoParaConversa(admin, {
         organizationId: entrada.organizationId,
@@ -51,7 +77,7 @@ export function enviadorPeloHandler(
         media_mime: copia.mime,
         ...(legenda ? { body: legenda } : {}),
         metadata: { idempotency_key: chave },
-      } as CorpoDoEnvio);
+      } as CorpoDoEnvio, legenda ?? "");
     },
   };
 }

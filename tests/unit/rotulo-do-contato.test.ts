@@ -244,6 +244,11 @@ describe("a sétima cópia não nasce", () => {
       trecho: 'rotulo: c.display_name?.trim() || c.phone_number || t("Sem nome"),',
       motivo: "rótulo do CANAL (channel_sessions) na seção Canais do filtro da fila, não de contato",
     },
+    {
+      arquivo: "lib/canais/variaveis.ts",
+      trecho: 'telefone: s?.phone_number ?? "" };',
+      motivo: "nome e telefone do NÚMERO (channel_sessions) para {{canal.nome}} e {{canal.telefone}}, não de contato",
+    },
   ];
 
   /**

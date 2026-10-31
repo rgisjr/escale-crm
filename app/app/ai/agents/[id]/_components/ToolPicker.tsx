@@ -56,6 +56,7 @@ export interface McpToolMeta extends CapacidadeSelecionavel {
   /** `false` = capacidade do harness: mostra, explica e não deixa marcar. */
   marcavel: boolean;
   motivo_nao_marcavel: string | null;
+  apenas_humano?: boolean;
 }
 
 interface Props {
@@ -202,7 +203,7 @@ export function ToolPicker({ value: valorSalvo, onChange, disabled, ocultar }: P
       const res = await apiClient.get<ApiResponse>("/api/v1/mcp/tools");
       // `name` é o mesmo `id` — a regra de seleção fala em `name`, o wire em `id`.
       return {
-        tools: res.data.tools.map((t) => ({ ...t, name: t.id })) as McpToolMeta[],
+        tools: res.data.tools.map((t) => ({ ...t, name: t.id, apenasHumano: t.apenas_humano === true })) as McpToolMeta[],
         desligadas: res.data.desligadas_pela_organizacao ?? [],
       };
     },

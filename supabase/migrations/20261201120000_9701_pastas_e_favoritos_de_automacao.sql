@@ -56,7 +56,8 @@ begin
   end if;
   return new;
 end $$;
-revoke all on function public.fn_escale_automacao_da_mesma_org() from public, anon;
+-- Função de gatilho: o gatilho dispara sem EXECUTE de quem grava, então ninguém logado precisa poder chamá-la.
+revoke all on function public.fn_escale_automacao_da_mesma_org() from public, anon, authenticated;
 
 drop trigger if exists trg_escale_automacao_da_casca_mesma_org on public.crm_automacoes_da_casca;
 create trigger trg_escale_automacao_da_casca_mesma_org before insert or update on public.crm_automacoes_da_casca
@@ -94,9 +95,9 @@ create policy crm_automacoes_da_casca_write on public.crm_automacoes_da_casca
 -- Favoritos: só os da própria pessoa, de gerente para cima (quem vê a lista).
 drop policy if exists crm_automacoes_favoritas_pessoa on public.crm_automacoes_favoritas;
 create policy crm_automacoes_favoritas_pessoa on public.crm_automacoes_favoritas
-  using ((organization_id in (select public.fn_user_org_ids())) and user_id = auth.uid()
+  using ((organization_id in (select public.fn_user_org_ids())) and user_id = (select auth.uid())
          and public.fn_role_at_least(organization_id, 'manager'))
-  with check ((organization_id in (select public.fn_user_org_ids())) and user_id = auth.uid()
+  with check ((organization_id in (select public.fn_user_org_ids())) and user_id = (select auth.uid())
          and public.fn_role_at_least(organization_id, 'manager'));
 
 grant select, insert, update, delete on public.crm_pastas_de_automacao, public.crm_automacoes_da_casca,

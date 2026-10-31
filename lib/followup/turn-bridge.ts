@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import type {JobClaim} from "@/lib/agent-engine/queue/claim";
 import { assertAgendaEffectPg } from "@/lib/agenda/efeito";
 import { isFollowupCasRecusado, parseServiceBoundary, StaleServiceBoundaryError } from "@/lib/atendimento/fronteira";
@@ -384,14 +385,20 @@ export function createPgAdminClient(pool: pg.Pool): TurnBridgeAdminClient {
       };
     },
     /** #2528 — contexto do render das mensagens de follow-up (o MESMO par de leituras de `loadLeadFacts`, com as linhas inteiras). */
-    loadRenderContext: async (orgId, contactId, conversationId) =>
-      anexarCanalAoContexto(
-        createAdminClient(),
-        orgId,
-        (await contextoDoContato(pool, orgId, contactId)) ?? {},
-        conversationId ?? null,
-        contactId,
-      ),
+    loadRenderContext: async (orgId, contactId, conversationId) => {
+      const contato = (await contextoDoContato(pool, orgId, contactId)) ?? {};
+      // As variáveis do número são um enriquecimento: se a leitura falhar, o texto sai com o dado do contato
+      // (a marcação `{{canal.*}}` sem valor some da frase) em vez de derrubar o passo inteiro do fluxo.
+      try {
+        return await anexarCanalAoContexto(createAdminClient(), orgId, contato, conversationId ?? null, contactId);
+      } catch (err) {
+        logger.warn("[followup] variáveis do número indisponíveis no render", {
+          organization_id: orgId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return contato;
+      }
+    },
     async loadLastInboundBody(orgId, contactId, conversationId, naoAntesDe) {
       const params: unknown[] = [orgId, contactId, conversationId ?? null];
       const desde = naoAntesDe ? "and sent_at >= $4" : "";

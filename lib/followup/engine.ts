@@ -64,6 +64,7 @@ import type { EventRow } from "@/lib/event-log/dispatcher";
 import { quandoDoRetornoVivo, reavaliarDepoisDoRetorno } from "./retorno-segura-o-fluxo";
 import { triggerConfigSchema } from "./api-schemas";
 import type { PassoDeEnvio } from "@/lib/automation/envio-de-passos";
+import type { Interativo } from "@/lib/channels/interativo";
 
 const MAX_STEPS = 80;
 const CLAIM_LEASE_SECONDS = 120;
@@ -338,6 +339,13 @@ function interpolarVolta(
  * action, classes/hint do ai_classify, guidance do wait smart) pra saber o que
  * fazer; sem isso o job só teria os 3 campos genéricos (enrollment/node/purpose).
  */
+/** Corpo e títulos de botões/lista com a mesma interpolação dos textos. */
+function interpolarInterativo(i: Interativo, interpolar: (texto: string) => string): Interativo {
+  return i.tipo === "botoes"
+    ? { ...i, corpo: interpolar(i.corpo), botoes: i.botoes.map((b) => ({ ...b, titulo: interpolar(b.titulo) })) }
+    : { ...i, corpo: interpolar(i.corpo), linhas: i.linhas.map((l) => ({ ...l, titulo: interpolar(l.titulo) })) };
+}
+
 function turnPayloadExtras(
   node: FlowNode,
   smartWaits: EsperaAdaptativa[],
@@ -360,7 +368,9 @@ function turnPayloadExtras(
           ? { ...p, texto: interpolarVolta(p.texto, events, contexto) }
           : p.tipo === "midia" && p.legenda
             ? { ...p, legenda: interpolarVolta(p.legenda, events, contexto) }
-            : p,
+            : p.tipo === "interativo"
+              ? { ...p, interativo: interpolarInterativo(p.interativo, (t) => interpolarVolta(t, events, contexto)) }
+              : p,
       ),
     };
   }

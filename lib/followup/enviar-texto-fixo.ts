@@ -17,6 +17,7 @@ import { completeTurnForEnrollment, type TurnBridgeAdminClient } from "@/lib/fol
 import { logger } from "@/lib/logger";
 import { OrgNaoOperanteError } from "@/lib/organizacao/operante";
 import { enviarPassos, passosSchema } from "@/lib/automation/envio-de-passos";
+import { espacarEnvio } from "@/lib/automation/throttle";
 import { enviadorPeloHandler } from "@/lib/automation/passos-pelo-handler";
 import { canalDaConversaOuDoContato } from "@/lib/canais/canal-da-conversa";
 import { lerAtivosDoCanal } from "@/lib/canais/ativos-do-canal";
@@ -200,6 +201,8 @@ export async function enviarTextoFixoPendente(
         // Sequência (áudio, texto, botões): o mesmo orquestrador do worker; a chave de idempotência por passo
         // é `<job>:<posição>` e o espaçamento anti-ban do número separa as mensagens.
         const organizationId = job.organization_id as string;
+        const canalDoNumero = await canalDaConversaOuDoContato(admin, organizationId, { conversationId });
+        let seq = 0;
         const resultadoDosPassos = await enviarPassos(passos.data, {
           enviador: enviadorPeloHandler(admin, {
             organizationId,
@@ -211,9 +214,20 @@ export async function enviarTextoFixoPendente(
               proactiveContext,
               requestId: `${job.id}`,
             },
-            espacar: async () => {},
+            // Espaçamento anti-ban do número e idempotência por passo: `send_ledger (job, seq)` faz o passo que
+            // já saiu voltar como `already_sent` quando o job é tentado de novo.
+            espacar: () => (canalDoNumero ? espacarEnvio(canalDoNumero) : Promise.resolve()),
+            executar: async (texto, enviar) => {
+              seq += 1;
+              const r = await sendWithLedger(
+                supabaseSendLedger(admin),
+                { tenantId: organizationId, leadId: contactId, jobId: job.id, seq, body: texto },
+                enviar as never,
+              );
+              if (r.kind !== "sent" && r.kind !== "already_sent") throw new Error(`message_${r.kind}`);
+            },
           }),
-          ativosDoCanal: await lerAtivosDoCanal(admin, organizationId, await canalDaConversaOuDoContato(admin, organizationId, { conversationId })),
+          ativosDoCanal: await lerAtivosDoCanal(admin, organizationId, canalDoNumero),
           renderizar: (t) => t, // já renderizado no enfileiramento
           chaveBase: `${job.id}`,
         });

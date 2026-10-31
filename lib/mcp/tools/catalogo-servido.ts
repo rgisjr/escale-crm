@@ -49,6 +49,8 @@ export interface CapacidadeServida {
   marcavel: boolean;
   /** Por que não é marcável, em pt-BR para a tela. `null` quando é marcável. */
   motivo_nao_marcavel: string | null;
+  /** Operada por pessoa: o pacote não a oferece (não gasta vaga do teto) e o turno do agente não a monta. */
+  apenas_humano: boolean;
 }
 
 export function juntarCatalogoComHandlers(
@@ -78,6 +80,7 @@ export function juntarCatalogoComHandlers(
       pacotes: entrada.pacotes,
       marcavel: !IDS_DO_HARNESS.has(handler.name),
       motivo_nao_marcavel: motivoDoHarness(handler.name),
+      apenas_humano: entrada.apenasHumano === true,
     };
   });
 }

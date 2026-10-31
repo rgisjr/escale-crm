@@ -25,6 +25,14 @@ describe("nó steps: enfileiramento", () => {
             passos: [
               { tipo: "midia", asset: "var:bv1" },
               { tipo: "texto", texto: "PIX {{canal.pix_chave}} (volta {{volta}})" },
+              {
+                tipo: "interativo",
+                interativo: {
+                  tipo: "botoes",
+                  corpo: "Plano {{canal.pix_chave}}?",
+                  botoes: [{ id: "a", titulo: "{{canal.pix_chave}} já" }],
+                },
+              },
             ],
           },
         },
@@ -61,6 +69,7 @@ describe("nó steps: enfileiramento", () => {
     expect(payloads[0]!.fixed_steps).toEqual([
       { tipo: "midia", asset: "var:bv1" },
       { tipo: "texto", texto: "PIX 519 (volta 2)" },
+      { tipo: "interativo", interativo: { tipo: "botoes", corpo: "Plano 519?", botoes: [{ id: "a", titulo: "519 já" }] } },
     ]);
   });
 });

@@ -47,6 +47,7 @@ const SERVIDO = juntarCatalogoComHandlers(allTools, TOOL_CATALOG);
 
 /** O catálogo como a regra de pacote o lê (a tela passa este mesmo shape). */
 const PARA_SELECAO: ReadonlyArray<CapacidadeSelecionavel> = SERVIDO.map((c) => ({
+  apenasHumano: c.apenas_humano,
   name: c.id,
   risco: c.risco,
   pacotes: c.pacotes,
@@ -107,7 +108,7 @@ describe("capacidade do harness não é oferecida como marcável", () => {
   });
 
   it("a contagem do pacote 'atender' não promete mais do que o motor entrega", () => {
-    const noCatalogo = SERVIDO.filter((c) => c.pacotes.includes("atender"));
+    const noCatalogo = SERVIDO.filter((c) => c.pacotes.includes("atender") && !c.apenas_humano);
     const harnessNoPacote = noCatalogo.filter((c) => IDS_DO_HARNESS.has(c.id));
     // Controle positivo: este era EXATAMENTE o pacote citado na issue — se a
     // lista deixar de ter membro aqui, o teste avisa em vez de passar vazio.

@@ -74,10 +74,10 @@ beforeAll(() => {
       ('${AGENT_B}', '${ORG_B}', 'agent', now())
       on conflict do nothing;
 
-    insert into public.channel_sessions (id, organization_id, provider, display_name, phone_number, status)
+    insert into public.channel_sessions (id, organization_id, provider, waha_session_name, display_name, phone_number, status, webhook_secret_encrypted)
     values
-      ('${CANAL_A}', '${ORG_A}', 'waha', 'Canal A', '5511900000001', 'WORKING'),
-      ('${CANAL_B}', '${ORG_B}', 'waha', 'Canal B', '5511900000002', 'WORKING')
+      ('${CANAL_A}', '${ORG_A}', 'waha', 'chbh-canal-a', 'Canal A', '5511900000001', 'WORKING', decode('00', 'hex')),
+      ('${CANAL_B}', '${ORG_B}', 'waha', 'chbh-canal-b', 'Canal B', '5511900000002', 'WORKING', decode('00', 'hex'))
     on conflict (id) do nothing;
 
     ${INSERE(ORG_A, CANAL_A, 1, 570, 1080)} on conflict do nothing;

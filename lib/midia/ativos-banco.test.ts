@@ -92,6 +92,24 @@ describe("subirAtivoPorUrl", () => {
     await expect(subirAtivoPorUrl(db, entrada)).rejects.toThrow("ativo_grande_demais");
     expect(uploads).toHaveLength(0);
   });
+  it("sem Content-Length, o corpo em stream é cortado ao passar de 16 MB", async () => {
+    let enviados = 0;
+    const corpo = new ReadableStream<Uint8Array>({
+      pull(controle) {
+        enviados += 1;
+        controle.enqueue(new Uint8Array(4 * 1024 * 1024));
+        if (enviados > 50) controle.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, status: 200, headers: new Headers({ "content-type": "audio/ogg" }), body: corpo })),
+    );
+    const { db, uploads } = admin();
+    await expect(subirAtivoPorUrl(db, entrada)).rejects.toThrow("ativo_grande_demais");
+    expect(uploads).toHaveLength(0);
+    expect(enviados).toBeLessThan(10);
+  });
   it("URL recusada pela guarda anti-SSRF não chega ao fetch", async () => {
     assertUrl.mockRejectedValue(new Error("url_bloqueada"));
     const fetchSpy = vi.fn();
@@ -118,7 +136,15 @@ describe("copiarAtivoParaConversa", () => {
     const { db, copias } = admin({ ativo: { storage_path: `${ORG}/assets/a1/bv1.ogg`, mime: "audio/ogg" }, conversa: { id: CONV } });
     const r = await copiarAtivoParaConversa(db, dados);
     expect(copias[0]![0]).toBe(`${ORG}/assets/a1/bv1.ogg`);
-    expect(copias[0]![1]).toMatch(new RegExp(`^${ORG}/${CONV}/auto-[0-9a-f-]{36}\\.ogg$`));
+    expect(copias[0]![1]).toMatch(new RegExp(`^${ORG}/${CONV}/auto-a1\\.ogg$`));
     expect(r).toEqual({ storagePath: copias[0]![1], mime: "audio/ogg", tipo: "audio" });
+  });
+  it("caminho de origem fora do prefixo do ativo (outra organização) é recusado sem copiar", async () => {
+    const { db, copias } = admin({
+      ativo: { storage_path: "outra-org/assets/a1/segredo.ogg", mime: "audio/ogg" },
+      conversa: { id: CONV },
+    });
+    await expect(copiarAtivoParaConversa(db, dados)).rejects.toThrow("ativo_com_caminho_invalido");
+    expect(copias).toHaveLength(0);
   });
 });

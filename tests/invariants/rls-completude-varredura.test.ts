@@ -76,6 +76,48 @@ interface Excecao {
  */
 const PROVA_PROPRIA: readonly Excecao[] = [
   {
+    tabela: "channel_variables",
+    razao:
+      "tests/invariants/channel-variables-rls.test.ts e org-media-assets-rls.test.ts — fork Escale (migrations 9702/9704): " +
+      "a organização lê o padrão e as variáveis dos próprios números e ZERO do vizinho, só gerente escreve, " +
+      "e a FK composta recusa número ou arquivo de outra organização.",
+  },
+  {
+    tabela: "channel_business_hours",
+    razao:
+      "tests/invariants/channel-business-hours-rls.test.ts — fork Escale (migration 9703): dois tenants reais por JWT " +
+      "(leitura local e ZERO do vizinho), só gerente escreve, faixa e dia validados e a FK composta recusa canal de outra organização.",
+  },
+  {
+    tabela: "org_media_assets",
+    razao:
+      "tests/invariants/org-media-assets-rls.test.ts — fork Escale (migration 9704): dois tenants reais por JWT " +
+      "(leitura local e ZERO do vizinho), agent não insere, manager insere.",
+  },
+  {
+    tabela: "crm_respostas_rapidas_anexos",
+    razao:
+      "tests/invariants/respostas-rapidas-anexos-rls.test.ts — fork Escale (migration 9705): leitura local e ZERO do vizinho, " +
+      "agent não grava anexo em resposta compartilhada, manager grava, e o organization_id do anexo tem de ser o do template.",
+  },
+  {
+    tabela: "crm_pastas_de_automacao",
+    razao:
+      "tests/invariants/escale-automacoes-9701.test.ts — fork Escale (migration 9701): gerente cria/renomeia/exclui, agente não cria, " +
+      "a outra organização não vê a pasta.",
+  },
+  {
+    tabela: "crm_automacoes_da_casca",
+    razao:
+      "tests/invariants/escale-automacoes-9701.test.ts — fork Escale (migration 9701): gerente grava pasta e forma, linha de organização " +
+      "diferente da regra é recusada pelo gatilho e pasta de outra organização viola a FK composta.",
+  },
+  {
+    tabela: "crm_automacoes_favoritas",
+    razao:
+      "tests/invariants/escale-automacoes-9701.test.ts — fork Escale (migration 9701): cada pessoa vê só os seus favoritos e o agente não grava.",
+  },
+  {
     tabela: "crm_paineis",
     razao:
       "tests/invariants/escale-indicadores-9601.test.ts e escale-paineis-9602.test.ts — fork Escale (migrations 9601/9602): " +
