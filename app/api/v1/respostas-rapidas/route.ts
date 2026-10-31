@@ -3,10 +3,10 @@ import { type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { fail, ok } from "@/lib/api/wrappers";
-import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { roleAtLeast } from "@/lib/auth/types";
-import { gravarExtras, lerRespostas } from "@/lib/escale/conversas/respostas-banco";
+import { lerRespostas } from "@/lib/escale/conversas/respostas-banco";
+import { criarResposta } from "@/lib/escale/conversas/respostas-escrita";
 import { FILTRO_PESSOAIS, FILTRO_TODOS, respostaSchema } from "@/lib/escale/conversas/respostas";
 import { pode } from "@/lib/escale/conversas/setores-banco";
 import { lerJson } from "@/lib/escale/origens/respostas";
@@ -84,39 +84,14 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
     db = createAdminClient();
   }
-  const { data, error } = await db
-    .from("message_templates")
-    .insert({
-      organization_id: authz.org.orgId,
-      owner_user_id: r.compartilhar ? null : authz.user.id,
-      title: r.atalho,
-      shortcut: r.atalho,
-      body: r.corpo,
-      created_by_user_id: authz.user.id,
-    })
-    .select("id")
-    .single();
-  if (error)
-    return fail(
-      error.code === "42501" ? "forbidden" : "internal_error",
-      error.message,
-      error.code === "42501" ? 403 : 500,
-      { requestId },
-    );
-  const id = (data as { id: string }).id;
-  try {
-    await gravarExtras(db, authz.org.orgId, id, r);
-  } catch (err) {
-    return fail("internal_error", (err as Error).message, 500, { requestId });
-  }
-  void audit({
-    action: "quick_reply.created",
-    actorUserId: authz.user.id,
+  const resultado = await criarResposta(db, {
     organizationId: authz.org.orgId,
-    resourceType: "message_template",
-    resourceId: id,
+    donoUserId: r.compartilhar ? null : authz.user.id,
+    criadoPor: authz.user.id,
+    dados: r,
     requestId,
-    metadata: { compartilhada: r.compartilhar, canais: r.canais },
   });
+  if (!resultado.ok) return fail(resultado.codigo, resultado.mensagem, resultado.status, { requestId });
+  const id = resultado.dado.id;
   return ok({ id }, { requestId, status: 201 });
 }

@@ -14,6 +14,46 @@
 import { declararTools } from "./tipos";
 
 export const TOOLS_ATENDIMENTO = declararTools([
+  {
+    name: "crm_list_quick_replies",
+    category: "read",
+    rotulo: "Ver as respostas rápidas",
+    explicacao:
+      "Lista os atalhos de resposta pronta da equipe, com o texto de cada um e para quais números e setores eles valem.",
+    oQueToca: "Respostas rápidas",
+    risco: "seguro",
+    pacotes: ["atender"],
+  },
+  {
+    name: "crm_create_quick_reply",
+    category: "write",
+    rotulo: "Criar uma resposta rápida",
+    explicacao:
+      "Cria um atalho de resposta pronta para a equipe inteira. É texto que as pessoas vão enviar a clientes, então confira antes.",
+    oQueToca: "Respostas rápidas",
+    risco: "atencao",
+    pacotes: ["atender"],
+  },
+  {
+    name: "crm_update_quick_reply",
+    category: "write",
+    rotulo: "Alterar uma resposta rápida",
+    explicacao:
+      "Muda o texto, os números ou os setores de uma resposta pronta. A mudança vale na próxima vez que alguém usar o atalho.",
+    oQueToca: "Respostas rápidas",
+    risco: "atencao",
+    pacotes: ["atender"],
+  },
+  {
+    name: "crm_delete_quick_reply",
+    category: "write",
+    rotulo: "Apagar uma resposta rápida",
+    explicacao:
+      "Remove um atalho de resposta pronta. Não dá para desfazer; quem usava deixa de encontrar o atalho.",
+    oQueToca: "Respostas rápidas",
+    risco: "atencao",
+    pacotes: ["atender"],
+  },
   // ── `risco` DESTAS DUAS REAVALIADO (#2158) ────────────────────────────────
   //
   // Medido contra a convenção que JÁ EXISTE, em `RISCOS`

@@ -38,7 +38,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const RAIZ = process.cwd();
-const PUBLISH = path.join(RAIZ, "app/api/v1/ai/followup-flows/[id]/publish/route.ts");
+const PUBLISH = path.join(RAIZ, "lib/followup/escrita-de-fluxo.ts");
 const SELETOR = path.join(RAIZ, "app/app/ai/followups/[id]/_components/TriggerConfigControl.tsx");
 
 function kindsComMotor(): string[] {

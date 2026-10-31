@@ -72,6 +72,21 @@ import {
   crmUpdateStage,
 } from "./operacao";
 import {
+  crmCreateQuickReply,
+  crmDeleteQuickReply,
+  crmListQuickReplies,
+  crmUpdateQuickReply,
+} from "./respostas-escrita";
+import { crmCreatePipeline, crmListChannels, crmSetChannelVariables } from "./canais-escrita";
+import { crmCreateAutomationRule, crmUpdateAutomationRule } from "./automacao-escrita";
+import {
+  crmCreateFollowupFlow,
+  crmGetFollowupFlow,
+  crmListFollowupFlows,
+  crmPublishFollowupFlow,
+  crmUpdateFollowupFlow,
+} from "./fluxos-escrita";
+import {
   crmBookAppointment,
   crmCancelAppointment,
   crmConfirmAppointment,
@@ -167,6 +182,20 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmCreateWebhookSource,
   crmSetWebhookSourceActive,
   crmSetAutomationRuleActive,
+  crmCreateAutomationRule,
+  crmUpdateAutomationRule,
+  crmListFollowupFlows,
+  crmGetFollowupFlow,
+  crmCreateFollowupFlow,
+  crmUpdateFollowupFlow,
+  crmPublishFollowupFlow,
+  crmCreatePipeline,
+  crmListChannels,
+  crmSetChannelVariables,
+  crmListQuickReplies,
+  crmCreateQuickReply,
+  crmUpdateQuickReply,
+  crmDeleteQuickReply,
   crmScheduleFollowup,
   crmEnrollFollowupFlow,
   crmCancelFollowup,

@@ -210,6 +210,113 @@ export const TOOLS_OPERACAO = declararTools([
     apenasHumano: true,
   },
 
+  {
+    name: "crm_create_automation_rule",
+    category: "write",
+    rotulo: "Criar uma regra automática",
+    explicacao:
+      "Cria o que a empresa deixa acontecer sozinho quando algo ocorre. A regra nasce desligada; só passa a falar com clientes quando uma pessoa liga.",
+    oQueToca: "Regras automáticas",
+    risco: "critico",
+    pacotes: ["organizar"],
+    apenasHumano: true,
+  },
+  {
+    name: "crm_update_automation_rule",
+    category: "write",
+    rotulo: "Alterar uma regra automática",
+    explicacao:
+      "Muda o gatilho, as condições ou as ações de uma regra que já existe. Se ela estiver ligada, a mudança passa a valer na hora para os clientes.",
+    oQueToca: "Regras automáticas",
+    risco: "critico",
+    pacotes: ["organizar"],
+    apenasHumano: true,
+  },
+
+  {
+    name: "crm_list_followup_flows",
+    category: "read",
+    rotulo: "Ver os fluxos de follow-up",
+    explicacao:
+      "Lista os fluxos de acompanhamento da empresa, quais estão no ar e quando mudaram, sem mostrar o desenho de cada um.",
+    oQueToca: "Fluxos de follow-up",
+    risco: "seguro",
+    pacotes: ["escalar", "organizar"],
+  },
+  {
+    name: "crm_get_followup_flow",
+    category: "read",
+    rotulo: "Abrir um fluxo de follow-up",
+    explicacao:
+      "Mostra um fluxo de acompanhamento por inteiro: o gatilho, a regra de passar para uma pessoa e o desenho de cada passo.",
+    oQueToca: "Fluxos de follow-up",
+    risco: "seguro",
+    pacotes: ["escalar", "organizar"],
+  },
+  {
+    name: "crm_create_followup_flow",
+    category: "write",
+    rotulo: "Criar um fluxo de follow-up",
+    explicacao:
+      "Cria um fluxo de acompanhamento vazio, em rascunho. Ele não fala com nenhum cliente até uma pessoa revisar e publicar.",
+    oQueToca: "Fluxos de follow-up",
+    risco: "atencao",
+    pacotes: ["escalar", "organizar"],
+  },
+  {
+    name: "crm_update_followup_flow",
+    category: "write",
+    rotulo: "Editar o rascunho de um fluxo de follow-up",
+    explicacao:
+      "Muda o desenho, o gatilho ou o nome de um fluxo de acompanhamento. Só mexe no rascunho: o que está no ar continua igual até alguém publicar.",
+    oQueToca: "Fluxos de follow-up",
+    risco: "critico",
+    pacotes: ["escalar", "organizar"],
+    apenasHumano: true,
+  },
+  {
+    name: "crm_publish_followup_flow",
+    category: "write",
+    rotulo: "Publicar um fluxo de follow-up",
+    explicacao:
+      "Coloca um fluxo de acompanhamento no ar: a partir daí ele fala com clientes de verdade. Exige o nome de quem revisou e aprovou.",
+    oQueToca: "Fluxos de follow-up",
+    risco: "critico",
+    pacotes: ["escalar", "organizar"],
+    apenasHumano: true,
+  },
+
+  {
+    name: "crm_create_pipeline",
+    category: "write",
+    rotulo: "Criar um funil de vendas",
+    explicacao:
+      "Cria um funil novo, com as etapas que você definir (ou com as quatro de sempre), e marca quais fecham o negócio como ganho ou perdido.",
+    oQueToca: "Funil de vendas",
+    risco: "atencao",
+    pacotes: ["organizar"],
+  },
+  {
+    name: "crm_list_channels",
+    category: "read",
+    rotulo: "Ver os números de WhatsApp da empresa",
+    explicacao:
+      "Lista os números conectados, quem responde por cada um e os dados de cada número (como a chave PIX), com o valor cortado para não expor o dado inteiro.",
+    oQueToca: "Números de WhatsApp",
+    risco: "seguro",
+    pacotes: ["organizar", "escalar"],
+  },
+  {
+    name: "crm_set_channel_variables",
+    category: "write",
+    rotulo: "Gravar os dados de um número de WhatsApp",
+    explicacao:
+      "Guarda dados que mudam de número para número, como chave PIX e telefone do suporte, para as mensagens automáticas usarem o certo em cada conversa.",
+    oQueToca: "Números de WhatsApp",
+    risco: "atencao",
+    pacotes: ["organizar"],
+  },
+
   // ---- time ----
   {
     name: "crm_list_team_members",
