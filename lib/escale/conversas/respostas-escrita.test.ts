@@ -11,7 +11,7 @@ import { atualizarResposta, criarResposta, excluirResposta } from "@/lib/escale/
 const ORG = "11111111-1111-4111-8111-111111111111";
 const dados = { atalho: "fechamento", corpo: "PIX {{canal.pix_chave}}", canais: ["whatsapp" as const], compartilhar: true, todos_os_setores: true, setores: [] };
 
-function banco(erro: { code?: string; message: string } | null = null) {
+function banco(erro: { code?: string; message: string } | null = null, ativoExiste = false) {
   const escritas: Array<Record<string, unknown>> = [];
   const db = {
     from: () => {
@@ -27,6 +27,7 @@ function banco(erro: { code?: string; message: string } | null = null) {
       q.delete = () => q;
       q.select = () => q;
       q.eq = () => q;
+      q.maybeSingle = async () => ({ data: ativoExiste ? { id: "a" } : null, error: null });
       q.single = async () => ({ data: erro ? null : { id: "t1" }, error: erro });
       q.then = (ok: (r: unknown) => unknown) => Promise.resolve({ error: erro }).then(ok);
       return q;
@@ -77,5 +78,24 @@ describe("atualizarResposta / excluirResposta", () => {
     const r = await excluirResposta(db, { organizationId: ORG, id: "t1", excluidoPor: null, requestId: "req" });
     expect(r).toEqual({ ok: true, dado: { id: "t1" } });
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "quick_reply.deleted" }));
+  });
+});
+
+describe("anexo da resposta", () => {
+  const ATIVO = "33333333-3333-4333-8333-333333333333";
+  const entrada = { organizationId: ORG, donoUserId: null, criadoPor: null, requestId: "req" };
+
+  it("arquivo que não existe na biblioteca da organização é recusado antes de gravar", async () => {
+    const { db, escritas } = banco(null, false);
+    const r = await criarResposta(db, { ...entrada, dados: { ...dados, anexo: { asset: ATIVO } } });
+    expect(r).toMatchObject({ ok: false, codigo: "validation_failed", status: 422 });
+    expect(escritas).toHaveLength(0);
+    expect(gravarExtras).not.toHaveBeenCalled();
+  });
+  it("arquivo da biblioteca e var:<chave> passam", async () => {
+    const { db } = banco(null, true);
+    expect((await criarResposta(db, { ...entrada, dados: { ...dados, anexo: { asset: ATIVO } } })).ok).toBe(true);
+    const outro = banco(null, false);
+    expect((await criarResposta(outro.db, { ...entrada, dados: { ...dados, anexo: { asset: "var:bv1" } } })).ok).toBe(true);
   });
 });

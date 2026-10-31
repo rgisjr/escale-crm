@@ -14,6 +14,23 @@ function mensagemDoBanco(err: unknown): string {
   return err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err);
 }
 
+/** O anexo fixo (id) tem de existir na biblioteca da organização; `var:<chave>` só vale pelo formato. */
+async function conferirAnexo(
+  db: SupabaseClient,
+  organizationId: string,
+  anexo: NovaResposta["anexo"],
+): Promise<ResultadoDeEscrita<null> | null> {
+  if (!anexo || anexo.asset.startsWith("var:")) return null;
+  const { data, error } = await db
+    .from("org_media_assets")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("id", anexo.asset)
+    .maybeSingle();
+  if (error) return falhaDeEscrita("internal_error", error.message, 500);
+  return data ? null : falhaDeEscrita("validation_failed", "O arquivo do anexo não existe na biblioteca de mídia.", 422);
+}
+
 export async function criarResposta(
   db: SupabaseClient,
   entrada: {
@@ -26,6 +43,8 @@ export async function criarResposta(
   },
 ): Promise<ResultadoDeEscrita<{ id: string }>> {
   const { organizationId, dados } = entrada;
+  const anexoInvalido = await conferirAnexo(db, organizationId, dados.anexo);
+  if (anexoInvalido) return anexoInvalido as ResultadoDeEscrita<{ id: string }>;
   const { data, error } = await db
     .from("message_templates")
     .insert({
@@ -74,6 +93,8 @@ export async function atualizarResposta(
   },
 ): Promise<ResultadoDeEscrita<{ id: string }>> {
   const { organizationId, id, dados } = entrada;
+  const anexoInvalido = await conferirAnexo(db, organizationId, dados.anexo);
+  if (anexoInvalido) return anexoInvalido as ResultadoDeEscrita<{ id: string }>;
   const { error } = await db
     .from("message_templates")
     .update({

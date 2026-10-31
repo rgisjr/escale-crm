@@ -1225,6 +1225,40 @@ export type Database = {
           },
         ]
       }
+      crm_respostas_rapidas_anexos: {
+        Row: {
+          asset: string
+          created_at: string
+          organization_id: string
+          template_id: string
+        }
+        Insert: {
+          asset: string
+          created_at?: string
+          organization_id: string
+          template_id: string
+        }
+        Update: {
+          asset?: string
+          created_at?: string
+          organization_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_respostas_rapidas_anexos_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_respostas_rapidas_anexos_template_id_fkey"
+            columns: ["template_id"]
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_media_assets: {
         Row: {
           created_at: string
