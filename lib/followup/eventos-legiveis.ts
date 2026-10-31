@@ -212,9 +212,7 @@ export function resumoDoNo(node: FlowNode): NoDoDossie {
     case "edit_lead_tag":
       return {
         ...base,
-        resumo: node.config.tags.length
-          ? `grava a(s) tag(s) ${node.config.tags.join(", ")} no lead — sem mensagem ao cliente`
-          : "grava tag no lead, ainda sem destino escolhido — sem mensagem ao cliente",
+        resumo: resumoDaEdicaoDeTag(node.config),
       };
     case "end":
       return { ...base, resumo: `encerra — ${DESFECHO[node.config.outcome] ?? node.config.outcome}` };
@@ -584,4 +582,16 @@ export function descreveEvento(
     default:
       return { titulo: "Passo registrado pelo motor", detalhe: `código: ${evento.event_type}`, ...motor };
   }
+}
+
+/** "grava a tag X", "tira a tag Y" ou as duas, sempre sem mensagem ao cliente. */
+function resumoDaEdicaoDeTag(config: { tags: string[]; remover?: string[] }): string {
+  const remover = config.remover ?? [];
+  const partes = [
+    ...(config.tags.length ? [`grava a(s) tag(s) ${config.tags.join(", ")} no lead`] : []),
+    ...(remover.length ? [`tira a(s) tag(s) ${remover.join(", ")} do lead`] : []),
+  ];
+  return partes.length
+    ? `${partes.join(" e ")} — sem mensagem ao cliente`
+    : "edita tag no lead, ainda sem destino escolhido — sem mensagem ao cliente";
 }

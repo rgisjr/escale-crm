@@ -58,6 +58,9 @@ export const ENTIDADE_ESPERADA_POR_GATILHO = {
   "lead.reopened": "crm_lead",
   "lead.assigned": "crm_lead",
   "message.received": "message",
+  // A equipe ENVIOU a mensagem (pelo sistema ou pelo aparelho): o gatilho exige uma palavra-chave
+  // (`trigger_config.palavra_chave`), que o motor compara com o texto enviado.
+  "message.sent": "message",
   // A entrega FALHOU depois de aceita — o 131047 que a Meta recusa pelo
   // webhook de status, o timeout do transporte, o pré-voo do próprio envio.
   // Gatilho novo porque quem integra via token não lê o nosso banco (#1614):
@@ -295,6 +298,10 @@ const acoesFixas = [
     }),
   }),
   z.object({
+    type: z.literal("remove_tag"),
+    config: z.object({ tags: z.array(z.string().min(1).max(60)).min(1).max(10) }),
+  }),
+  z.object({
     type: z.literal("assign_owner"),
     config: z.union([
       z.object({ user_id: z.string().uuid() }),
@@ -473,6 +480,7 @@ export const createAutomationRuleSchema = z
   })
   .superRefine(exigirConfigDoGatilhoDeData)
   .superRefine(exigirConfigDosGatilhosDeTempo)
+  .superRefine(exigirPalavraChave)
   .superRefine(exigirIdDaFonteWebhook)
   .superRefine(recusarLacoDeLead);
 
@@ -505,6 +513,27 @@ function exigirIdDaFonteWebhook(
  * Só roda para os dois gatilhos novos; os demais seguem com `{}` e voltam
  * `true` sem custo.
  */
+/** A configuração do gatilho de mensagem enviada: o que o texto precisa conter (ou ser) e, se quiser, o número. */
+export const configDaPalavraChaveSchema = z.object({
+  palavra_chave: z.string().trim().min(1).max(200),
+  modo: z.enum(["contem", "igual"]).default("contem"),
+  channel_session_id: z.string().uuid().optional(),
+});
+
+/** Sem a palavra-chave a regra dispararia em TODA mensagem da equipe: o schema recusa. */
+function exigirPalavraChave(
+  regra: { trigger_event: string; trigger_config?: Record<string, unknown> },
+  ctx: z.RefinementCtx,
+): void {
+  if (regra.trigger_event !== "message.sent") return;
+  if (configDaPalavraChaveSchema.safeParse(regra.trigger_config).success) return;
+  ctx.addIssue({
+    code: "custom",
+    path: ["trigger_config"],
+    message: "Informe a palavra-chave (palavra_chave) da mensagem enviada.",
+  });
+}
+
 function exigirConfigDosGatilhosDeTempo(
   regra: { trigger_event: string; trigger_config?: Record<string, unknown> },
   ctx: z.RefinementCtx,
@@ -577,6 +606,7 @@ export const updateAutomationRuleSchema = z
     // configuração, produz o mesmo calado da criação (#1540): regra salva que
     // a varredura não sabe avaliar.
     exigirConfigDosGatilhosDeTempo(patch as { trigger_event: string; trigger_config?: Record<string, unknown> }, ctx);
+    exigirPalavraChave(patch as { trigger_event: string; trigger_config?: Record<string, unknown> }, ctx);
   })
   .superRefine(exigirIdDaFonteWebhook)
   // Só vê o laço quando o PATCH traz gatilho E ações; o PATCH parcial é

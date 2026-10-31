@@ -20,7 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash, CaretUp, CaretDown } from "@/lib/ui/icons";
-import { acoesQueFechamLaco, createAutomationRuleSchema, TRIGGER_EVENTS } from "@/lib/schemas/webhooks";
+import {
+  acoesQueFechamLaco,
+  configDaPalavraChaveSchema,
+  createAutomationRuleSchema,
+  TRIGGER_EVENTS,
+} from "@/lib/schemas/webhooks";
 import {
   DIAS_MAX,
   DIAS_MIN,
@@ -144,6 +149,8 @@ export const CURATED_FIELDS: Record<TriggerEvent, CuratedField[]> = {
   "lead.reopened": LEAD_FIELDS,
   "lead.assigned": LEAD_FIELDS,
   "message.received": MESSAGE_FIELDS,
+  // A palavra-chave já é o gatilho: filtrar o texto de novo seria uma regra sempre-verdadeira. O que sobra é de QUEM é o contato.
+  "message.sent": [{ value: "contact.tags", label: "Tags do contato", op: "contains", lista: true }],
   // O que a regra quer filtrar numa falha é o MOTIVO (só o 131047, só o
   // timeout) e de QUEM é o contato — `event.erro.codigo` é o mesmo valor que a
   // coluna `messages.error_code` grava, então quem compara com o webhook da
@@ -237,6 +244,12 @@ interface ConfigDoTempo {
 
 const QUALQUER_FONTE = "__qualquer_fonte__";
 
+/** A palavra-chave do gatilho "a equipe enviou uma mensagem" e como comparar com o texto. */
+interface ConfigDaPalavra {
+  palavra_chave: string;
+  modo: "contem" | "igual";
+}
+
 export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daCasca }: Props) {
   const t = useT();
   const isEdit = !!rule;
@@ -256,6 +269,10 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
     proteger_pela_agenda: false,
     pipeline_id: "",
     stage_id: "",
+  });
+  const [configDaPalavra, setConfigDaPalavra] = React.useState<ConfigDaPalavra>({
+    palavra_chave: "",
+    modo: "contem",
   });
   const [webhookSourceId, setWebhookSourceId] = React.useState(QUALQUER_FONTE);
 
@@ -299,6 +316,12 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
           }
         : { pipeline_id: "", campo: "", dias: DIAS_PADRAO },
     );
+    const palavraGuardada = configDaPalavraChaveSchema.safeParse(rule?.trigger_config ?? {});
+    setConfigDaPalavra(
+      palavraGuardada.success
+        ? { palavra_chave: palavraGuardada.data.palavra_chave, modo: palavraGuardada.data.modo }
+        : { palavra_chave: "", modo: "contem" },
+    );
     const silencioGuardado = configDoSilencio(rule?.trigger_config);
     const etapaGuardada = configDaEtapaParada(rule?.trigger_config);
     const tempoGuardado = silencioGuardado ?? etapaGuardada;
@@ -318,6 +341,7 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
   const ehGatilhoDeTempo =
     triggerEvent === GATILHO_SILENCIO || triggerEvent === GATILHO_ETAPA_PARADA;
   const ehGatilhoDeNovoContato = triggerEvent === "lead.created";
+  const ehGatilhoDeMensagemEnviada = triggerEvent === "message.sent";
   const camposDeData = camposDoFunil(
     (pipelinesRes?.data ?? []).find((p) => p.id === configDaData.pipeline_id)?.settings ?? null,
   ).filter((campo) => campo.type === "date");
@@ -411,7 +435,17 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
                   webhook_source_id: webhookSourceId === QUALQUER_FONTE ? null : webhookSourceId,
                 },
               })
-            : {},
+            : ehGatilhoDeMensagemEnviada
+              ? configAoSalvarDaTela({
+                  gatilhoDaRegra: rule?.trigger_event,
+                  configDaRegra: rule?.trigger_config,
+                  gatilhoDaTela: triggerEvent,
+                  configDaTela: {
+                    palavra_chave: configDaPalavra.palavra_chave,
+                    modo: configDaPalavra.modo,
+                  },
+                })
+              : {},
     };
     const parsed = createAutomationRuleSchema.safeParse(payload);
     if (!parsed.success) {
@@ -585,6 +619,46 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
                     )}
                   </p>
                 ) : null}
+              </div>
+            ) : null}
+
+            {ehGatilhoDeMensagemEnviada ? (
+              <div className="space-y-3 rounded-sm border border-border p-3">
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    "A regra roda quando alguém da equipe envia uma mensagem com esta palavra ou frase, pelo sistema ou pelo celular. Mensagens enviadas por automação ou pela IA não disparam, para a regra não repetir a si mesma.",
+                  )}
+                </p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="flex-1 basis-64 space-y-1">
+                    <Label htmlFor="palavra-chave-enviada">{t("Palavra-chave")}</Label>
+                    <Input
+                      id="palavra-chave-enviada"
+                      value={configDaPalavra.palavra_chave}
+                      maxLength={200}
+                      onChange={(e) =>
+                        setConfigDaPalavra((prev) => ({ ...prev, palavra_chave: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="w-52 space-y-1">
+                    <Label>{t("Comparar com")}</Label>
+                    <Select
+                      value={configDaPalavra.modo}
+                      onValueChange={(v) =>
+                        setConfigDaPalavra((prev) => ({ ...prev, modo: v as ConfigDaPalavra["modo"] }))
+                      }
+                    >
+                      <SelectTrigger aria-label={t("Comparar com")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="contem">{t("A mensagem contém")}</SelectItem>
+                        <SelectItem value="igual">{t("A mensagem é igual a")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             ) : null}
 

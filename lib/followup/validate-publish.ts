@@ -573,11 +573,13 @@ function conferirTags(
   errors: PublishValidationError[]
 ): void {
   const tags = node.config.tags.map((t) => t.trim());
-  if (tags.length === 0 || tags.some((t) => t === '')) {
+  const remover = (node.config.remover ?? []).map((t) => t.trim());
+  // A caixa pode só TIRAR tags: então só falta tag quando não há o que gravar nem o que tirar.
+  if ((tags.length === 0 && remover.length === 0) || tags.some((t) => t === '') || remover.some((t) => t === '')) {
     errors.push({
       node_id: node.id,
       code: 'tag_ausente',
-      message: `A caixa "${node.label}" não tem tag para gravar — escreva ao menos uma tag.`,
+      message: `A caixa "${node.label}" não tem tag para gravar nem para tirar — escreva ao menos uma tag.`,
     });
   }
 }

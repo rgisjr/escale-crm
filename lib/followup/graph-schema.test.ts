@@ -1676,3 +1676,18 @@ describe('graph-schema', () => {
     });
   });
 });
+
+describe("edit_lead_tag com remover", () => {
+  it("aceita tags para tirar", async () => {
+    const { editLeadTagConfigSchema } = await import("@/lib/followup/graph-schema");
+    expect(editLeadTagConfigSchema.safeParse({ tags: ["Já testou"], remover: ["Tem interese"] }).success).toBe(true);
+  });
+  it("sem remover continua válido (fluxos antigos)", async () => {
+    const { editLeadTagConfigSchema } = await import("@/lib/followup/graph-schema");
+    expect(editLeadTagConfigSchema.safeParse({ tags: ["x"] }).success).toBe(true);
+  });
+  it("recusa tag longa demais em remover", async () => {
+    const { editLeadTagConfigSchema } = await import("@/lib/followup/graph-schema");
+    expect(editLeadTagConfigSchema.safeParse({ tags: [], remover: ["x".repeat(61)] }).success).toBe(false);
+  });
+});

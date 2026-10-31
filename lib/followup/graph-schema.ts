@@ -317,6 +317,8 @@ export const editLeadTagConfigSchema = z.strictObject({
   tags: z
     .array(z.string().max(60, "Tag muito longa: máximo de 60 caracteres."))
     .max(10, "No máximo 10 tags por caixa."),
+  /** Tags a TIRAR do negócio (o `remove_tag` do motor de regras). Ausente = não tira nenhuma. */
+  remover: z.array(z.string().max(60, "Tag muito longa: máximo de 60 caracteres.")).max(10, "No máximo 10 tags por caixa.").optional(),
 });
 
 /**

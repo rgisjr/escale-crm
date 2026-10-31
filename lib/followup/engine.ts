@@ -1334,6 +1334,25 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
       if (resultado.status === "failed") {
         throw new Error(resultado.error ?? "add_tag_failed");
       }
+      // A mesma caixa também TIRA tags (`remover`), pelo `remove_tag` do motor de regras.
+      const remover = item.config.remover ?? [];
+      if (remover.length > 0) {
+        const tirar = getAction("remove_tag");
+        if (!tirar) throw new Error("remove_tag_nao_registrada");
+        const tirada = await tirar.execute(
+          {
+            admin,
+            organizationId: item.organization_id,
+            ruleId: `followup:${item.enrollment_id}`,
+            ruleName: "Fluxo de follow-up",
+            event: {} as EventRow,
+            context,
+            requestId: `followup:${item.enrollment_id}`,
+          },
+          { tags: remover },
+        );
+        if (tirada.status === "failed") throw new Error(tirada.error ?? "remove_tag_failed");
+      }
     },
     async abrirAvisoRecuperacaoEsgotada(item) {
       // ── A GUARDA DE ANONIMIZAÇÃO DESTA PORTA (issue #701) ──

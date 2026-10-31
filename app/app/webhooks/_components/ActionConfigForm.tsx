@@ -51,6 +51,7 @@ export type ActionItem =
       type: "add_tag";
       config: { tags: string[]; destino?: "card" | "contato" };
     }
+  | { type: "remove_tag"; config: { tags: string[] } }
   | { type: "assign_owner"; config: { user_id?: string; modo?: "responsavel_do_canal" } }
   | { type: "call_webhook"; config: { url: string; secret?: string; secret_enc?: string; include_owner?: boolean } }
   | { type: "start_message_flow"; config: { flow_pointer_id: string } }
@@ -85,6 +86,8 @@ export function defaultActionConfig(type: ActionItem["type"]): ActionItem {
     case "send_ai_message":
       return { type, config: { agent_id: "", channel_session_id: "", instruction: "" } };
     case "add_tag":
+      return { type, config: { tags: [] } };
+    case "remove_tag":
       return { type, config: { tags: [] } };
     case "assign_owner":
       return { type, config: { user_id: "" } };
@@ -528,6 +531,30 @@ function AddTagForm({
   );
 }
 
+/** `remove_tag` — as tags a TIRAR do card (ou do contato, se o evento não tiver card). */
+function RemoveTagForm({ config, onChange }: FormProps<{ tags: string[] }>) {
+  const t = useT();
+  const [text, setText] = React.useState(config.tags.join(", "));
+  return (
+    <div className="space-y-1">
+      <Label>{t("Tags a remover (separadas por vírgula)")}</Label>
+      <Input
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          onChange({
+            tags: e.target.value
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean),
+          });
+        }}
+        placeholder="aguardando-pagamento"
+      />
+    </div>
+  );
+}
+
 /** Valor do seletor que significa "quem responde pelo número da conversa" (não é um uuid). */
 const RESPONSAVEL_DO_CANAL = "__responsavel_do_canal__";
 
@@ -854,6 +881,13 @@ export function ActionConfigForm({
     case "add_tag":
       return (
         <AddTagForm
+          config={action.config}
+          onChange={(config) => onChange({ type: action.type, config })}
+        />
+      );
+    case "remove_tag":
+      return (
+        <RemoveTagForm
           config={action.config}
           onChange={(config) => onChange({ type: action.type, config })}
         />

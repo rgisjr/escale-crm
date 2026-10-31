@@ -101,7 +101,8 @@ function DescricaoDaAcao({ tipo, config }: { tipo: string; config: Record<string
       const texto = cfg(config, "template").trim();
       return <>{texto ? `“${texto}”` : t("Escreva a mensagem")}</>;
     }
-    case "add_tag": {
+    case "add_tag":
+    case "remove_tag": {
       const tags = Array.isArray(config.tags) ? (config.tags as unknown[]).map(String) : [];
       return <>{tags.length ? tags.join(", ") : t("Escreva pelo menos uma tag")}</>;
     }

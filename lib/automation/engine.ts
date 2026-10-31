@@ -27,11 +27,13 @@ import { evaluateConditions, type RuleCondition } from "@/lib/automation/conditi
 import { getAction } from "@/lib/automation/actions";
 import type { ActionResultDetail } from "@/lib/automation/types";
 import { audit } from "@/lib/audit";
+import { casaComPalavraChave, foiEnviadaPorPessoa } from "@/lib/automation/palavra-chave";
 import { canalDaConversaOuDoContato } from "@/lib/canais/canal-da-conversa";
 import { contextoDoCanal } from "@/lib/canais/variaveis";
 import { regraDoEvento } from "@/lib/automation/gatilho-de-data-do-funil";
 import {
   acoesQueFechamLaco,
+  configDaPalavraChaveSchema,
   ENTIDADE_ESPERADA_POR_GATILHO,
   GATILHOS_DO_TRIGGER_DE_LEAD,
 } from "@/lib/schemas/webhooks";
@@ -143,7 +145,20 @@ export async function buildContext(
       }
     }
   } else if (row.entity_kind === "message" && row.entity_id) {
-    const contactId = row.payload.contact_id as string | undefined;
+    // Só o gatilho de mensagem enviada precisa do texto e de quem enviou: os demais não pagam a leitura.
+    let contactId = row.payload.contact_id as string | undefined;
+    if (row.event_type === "message.sent") {
+      const { data: mensagem } = await admin
+        .from("messages")
+        .select("id, body, sent_via, sent_by_user_id, direction, channel_session_id, conversation_id, contact_id")
+        .eq("id", row.entity_id)
+        .eq("organization_id", org)
+        .maybeSingle();
+      if (mensagem) {
+        context.message = mensagem;
+        contactId = contactId ?? (mensagem.contact_id as string | undefined);
+      }
+    }
     if (contactId) {
       const { data: contact } = await admin
         .from("contacts")
@@ -269,6 +284,26 @@ async function eventoEhDeContatoPessoal(
   }
 }
 
+/**
+ * `message.sent` com palavra-chave: só mensagem que uma PESSOA enviou (anti-laço: a que a própria
+ * automação, a IA ou o sistema mandou nunca dispara), que não falhou, do canal escolhido (se houver)
+ * e que contém/é a palavra-chave. Config ausente ou inválida nunca dispara.
+ */
+function mensagemEnviadaCasa(
+  triggerConfig: Record<string, unknown> | null | undefined,
+  context: Record<string, unknown>,
+  row: EventRow,
+): boolean {
+  const cfg = configDaPalavraChaveSchema.safeParse(triggerConfig ?? {});
+  const msg = context.message as
+    | { body?: string | null; sent_via?: string | null; channel_session_id?: string | null }
+    | undefined;
+  if (!cfg.success || !msg || row.payload?.status === "failed") return false;
+  if (!foiEnviadaPorPessoa(msg.sent_via)) return false;
+  if (cfg.data.channel_session_id && cfg.data.channel_session_id !== msg.channel_session_id) return false;
+  return casaComPalavraChave(msg.body ?? "", cfg.data.palavra_chave, cfg.data.modo);
+}
+
 export async function runAutomationForEvent(
   admin: SupabaseClient,
   row: EventRow,
@@ -349,6 +384,7 @@ export async function runAutomationForEvent(
     ) {
       return false;
     }
+    if (row.event_type === "message.sent" && !mensagemEnviadaCasa(rule.trigger_config, context, row)) return false;
     return evaluateConditions(rule.conditions ?? [], context);
   });
   if (!applicable.length) {
