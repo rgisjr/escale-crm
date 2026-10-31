@@ -6165,6 +6165,9 @@ export const DICIONARIO: Traducoes = {
   "sem tag escolhida": { es: "sin etiqueta elegida" },
   "Tags para gravar no lead": { es: "Etiquetas para grabar en el lead" },
   "ex.: vip, orcamento-aberto": { es: "ej.: vip, presupuesto-abierto" },
+  "Tags para tirar do lead": { es: "Etiquetas para quitar del lead" },
+  "ex.: aguardando-pagamento": { es: "ej.: esperando-pago" },
+  "Tirar": { es: "Quitar" },
   "Separe por vírgula. Tags que o lead já tem são mantidas e nada é apagado.": {
     es: "Separa por comas. Las etiquetas que el lead ya tiene se conservan y no se borra nada.",
   },
@@ -6193,6 +6196,15 @@ export const DICIONARIO: Traducoes = {
     es: "Con este disparador la automatización no puede asignar responsable ni mover el lead: el propio cambio volvería a disparar la automatización, sin fin.",
   },
   "Quando chegar mensagem no WhatsApp": { es: "Cuando llegue un mensaje por WhatsApp" },
+  "Quando a equipe enviar uma mensagem com uma palavra-chave": { es: "Cuando el equipo envíe un mensaje con una palabra clave" },
+  "A regra roda quando alguém da equipe envia uma mensagem com esta palavra ou frase, pelo sistema ou pelo celular. Mensagens enviadas por automação ou pela IA não disparam, para a regra não repetir a si mesma.": {
+    es: "La regla se ejecuta cuando alguien del equipo envía un mensaje con esta palabra o frase, desde el sistema o desde el celular. Los mensajes enviados por automatización o por la IA no la activan, para que la regla no se repita a sí misma.",
+  },
+  "Palavra-chave": { es: "Palabra clave" },
+  "Comparar com": { es: "Comparar con" },
+  "A mensagem contém": { es: "El mensaje contiene" },
+  "A mensagem é igual a": { es: "El mensaje es igual a" },
+  "Informe a palavra-chave (palavra_chave) da mensagem enviada.": { es: "Indica la palabra clave (palavra_chave) del mensaje enviado." },
   "Quando uma mensagem não for entregue": { es: "Cuando un mensaje no se entregue" },
   "Código do erro": { es: "Código del error" },
   "Janela de 24 horas fechada: texto livre é recusado pela plataforma (131047). Envie um modelo aprovado ou aguarde o cliente escrever.": {
@@ -7478,6 +7490,8 @@ export const DICIONARIO: Traducoes = {
   Etapa: { es: "Etapa" },
   "Escolha o número": { es: "Elige el número" },
   "Canal da conversa": { es: "Canal de la conversación" },
+  "Remover tag": { es: "Quitar etiqueta" },
+  "Tags a remover (separadas por vírgula)": { es: "Etiquetas a quitar (separadas por coma)" },
   "Responsável do canal": { es: "Responsable del canal" },
   Mensagem: { es: "Mensaje" },
   "Escolha o agente": { es: "Elige el agente" },
@@ -7666,7 +7680,6 @@ export const DICIONARIO: Traducoes = {
   // ─── Inbox: tags de contato/conversa ───
   "Sem tags no contato.": { es: "Sin etiquetas en el contacto." },
   "Adicionar tag ao contato": { es: "Agregar etiqueta al contacto" },
-  "Remover tag": { es: "Quitar etiqueta" },
   "Tags da conversa": { es: "Etiquetas de la conversación" },
 
   "Aguarde uma nova mensagem do cliente para reabrir o atendimento nesta rede.": { es: "Espera un nuevo mensaje del cliente para reabrir la atención en esta red." },

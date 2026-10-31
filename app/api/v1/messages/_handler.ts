@@ -1417,7 +1417,12 @@ export async function sendMessageHandler(
       p_event_type: "message.sent",
       p_entity_kind: "message",
       p_entity_id: message.id,
-      p_payload: { status: message.status, conversation_id: c.id },
+      p_payload: {
+        status: message.status,
+        conversation_id: c.id,
+        contact_id: c.contact_id,
+        channel_session_id: c.channel_session_id,
+      },
       p_metadata: { request_id: ctx.requestId, ...a.metadataActor, ...emNomeDe },
       p_organization_id: c.organization_id,
     })

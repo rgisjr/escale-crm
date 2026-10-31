@@ -77,7 +77,7 @@ import {
   crmListQuickReplies,
   crmUpdateQuickReply,
 } from "./respostas-escrita";
-import { crmCreatePipeline, crmListChannels, crmSetChannelVariables } from "./canais-escrita";
+import { crmCreatePipeline, crmListChannels, crmSetChannelBusinessHours, crmSetChannelVariables } from "./canais-escrita";
 import { crmCreateAutomationRule, crmUpdateAutomationRule } from "./automacao-escrita";
 import {
   crmCreateFollowupFlow,
@@ -192,6 +192,7 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmCreatePipeline,
   crmListChannels,
   crmSetChannelVariables,
+  crmSetChannelBusinessHours,
   crmListQuickReplies,
   crmCreateQuickReply,
   crmUpdateQuickReply,

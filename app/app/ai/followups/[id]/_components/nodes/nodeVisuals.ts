@@ -291,7 +291,11 @@ export function describeNodeConfig(
     }
     case "edit_lead_tag": {
       const c = config as ConfigOf<"edit_lead_tag">;
-      return c.tags.length ? c.tags.join(", ") : t("sem tag escolhida");
+      const tirar = c.remover ?? [];
+      if (!c.tags.length && !tirar.length) return t("sem tag escolhida");
+      return [c.tags.join(", "), tirar.length ? `${t("Tirar")}: ${tirar.join(", ")}` : ""]
+        .filter(Boolean)
+        .join(" · ");
     }
     case "end": {
       const c = config as ConfigOf<"end">;

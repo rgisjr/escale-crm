@@ -95,14 +95,14 @@ export const edgeBranchIdSchema = z
 /**
  * Wait node configuration schema.
  * Supports two modes:
- * - fixed: absolute wait duration in milliseconds (5 min to 90 days)
+ * - fixed: absolute wait duration in milliseconds (30 s to 90 days; the worker ticks every minute, so under 5 min is precise to ~1 min)
  * - smart: adaptive wait with min/max range and optional guidance
  */
 export const waitConfigSchema = z
   .discriminatedUnion('mode', [
     z.strictObject({
       mode: z.literal('fixed'),
-      duration_ms: z.number().int().min(300_000).max(7_776_000_000),
+      duration_ms: z.number().int().min(30_000).max(7_776_000_000),
       /**
        * A espera NÃO é encurtada nem cancelada quando o contato manda mensagem.
        *
@@ -317,6 +317,8 @@ export const editLeadTagConfigSchema = z.strictObject({
   tags: z
     .array(z.string().max(60, "Tag muito longa: máximo de 60 caracteres."))
     .max(10, "No máximo 10 tags por caixa."),
+  /** Tags a TIRAR do negócio (o `remove_tag` do motor de regras). Ausente = não tira nenhuma. */
+  remover: z.array(z.string().max(60, "Tag muito longa: máximo de 60 caracteres.")).max(10, "No máximo 10 tags por caixa.").optional(),
 });
 
 /**

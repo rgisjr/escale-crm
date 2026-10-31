@@ -11,6 +11,7 @@ export type ActionType =
   | "send_email"
   | "send_ai_message"
   | "add_tag"
+  | "remove_tag"
   | "assign_owner"
   | "call_webhook"
   | "start_message_flow"
@@ -30,6 +31,8 @@ export const TRIGGER_LABELS: Record<TriggerEvent, string> = {
   "lead.reopened": "Quando um lead encerrado for reaberto",
   "lead.assigned": "Quando o responsável do lead mudar",
   "message.received": "Quando chegar mensagem no WhatsApp",
+  // A frase diz QUEM envia: a equipe, pelo sistema ou pelo celular. Mensagem de automação e de IA não dispara.
+  "message.sent": "Quando a equipe enviar uma mensagem com uma palavra-chave",
   // A frase é do ponto de vista de quem RECEBE o aviso: a falha é do envio, e
   // é ela que manda o integrador verificar. "não for entregue" cobre os dois
   // caminhos que emitem (recusa da plataforma e pré-voo), sem prometer que a
@@ -72,6 +75,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   send_email: "Enviar e-mail",
   send_ai_message: "Mensagem escrita pela IA",
   add_tag: "Adicionar tag",
+  remove_tag: "Remover tag",
   assign_owner: "Atribuir a um atendente",
   call_webhook: "Avisar outro sistema (webhook)",
   start_message_flow: "Iniciar fluxo de mensagem",
