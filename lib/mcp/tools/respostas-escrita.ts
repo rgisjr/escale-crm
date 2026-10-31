@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { lerRespostas } from "@/lib/escale/conversas/respostas-banco";
 import { atualizarResposta, criarResposta, excluirResposta } from "@/lib/escale/conversas/respostas-escrita";
+import { REFERENCIA_DE_ATIVO } from "@/lib/automation/envio-de-passos";
 import { CANAIS_DA_RESPOSTA, respostaSchema, type NovaResposta } from "@/lib/escale/conversas/respostas";
 
 import type { McpContext, McpToolDefinition } from "../types";
@@ -27,6 +28,8 @@ const camposShape = {
   canais: z.array(z.enum(CANAIS_DA_RESPOSTA)).min(1).optional(),
   /** Vazio ou ausente = vale para todos os setores. Para restringir a uma pessoa, crie um setor só dela em Configurações. */
   setores: z.array(z.string().uuid()).max(100).optional(),
+  /** Áudio, imagem ou arquivo que sai junto do texto: `asset` é um id de crm_upload_media_asset ou `var:<chave>` (o do número da conversa). */
+  anexo: z.object({ asset: z.string().regex(REFERENCIA_DE_ATIVO) }).nullable().optional(),
 };
 
 function montarResposta(campos: {
@@ -34,6 +37,7 @@ function montarResposta(campos: {
   corpo: string;
   canais?: NovaResposta["canais"];
   setores?: string[];
+  anexo?: NovaResposta["anexo"];
 }): NovaResposta | null {
   const setores = campos.setores ?? [];
   const parsed = respostaSchema.safeParse({
@@ -43,6 +47,7 @@ function montarResposta(campos: {
     compartilhar: true,
     todos_os_setores: setores.length === 0,
     setores,
+    ...(campos.anexo !== undefined ? { anexo: campos.anexo } : {}),
   });
   return parsed.success ? parsed.data : null;
 }
@@ -93,6 +98,8 @@ const atualizarShape = {
   corpo: camposShape.corpo.optional(),
   canais: camposShape.canais,
   setores: camposShape.setores,
+  /** `null` tira o anexo; ausente mantém o que já está. */
+  anexo: camposShape.anexo,
 };
 
 export const crmUpdateQuickReply: McpToolDefinition<typeof atualizarShape> = {
@@ -112,6 +119,7 @@ export const crmUpdateQuickReply: McpToolDefinition<typeof atualizarShape> = {
       corpo: input.corpo ?? atual.corpo,
       canais: input.canais ?? atual.canais,
       setores: input.setores ?? (atual.todos_os_setores ? [] : atual.setores),
+      anexo: input.anexo,
     });
     if (!dados) throw new Error("validation_failed: resposta inválida.");
     const r = await atualizarResposta(ctx.supabase, {

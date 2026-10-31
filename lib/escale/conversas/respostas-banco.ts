@@ -39,7 +39,7 @@ export async function lerRespostas(
   }>;
   if (templates.length === 0) return [];
   const ids = templates.map((x) => x.id);
-  const [extras, setores] = await Promise.all([
+  const [extras, setores, anexos] = await Promise.all([
     db
       .from("crm_respostas_rapidas_extras")
       .select("template_id, canais, todos_os_setores")
@@ -50,9 +50,18 @@ export async function lerRespostas(
       .select("template_id, setor_id")
       .eq("organization_id", orgId)
       .in("template_id", ids),
+    db
+      .from("crm_respostas_rapidas_anexos")
+      .select("template_id, asset")
+      .eq("organization_id", orgId)
+      .in("template_id", ids),
   ]);
   if (extras.error) throw extras.error;
   if (setores.error) throw setores.error;
+  if (anexos.error) throw anexos.error;
+  const anexoDe = new Map(
+    ((anexos.data ?? []) as Array<{ template_id: string; asset: string }>).map((a) => [a.template_id, a.asset]),
+  );
   const ex = new Map(
     (
       (extras.data ?? []) as Array<{
@@ -73,6 +82,7 @@ export async function lerRespostas(
       compartilhada: x.owner_user_id === null,
       todos_os_setores: e?.todos_os_setores ?? true,
       setores: se.filter((s) => s.template_id === x.id).map((s) => s.setor_id),
+      anexo: anexoDe.has(x.id) ? { asset: anexoDe.get(x.id)! } : null,
       dono: x.owner_user_id,
       criada_por: x.created_by_user_id,
       atualizada_em: x.updated_at,
@@ -97,6 +107,7 @@ export async function gravarExtras(
     { onConflict: "template_id" },
   );
   if (extras.error) throw extras.error;
+  await gravarAnexo(db, orgId, templateId, r.anexo);
   // Sem transação no PostgREST: os setores novos entram primeiro e só depois saem
   // os que ficaram de fora, para uma falha na entrada não deixar a resposta sem setores.
   const setores = r.todos_os_setores ? [] : [...new Set(r.setores)];
@@ -118,5 +129,28 @@ export async function gravarExtras(
     .eq("template_id", templateId);
   if (setores.length > 0) apagar = apagar.not("setor_id", "in", `(${setores.join(",")})`);
   const { error } = await apagar;
+  if (error) throw error;
+}
+
+/** `undefined` não mexe; `null` tira o anexo; o objeto grava (um por resposta). */
+async function gravarAnexo(
+  db: SupabaseClient,
+  orgId: string,
+  templateId: string,
+  anexo: NovaResposta["anexo"],
+): Promise<void> {
+  if (anexo === undefined) return;
+  if (anexo === null) {
+    const { error } = await db
+      .from("crm_respostas_rapidas_anexos")
+      .delete()
+      .eq("organization_id", orgId)
+      .eq("template_id", templateId);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await db
+    .from("crm_respostas_rapidas_anexos")
+    .upsert({ template_id: templateId, organization_id: orgId, asset: anexo.asset }, { onConflict: "template_id" });
   if (error) throw error;
 }

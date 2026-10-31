@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { REFERENCIA_DE_ATIVO } from "@/lib/automation/envio-de-passos";
+
 /**
  * AS RESPOSTAS RÁPIDAS DA CASCA (fork Escale, Fase 3C; E6, C6; c41, c96).
  * Sobre os `message_templates` do original: atalho = `shortcut` (e `title`),
@@ -19,6 +21,8 @@ export const respostaSchema = z
     compartilhar: z.boolean(),
     todos_os_setores: z.boolean(),
     setores: z.array(z.string().uuid()).max(100),
+    /** Arquivo da biblioteca de mídia (id) ou `var:<chave>` do número. Ausente = não mexe; `null` = tira. */
+    anexo: z.object({ asset: z.string().regex(REFERENCIA_DE_ATIVO) }).nullable().optional(),
   })
   .refine((r) => r.todos_os_setores || r.setores.length > 0, { path: ["setores"] });
 export type NovaResposta = z.infer<typeof respostaSchema>;
@@ -33,6 +37,8 @@ export interface RespostaLida {
   compartilhada: boolean;
   todos_os_setores: boolean;
   setores: string[];
+  /** Áudio, imagem ou arquivo que sai junto: id da biblioteca ou `var:<chave>` do número da conversa. */
+  anexo: { asset: string } | null;
   dono: string | null;
   criada_por: string | null;
   atualizada_em: string;
