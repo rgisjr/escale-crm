@@ -10,11 +10,14 @@
  * Automações. `[id]` é tela de detalhe, alcançada pela lista, como a do
  * follow-up — por isso não entra no menu.
  */
+import { cookies } from "next/headers"; // FORK ESCALE · Fase 5B
 import { notFound, redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
+import { FluxoDaCasca } from "@/components/escale/automacoes/fluxo/FluxoDaCasca"; // FORK ESCALE · Fase 5B
 import { NOME_MAXIMO } from "@/lib/escale/automacoes/regras"; // FORK ESCALE · Fase 5A
+import { COOKIE_DO_MENU, lerPreferenciaDeMenu } from "@/lib/escale/preferencia-de-menu"; // FORK ESCALE · Fase 5B
 
 import { DesignerDeAutomacao } from "./_components/DesignerDeAutomacao";
 
@@ -42,6 +45,20 @@ export default async function DesignerDeAutomacaoPage({
   const { nome, pasta } = await searchParams;
   const nomeInicial = id === "nova" && typeof nome === "string" ? nome.slice(0, NOME_MAXIMO) : undefined;
   const pastaInicial = id === "nova" && typeof pasta === "string" && UUID.test(pasta) ? pasta : null;
+
+  // FORK ESCALE · Fase 5B: com a casca, a automação abre no fluxo da Clint; sem ela, o designer de hoje.
+  if (lerPreferenciaDeMenu((await cookies()).get(COOKIE_DO_MENU)?.value) === "topo") {
+    return (
+      <div className="flex h-full flex-col">
+        <FluxoDaCasca
+          id={id}
+          fuso={activeOrg.timezone ?? "America/Sao_Paulo"}
+          nomeInicial={nomeInicial}
+          pastaInicial={pastaInicial}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

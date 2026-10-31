@@ -244,3 +244,6 @@ export const FolderOff = createLucideIcon("FolderOff", [
   ],
   ["path", { d: "m2 2 20 20", key: "risco" }],
 ]);
+
+// FORK ESCALE · Fase 5B: ícones dos gatilhos e das ações do fluxo de automação.
+export { Cake, MessageCircleOff, MessageCircleWarning, Trophy, UserCheck, UserRound, Webhook } from "lucide-react";

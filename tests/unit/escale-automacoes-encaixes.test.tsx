@@ -54,6 +54,8 @@ vi.mock("@/app/app/webhooks/automacoes/[id]/_components/CanvasDaAutomacao", () =
   },
 }));
 vi.mock("@xyflow/react", () => ({ ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+// FORK ESCALE · Fase 5B: a página também importa o fluxo da casca; ele tem testes próprios.
+vi.mock("@/components/escale/automacoes/fluxo/FluxoDaCasca", () => ({ FluxoDaCasca: () => <div>FLUXO DA CASCA</div> }));
 
 import DesignerPage from "@/app/app/webhooks/automacoes/[id]/page";
 import { DesignerDeAutomacao } from "@/app/app/webhooks/automacoes/[id]/_components/DesignerDeAutomacao";

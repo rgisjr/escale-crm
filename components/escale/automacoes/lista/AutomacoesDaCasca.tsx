@@ -205,7 +205,14 @@ export function AutomacoesDaCasca({ fuso, editorAberto }: { fuso: string; editor
         pastaInicial={pastaAberta}
         aoCriar={criar}
       />
-      <JanelaRenomearAutomacao automacao={renomeando} aoFechar={() => setRenomeando(null)} />
+      <JanelaRenomearAutomacao
+        automacao={renomeando}
+        aoFechar={() => setRenomeando(null)}
+        aoSalvar={(nome) => {
+          if (renomeando) acoes.renomear.mutate({ id: renomeando.id, nome }, { onSuccess: () => setRenomeando(null) });
+        }}
+        ocupado={acoes.renomear.isPending}
+      />
       <RuleEditor
         open={editor !== null}
         onOpenChange={(aberto) => {

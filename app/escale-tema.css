@@ -168,6 +168,17 @@ body:has([data-escale-casca]) {
   --color-casca-marca-suave: color-mix(in oklab, var(--color-accent) 8%, white);
   --color-casca-marca-media: color-mix(in oklab, var(--color-accent) 18%, white);
   --color-casca-dia: color-mix(in oklab, var(--color-accent) 4%, white);
+  /* FORK ESCALE · Fase 5B: fluxo de automação (07-013) */
+  --color-casca-fluxo: #f7f7fe;
+  --color-casca-fluxo-aresta: #a5abf3;
+  --color-casca-fluxo-gatilho: #3538cd;
+  --color-casca-fluxo-gatilho-suave: #eef0fc;
+  --color-casca-fluxo-whatsapp: #16a34a;
+  --color-casca-fluxo-whatsapp-suave: #eaf8ee;
+  --color-casca-fluxo-canal: #2563eb;
+  --color-casca-fluxo-canal-suave: #dbeafe;
+  --color-casca-fluxo-acoes: #ea580c;
+  --color-casca-fluxo-acoes-suave: #ffedd5;
   --shadow-casca-painel: 0 8px 16px rgb(17 24 39 / 0.1), 0 0 1px rgb(17 24 39 / 0.3);
 }
 
@@ -249,6 +260,17 @@ body:has([data-escale-casca]) {
   --color-casca-marca-suave: color-mix(in oklab, var(--color-accent) 16%, #181b26);
   --color-casca-marca-media: color-mix(in oklab, var(--color-accent) 28%, #181b26);
   --color-casca-dia: color-mix(in oklab, var(--color-accent) 10%, #181b26);
+  /* FORK ESCALE · Fase 5B: fluxo de automação (07-013) */
+  --color-casca-fluxo: #14161f;
+  --color-casca-fluxo-aresta: #5b61b0;
+  --color-casca-fluxo-gatilho: #8b8ef5;
+  --color-casca-fluxo-gatilho-suave: color-mix(in oklab, #3538cd 16%, #181b26);
+  --color-casca-fluxo-whatsapp: #4ade80;
+  --color-casca-fluxo-whatsapp-suave: color-mix(in oklab, #16a34a 16%, #181b26);
+  --color-casca-fluxo-canal: #60a5fa;
+  --color-casca-fluxo-canal-suave: color-mix(in oklab, #2563eb 16%, #181b26);
+  --color-casca-fluxo-acoes: #fb923c;
+  --color-casca-fluxo-acoes-suave: color-mix(in oklab, #ea580c 16%, #181b26);
   --shadow-casca-painel: 0 8px 16px rgb(0 0 0 / 0.45), 0 0 1px rgb(0 0 0 / 0.6);
 }
 
@@ -470,6 +492,45 @@ body:has([data-escale-editor-de-automacao]) [role="listbox"] [role="option"] {
 }
 body:has([data-escale-editor-de-automacao]) [role="listbox"] [role="option"][data-highlighted] {
   background-color: var(--color-casca-marca-suave);
+}
+
+/* ─── FORK ESCALE · Fase 5B (fluxo de automação, 07-013/07-014/07-026) ───
+   O React Flow desenhado como o editor da Clint, só dentro de [data-escale-fluxo]. */
+[data-escale-fluxo] .react-flow__edge-path {
+  stroke: var(--color-casca-fluxo-aresta);
+  stroke-width: 2px;
+}
+[data-escale-fluxo] .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 4.5px;
+}
+[data-escale-fluxo] .react-flow__edge {
+  /* A lixeira vermelha num quadrado branco de 24 px (material, seção 6). */
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect width='24' height='24' rx='4' fill='white'/%3E%3Cpath d='M7 8h10M10 8V6.5h4V8M8.5 8l.7 9.5h5.6l.7-9.5' fill='none' stroke='%23e63757' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 12 12, pointer;
+}
+[data-escale-fluxo] .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--color-casca-marca);
+}
+[data-escale-fluxo] .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: var(--color-casca-fluxo-gatilho);
+  border: 2px solid var(--color-surface);
+}
+[data-escale-fluxo] .react-flow__controls {
+  box-shadow: none;
+  gap: 4px;
+}
+[data-escale-fluxo] .react-flow__controls-button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-casca-divisoria);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-casca-texto);
+}
+[data-escale-fluxo] .react-flow__controls-button svg {
+  max-width: 14px;
+  max-height: 14px;
 }
 
 /* ─── FORK ESCALE · Fase 8B (assistente de campanha) ───
