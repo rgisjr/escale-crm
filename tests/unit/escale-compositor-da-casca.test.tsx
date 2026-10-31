@@ -60,6 +60,7 @@ vi.mock("@/hooks/escale/useRespostasRapidas", () => ({
           id: "t2",
           atalho: "mi",
           corpo: "Só minha",
+          anexo: { asset: "var:bv1" },
           canais: ["whatsapp"],
           compartilhada: false,
           todos_os_setores: true,
@@ -94,6 +95,12 @@ vi.mock("@/components/inbox/composer/EmojiButton", () => ({
   EmojiButton: ({ onPick }: { onPick: (e: string) => void }) => (
     <button type="button" aria-label="Emoji" onClick={() => onPick("😀")} />
   ),
+}));
+const prepararAnexo = vi.fn();
+vi.mock("@/lib/api/client", () => ({ apiClient: { post: (...a: unknown[]) => prepararAnexo(...a) } }));
+vi.mock("@/hooks/escale/useAtivosDeMidia", () => ({
+  useAtivosDeMidia: () => ({ data: [], isLoading: false }),
+  useSubirAtivo: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
@@ -130,6 +137,7 @@ const wrap = (ui: ReactNode) => render(<QueryClientProvider client={qc}>{ui}</Qu
 beforeEach(() => {
   qc = new QueryClient();
   enviar.mockClear();
+  prepararAnexo.mockReset();
   criarNota.mockClear();
   rascunho.mockClear();
   claim.mockClear();
@@ -137,6 +145,59 @@ beforeEach(() => {
 });
 
 describe("CompositorDaCasca (c02)", () => {
+  it("resposta rápida com anexo: mostra o arquivo, prepara pelo servidor e envia a mídia com o texto de legenda", async () => {
+    prepararAnexo.mockResolvedValue({
+      data: { media_storage_path: "o1/c1/auto-x.jpg", media_mime: "image/jpeg", type: "image" },
+    });
+    wrap(
+      <CompositorDaCasca
+        conversationId="c1"
+        conversa={conversa()}
+        modo="livre"
+        bloqueio={null}
+        respondendo={null}
+        aoCancelarResposta={vi.fn()}
+        aoAgendar={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Respostas rápidas" }));
+    fireEvent.click(screen.getByText("/mi"));
+    expect(screen.getByTestId("anexo-da-resposta")).toHaveTextContent("Arquivo do número: bv1");
+    fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
+    await waitFor(() => expect(enviar).toHaveBeenCalledTimes(1));
+    expect(prepararAnexo).toHaveBeenCalledWith("/api/v1/respostas-rapidas/t2/anexo", { conversation_id: "c1" });
+    expect(enviar).toHaveBeenCalledWith({
+      conversation_id: "c1",
+      type: "image",
+      media_storage_path: "o1/c1/auto-x.jpg",
+      media_mime: "image/jpeg",
+      body: "Só minha",
+    });
+    await waitFor(() => expect(screen.queryByTestId("anexo-da-resposta")).toBeNull());
+  });
+  it("áudio não leva legenda: manda o áudio e depois o texto", async () => {
+    prepararAnexo.mockResolvedValue({
+      data: { media_storage_path: "o1/c1/auto-x.ogg", media_mime: "audio/ogg", type: "audio" },
+    });
+    wrap(
+      <CompositorDaCasca
+        conversationId="c1"
+        conversa={conversa()}
+        modo="livre"
+        bloqueio={null}
+        respondendo={null}
+        aoCancelarResposta={vi.fn()}
+        aoAgendar={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Respostas rápidas" }));
+    fireEvent.click(screen.getByText("/mi"));
+    fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
+    await waitFor(() => expect(enviar).toHaveBeenCalledTimes(2));
+    expect(enviar.mock.calls[0]![0]).toMatchObject({ type: "audio", media_mime: "audio/ogg" });
+    expect(enviar.mock.calls[0]![0]).not.toHaveProperty("body");
+    expect(enviar.mock.calls[1]![0]).toEqual({ conversation_id: "c1", type: "text", body: "Só minha" });
+  });
   it("tem os 11 ícones, envia com Enter, insere emoji, abre as respostas com '/', 'Agendar' leva o texto", async () => {
     const aoAgendar = vi.fn();
     wrap(
@@ -285,6 +346,22 @@ describe("FaixaAtribuirAMim (C11)", () => {
 });
 
 describe("PainelRespostasRapidas (c09) e JanelaNotaInterna (c12)", () => {
+  it("resposta com anexo mostra o clipe e entrega o anexo junto do texto ao escolher", () => {
+    const escolher = vi.fn();
+    wrap(
+      <PainelRespostasRapidas
+        conversationId="c1"
+        aberto
+        aoFechar={vi.fn()}
+        termoInicial=""
+        contato={{ name: "Ana Souza", displayName: "Ana" }}
+        aoEscolher={escolher}
+      />,
+    );
+    expect(screen.getAllByLabelText("Tem anexo")).toHaveLength(1);
+    fireEvent.click(screen.getByText("/mi"));
+    expect(escolher).toHaveBeenCalledWith("Só minha", { respostaId: "t2", asset: "var:bv1" });
+  });
   it("agrupa Gerais e Minhas, filtra pela busca, interpola {{nome}} ao escolher; a nota salva pelo hook", async () => {
     const escolher = vi.fn();
     wrap(
@@ -302,7 +379,7 @@ describe("PainelRespostasRapidas (c09) e JanelaNotaInterna (c12)", () => {
     fireEvent.change(screen.getByPlaceholderText("Buscar"), { target: { value: "oi" } });
     expect(screen.queryByText("/mi")).toBeNull();
     fireEvent.click(screen.getByText("/oi"));
-    expect(escolher).toHaveBeenCalledWith("Olá Ana Souza, tudo bem?");
+    expect(escolher).toHaveBeenCalledWith("Olá Ana Souza, tudo bem?", undefined);
     fireEvent.click(screen.getByRole("button", { name: /Nova resposta/ }));
     expect(screen.getByText("Criar Resposta rápida")).toBeInTheDocument();
 

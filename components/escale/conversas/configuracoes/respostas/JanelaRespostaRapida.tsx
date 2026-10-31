@@ -8,6 +8,11 @@ import {
   JanelaDaCasca,
   RodapeDaJanela,
 } from "@/components/escale/origens/JanelaDaCasca";
+import {
+  BotaoDeAnexo,
+  FaixaDoAnexo,
+  type ValorDoAnexo,
+} from "@/components/escale/conversas/configuracoes/respostas/AnexoDaResposta";
 import { SeletorDeVariaveis } from "@/components/escale/variaveis/SeletorDeVariaveis";
 import { SeletorMultiploDaCasca } from "@/components/escale/ui/SeletorMultiploDaCasca";
 import { useAuth } from "@/hooks/auth/AuthProvider";
@@ -29,7 +34,6 @@ import {
   Gift,
   MessageCircle,
   Mic,
-  Paperclip,
   PlusCircle,
   X,
 } from "@/lib/ui/icons-da-casca";
@@ -41,8 +45,8 @@ const ICONE_EM_BREVE = "grid size-7 place-items-center rounded-casca-gatilho tex
 
 /**
  * "CRIAR / EDITAR RESPOSTA RÁPIDA" (c96; E6; N14). Uma mensagem por resposta;
- * emoji e variáveis funcionam; GIF, anexo, câmera, áudio e "+ Adicionar"
- * ficam "Em breve". "Compartilhar" exige gerente ou a exceção da Clint.
+ * emoji, variáveis e o clipe (anexo: biblioteca de mídia ou arquivo por número)
+ * funcionam; GIF, câmera, áudio e "+ Adicionar" ficam "Em breve". "Compartilhar" exige gerente ou a exceção da Clint.
  */
 export function JanelaRespostaRapida({
   aberta,
@@ -66,8 +70,10 @@ export function JanelaRespostaRapida({
   const [canais, setCanais] = useState<CanalDaResposta[]>(["whatsapp", "instagram"]);
   const [compartilhar, setCompartilhar] = useState(false);
   const [escolhidos, setEscolhidos] = useState<string[]>([TODOS]);
+  const [anexo, setAnexo] = useState<ValorDoAnexo | null>(null);
   useEffect(() => {
     if (!aberta) return;
+    setAnexo(resposta?.anexo ?? null);
     setCorpo(resposta?.corpo ?? "");
     setAtalho(resposta?.atalho ?? "");
     setCanais(resposta?.canais ?? ["whatsapp", "instagram"]);
@@ -91,6 +97,8 @@ export function JanelaRespostaRapida({
     compartilhar,
     todos_os_setores: todos,
     setores: todos ? [] : escolhidos,
+    // Escolhido grava; tirado de uma resposta que tinha (null) apaga; nunca mexida (undefined) deixa como está.
+    anexo: anexo ?? (resposta?.anexo ? null : undefined),
   };
   const valida = respostaSchema.safeParse(nova).success;
 
@@ -152,14 +160,13 @@ export function JanelaRespostaRapida({
             aria-label={t("Mensagem")}
             className="h-24 w-full resize-none rounded-t-md bg-white px-3 py-2.5 text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta"
           />
+          {anexo ? <FaixaDoAnexo valor={anexo} aoTirar={() => setAnexo(null)} /> : null}
           <div className="flex h-10 items-center gap-1 border-t border-casca-borda px-2">
             <EmojiButton onPick={inserir} />
             <span title={t("Em breve")} className={ICONE_EM_BREVE}>
               <Gift size={16} aria-hidden />
             </span>
-            <span title={t("Em breve")} className={ICONE_EM_BREVE}>
-              <Paperclip size={16} aria-hidden />
-            </span>
+            <BotaoDeAnexo valor={anexo} aoMudar={setAnexo} />
             <span title={t("Em breve")} className={ICONE_EM_BREVE}>
               <Camera size={16} aria-hidden />
             </span>

@@ -12,7 +12,13 @@ import { useT } from "@/hooks/i18n/useT";
 import { comBarra, type RespostaLida } from "@/lib/escale/conversas/respostas";
 import { interpolateTemplate, type TemplateContact } from "@/lib/inbox/template-vars";
 import { usaTokensDaClint } from "@/lib/variaveis/resolver";
-import { Search, Settings, X } from "@/lib/ui/icons-da-casca";
+import { Paperclip, Search, Settings, X } from "@/lib/ui/icons-da-casca";
+
+/** A resposta escolhida que leva arquivo: o compositor a usa para preparar o anexo no envio. */
+export interface AnexoEscolhido {
+  respostaId: string;
+  asset: string;
+}
 
 /**
  * RESPOSTAS RÁPIDAS (c09; C6; N12): os `message_templates` do original em
@@ -33,7 +39,8 @@ export function PainelRespostasRapidas({
   aoFechar: () => void;
   termoInicial: string;
   contato: TemplateContact;
-  aoEscolher: (texto: string) => void;
+  /** `anexo` vem quando a resposta tem arquivo: o compositor o prepara e manda junto no envio. */
+  aoEscolher: (texto: string, anexo?: AnexoEscolhido) => void;
 }) {
   const t = useT();
   const { user } = useAuth();
@@ -61,9 +68,9 @@ export function PainelRespostasRapidas({
    * falhar, o texto segue pelo caminho local (o nome do contato) e o resto
    * fica literal, como sempre: o compositor barra o envio.
    */
-  const escolher = async (corpo: string) => {
+  const escolher = async (corpo: string, anexo?: AnexoEscolhido) => {
     const local = interpolateTemplate(corpo, contato);
-    if (!usaTokensDaClint(corpo)) return aoEscolher(local);
+    if (!usaTokensDaClint(corpo)) return aoEscolher(local, anexo);
     try {
       const r = await fetch("/api/v1/variaveis/resolver", {
         method: "POST",
@@ -72,9 +79,9 @@ export function PainelRespostasRapidas({
       });
       const json = (await r.json().catch(() => null)) as { data?: { texto?: string } } | null;
       const texto = r.ok ? json?.data?.texto : undefined;
-      aoEscolher(texto !== undefined ? interpolateTemplate(texto, contato) : local);
+      aoEscolher(texto !== undefined ? interpolateTemplate(texto, contato) : local, anexo);
     } catch {
-      aoEscolher(local);
+      aoEscolher(local, anexo);
     }
   };
   if (!aberto) return null;
@@ -89,7 +96,9 @@ export function PainelRespostasRapidas({
             key={r.id}
             type="button"
             className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-casca-raia"
-            onClick={() => void escolher(r.corpo_pronto ?? r.corpo)}
+            onClick={() =>
+              void escolher(r.corpo_pronto ?? r.corpo, r.anexo ? { respostaId: r.id, asset: r.anexo.asset } : undefined)
+            }
           >
             <span className="shrink-0 rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 font-mono text-[12px] text-casca-suave">
               {comBarra(r.atalho)}
@@ -97,6 +106,13 @@ export function PainelRespostasRapidas({
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[14px] text-casca-texto">{r.corpo}</span>
             </span>
+            {r.anexo ? (
+              <Paperclip
+                size={14}
+                aria-label={t("Tem anexo")}
+                className="mt-0.5 shrink-0 text-casca-suave"
+              />
+            ) : null}
           </button>
         ))}
       </div>
