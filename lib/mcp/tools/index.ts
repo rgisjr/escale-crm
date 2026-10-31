@@ -71,6 +71,14 @@ import {
   crmSetWebhookSourceActive,
   crmUpdateStage,
 } from "./operacao";
+import { crmCreateAutomationRule, crmUpdateAutomationRule } from "./automacao-escrita";
+import {
+  crmCreateFollowupFlow,
+  crmGetFollowupFlow,
+  crmListFollowupFlows,
+  crmPublishFollowupFlow,
+  crmUpdateFollowupFlow,
+} from "./fluxos-escrita";
 import {
   crmBookAppointment,
   crmCancelAppointment,
@@ -167,6 +175,13 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmCreateWebhookSource,
   crmSetWebhookSourceActive,
   crmSetAutomationRuleActive,
+  crmCreateAutomationRule,
+  crmUpdateAutomationRule,
+  crmListFollowupFlows,
+  crmGetFollowupFlow,
+  crmCreateFollowupFlow,
+  crmUpdateFollowupFlow,
+  crmPublishFollowupFlow,
   crmScheduleFollowup,
   crmEnrollFollowupFlow,
   crmCancelFollowup,
