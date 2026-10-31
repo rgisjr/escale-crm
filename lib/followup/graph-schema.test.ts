@@ -70,10 +70,10 @@ describe('graph-schema', () => {
         expect(result.success).toBe(true);
       });
 
-      it('rejects duration below 5 min', () => {
+      it('rejects duration below 30 s', () => {
         const result = waitConfigSchema.safeParse({
           mode: 'fixed',
-          duration_ms: 299_999,
+          duration_ms: 29_999,
         });
         expect(result.success).toBe(false);
       });
@@ -1689,5 +1689,20 @@ describe("edit_lead_tag com remover", () => {
   it("recusa tag longa demais em remover", async () => {
     const { editLeadTagConfigSchema } = await import("@/lib/followup/graph-schema");
     expect(editLeadTagConfigSchema.safeParse({ tags: [], remover: ["x".repeat(61)] }).success).toBe(false);
+  });
+});
+
+describe("wait fixo a partir de 30 segundos", () => {
+  it("aceita 30 s", async () => {
+    const { waitConfigSchema } = await import("@/lib/followup/graph-schema");
+    expect(waitConfigSchema.safeParse({ mode: "fixed", duration_ms: 30_000 }).success).toBe(true);
+  });
+  it("recusa menos de 30 s", async () => {
+    const { waitConfigSchema } = await import("@/lib/followup/graph-schema");
+    expect(waitConfigSchema.safeParse({ mode: "fixed", duration_ms: 29_999 }).success).toBe(false);
+  });
+  it("a espera adaptativa continua com o piso de 5 min", async () => {
+    const { waitConfigSchema } = await import("@/lib/followup/graph-schema");
+    expect(waitConfigSchema.safeParse({ mode: "smart", min_ms: 30_000, max_ms: 600_000 }).success).toBe(false);
   });
 });

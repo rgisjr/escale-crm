@@ -91,7 +91,8 @@ export function WaitForm({
           <Input
             id="wait-duration"
             type="number"
-            min={5}
+            min={0.5}
+            step={0.5}
             value={durationMin}
             onChange={(e) => {
               const v = Number(e.target.value);

@@ -4,7 +4,8 @@ import type { FlowNode } from "@/lib/followup/graph-schema";
 export type ConfigOf<T extends FlowNode["type"]> = Extract<FlowNode, { type: T }>["config"];
 
 export function msToMin(ms: number): number {
-  return Math.round(ms / 60_000);
+  // Uma casa decimal: 30 s aparece como 0,5 min em vez de virar 1.
+  return Math.round(ms / 6_000) / 10;
 }
 
 export function minToMs(min: number): number {
