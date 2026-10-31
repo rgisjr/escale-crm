@@ -132,9 +132,9 @@ export const crmListChannels: McpToolDefinition<typeof listarCanaisShape> = {
 
 const variaveisShape = {
   channel_session_id: z.string().uuid().nullable(),
-  valores: z.record(z.string(), z.string()).refine((v) => Object.keys(v).length >= 1 && Object.keys(v).length <= 30, {
-    message: "Informe de 1 a 30 variáveis.",
-  }),
+  valores: z.record(z.string(), z.string()).default({}),
+  /** Chave → asset_id de um arquivo do repositório de mídia (áudio por número). */
+  ativos: z.record(z.string(), z.string().uuid()).optional(),
 };
 
 export const crmSetChannelVariables: McpToolDefinition<typeof variaveisShape> = {
@@ -142,7 +142,8 @@ export const crmSetChannelVariables: McpToolDefinition<typeof variaveisShape> = 
   description:
     "Grava variáveis de um número (ex.: pix_chave, pix_banco, suporte_telefone), usadas como {{canal.pix_chave}} nas " +
     "mensagens automáticas e respostas rápidas. Com channel_session_id=null grava o PADRÃO da organização, que cada " +
-    "número pode sobrescrever. Chaves: minúsculas, números e _ (até 40). `nome` e `telefone` são reservadas.",
+    "número pode sobrescrever. Chaves: minúsculas, números e _ (até 40). `nome` e `telefone` são reservadas. " +
+    "Para áudio por número use `ativos` (`{ bv1: <asset_id> }`), referenciado como `var:bv1` nos passos de envio.",
   inputSchema: variaveisShape,
   category: "write",
   requiresRole: "manager",
@@ -154,14 +155,17 @@ export const crmSetChannelVariables: McpToolDefinition<typeof variaveisShape> = 
       args.valores && typeof args.valores === "object" ? Object.keys(args.valores as Record<string, unknown>) : [],
   }),
   handler: async (input, ctx) => {
+    const total = Object.keys(input.valores).length + Object.keys(input.ativos ?? {}).length;
+    if (total < 1 || total > 30) throw new Error("Informe de 1 a 30 variáveis (valores e ativos somados).");
     await gravarVariaveisDoCanal(ctx.supabase, {
       organizationId: ctx.organizationId,
       channelSessionId: input.channel_session_id,
       valores: input.valores,
+      ...(input.ativos ? { ativos: input.ativos } : {}),
       requestId: ctx.requestId,
       actorUserId: ctx.actor.type === "user" ? ctx.actor.id : null,
     });
-    return { gravadas: Object.keys(input.valores) };
+    return { gravadas: [...Object.keys(input.valores), ...Object.keys(input.ativos ?? {})] };
   },
 };
 

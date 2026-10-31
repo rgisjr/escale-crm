@@ -11,7 +11,8 @@ export const CHAVES_RESERVADAS = ["nome", "telefone"] as const;
 export interface LinhaDeVariavel {
   channel_session_id: string | null;
   chave: string;
-  value_text: string;
+  /** Nulo nas linhas que apontam para um ativo de mídia (`asset_id`): não viram `{{canal.*}}`. */
+  value_text: string | null;
 }
 export interface ContextoDoCanal {
   canal: Record<string, string>;
@@ -23,9 +24,13 @@ export function mesclarVariaveis(
   channelSessionId: string | null,
 ): Record<string, string> {
   const resultado: Record<string, string> = {};
-  for (const l of linhas) if (l.channel_session_id === null) resultado[l.chave] = l.value_text;
+  for (const l of linhas) {
+    if (l.value_text !== null && l.channel_session_id === null) resultado[l.chave] = l.value_text;
+  }
   if (channelSessionId !== null) {
-    for (const l of linhas) if (l.channel_session_id === channelSessionId) resultado[l.chave] = l.value_text;
+    for (const l of linhas) {
+      if (l.value_text !== null && l.channel_session_id === channelSessionId) resultado[l.chave] = l.value_text;
+    }
   }
   return resultado;
 }

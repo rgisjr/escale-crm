@@ -27,7 +27,7 @@ describe("validarVariaveis", () => {
 });
 
 /** Banco falso: `jaExistem` são as chaves que o update encontra; o resto vai para insert. */
-function banco(opcoes: { canalExiste?: boolean; jaExistem?: string[] }) {
+function banco(opcoes: { canalExiste?: boolean; jaExistem?: string[]; ativoExiste?: boolean }) {
   const inserts: Array<Record<string, unknown>> = [];
   const updates: Array<{ valores: Record<string, unknown>; filtros: Record<string, unknown> }> = [];
   const db = {
@@ -52,7 +52,13 @@ function banco(opcoes: { canalExiste?: boolean; jaExistem?: string[] }) {
         inserts.push(v);
         return { error: null };
       };
-      q.maybeSingle = async () => ({ data: tabela === "channel_sessions" && opcoes.canalExiste ? { id: CANAL } : null, error: null });
+      q.maybeSingle = async () => ({
+        data:
+          (tabela === "channel_sessions" && opcoes.canalExiste) || (tabela === "org_media_assets" && opcoes.ativoExiste)
+            ? { id: CANAL }
+            : null,
+        error: null,
+      });
       q.then = (ok: (r: unknown) => unknown) => {
         if (valores) updates.push({ valores, filtros: { ...filtros } });
         const achou = valores && (opcoes.jaExistem ?? []).includes(String(filtros.chave));
@@ -77,7 +83,7 @@ describe("gravarVariaveisDoCanal", () => {
       actorUserId: null,
     });
     expect(updates[0]!.filtros).toMatchObject({ organization_id: ORG, chave: "pix_chave", channel_session_id: CANAL });
-    expect(inserts).toEqual([{ organization_id: ORG, channel_session_id: CANAL, chave: "pix_nome", value_text: "Maria" }]);
+    expect(inserts).toEqual([{ organization_id: ORG, channel_session_id: CANAL, chave: "pix_nome", value_text: "Maria", asset_id: null }]);
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "channel_variables.updated" }));
   });
 
@@ -93,5 +99,30 @@ describe("gravarVariaveisDoCanal", () => {
     const { db, updates } = banco({ jaExistem: ["pix_banco"] });
     await gravarVariaveisDoCanal(db, { organizationId: ORG, channelSessionId: null, valores: { pix_banco: "MP" }, requestId: "r", actorUserId: null });
     expect(updates[0]!.filtros).toMatchObject({ channel_session_id: null });
+  });
+});
+
+describe("gravarVariaveisDoCanal com ativos", () => {
+  const ATIVO = "33333333-3333-4333-8333-333333333333";
+  const entrada = { organizationId: ORG, channelSessionId: CANAL, valores: {}, requestId: "r", actorUserId: null };
+
+  it("ativo de outra organização: recusa sem gravar", async () => {
+    const { db, inserts, updates } = banco({ canalExiste: true, ativoExiste: false });
+    await expect(gravarVariaveisDoCanal(db, { ...entrada, ativos: { bv1: ATIVO } })).rejects.toThrow("ativo_nao_encontrado:bv1");
+    expect(inserts).toHaveLength(0);
+    expect(updates).toHaveLength(0);
+  });
+  it("ativo da organização: insere com asset_id e value_text nulo", async () => {
+    const { db, inserts } = banco({ canalExiste: true, ativoExiste: true });
+    await gravarVariaveisDoCanal(db, { ...entrada, ativos: { bv1: ATIVO } });
+    expect(inserts).toEqual([
+      { organization_id: ORG, channel_session_id: CANAL, chave: "bv1", value_text: null, asset_id: ATIVO },
+    ]);
+  });
+  it("a mesma chave não pode vir em texto e em ativo", async () => {
+    const { db } = banco({ canalExiste: true, ativoExiste: true });
+    await expect(
+      gravarVariaveisDoCanal(db, { ...entrada, valores: { bv1: "x" }, ativos: { bv1: ATIVO } }),
+    ).rejects.toThrow("chave_em_texto_e_ativo:bv1");
   });
 });
