@@ -5754,6 +5754,10 @@ export const DICIONARIO: Traducoes = {
   "Escolha o fluxo de follow-up": { es: "Elige el flujo de seguimiento" },
   "Escolha o plano de tarefas": { es: "Elige el plan de tareas" },
   "Escreva a mensagem": { es: "Escribe el mensaje" },
+  "Sequência de mensagens configurada pelo MCP. Edite pelo assistente.": {
+    es: "Secuencia de mensajes configurada por el MCP. Edítala desde el asistente.",
+  },
+  "mensagens em sequência": { es: "mensajes en secuencia" },
   "Escreva pelo menos uma tag": { es: "Escribe al menos una etiqueta" },
   "Informe o endereço": { es: "Indica la dirección" },
   "Sem título": { es: "Sin título" },

@@ -99,6 +99,7 @@ export function DescricaoDaAcao({ tipo, config }: { tipo: string; config: Record
     case "apply_task_plan":
       return <DescricaoDoPlano config={config} />;
     case "send_whatsapp_message": {
+      if (Array.isArray(config.passos)) return <>{`${config.passos.length} ${t("mensagens em sequência")}`}</>;
       const texto = cfg(config, "template").trim();
       return <>{texto ? `“${texto}”` : t("Escreva a mensagem")}</>;
     }
