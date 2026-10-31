@@ -14,6 +14,7 @@ import type { NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { salvarFluxo } from "@/lib/followup/escrita-de-fluxo";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { patchFollowupFlowSchema } from "@/lib/followup/api-schemas";
@@ -114,69 +115,15 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   }
 
   const supabase = await createClient();
-  const { data: existing, error: fetchErr } = await supabase
-    .from("followup_flow_pointers")
-    .select("id")
-    .eq("id", id)
-    .eq("organization_id", activeOrg.orgId)
-    .maybeSingle();
-  if (fetchErr) return fail("internal_error", fetchErr.message, 500, { requestId });
-  if (!existing) return fail("not_found", t("Fluxo não encontrado."), 404, { requestId });
-
-  const patch = parsed.data;
-  if (Object.keys(patch).length === 0) {
-    const { data: unchanged, error: reloadErr } = await supabase
-      .from("followup_flow_pointers")
-      .select(DETAIL_COLUMNS)
-      .eq("id", id)
-      .eq("organization_id", activeOrg.orgId)
-      .single();
-    if (reloadErr || !unchanged) {
-      return fail("internal_error", reloadErr?.message ?? "reload_failed", 500, { requestId });
-    }
-    return ok(unchanged, { requestId });
-  }
-
-  const update: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
-
-  const { data: updated, error: updErr } = await supabase
-    .from("followup_flow_pointers")
-    .update(update)
-    .eq("id", id)
-    .eq("organization_id", activeOrg.orgId)
-    .select(DETAIL_COLUMNS)
-    .single();
-
-  if (updErr || !updated) {
-    if (updErr?.code === "23505") {
-      return fail("conflict", t("Já existe um fluxo com este nome."), 409, { requestId });
-    }
-    // O banco recusa gatilho de relógio em roteiro de atendimento (0394,
-    // `followup_flow_pointers_roteiro_so_manual`): ele começa na conversa.
-    if (updErr?.code === "23514") {
-      return fail(
-        "validation_failed",
-        t("Roteiro de atendimento começa por palavra-gatilho ou pelo roteador, não por gatilho de follow-up."),
-        422,
-        { requestId },
-      );
-    }
-    return fail("internal_error", updErr?.message ?? "followup_flow_update_failed", 500, {
-      requestId,
-    });
-  }
-
-  void audit({
-    action: "followup_flow.updated",
-    actorUserId: user.id,
+  const resultado = await salvarFluxo(supabase, {
     organizationId: activeOrg.orgId,
-    resourceType: "followup_flow_pointer",
-    resourceId: id,
+    pointerId: id,
+    alteracoes: parsed.data,
+    autor: { userId: user.id },
     requestId,
-    metadata: { fields_changed: Object.keys(patch) },
   });
-
-  return ok(updated, { requestId });
+  if (!resultado.ok) return fail(resultado.codigo, t(resultado.mensagem), resultado.status, { requestId });
+  return ok(resultado.dado, { requestId });
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteCtx): Promise<Response> {

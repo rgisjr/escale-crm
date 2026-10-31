@@ -3,10 +3,9 @@ import { type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fail, noContent, ok } from "@/lib/api/wrappers";
-import { audit } from "@/lib/audit";
 import { requireRole, type RoleCheck } from "@/lib/auth/require-role";
 import { roleAtLeast } from "@/lib/auth/types";
-import { gravarExtras } from "@/lib/escale/conversas/respostas-banco";
+import { atualizarResposta, excluirResposta } from "@/lib/escale/conversas/respostas-escrita";
 import { respostaSchema } from "@/lib/escale/conversas/respostas";
 import { pode } from "@/lib/escale/conversas/setores-banco";
 import { lerUuid } from "@/lib/escale/origens/preferencias";
@@ -89,32 +88,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx): Promise<Response> {
   }
   // Dono nulo só passa na RLS para gerente: quem compartilha pela permissão vai pelo service role (como no POST).
   const db = compartilhaSemSerGerente ? createAdminClient() : p.db;
-  const { error } = await db
-    .from("message_templates")
-    .update({
-      title: r.atalho,
-      shortcut: r.atalho,
-      body: r.corpo,
-      // A resposta pessoal de outra pessoa continua dela; a compartilhada que deixa de ser vira de quem editou.
-      owner_user_id: r.compartilhar ? null : (dono ?? authz.user.id),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("organization_id", authz.org.orgId)
-    .eq("id", id);
-  if (error) return fail("internal_error", error.message, 500, { requestId });
-  try {
-    await gravarExtras(db, authz.org.orgId, id, r);
-  } catch (err) {
-    return fail("internal_error", (err as Error).message, 500, { requestId });
-  }
-  void audit({
-    action: "quick_reply.updated",
-    actorUserId: authz.user.id,
+  const resultado = await atualizarResposta(db, {
     organizationId: authz.org.orgId,
-    resourceType: "message_template",
-    resourceId: id,
+    id,
+    // A resposta pessoal de outra pessoa continua dela; a compartilhada que deixa de ser vira de quem editou.
+    donoUserId: r.compartilhar ? null : (dono ?? authz.user.id),
+    atualizadoPor: authz.user.id,
+    dados: r,
     requestId,
   });
+  if (!resultado.ok) return fail(resultado.codigo, resultado.mensagem, resultado.status, { requestId });
   return ok({ id }, { requestId });
 }
 
@@ -124,19 +107,12 @@ export async function DELETE(_req: NextRequest, ctx: Ctx): Promise<Response> {
   const p = await preparar(ctx);
   if ("erro" in p) return p.erro as Response;
   const { requestId, authz, id, db } = p;
-  const { error } = await db
-    .from("message_templates")
-    .delete()
-    .eq("organization_id", authz.org.orgId)
-    .eq("id", id);
-  if (error) return fail("internal_error", error.message, 500, { requestId });
-  void audit({
-    action: "quick_reply.deleted",
-    actorUserId: authz.user.id,
+  const resultado = await excluirResposta(db, {
     organizationId: authz.org.orgId,
-    resourceType: "message_template",
-    resourceId: id,
+    id,
+    excluidoPor: authz.user.id,
     requestId,
   });
+  if (!resultado.ok) return fail(resultado.codigo, resultado.mensagem, resultado.status, { requestId });
   return noContent(requestId);
 }

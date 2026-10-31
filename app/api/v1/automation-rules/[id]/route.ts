@@ -10,16 +10,9 @@ import type { NextRequest } from "next/server";
 import { ok, fail, noContent } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
-import { autoriaDaMudanca } from "@/lib/operacao/autoria";
+import { atualizarRegra } from "@/lib/automation/regras-escrita";
 import { updateAutomationRuleSchema } from "@/lib/schemas";
-import {
-  acoesQueFechamLaco,
-  MENSAGEM_DA_VERSAO_VELHA,
-  MENSAGEM_DO_LACO_DE_LEAD,
-} from "@/lib/schemas/webhooks";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { encryptRuleActionSecrets } from "@/lib/webhooks/secrets";
 import { traduzir } from "@/lib/i18n/dicionario";
 
 export const dynamic = "force-dynamic";
@@ -73,92 +66,17 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   }
 
   const supabase = await createClient();
-  const { data: existing, error: fetchErr } = await supabase
-    .from("automation_rules")
-    .select("id, trigger_event, trigger_config, actions")
-    .eq("id", id)
-    .eq("organization_id", activeOrg.orgId)
-    .maybeSingle();
-  if (fetchErr) return fail("internal_error", fetchErr.message, 500, { requestId });
-  if (!existing) return fail("not_found", t("Regra não encontrada."), 404, { requestId });
-
-  // O PATCH parcial (só o gatilho, ou só as ações) monta o laço de #1528 pela
-  // porta do lado: o schema só o vê quando os dois vêm juntos. Desligar a regra
-  // (só `is_active`) nunca é barrado.
-  const gravada = existing as { trigger_event: string; actions: { type: string }[] | null };
-  if (
-    (parsed.data.trigger_event !== undefined || parsed.data.actions !== undefined) &&
-    acoesQueFechamLaco(
-      parsed.data.trigger_event ?? gravada.trigger_event,
-      parsed.data.actions ?? gravada.actions ?? [],
-    ).length
-  ) {
-    return fail("invalid_request", t(MENSAGEM_DO_LACO_DE_LEAD), 400, { requestId });
-  }
-
-  const webhookSourceId = parsed.data.trigger_config?.webhook_source_id;
-  if (typeof webhookSourceId === "string") {
-    const { data: source, error: sourceError } = await supabase
-      .from("webhook_sources")
-      .select("id")
-      .eq("id", webhookSourceId)
-      .eq("organization_id", activeOrg.orgId)
-      .maybeSingle();
-    if (sourceError) return fail("internal_error", sourceError.message, 500, { requestId });
-    if (!source) {
-      return fail("invalid_request", t("A fonte escolhida não pertence a esta empresa."), 422, { requestId });
-    }
-  }
-
-  // Secrets de call_webhook nunca ficam em claro no jsonb (migration 0041);
-  // secret_enc existente (round-trip do editor) passa intacto.
-  // A autoria vai junto de TODA escrita, pelo mesmo helper que o agente usa: uma
-  // regra ligada é o estado mais perigoso do sistema, e a tela precisa dizer
-  // quem a ligou (migration 0101).
-  const { versao_lida: versaoLida, ...campos } = parsed.data;
-  const patch: Record<string, unknown> = {
-    ...campos,
-    updated_at: new Date().toISOString(),
-    ...autoriaDaMudanca({ type: "user", id: user.id, role: activeOrg.role }),
-  };
-  if (parsed.data.actions !== undefined) {
-    const safeActions = await encryptRuleActionSecrets(createAdminClient(), parsed.data.actions);
-    if (safeActions === null) {
-      return fail(
-        "encryption_unavailable",
-        t("Não foi possível guardar o segredo do webhook com segurança: a chave de cifra desta instalação não está ativa. Quem administra o servidor resolve rodando o update.sh, que gera e ativa a chave."),
-        422,
-        { requestId },
-      );
-    }
-    patch.actions = safeActions;
-  }
-
-  // Com a versão lida, o UPDATE só casa se a linha ainda for aquela: a checagem
-  // e a escrita são o mesmo comando, sem janela entre elas.
-  let escrita = supabase.from("automation_rules").update(patch).eq("id", id);
-  if (versaoLida !== undefined) escrita = escrita.eq("updated_at", versaoLida);
-  const { data: updated, error: updErr } = await escrita.select("*").maybeSingle();
-  if (updErr) return fail("internal_error", updErr.message, 500, { requestId });
-  if (!updated) {
-    return versaoLida !== undefined
-      ? fail("state_conflict", t(MENSAGEM_DA_VERSAO_VELHA), 409, { requestId })
-      : fail("not_found", t("Regra não encontrada."), 404, { requestId });
-  }
-
-  const { actions: _actionsWithSecrets, ...auditableRule } = campos;
-  void audit({
-    action: "automation.rule_updated",
-    actorUserId: user.id,
+  const resultado = await atualizarRegra(supabase, {
     organizationId: activeOrg.orgId,
-    resourceType: "automation_rule",
-    resourceId: id,
+    regraId: id,
     requestId,
-    // actions fora do audit: config de call_webhook carrega secret plaintext no input.
-    metadata: { ...auditableRule, ...(parsed.data.actions !== undefined ? { actions_changed: true } : {}) },
+    actor: { type: "user", id: user.id, role: activeOrg.role },
+    patch: parsed.data,
   });
-
-  return ok(updated, { requestId });
+  if (!resultado.ok) {
+    return fail(resultado.codigo, t(resultado.mensagem), resultado.status, { requestId });
+  }
+  return ok(resultado.dado, { requestId });
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
