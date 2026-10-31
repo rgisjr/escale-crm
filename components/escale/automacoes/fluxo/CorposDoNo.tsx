@@ -10,9 +10,11 @@ import type { DadosDaAcao, DadosDasCondicoes, DadosDoGatilho } from "@/lib/autom
 import { GATILHO_DE_DATA_DO_FUNIL } from "@/lib/automation/gatilho-de-data-do-funil";
 import { GATILHO_ETAPA_PARADA, GATILHO_SILENCIO } from "@/lib/automation/gatilhos-de-tempo";
 import { opcaoDoEvento } from "@/lib/escale/automacoes/fluxo/gatilhos";
+import { acoesDoGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
+import { tituloDaAcaoNoFluxo } from "@/lib/escale/automacoes/fluxo/paleta";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 
-import { ICONE_DO_GATILHO } from "./visual-do-fluxo";
+import { ICONE_DA_ACAO, ICONE_DO_GATILHO } from "./visual-do-fluxo";
 
 /**
  * FORK ESCALE · Fase 5B: o miolo de cada tipo de nó (07-013, 07-025, 07-027).
@@ -151,5 +153,41 @@ export function CorpoDaAcao({ dados }: { dados: DadosDaAcao }) {
     <p className="line-clamp-3 break-words text-[12px] text-casca-texto-2">
       <DescricaoDaAcao tipo={acao.type} config={acao.config} />
     </p>
+  );
+}
+
+/**
+ * O corpo do passo "Ações" (Clint, ao vivo): a lista das ações do passo, cada uma com o
+ * título e o resumo; vazio, o "+ Adicionar ação" tracejado (o painel é que adiciona).
+ */
+export function CorpoDoGrupo({ dados }: { dados: DadosDaAcao }) {
+  const t = useT();
+  const acoes = acoesDoGrupo(dados);
+  if (acoes.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed border-casca-divisoria py-3 text-center text-[13px] font-medium text-casca-marca-forte">
+        + {t("Adicionar ação")}
+      </p>
+    );
+  }
+  return (
+    <ul className="flex flex-col gap-2" data-testid="acoes-do-no">
+      {acoes.map((acao, i) => {
+        const Icone = ICONE_DA_ACAO[acao.type as ActionType];
+        return (
+          <li key={i} className="flex items-start gap-2 rounded-lg border border-casca-divisoria px-3 py-2">
+            {Icone ? <Icone size={14} className="mt-0.5 shrink-0 text-casca-texto" aria-hidden /> : null}
+            <span className="min-w-0">
+              <span className="block text-[13px] font-medium text-casca-texto">
+                {t(tituloDaAcaoNoFluxo(acao.type) ?? ACTION_LABELS[acao.type as ActionType] ?? acao.type)}
+              </span>
+              <span className="line-clamp-2 block break-words text-[12px] text-casca-texto-2">
+                <DescricaoDaAcao tipo={acao.type} config={acao.config} />
+              </span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

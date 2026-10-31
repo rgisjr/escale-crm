@@ -44,6 +44,17 @@ import {
   type TelaDoGatilho,
 } from "@/lib/automation/desenho-da-regra";
 import { copiaDaCaixa, regraGravadaDe, retratoDoFluxo, toastDaRecusa } from "@/lib/escale/automacoes/fluxo/estado";
+import {
+  PROBLEMA_DO_GRUPO_VAZIO,
+  achatar,
+  acoesDoGrupo,
+  agrupar,
+  contarAcoes,
+  ehGrupo,
+  gruposVazios,
+  idNaTela,
+  novoGrupo,
+} from "@/lib/escale/automacoes/fluxo/grupos";
 import { organizarNaHorizontal } from "@/lib/escale/automacoes/fluxo/layout";
 import { rotaDoFluxo } from "@/lib/escale/automacoes/rotas";
 import { acoesQueFechamLaco, MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
@@ -82,7 +93,7 @@ export interface EstadoDoFluxo {
   selecionado: string | null;
   selecionar: (id: string | null) => void;
   problemasGerais: ProblemaDoDesenho[];
-  adicionar: (passo: ActionType | "condicoes", posicao?: { x: number; y: number }) => void;
+  adicionar: (passo: ActionType | "condicoes" | "grupo", posicao?: { x: number; y: number }) => void;
   ligar: (c: Connection) => void;
   removerNo: (id: string) => void;
   removerLigacao: (id: string) => void;
@@ -108,7 +119,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   const regraGravada = useMemo(() => regraGravadaDe(regra), [regra]);
   // O desenho inicial nasce UMA vez: refetch da lista não pode atropelar edição.
   const inicial = useMemo(
-    () => organizarNaHorizontal(desenhoDaRegra(regraGravada)),
+    () => organizarNaHorizontal(agrupar(desenhoDaRegra(regraGravada))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -131,7 +142,9 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   });
 
   const desenho = useMemo(() => desenhoDaTela(nos, ligacoes), [nos, ligacoes]);
-  const percurso = useMemo(() => percorrer(desenho), [desenho]);
+  // A fila do motor (uma caixa por ação): é ela que se confere e se grava. A tela mostra os grupos.
+  const achatado = useMemo(() => achatar(desenho), [desenho]);
+  const percurso = useMemo(() => percorrer(achatado), [achatado]);
   const evento = percurso.gatilho?.data.kind === "gatilho" ? percurso.gatilho.data.evento : "";
   const sujo = retratoDoFluxo(nome, desenho) !== salvo;
 
@@ -174,35 +187,38 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   );
 
   const adicionar = useCallback(
-    (passo: ActionType | "condicoes", posicao?: { x: number; y: number }) => {
+    (passo: ActionType | "condicoes" | "grupo", posicao?: { x: number; y: number }) => {
       if (passo === "condicoes" && desenho.caixas.some((c) => c.data.kind === "condicoes")) {
         setSelecionado(ID_DAS_CONDICOES);
         toast.info(t("As condições ficam numa caixa só. Acrescente a nova condição nela."));
         return;
       }
-      if (passo !== "condicoes" && acoesQueFechamLaco(evento, [{ type: passo }]).length > 0) {
+      if (passo !== "condicoes" && passo !== "grupo" && acoesQueFechamLaco(evento, [{ type: passo }]).length > 0) {
         toast.error(t(MENSAGEM_DO_LACO_DE_LEAD));
         return;
       }
-      if (passo !== "condicoes" && !posicao && percurso.acoes.length >= MAXIMO_DE_ACOES) {
+      if (passo !== "condicoes" && !posicao && contarAcoes(desenho) >= MAXIMO_DE_ACOES) {
         toast.error(t(PROBLEMAS.acoesDemais));
         return;
       }
       const id = passo === "condicoes" ? ID_DAS_CONDICOES : proximoId(desenho.caixas.map((c) => c.id), "acao");
+      const onde = posicao ?? { x: 0, y: 0 };
       const nova: CaixaDoDesenho =
-        passo === "condicoes"
-          ? {
-              id,
-              type: "condicoes",
-              position: posicao ?? { x: 0, y: 0 },
-              data: { kind: "condicoes", linhas: [{ field: "", op: "eq", value: "" }] },
-            }
-          : {
-              id,
-              type: "acao",
-              position: posicao ?? { x: 0, y: 0 },
-              data: { kind: "acao", acao: defaultActionConfig(passo) as unknown as AcaoDaRegra },
-            };
+        passo === "grupo"
+          ? novoGrupo(id, onde)
+          : passo === "condicoes"
+            ? {
+                id,
+                type: "condicoes",
+                position: onde,
+                data: { kind: "condicoes", linhas: [{ field: "", op: "eq", value: "" }] },
+              }
+            : {
+                id,
+                type: "acao",
+                position: onde,
+                data: { kind: "acao", acao: defaultActionConfig(passo) as unknown as AcaoDaRegra },
+              };
       setSelecionado(id);
       if (posicao) {
         // Soltar no canvas: a caixa fica onde caiu, e a ligação é feita à mão.
@@ -211,7 +227,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       }
       reorganizarDe(inserirDepois(desenho, selecionado, nova));
     },
-    [desenho, evento, percurso.acoes.length, selecionado, aplicar, reorganizarDe, t],
+    [desenho, evento, selecionado, aplicar, reorganizarDe, t],
   );
 
   const ligar = useCallback(
@@ -246,7 +262,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
     (id: string) => {
       const caixa = desenho.caixas.find((c) => c.id === id);
       if (!caixa || caixa.data.kind !== "acao") return;
-      if (percurso.acoes.length >= MAXIMO_DE_ACOES) {
+      if (contarAcoes(desenho) + (ehGrupo(caixa.data) ? acoesDoGrupo(caixa.data).length : 1) > MAXIMO_DE_ACOES) {
         toast.error(t(PROBLEMAS.acoesDemais));
         return;
       }
@@ -254,7 +270,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       reorganizarDe(inserirDepois(desenho, id, copia));
       setSelecionado(copia.id);
     },
-    [desenho, percurso.acoes.length, reorganizarDe, t],
+    [desenho, reorganizarDe, t],
   );
 
   const trocarGatilho = useCallback(
@@ -274,16 +290,24 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   );
 
   const salvar = useCallback(async (): Promise<ResultadoDoSalvar> => {
-    const resultado = validarDesenho({ nome, desenho, regraGravada });
+    const resultado = validarDesenho({ nome, desenho: achatado, regraGravada });
+    // Os problemas vêm da fila do motor; cada um volta para a caixa da tela a que a ação pertence.
+    const problemas: ProblemaDoDesenho[] = [];
+    const juntar = (p: ProblemaDoDesenho) => {
+      const caixa = p.caixa === null ? null : idNaTela(p.caixa);
+      if (!problemas.some((q) => q.caixa === caixa && q.mensagem === p.mensagem)) problemas.push({ caixa, mensagem: p.mensagem });
+    };
+    resultado.problemas.forEach(juntar);
+    gruposVazios(desenho).forEach((c) => juntar({ caixa: c.id, mensagem: PROBLEMA_DO_GRUPO_VAZIO }));
     const porCaixa = new Map<string, ProblemaDoDesenho[]>();
-    for (const p of resultado.problemas) {
+    for (const p of problemas) {
       if (p.caixa) porCaixa.set(p.caixa, [...(porCaixa.get(p.caixa) ?? []), p]);
     }
     setNos((atuais) => atuais.map((n) => ({ ...n, data: { ...n.data, problemas: porCaixa.get(n.id) } })));
-    setProblemasGerais(resultado.problemas.filter((p) => p.caixa === null));
-    if (!resultado.ok) {
+    setProblemasGerais(problemas.filter((p) => p.caixa === null));
+    if (!resultado.ok || problemas.length > 0) {
       setSelecionado(null);
-      toast.error(t(toastDaRecusa(resultado.problemas)));
+      toast.error(t(toastDaRecusa(problemas)));
       return "recusado";
     }
     try {
@@ -313,7 +337,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       /* showApiError já mostrou o toast */
       return "falhou";
     }
-  }, [nome, desenho, regraGravada, regra, versao, atualizar, criar, router, qc, setNos, t]);
+  }, [nome, desenho, achatado, regraGravada, regra, versao, atualizar, criar, router, qc, setNos, t]);
 
   const alternarAtivo = useCallback(
     (ligarRegra: boolean) => {

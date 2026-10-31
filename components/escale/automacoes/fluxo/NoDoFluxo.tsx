@@ -4,11 +4,12 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { NoDaAutomacao } from "@/app/app/webhooks/automacoes/[id]/_components/CaixaDaAutomacao";
 import { ACTION_LABELS, type ActionType } from "@/app/app/webhooks/_components/labels";
 import { useT } from "@/hooks/i18n/useT";
+import { ehGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { tipoDoNo, tituloDaAcaoNoFluxo } from "@/lib/escale/automacoes/fluxo/paleta";
 import { cn } from "@/lib/utils";
 
 import { BarraDoNo } from "./BarraDoNo";
-import { CorpoDaAcao, CorpoDasCondicoes, CorpoDoGatilho, CorpoDoWhatsapp } from "./CorposDoNo";
+import { CorpoDaAcao, CorpoDasCondicoes, CorpoDoGatilho, CorpoDoGrupo, CorpoDoWhatsapp } from "./CorposDoNo";
 import { VISUAL_DO_NO } from "./visual-do-fluxo";
 
 /**
@@ -24,6 +25,7 @@ export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
   const Icone = visual.icone;
   const problemas = data.problemas ?? [];
   const temProblema = problemas.length > 0;
+  const grupo = ehGrupo(data);
 
   let titulo = "";
   if (data.kind === "acao") {
@@ -49,8 +51,8 @@ export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
         <Icone size={18} className={cn("shrink-0", visual.texto)} aria-hidden />
         {data.kind === "gatilho" ? (
           <p className={cn("text-[18px] font-semibold", visual.texto)}>{t("Iniciar quando...")}</p>
-        ) : data.kind === "condicoes" ? (
-          <p className={cn("text-[18px] font-semibold", visual.texto)}>{t("Condições")}</p>
+        ) : data.kind === "condicoes" || grupo ? (
+          <p className={cn("text-[18px] font-semibold", visual.texto)}>{grupo ? t("Ações") : t("Condições")}</p>
         ) : (
           <div className="min-w-0">
             {visual.rotulo ? <p className="text-[11px] text-casca-suave">{t(visual.rotulo)}</p> : null}
@@ -63,6 +65,8 @@ export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
           <CorpoDoGatilho dados={data} />
         ) : data.kind === "condicoes" ? (
           <CorpoDasCondicoes dados={data} evento={data.eventoDaRegra ?? ""} />
+        ) : grupo ? (
+          <CorpoDoGrupo dados={data} />
         ) : tipo === "whatsapp" ? (
           <CorpoDoWhatsapp dados={data} />
         ) : (

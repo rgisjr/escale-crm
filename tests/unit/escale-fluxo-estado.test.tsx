@@ -23,6 +23,8 @@ import { toast } from "sonner";
 
 import { useFluxo } from "@/components/escale/automacoes/fluxo/useFluxo";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
+import { percorrer } from "@/lib/automation/desenho-da-regra";
+import { PROBLEMA_DO_GRUPO_VAZIO, dadosDoGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
 
 const U1 = "11111111-1111-4111-8111-111111111111";
@@ -55,7 +57,8 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 );
 const montar = (r: AutomationRuleRow | null, opcoes: Parameters<typeof useFluxo>[1] = {}) =>
   renderHook(() => useFluxo(r, opcoes), { wrapper });
-const acoesDa = (r: { current: ReturnType<typeof useFluxo> }) => r.current.percurso.acoes.map((c) => c.id);
+/** A fila na tela: o gatilho, as condições e os passos (cada grupo conta como um). */
+const filaDa = (r: { current: ReturnType<typeof useFluxo> }) => percorrer(r.current.desenho).fila.map((c) => c.id);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -95,14 +98,20 @@ describe("useFluxo", () => {
     expect(result.current.sujo).toBe(true);
   });
 
-  it("adicionar sem seleção põe no fim da fila e seleciona; com seleção entra depois dela", () => {
+  it("as duas tags da regra abrem como UM passo 'Ações'; a fila do motor segue com as duas", () => {
     const { result } = montar(regra());
-    act(() => result.current.adicionar("add_tag"));
-    expect(acoesDa(result)).toEqual(["acao-1", "acao-2", "acao-3"]);
-    expect(result.current.selecionado).toBe("acao-3");
+    expect(filaDa(result)).toEqual(["gatilho", "condicoes", "acao-1"]);
+    expect(result.current.percurso.acoes).toHaveLength(2);
+  });
+
+  it("adicionar 'grupo' põe um passo vazio no fim e o seleciona; com seleção entra depois dela", () => {
+    const { result } = montar(regra());
+    act(() => result.current.adicionar("grupo"));
+    expect(filaDa(result)).toEqual(["gatilho", "condicoes", "acao-1", "acao-2"]);
+    expect(result.current.selecionado).toBe("acao-2");
     act(() => result.current.selecionar("acao-1"));
-    act(() => result.current.adicionar("create_task"));
-    expect(acoesDa(result)).toEqual(["acao-1", "acao-4", "acao-2", "acao-3"]);
+    act(() => result.current.adicionar("send_whatsapp_message"));
+    expect(filaDa(result)).toEqual(["gatilho", "condicoes", "acao-1", "acao-3", "acao-2"]);
   });
 
   it("condições entram uma vez só", () => {
@@ -121,10 +130,11 @@ describe("useFluxo", () => {
     expect(result.current.desenho.caixas).toHaveLength(antes);
   });
 
-  it("duplicar copia a ação logo depois e recusa com 10 ações", () => {
+  it("duplicar copia o passo logo depois e recusa quando passaria de 10 ações", () => {
     const { result } = montar(regra());
     act(() => result.current.duplicarNo("acao-1"));
-    expect(acoesDa(result)).toEqual(["acao-1", "acao-3", "acao-2"]);
+    expect(filaDa(result)).toEqual(["gatilho", "condicoes", "acao-1", "acao-2"]);
+    expect(result.current.percurso.acoes).toHaveLength(4);
     const dez = Array.from({ length: 10 }, () => ({ type: "add_tag", config: { tags: ["a"] } }));
     const cheia = montar(regra({ actions: dez }));
     act(() => cheia.result.current.duplicarNo("acao-1"));
@@ -132,12 +142,16 @@ describe("useFluxo", () => {
     expect(toast.error).toHaveBeenCalledWith("Uma automação tem no máximo 10 ações.");
   });
 
-  it("remover o gatilho não faz nada; remover uma ação do meio fecha a fila", () => {
-    const { result } = montar(regra({ actions: [...regra().actions, { type: "add_tag", config: { tags: ["c"] } }] }));
+  it("remover o gatilho não faz nada; remover um passo do meio fecha a fila", () => {
+    const whatsapp = { type: "send_whatsapp_message", config: { channel_session_id: U1, template: "Oi" } };
+    const { result } = montar(
+      regra({ actions: [{ type: "add_tag", config: { tags: ["a"] } }, whatsapp, { type: "add_tag", config: { tags: ["c"] } }] }),
+    );
+    expect(filaDa(result)).toEqual(["gatilho", "condicoes", "acao-1", "acao-2", "acao-3"]);
     act(() => result.current.removerNo("gatilho"));
     expect(result.current.desenho.caixas.some((c) => c.id === "gatilho")).toBe(true);
     act(() => result.current.removerNo("acao-2"));
-    expect(acoesDa(result)).toEqual(["acao-1", "acao-3"]);
+    expect(filaDa(result)).toEqual(["gatilho", "condicoes", "acao-1", "acao-3"]);
   });
 
   it("trocar o gatilho para outro evento apaga as condições; para o mesmo só troca a tela", () => {
@@ -209,6 +223,47 @@ describe("useFluxo", () => {
     expect(h.atualizar.mock.calls[0]![0].versao_lida).toBe("2026-10-30T12:00:00.000Z");
   });
 
+  it("passo 'Ações' vazio é recusado e marcado, sem chamar a API", async () => {
+    const { result } = montar(regra());
+    act(() => result.current.adicionar("grupo"));
+    let resultado = "";
+    await act(async () => {
+      resultado = await result.current.salvar();
+    });
+    expect(resultado).toBe("recusado");
+    expect(h.atualizar).not.toHaveBeenCalled();
+    const no = result.current.nos.find((n) => n.id === "acao-2")!;
+    expect(no.data.problemas?.map((p) => p.mensagem)).toEqual([PROBLEMA_DO_GRUPO_VAZIO]);
+  });
+
+  it("as ações do passo vão para a lista da regra na ordem em que estão no passo", async () => {
+    const { result } = montar(regra());
+    act(() =>
+      result.current.aplicarNoNo(
+        "acao-1",
+        dadosDoGrupo([
+          { type: "add_tag", config: { tags: ["x"] } },
+          { type: "create_task", config: { titulo: "Ligar", vence_em_dias: 1, atribuir_a: "dono_do_lead", prioridade: "medium" } },
+          { type: "remove_tag", config: { tags: ["y"] } },
+        ]),
+      ),
+    );
+    await act(async () => {
+      await result.current.salvar();
+    });
+    expect(h.atualizar.mock.calls[0]![0].actions.map((a: { type: string }) => a.type)).toEqual(["add_tag", "create_task", "remove_tag"]);
+  });
+
+  it("canal entre dois passos 'Ações' mantém a ordem gravada ao salvar sem mexer", async () => {
+    const whatsapp = { type: "send_whatsapp_message", config: { channel_session_id: U1, template: "Oi" } };
+    const acoes = [{ type: "add_tag", config: { tags: ["a"] } }, whatsapp, { type: "add_tag", config: { tags: ["c"] } }];
+    const { result } = montar(regra({ actions: acoes }));
+    await act(async () => {
+      await result.current.salvar();
+    });
+    expect(h.atualizar.mock.calls[0]![0].actions).toEqual(acoes);
+  });
+
   it("organizar chama aoReorganizar", () => {
     const aoReorganizar = vi.fn();
     const { result } = montar(regra(), { aoReorganizar });
@@ -217,4 +272,3 @@ describe("useFluxo", () => {
   });
 });
 
-void U1;

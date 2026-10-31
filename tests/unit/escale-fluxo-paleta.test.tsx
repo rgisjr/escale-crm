@@ -57,31 +57,32 @@ describe("paleta do fluxo", () => {
   });
 });
 
-describe("modal Ações", () => {
-  it("abre em CRM com 4 cartões e troca de aba", async () => {
-    render(<JanelaDeAcoes aberta evento="contact.tag_added" aoFechar={vi.fn()} aoRealizar={vi.fn()} />);
-    expect(screen.getAllByText("Ações").length).toBeGreaterThan(0);
+describe("modal Realizar ação", () => {
+  it("abre em Dados do contato com as abas na vertical; sem rodapé nem botão de confirmar", async () => {
+    render(<JanelaDeAcoes aberta evento="contact.tag_added" aoFechar={vi.fn()} aoEscolher={vi.fn()} />);
+    expect(screen.getAllByText("Realizar ação").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("tab").map((a) => a.textContent)).toEqual(["Dados do contato", "Integrações", "CRM"]);
+    expect(screen.getByText("Adicionar tag")).toBeTruthy();
+    expect(screen.getByText("Remover tag")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).toBeNull();
+    await userEvent.click(screen.getByRole("tab", { name: "Integrações" }));
+    expect(screen.getByText("Enviar Webhook")).toBeTruthy();
+    await userEvent.click(screen.getByRole("tab", { name: "CRM" }));
     for (const titulo of ["Criar ou mover negócio", "Atribuir dono do negócio", "Tarefa interna", "Plano de tarefas"]) {
       expect(screen.getByText(titulo)).toBeTruthy();
     }
-    await userEvent.click(screen.getByRole("tab", { name: "Contatos" }));
-    expect(screen.getByText("Adicionar tag")).toBeTruthy();
-    await userEvent.click(screen.getByRole("tab", { name: "Integrações" }));
-    expect(screen.getByText("Enviar Webhook")).toBeTruthy();
   });
 
-  it("Realizar ação só depois de escolher, e chama aoRealizar com o tipo", async () => {
-    const aoRealizar = vi.fn();
-    render(<JanelaDeAcoes aberta evento="contact.tag_added" aoFechar={vi.fn()} aoRealizar={aoRealizar} />);
-    const realizar = screen.getByRole("button", { name: "Realizar ação" });
-    expect((realizar as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.click(screen.getByText("Tarefa interna"));
-    await userEvent.click(realizar);
-    expect(aoRealizar).toHaveBeenCalledWith("create_task");
+  it("clicar no cartão já escolhe a ação", async () => {
+    const aoEscolher = vi.fn();
+    render(<JanelaDeAcoes aberta evento="contact.tag_added" aoFechar={vi.fn()} aoEscolher={aoEscolher} />);
+    await userEvent.click(screen.getByText("Remover tag"));
+    expect(aoEscolher).toHaveBeenCalledWith("remove_tag");
   });
 
-  it("com gatilho que fecha laço, 'Atribuir dono do negócio' fica travado com a mensagem do laço", () => {
-    render(<JanelaDeAcoes aberta evento="lead.assigned" aoFechar={vi.fn()} aoRealizar={vi.fn()} />);
+  it("com gatilho que fecha laço, 'Atribuir dono do negócio' fica travado com a mensagem do laço", async () => {
+    render(<JanelaDeAcoes aberta evento="lead.assigned" aoFechar={vi.fn()} aoEscolher={vi.fn()} />);
+    await userEvent.click(screen.getByRole("tab", { name: "CRM" }));
     const cartao = screen.getByText("Atribuir dono do negócio").closest("button")!;
     expect(cartao.disabled).toBe(true);
     expect(cartao.getAttribute("title")).toBe(MENSAGEM_DO_LACO_DE_LEAD);

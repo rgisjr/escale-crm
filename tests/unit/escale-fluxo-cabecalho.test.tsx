@@ -49,7 +49,7 @@ vi.mock("@/components/escale/automacoes/fluxo/CanvasDoFluxo", () => ({
       <span data-testid="posicoes">{JSON.stringify(p.fluxo.nos.map((n) => [n.id, n.position]))}</span>
       <button type="button" onClick={() => p.aoClicarNo("gatilho")}>no-gatilho</button>
       <button type="button" onClick={() => p.aoClicarNo("acao-1")}>no-acao-1</button>
-      <button type="button" onClick={() => p.aoClicarNo("acao-2")}>no-acao-2</button>
+      <button type="button" onClick={() => p.aoClicarNo("acao-3")}>no-acao-3</button>
       <button type="button" onClick={p.aoClicarFundo}>fundo</button>
       <button type="button" onClick={() => p.aoSoltar("acoes", { x: 5, y: 6 })}>soltar-acoes</button>
     </div>
@@ -67,6 +67,13 @@ vi.mock("@/components/escale/automacoes/fluxo/painel/PainelDasCondicoes", () => 
 }));
 vi.mock("@/components/escale/automacoes/fluxo/painel/PainelDaMensagem", () => ({
   PainelDaMensagem: () => <div data-testid="painel-mensagem" />,
+}));
+vi.mock("@/components/escale/automacoes/fluxo/painel/PainelDoGrupo", () => ({
+  PainelDoGrupo: (p: { aoMudarRascunho: (s: boolean) => void }) => (
+    <div data-testid="painel-grupo">
+      <button type="button" onClick={() => p.aoMudarRascunho(true)}>mexer-no-painel</button>
+    </div>
+  ),
 }));
 vi.mock("@/components/escale/automacoes/fluxo/painel/PainelDaAcao", () => ({
   PainelDaAcao: (p: { aoMudarRascunho: (s: boolean) => void }) => (
@@ -94,9 +101,11 @@ function regra(over: Partial<AutomationRuleRow> = {}): AutomationRuleRow {
     trigger_event: "contact.tag_added",
     trigger_config: {},
     conditions: [],
+    // As duas tags abrem como UM passo "Ações" (acao-1); o e-mail é um passo próprio (acao-3).
     actions: [
       { type: "add_tag", config: { tags: ["a"] } },
       { type: "add_tag", config: { tags: ["b"] } },
+      { type: "send_email", config: { destinatario: "contato", email_fixo: "", assunto: "Oi", corpo: "Oi", formato: "texto" } },
     ],
     is_active: true,
     last_run_at: null,
@@ -291,6 +300,9 @@ describe("TelaDoFluxo", () => {
     expect(screen.getByTestId("painel-gatilho")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "no-acao-1" }));
     expect(screen.queryByTestId("painel-gatilho")).toBeNull();
+    expect(screen.getByTestId("painel-grupo")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "no-acao-3" }));
+    expect(screen.queryByTestId("painel-grupo")).toBeNull();
     expect(screen.getByTestId("painel-acao")).toBeTruthy();
   });
 
@@ -298,7 +310,7 @@ describe("TelaDoFluxo", () => {
     montar();
     await userEvent.click(screen.getByRole("button", { name: "no-acao-1" }));
     await userEvent.click(screen.getByRole("button", { name: "mexer-no-painel" }));
-    await userEvent.click(screen.getByRole("button", { name: "no-acao-2" }));
+    await userEvent.click(screen.getByRole("button", { name: "no-acao-3" }));
     expect(screen.getByText("Configuração do passo não salva")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Descartar e continuar" }));
     expect(screen.queryByText("Configuração do passo não salva")).toBeNull();
@@ -316,13 +328,12 @@ describe("TelaDoFluxo", () => {
     expect(screen.queryByTestId("painel-gatilho")).toBeNull();
   });
 
-  it("soltar 'Ações' no canvas abre o modal e 'Realizar ação' cria a caixa onde caiu", async () => {
+  it("soltar 'Ações' no canvas cria o passo vazio onde caiu e abre o painel dele", async () => {
     montar();
     await userEvent.click(screen.getByRole("button", { name: "soltar-acoes" }));
-    await userEvent.click(screen.getByText("Tarefa interna"));
-    await userEvent.click(screen.getByRole("button", { name: "Realizar ação" }));
     const posicoes = JSON.parse(screen.getByTestId("posicoes").textContent ?? "[]") as [string, { x: number; y: number }][];
-    expect(posicoes.find(([id]) => id === "acao-3")?.[1]).toEqual({ x: 5, y: 6 });
+    expect(posicoes.find(([id]) => id === "acao-4")?.[1]).toEqual({ x: 5, y: 6 });
+    expect(screen.getByTestId("painel-grupo")).toBeTruthy();
   });
 
   it("o aviso do navegador ao fechar a aba só existe com alterações", async () => {
