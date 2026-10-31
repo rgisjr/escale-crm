@@ -67,12 +67,41 @@ async function baixar(url: string): Promise<{ bytes: Uint8Array; mime: string }>
   return { bytes, mime: mime.split(";")[0]!.trim().toLowerCase() };
 }
 
+interface EntradaDoAtivo {
+  organizationId: string;
+  nome: string;
+  requestId: string;
+  actorUserId: string | null;
+}
+
 /** Baixa da URL (anti-SSRF, 16 MB, 20 s), guarda no bucket privado e registra o ativo na organização. */
 export async function subirAtivoPorUrl(
   admin: SupabaseClient,
-  entrada: { organizationId: string; nome: string; url: string; requestId: string; actorUserId: string | null },
+  entrada: EntradaDoAtivo & { url: string },
 ): Promise<AtivoLido> {
   const { bytes, mime } = await baixar(entrada.url);
+  return guardarAtivo(admin, entrada, bytes, mime);
+}
+
+/** Arquivo enviado pela tela: mesma régua de tipo e tamanho do download por URL. */
+export async function subirAtivoDeArquivo(
+  admin: SupabaseClient,
+  entrada: EntradaDoAtivo & { bytes: Uint8Array; mime: string },
+): Promise<AtivoLido> {
+  const mime = entrada.mime.split(";")[0]!.trim().toLowerCase();
+  const validacao = validarMimeDoAtivo(mime);
+  if (!validacao.ok) throw new Error(validacao.motivo);
+  if (entrada.bytes.byteLength === 0) throw new Error("ativo_vazio");
+  if (entrada.bytes.byteLength > TAMANHO_MAXIMO_DO_ATIVO) throw new Error("ativo_grande_demais");
+  return guardarAtivo(admin, entrada, entrada.bytes, mime);
+}
+
+async function guardarAtivo(
+  admin: SupabaseClient,
+  entrada: EntradaDoAtivo,
+  bytes: Uint8Array,
+  mime: string,
+): Promise<AtivoLido> {
   const id = randomUUID();
   const storagePath = caminhoDoAtivo(entrada.organizationId, id, entrada.nome);
   const { error: erroDoUpload } = await admin.storage

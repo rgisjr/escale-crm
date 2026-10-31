@@ -11,7 +11,10 @@ import {
 } from "@/components/inbox/composer/ContactPickerDialog";
 import { EmojiButton } from "@/components/inbox/composer/EmojiButton";
 import { resolveSlash } from "@/components/inbox/composer/TemplateMenu";
+import { FaixaDoAnexo } from "@/components/escale/conversas/configuracoes/respostas/AnexoDaResposta";
 import { useT } from "@/hooks/i18n/useT";
+import { apiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/types";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import { useSendMessage } from "@/hooks/inbox/useSendMessage";
@@ -28,7 +31,7 @@ import { BarraDeIcones, BOTAO_DO_ICONE } from "./BarraDeIcones";
 import { FaixaAtribuirAMim } from "./FaixaAtribuirAMim";
 import { JanelaModelosDeMensagem } from "./JanelaModelosDeMensagem";
 import { JanelaNotaInterna } from "./JanelaNotaInterna";
-import { PainelRespostasRapidas } from "./PainelRespostasRapidas";
+import { PainelRespostasRapidas, type AnexoEscolhido } from "./PainelRespostasRapidas";
 
 const ALTURA_MAX = 160;
 type Painel = "assistente" | "respostas" | "modelos" | "nota" | null;
@@ -67,6 +70,7 @@ export function CompositorDaCasca({
   const [texto, setTexto] = useState(textoInicial);
   const [painel, setPainel] = useState<Painel>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [anexoDaResposta, setAnexoDaResposta] = useState<AnexoEscolhido | null>(null);
   const [escolhendoContato, setEscolhendoContato] = useState(false);
   const campoRef = useRef<HTMLTextAreaElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
@@ -86,6 +90,7 @@ export function CompositorDaCasca({
     }
     setTexto("");
     setPainel(null);
+    setAnexoDaResposta(null);
   }, [conversationId]);
   useEffect(() => {
     if (slash.open) setPainel("respostas");
@@ -106,9 +111,47 @@ export function CompositorDaCasca({
     setTexto(texto.slice(0, inicio) + trecho + texto.slice(fim));
     requestAnimationFrame(() => el?.focus());
   };
+  /**
+   * Resposta rápida com arquivo: o servidor copia o arquivo (da biblioteca, ou o do número desta conversa)
+   * para a pasta da conversa; o envio sai pelo caminho de mídia de sempre. Áudio não leva legenda, então o
+   * texto vai em seguida; nos demais tipos o texto é a legenda.
+   */
+  const enviarComAnexo = async (anexo: AnexoEscolhido, body: string) => {
+    try {
+      const preparado = await apiClient.post<{
+        data: { media_storage_path: string; media_mime: string; type: "image" | "video" | "audio" | "document" };
+      }>(`/api/v1/respostas-rapidas/${anexo.respostaId}/anexo`, { conversation_id: conversationId });
+      const m = preparado.data;
+      const legenda = m.type === "audio" ? "" : body;
+      await enviar.mutateAsync({
+        conversation_id: conversationId,
+        type: m.type,
+        media_storage_path: m.media_storage_path,
+        media_mime: m.media_mime,
+        ...(legenda ? { body: legenda } : {}),
+        ...(respondendo ? { reply_to_message_id: respondendo.id } : {}),
+      });
+      if (m.type === "audio" && body) {
+        await enviar.mutateAsync({ conversation_id: conversationId, type: "text", body });
+      }
+      setTexto("");
+      setAnexoDaResposta(null);
+      aoCancelarResposta();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError && err.status === 404
+          ? t("Este número não tem o arquivo desta resposta.")
+          : t("Não foi possível enviar o arquivo."),
+      );
+    }
+  };
   const enviarTexto = () => {
     const body = texto.trim();
-    if (!body || enviar.isPending) return;
+    if ((!body && !anexoDaResposta) || enviar.isPending) return;
+    if (anexoDaResposta) {
+      void enviarComAnexo(anexoDaResposta, body);
+      return;
+    }
     enviar.mutate(
       {
         conversation_id: conversationId,
@@ -235,6 +278,14 @@ export function CompositorDaCasca({
         </div>
       ) : null}
       <div className={cn("px-4 pt-3 pb-2", compacto && "px-3 pt-2")}>
+        {anexoDaResposta ? (
+          <div className="mb-2 overflow-hidden rounded-lg bg-casca-busca">
+            <FaixaDoAnexo
+              valor={{ asset: anexoDaResposta.asset }}
+              aoTirar={() => setAnexoDaResposta(null)}
+            />
+          </div>
+        ) : null}
         <textarea
           ref={campoRef}
           value={texto}
@@ -281,7 +332,7 @@ export function CompositorDaCasca({
             className={cn(BOTAO_DO_ICONE, "text-casca-marca")}
             aria-label={t("Enviar")}
             title={t("Enviar")}
-            disabled={!texto.trim() || enviar.isPending}
+            disabled={(!texto.trim() && !anexoDaResposta) || enviar.isPending}
             onClick={enviarTexto}
           >
             <Send size={16} aria-hidden />
@@ -304,8 +355,9 @@ export function CompositorDaCasca({
         aoFechar={() => setPainel(null)}
         termoInicial={slash.open ? slash.query : ""}
         contato={contato}
-        aoEscolher={(s) => {
+        aoEscolher={(s, anexo) => {
           setTexto(s);
+          setAnexoDaResposta(anexo ?? null);
           setPainel(null);
           requestAnimationFrame(() => campoRef.current?.focus());
         }}
