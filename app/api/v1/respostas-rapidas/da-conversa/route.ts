@@ -3,10 +3,13 @@ import { type NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import { contextoDoCanal, renderizarVariaveisDoCanal } from "@/lib/canais/variaveis";
 import { lerRespostas } from "@/lib/escale/conversas/respostas-banco";
-import { canalDaConversa, respostaServe } from "@/lib/escale/conversas/respostas";
+import { canalDaConversa, respostaServe, type RespostaLida } from "@/lib/escale/conversas/respostas";
 import { pode, setorEfetivo } from "@/lib/escale/conversas/setores-banco";
 import { lerUuid } from "@/lib/escale/origens/preferencias";
+import { logger } from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +28,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const { data: conversa } = await supabase
       .from("conversations")
       .select(
-        "id, channel_session_id, channel_sessions:channel_session_id ( provider, social_platform )",
+        "id, channel_session_id, assigned_to_user_id, channel_sessions:channel_session_id ( provider, social_platform )",
       )
       .eq("organization_id", authz.org.orgId)
       .eq("id", conversationId)
@@ -34,6 +37,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const c = conversa as unknown as {
       id: string;
       channel_session_id: string;
+      assigned_to_user_id: string | null;
       channel_sessions: { provider: string | null; social_platform: string | null } | null;
     };
     const [{ setorId }, podeOutrosSetores, todas] = await Promise.all([
@@ -47,8 +51,33 @@ export async function GET(req: NextRequest): Promise<Response> {
     const respostas = todas.filter((r) =>
       respostaServe(r, { canal, setorDaConversa: setorId, setorEscolhido }),
     );
-    return ok({ respostas, setorDaConversa: setorId, podeOutrosSetores }, { requestId });
+    const prontas = await comVariaveisDoCanal(authz.org.orgId, c, respostas);
+    return ok({ respostas: prontas, setorDaConversa: setorId, podeOutrosSetores }, { requestId });
   } catch (err) {
     return fail("internal_error", (err as Error).message, 500, { requestId });
+  }
+}
+
+/**
+ * `corpo_pronto`: o corpo com `{{canal.*}}` e `{{atendente.*}}` do número da conversa
+ * já trocados. O resto (`{{nome}}`, `[DEAL.STAGE]`) segue para o compositor resolver.
+ * Se a leitura do canal falhar, a resposta sai sem `corpo_pronto` e o painel usa o corpo.
+ */
+async function comVariaveisDoCanal(
+  organizationId: string,
+  conversa: { channel_session_id: string; assigned_to_user_id: string | null },
+  respostas: RespostaLida[],
+): Promise<RespostaLida[]> {
+  try {
+    const contexto = await contextoDoCanal(
+      createAdminClient(),
+      organizationId,
+      conversa.channel_session_id,
+      conversa.assigned_to_user_id,
+    );
+    return respostas.map((r) => ({ ...r, corpo_pronto: renderizarVariaveisDoCanal(r.corpo, contexto) }));
+  } catch (err) {
+    logger.warn("[respostas-rapidas] variáveis do canal indisponíveis", { error: (err as Error).message });
+    return respostas;
   }
 }

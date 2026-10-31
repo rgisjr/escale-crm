@@ -27,6 +27,8 @@ import { evaluateConditions, type RuleCondition } from "@/lib/automation/conditi
 import { getAction } from "@/lib/automation/actions";
 import type { ActionResultDetail } from "@/lib/automation/types";
 import { audit } from "@/lib/audit";
+import { canalDaConversaOuDoContato } from "@/lib/canais/canal-da-conversa";
+import { contextoDoCanal } from "@/lib/canais/variaveis";
 import { regraDoEvento } from "@/lib/automation/gatilho-de-data-do-funil";
 import {
   acoesQueFechamLaco,
@@ -64,8 +66,18 @@ interface RuleRow {
   trigger_config?: Record<string, unknown> | null;
 }
 
+/** Só a regra que escreve `{{canal.*}}`/`{{atendente.*}}` paga as leituras do canal. */
+const USA_VARIAVEL_DO_CANAL = /\{\{\s*(canal|atendente)\./;
+export function regraUsaVariavelDoCanal(actions: unknown): boolean {
+  return USA_VARIAVEL_DO_CANAL.test(JSON.stringify(actions ?? []));
+}
+
 /** Hidrata o contexto avaliado pelas condições/ações a partir do entity do evento. */
-export async function buildContext(admin: SupabaseClient, row: EventRow): Promise<Record<string, unknown>> {
+export async function buildContext(
+  admin: SupabaseClient,
+  row: EventRow,
+  opcoes: { comCanal?: boolean } = {},
+): Promise<Record<string, unknown>> {
   const context: Record<string, unknown> = { event: row.payload };
   // Admin client bypassa RLS — todo lookup filtra organization_id do evento
   // (doutrina multi-tenant; um FK cross-org corrompido nunca vaza pro contexto).
@@ -142,7 +154,28 @@ export async function buildContext(admin: SupabaseClient, row: EventRow): Promis
       if (contact) context.contact = contact;
     }
   }
+  // Variáveis do canal e atendente: uma automação serve N canais (lib/canais/variaveis.ts).
+  const canalId = opcoes.comCanal ? await canalDoEvento(admin, row, context) : null;
+  if (canalId !== null) {
+    const dono = (context.lead as { owner_user_id?: string | null } | undefined)?.owner_user_id ?? null;
+    const { canal, atendente } = await contextoDoCanal(admin, org, canalId, dono);
+    context.canal = canal;
+    context.atendente = atendente;
+  }
   return context;
+}
+
+/** Canal do evento: o do payload; senão o da conversa mais recente do contato (não-grupo). */
+async function canalDoEvento(
+  admin: SupabaseClient,
+  row: EventRow,
+  context: Record<string, unknown>,
+): Promise<string | null> {
+  const doPayload = row.payload?.channel_session_id;
+  if (typeof doPayload === "string" && doPayload !== "") return doPayload;
+  const contactId = (context.contact as { id?: string } | undefined)?.id;
+  if (!contactId) return null;
+  return canalDaConversaOuDoContato(admin, row.organization_id, { contactId });
 }
 
 /**
@@ -293,7 +326,9 @@ export async function runAutomationForEvent(
     return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "ok", detail: "no_rules" };
   }
 
-  const context = await buildContext(admin, row);
+  const context = await buildContext(admin, row, {
+    comCanal: todas.some((r) => regraUsaVariavelDoCanal(r.actions)),
+  });
   // O pré-check acima só acha o contato pelo payload (`contact_id`/`conversation_id`).
   // O aniversário (`contact.birthday`) traz o contato em `entity_id`, e o evento de
   // negócio ou de compromisso traz o contato pelo lead/compromisso: o contexto

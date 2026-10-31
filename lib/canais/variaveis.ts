@@ -73,3 +73,20 @@ export async function contextoDoCanal(
   const nomes = await nomesDosAtendentes([atendenteId]);
   return { canal, atendente: { nome: nomes.get(atendenteId) ?? "", id: atendenteId } };
 }
+
+const MARCA_DO_CANAL = /\{\{\s*(canal|atendente)\.([a-z][a-z0-9_]*)\s*\}\}/g;
+
+/**
+ * Troca SÓ `{{canal.*}}` e `{{atendente.*}}`. O resto (`{{nome}}`, `[DEAL.STAGE]`)
+ * fica como está para quem conhece o contato resolver depois: renderizar tudo aqui
+ * apagaria `{{nome}}`, que não tem contato neste contexto. Sem valor, a marcação vira vazio.
+ */
+export function renderizarVariaveisDoCanal(
+  texto: string,
+  contexto: { canal: Record<string, string>; atendente: { nome: string } },
+): string {
+  return texto.replace(MARCA_DO_CANAL, (_marca, grupo: string, chave: string) => {
+    const fonte: Record<string, string> = grupo === "canal" ? contexto.canal : contexto.atendente;
+    return Object.hasOwn(fonte, chave) ? (fonte[chave] ?? "") : "";
+  });
+}
