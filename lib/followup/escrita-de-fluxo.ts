@@ -313,7 +313,10 @@ export async function publicarFluxo(
     .eq("organization_id", organizationId)
     .is("archived_at", null);
   if (erroDeConexoes) return falhaDeEscrita("internal_error", erroDeConexoes.message, 500);
+  const ativos = await ativosDaOrganizacao(admin, organizationId);
+  if (!ativos.ok) return falhaDeEscrita("internal_error", ativos.mensagem, 500);
   const validacao = validateFlowForPublish(graph, {
+    ativos: ativos.dado,
     etapas: citadas.etapas,
     surface,
     roteiro,
@@ -370,4 +373,24 @@ export async function publicarFluxo(
     });
   }
   return { ok: true, dado: { versionId: publicado.version_id, pointer: atual as Record<string, unknown> } };
+}
+
+/** Ids dos arquivos da biblioteca de mídia e chaves de variável que apontam para arquivo, ambos filtrados pela organização. */
+async function ativosDaOrganizacao(
+  admin: SupabaseClient,
+  organizationId: string,
+): Promise<{ ok: true; dado: { ids: Set<string>; chaves: Set<string> } } | { ok: false; mensagem: string }> {
+  const [arquivos, variaveis] = await Promise.all([
+    admin.from("org_media_assets").select("id").eq("organization_id", organizationId),
+    admin.from("channel_variables").select("chave").eq("organization_id", organizationId).not("asset_id", "is", null),
+  ]);
+  if (arquivos.error) return { ok: false, mensagem: arquivos.error.message };
+  if (variaveis.error) return { ok: false, mensagem: variaveis.error.message };
+  return {
+    ok: true,
+    dado: {
+      ids: new Set((arquivos.data ?? []).map((a) => (a as { id: string }).id)),
+      chaves: new Set((variaveis.data ?? []).map((v) => (v as { chave: string }).chave)),
+    },
+  };
 }

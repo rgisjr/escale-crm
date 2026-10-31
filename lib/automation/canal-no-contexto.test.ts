@@ -48,4 +48,11 @@ describe("regraUsaVariavelDoCanal", () => {
     expect(regraUsaVariavelDoCanal([{ type: "x", config: { t: "{{atendente.nome}}" } }])).toBe(true);
     expect(regraUsaVariavelDoCanal(sem)).toBe(false);
   });
+  it("{{canal.*}} dentro de uma sequência de passos também conta", async () => {
+    const { regraUsaVariavelDoCanal } = await import("@/lib/automation/engine");
+    const passos = [
+      { type: "send_whatsapp_message", config: { passos: [{ tipo: "texto", texto: "PIX {{canal.pix_chave}}" }] } },
+    ];
+    expect(regraUsaVariavelDoCanal(passos)).toBe(true);
+  });
 });

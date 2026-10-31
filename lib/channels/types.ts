@@ -3,6 +3,7 @@
 // TIPO atravessa (`import type` some na compilação) — o seam não carrega código
 // do provider. Quando a Fase 3 absorver `lib/waha/`, este é o único ponteiro a
 // mudar de casa.
+import type { Interativo } from "./interativo";
 import type { SendMessageInput } from "@/lib/schemas";
 import type { FetchedMedia } from "@/lib/messaging/media/types";
 import type { OutboundMedia } from "@/lib/waha/media-send";
@@ -56,6 +57,8 @@ export interface ChannelCapabilities {
   costPerMessage: boolean;
   /** O atendente pode editar e apagar para todos uma mensagem já enviada. */
   alteraMensagemEnviada: boolean;
+  /** Botões e lista nativos do WhatsApp. Sem isto, a mensagem sai como o texto numerado de reserva. */
+  interativo: boolean;
 }
 
 /**
@@ -129,6 +132,8 @@ export interface OutboundEnvelope extends ChannelTenantScope {
   kind: OutboundKind;
   body?: string;
   media?: OutboundMedia;
+  /** Botões ou lista nativos — só preenchido quando o canal tem `capabilities.interativo`. */
+  interativo?: Interativo;
   /** Cartão de contato — preenchido quando `kind === "contact"`. */
   contact?: OutboundContact;
   /**

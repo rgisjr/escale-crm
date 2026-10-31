@@ -35,6 +35,8 @@ describe("capabilities do canal intermediado", () => {
       groups: "limited",
       costPerMessage: true,
       alteraMensagemEnviada: false,
+      // O WhatsApp permite, mas o transporte do intermediário ainda não monta `interactive`: sai o texto numerado.
+      interativo: false,
     });
   });
 

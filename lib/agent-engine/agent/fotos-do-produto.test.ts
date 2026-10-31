@@ -187,6 +187,17 @@ describe("corpoDoEnvio — a foto chega ao handler como imagem da conversa", () 
     });
   });
 
+  it("áudio e arquivo seguem o tipo do mime, e metadata extra viaja junto da chave", () => {
+    const audio = corpoDoEnvio(
+      { ...base, body: "", media: { storagePath: "p.ogg", mime: "audio/ogg" }, metadata: { interativo: { tipo: "x" } } },
+      "k",
+    );
+    expect(audio).toMatchObject({ type: "audio", metadata: { interativo: { tipo: "x" }, idempotency_key: "k" } });
+    expect(corpoDoEnvio({ ...base, body: "", media: { storagePath: "p.pdf", mime: "application/pdf" } }, "k")).toMatchObject({
+      type: "document",
+    });
+  });
+
   it("foto sem legenda vai SEM body — o schema do envio recusa corpo vazio", () => {
     const corpo = corpoDoEnvio({ ...base, body: "", media: { storagePath: "p.jpg", mime: "image/jpeg" } }, "k");
     expect("body" in corpo).toBe(false);

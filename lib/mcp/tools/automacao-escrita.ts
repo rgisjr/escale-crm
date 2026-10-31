@@ -33,7 +33,9 @@ export const crmCreateAutomationRule: McpToolDefinition<typeof criarShape> = {
     "Cria uma regra automática, SEMPRE DESLIGADA (is_active=false). Confira com crm_list_automation_rules e ligue " +
     "com crm_set_automation_rule_active depois de um humano aprovar: ligada, ela envia mensagem a clientes sozinha. " +
     "Em send_whatsapp_message use channel_session_id='conversation' para o número da própria conversa, e " +
-    "{{canal.<variavel>}} / {{atendente.nome}} no texto para dados que mudam de número para número.",
+    "{{canal.<variavel>}} / {{atendente.nome}} no texto para dados que mudam de número para número. " +
+    "No lugar de template, `passos` envia uma sequência (até 5) de {tipo:'texto'|'midia'}: midia usa asset " +
+    "(id de crm_upload_media_asset ou 'var:<chave>' para o áudio de cada número) e legenda opcional.",
   inputSchema: criarShape,
   category: "write",
   requiresRole: "manager",

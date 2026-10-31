@@ -26,7 +26,7 @@ function banco(ponteiro: Record<string, unknown> | null) {
   const db = {
     from: (tabela: string) => {
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "eq", "is", "neq", "update"]) q[m] = () => q;
+      for (const m of ["select", "eq", "is", "neq", "not", "update"]) q[m] = () => q;
       q.insert = (v: Record<string, unknown>) => {
         insercoes.push(v);
         return q;

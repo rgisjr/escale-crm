@@ -1,3 +1,4 @@
+import { passosSchema } from '@/lib/automation/envio-de-passos';
 import { z } from 'zod';
 
 import { PRIORIDADES_DA_TAREFA } from '@/lib/tarefas/tipos';
@@ -256,6 +257,11 @@ export const actionConfigSchema = z.discriminatedUnion('mode', [
   z.strictObject({
     mode: z.literal('template'),
     template_id: z.string().uuid(),
+  }),
+  z.strictObject({
+    mode: z.literal('steps'),
+    /** Sequência curta de texto e mídia (e botões/lista); textos com `{{canal.*}}` saem pelo número da conversa. */
+    passos: passosSchema,
   }),
 ]);
 

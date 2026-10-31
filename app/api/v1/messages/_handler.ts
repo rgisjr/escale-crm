@@ -42,6 +42,9 @@ import {
 } from "@/lib/channels";
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/archived";
 import { canalDesativado } from "@/lib/channels/desativado";
+import { CHANNEL_CAPABILITIES } from "@/lib/channels/capabilities";
+import type { ProviderDeMensagem } from "@/lib/channels/types";
+import { interativoDaMensagem } from "@/lib/channels/interativo";
 import { conferirDefinicao } from "@/lib/channels/conferir-definicao";
 import { estadoDaJanela } from "@/lib/channels/janela";
 import { isMediaPathOwnedBy } from "@/lib/messaging/media/upload-validation";
@@ -907,6 +910,10 @@ export async function sendMessageHandler(
   // (`conversations.channel_session_id` é NOT NULL com FK ON DELETE RESTRICT),
   // e ainda assim mantido para não trocar o desfecho desse ramo defensivo.
   const adapter = getAdapter(c.channel_sessions?.provider ?? DEFAULT_CHANNEL_PROVIDER);
+  const interativoDaConversa =
+    input.type === "text" && CHANNEL_CAPABILITIES[(c.channel_sessions?.provider ?? DEFAULT_CHANNEL_PROVIDER) as ProviderDeMensagem]?.interativo === true
+      ? interativoDaMensagem(input.metadata)
+      : null;
   const chatId = adapter.resolveRecipient({
     isGroup: c.is_group,
     groupChatId: c.group_chat_id,
@@ -1185,6 +1192,8 @@ export async function sendMessageHandler(
           providerConversationId: c.provider_conversation_id,
           kind: input.type,
           body: corpoDoCanal(input.body ?? "") ?? "",
+          // Botões/lista nativos só onde o canal os tem; nos demais sai o texto numerado que já está no body.
+          ...(interativoDaConversa ? { interativo: interativoDaConversa } : {}),
           replyToExternalId: citada?.external_id ?? null,
         }));
       }

@@ -8,6 +8,7 @@
  */
 import { z } from "zod";
 import { webhookFormFieldsSchema } from "@/lib/webhooks/formulario";
+import { passosSchema } from "@/lib/automation/envio-de-passos";
 
 import {
   GATILHO_DE_DATA_DO_FUNIL,
@@ -242,11 +243,18 @@ const acoesFixas = [
   z.object({ type: z.literal("create_or_move_lead"), config: z.object({ pipeline_id: z.string().uuid(), stage_id: z.string().uuid() }) }),
   z.object({
     type: z.literal("send_whatsapp_message"),
-    config: z.object({
-      // `conversation` = o número pelo qual a conversa acontece (uma automação, N canais).
-      channel_session_id: z.union([z.string().uuid(), z.literal("conversation")]),
-      template: z.string().min(1).max(2000),
-    }),
+    config: z
+      .object({
+        // `conversation` = o número pelo qual a conversa acontece (uma automação, N canais).
+        channel_session_id: z.union([z.string().uuid(), z.literal("conversation")]),
+        template: z.string().min(1).max(2000).optional(),
+        /** Sequência curta de texto e mídia (e botões/lista), no lugar do texto único. */
+        passos: passosSchema.optional(),
+      })
+      .refine((c) => (c.template === undefined) !== (c.passos === undefined), {
+        message: "Informe o texto da mensagem ou a sequência de passos (um dos dois).",
+        path: ["template"],
+      }),
   }),
   // #2726 — o e-mail como SAÍDA. O transporte não é configuração da regra: ele
   // já existe em `lib/email` (SMTP ou Resend, escolhido em Admin › E-mail), e

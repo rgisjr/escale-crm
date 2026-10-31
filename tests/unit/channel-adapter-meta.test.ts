@@ -183,6 +183,27 @@ describe("adapter meta_cloud — envio", () => {
     expect(corpo).not.toHaveProperty("session");
   });
 
+  it("lista interativa vai como type:interactive; sem interativo continua type:text", async () => {
+    configurar();
+    const spy = stubFetch({ messages: [{ id: "wamid.I" }] });
+    await a().send({
+      organizationId: ORG, sessionRef: "x", to: "5531998966398", kind: "text", body: "Qual aparelho?\n\n1 - TV",
+      interativo: {
+        tipo: "lista", corpo: "Qual aparelho?", botaoDaLista: "Escolher", linhas: [{ id: "tv", titulo: "TV" }],
+      },
+    });
+    const corpo = JSON.parse(spy.mock.calls[0]![1].body as string) as Record<string, unknown>;
+    expect(corpo).toMatchObject({
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: { text: "Qual aparelho?" },
+        action: { button: "Escolher", sections: [{ rows: [{ id: "tv", title: "TV" }] }] },
+      },
+    });
+    expect(corpo).not.toHaveProperty("text");
+  });
+
   it("áudio leva voice:true — sem isso vira anexo de música, não nota de voz", async () => {
     configurar();
     const spy = stubFetch({ messages: [{ id: "wamid.A" }] });

@@ -29,7 +29,11 @@ import type { PlanoDeTarefas } from "@/lib/tarefas/plano";
 
 export type ActionItem =
   | { type: "create_or_move_lead"; config: { pipeline_id: string; stage_id: string } }
-  | { type: "send_whatsapp_message"; config: { channel_session_id: string; template: string } }
+  | {
+      type: "send_whatsapp_message";
+      // `passos` (sequência de texto, mídia e botões) só é configurada pelo MCP: o editor preserva e avisa.
+      config: { channel_session_id: string; template?: string; passos?: unknown[] };
+    }
   // #2726 — o e-mail de saída: mesmo campo que a irmã de WhatsApp (`assunto`/
   // `corpo` no lugar do `template`), e `email_fixo` só preenche quando o
   // destinatário é o endereço gravado na regra.
@@ -203,14 +207,15 @@ function AdicionarVariaveis({ aoEscolher }: { aoEscolher: (token: string) => voi
 function SendWhatsappForm({
   config,
   onChange,
-}: FormProps<{ channel_session_id: string; template: string }>) {
+}: FormProps<{ channel_session_id: string; template?: string; passos?: unknown[] }>) {
   const t = useT();
   const { data: sessions } = useChannelSessions();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const temPassos = Array.isArray(config.passos);
 
   const insertVar = (token: string) => {
     const el = textareaRef.current;
-    const current = config.template;
+    const current = config.template ?? "";
     const start = el?.selectionStart ?? current.length;
     const end = el?.selectionEnd ?? current.length;
     const next = current.slice(0, start) + token + current.slice(end);
@@ -247,13 +252,18 @@ function SendWhatsappForm({
           </p>
         ) : null}
       </div>
+      {temPassos ? (
+        <p className="text-xs text-muted-foreground">
+          {t("Sequência de mensagens configurada pelo MCP. Edite pelo assistente.")}
+        </p>
+      ) : (
       <div className="space-y-1">
         <Label>{t("Mensagem")}</Label>
         <AdicionarVariaveis aoEscolher={insertVar} />
         <Textarea
           ref={textareaRef}
           rows={4}
-          value={config.template}
+          value={config.template ?? ""}
           onChange={(e) => onChange({ ...config, template: e.target.value })}
           placeholder="Oi [CONTACT.FIRST_NAME], tudo bem?"
         />
@@ -264,6 +274,7 @@ function SendWhatsappForm({
           {t("Respeitamos a janela de envio e o limite diário configurados para esse número em Conexões — fora da janela, a mensagem espera a próxima.")}
         </p>
       </div>
+      )}
     </div>
   );
 }
