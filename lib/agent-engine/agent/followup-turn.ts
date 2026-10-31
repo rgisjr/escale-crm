@@ -38,6 +38,8 @@ import { definicaoNaConexao } from '@/lib/channels/linha-do-espelho';
 import { estadoDaJanela } from '@/lib/channels/janela';
 import { renderTemplateBody } from '@/lib/channels/meta/render-template';
 import { contextoDoContato, renderizarTextoDeFollowup } from '@/lib/automation/texto-do-followup';
+import { proximaAberturaComercial } from '@/lib/canais/horario-comercial';
+import { faixasComerciaisPg, fusoDoCanalPg } from '@/lib/canais/horario-comercial-pg';
 import { isStatusSendable } from '@/lib/channels/meta/template-binding';
 import { deriveTemplateContract } from '@/lib/channels/meta/template-contract';
 import { camadaLigada, lerCamadasDaOrg } from '../guardrails/camadas-da-org';
@@ -563,6 +565,56 @@ export function createFollowupTurnHandler(deps: FollowupTurnDeps) {
             enrollmentId: payload.followup_enrollment_id,
             nodeId: payload.node_id,
             result: { kind: 'deferred', until: proximaAbertura, reason: 'followup_send_window' },
+          });
+          return;
+        }
+      }
+    }
+
+    // Horário comercial por dia da semana (terceira régua do envio automático, só do número desta
+    // conversa): sem faixa configurada não restringe nada. O adiamento volta ao enrollment pelo mesmo
+    // caminho da janela própria — sem isso o dead-man leria a espera como worker morto.
+    if (payload.followup_enrollment_id !== undefined && payload.purpose === 'send_message') {
+      const faixas = await faixasComerciaisPg(pool, tenantId, target.channelSessionId);
+      if (faixas.length > 0) {
+        const runLog = withFields(deps.log, {
+          job_id: job.id,
+          tenant_id: tenantId,
+          lead_id: leadId,
+          enrollment_id: payload.followup_enrollment_id,
+        });
+        const fuso = await fusoDoCanalPg(
+          pool,
+          tenantId,
+          target.channelSessionId,
+          await fusoDaOrganizacao(pool, tenantId, runLog),
+        );
+        const abertura = proximaAberturaComercial(clock(), fuso, faixas);
+        if (abertura !== null) {
+          const complete = deps.completeFollowupTurn;
+          if (!complete || payload.node_id === undefined) {
+            throw new Error(
+              'follow-up adiado pelo horário comercial sem completeFollowupTurn/node_id — o enrollment não saberia do adiamento',
+            );
+          }
+          await rescheduleReentry(pool, {
+            tenantId,
+            leadId,
+            jobId: job.id,
+            at: abertura,
+            payload: job.payload,
+          });
+          runLog.info('follow-up adiado pelo horário comercial do número', {
+            next_run_at: abertura.toISOString(),
+            timezone: fuso,
+          });
+          await complete(pool, {
+            jobId: job.id,
+            jobClaim: claimOfJob(job),
+            organizationId: tenantId,
+            enrollmentId: payload.followup_enrollment_id,
+            nodeId: payload.node_id,
+            result: { kind: 'deferred', until: abertura, reason: 'business_hours' },
           });
           return;
         }

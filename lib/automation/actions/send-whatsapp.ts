@@ -8,6 +8,7 @@ import { fontesDaAutomacao } from "@/lib/automation/fontes-da-automacao";
 import { serviceForAutomation } from "@/lib/atendimento/origem-automacao";
 import { checkDailyLimit, espacarEnvio } from "@/lib/automation/throttle";
 import { adiarAteAJanelaAbrir } from "@/lib/automation/janela-do-canal";
+import { adiarAteHorarioComercial } from "@/lib/canais/horario-comercial";
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import { reportarEnvio, type MensagemEnviada } from "@/lib/automation/desfecho-do-envio";
 import { checarGuardasDeContato } from "@/lib/automation/guarda-do-contato";
@@ -25,7 +26,11 @@ async function postponeUntil(ctx: ActionCtx, config: Record<string, unknown>): P
   // A janela vem dos knobs DO NÚMERO (fuso do tenant, domingo configurável) —
   // a mesma régua da tela de Conexões e do agente. Ver janela-do-canal.ts.
   const foraDaJanela = await adiarAteAJanelaAbrir(ctx.admin, ctx.organizationId, sessionId);
-  if (foraDaJanela) return foraDaJanela;
+  // O horário comercial por dia da semana é a terceira régua: o envio só sai quando as DUAS estão abertas,
+  // então segura até a mais tardia das duas aberturas.
+  const foraDoHorario = await adiarAteHorarioComercial(ctx.admin, ctx.organizationId, sessionId);
+  const aberturas = [foraDaJanela, foraDoHorario].filter((a): a is string => a !== null);
+  if (aberturas.length > 0) return aberturas.reduce((a, b) => (new Date(a) >= new Date(b) ? a : b));
 
   const daily = await checkDailyLimit(ctx.admin, ctx.organizationId, sessionId);
   return daily.allowed ? null : (daily.retry_at ?? null);

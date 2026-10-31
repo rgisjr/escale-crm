@@ -1264,6 +1264,7 @@ export const AUDIT_ACTIONS = [
   "dashboard.template_deleted",
   "channel_variables.updated",
   "followup_flow.published_by_mcp",
+  "channel_business_hours.updated",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

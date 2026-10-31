@@ -317,6 +317,17 @@ export const TOOLS_OPERACAO = declararTools([
     pacotes: ["organizar"],
   },
 
+  {
+    name: "crm_set_channel_business_hours",
+    category: "write",
+    rotulo: "Definir o horário comercial de um número",
+    explicacao:
+      "Escolhe em quais dias e horas as mensagens automáticas podem sair por um número. Fora do horário, elas esperam a próxima abertura.",
+    oQueToca: "Números de WhatsApp",
+    risco: "atencao",
+    pacotes: ["organizar"],
+  },
+
   // ---- time ----
   {
     name: "crm_list_team_members",

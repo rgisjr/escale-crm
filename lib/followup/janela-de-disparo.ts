@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { proximaAberturaDoFollowup } from "@/lib/agent-engine/agent/janela-de-followup";
 import { janelaDeEnvioAberta, proximaAberturaDaJanela } from "@/lib/agent-engine/pacing/engine";
 import { knobsDoCanal } from "@/lib/automation/janela-do-canal";
+import { lerHorarioComercial, proximaAberturaComercial } from "@/lib/canais/horario-comercial";
 import { fusoUtilizavel } from "@/lib/tempo/fusos";
 
 /**
@@ -46,7 +47,7 @@ import { fusoUtilizavel } from "@/lib/tempo/fusos";
 export interface AdiamentoPorJanela {
   /** Instante da próxima abertura — vira `run_after` do job e `until` do enrollment. */
   until: Date;
-  /** `outside_window` (canal) ou `followup_send_window` (faixa do agente). */
+  /** `outside_window` (canal), `followup_send_window` (faixa do agente) ou `business_hours` (horário comercial do canal). */
   reason: string;
 }
 
@@ -163,6 +164,9 @@ export async function decidirAdiamentoPorJanela(
     fuso = fusoUtilizavel((org as { timezone?: string | null } | null)?.timezone);
   }
 
+  // Horário comercial por dia da semana (terceira régua): sem faixa configurada, não restringe.
+  const faixasComerciais = sessionId === null ? [] : await lerHorarioComercial(admin, entrada.organizationId, sessionId);
+
   let instante = agora;
   let motivo: string | null = null;
   let antesDaAberturaDoCanal = agora;
@@ -177,6 +181,13 @@ export async function decidirAdiamentoPorJanela(
     if (aberturaDaFaixa !== null) {
       instante = aberturaDaFaixa;
       motivo = "followup_send_window";
+      continue;
+    }
+    const aberturaComercial =
+      knobs === null ? null : proximaAberturaComercial(instante, knobs.timezone, faixasComerciais);
+    if (aberturaComercial !== null) {
+      instante = aberturaComercial;
+      motivo = "business_hours";
       continue;
     }
     if (motivo === null) return null;

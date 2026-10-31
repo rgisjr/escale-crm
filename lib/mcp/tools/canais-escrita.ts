@@ -8,6 +8,8 @@
 import { z } from "zod";
 
 import { gravarVariaveisDoCanal } from "@/lib/canais/variaveis-escrita";
+import { faixasDosBlocos, lerHorarioComercial } from "@/lib/canais/horario-comercial";
+import { gravarHorarioComercial } from "@/lib/canais/horario-comercial-escrita";
 import { mesclarVariaveis, type LinhaDeVariavel } from "@/lib/canais/variaveis";
 import { responsavelDoCanal } from "@/lib/canais/responsavel";
 import { criarFunil } from "@/lib/pipelines/criar-funil";
@@ -72,7 +74,7 @@ export const crmListChannels: McpToolDefinition<typeof listarCanaisShape> = {
   name: "crm_list_channels",
   description:
     "Lista os números/canais da organização: nome, telefone, provedor, situação, QUEM responde por ele (escolhido em " +
-    "Configurações › Atendimento) e as variáveis do canal ({{canal.<chave>}}) com o valor cortado em 40 caracteres.",
+    "Configurações › Atendimento), o horário comercial por dia da semana e as variáveis do canal ({{canal.<chave>}}) com o valor cortado em 40 caracteres.",
   inputSchema: listarCanaisShape,
   category: "read",
   requiresRole: "manager",
@@ -98,6 +100,7 @@ export const crmListChannels: McpToolDefinition<typeof listarCanaisShape> = {
     const ids = responsaveis.flatMap((r) => (r.tipo === "unico" ? [r.userId] : r.tipo === "varios" ? r.userIds : []));
     const nomes = await nomesDosAtendentes(ids);
     const nomeDe = (id: string): string => nomes.get(id) ?? id.slice(0, 8);
+    const grades = await Promise.all(lidos.map((c) => lerHorarioComercial(ctx.supabase, ctx.organizationId, c.id)));
 
     return {
       canais: lidos.map((c, i) => {
@@ -109,6 +112,11 @@ export const crmListChannels: McpToolDefinition<typeof listarCanaisShape> = {
           telefone: c.phone_number,
           provedor: c.provider,
           situacao: c.status,
+          horario_comercial: grades[i]!.map((f) => ({
+            dia: f.diaDaSemana,
+            das: `${String(Math.floor(f.inicioMin / 60)).padStart(2, "0")}:${String(f.inicioMin % 60).padStart(2, "0")}`,
+            ate: `${String(Math.floor(f.fimMin / 60)).padStart(2, "0")}:${String(f.fimMin % 60).padStart(2, "0")}`,
+          })),
           responsaveis: r.tipo === "unico" ? [nomeDe(r.userId)] : r.tipo === "varios" ? r.userIds.map(nomeDe) : [],
           variaveis: Object.fromEntries(
             Object.entries(variaveis).map(([chave, valor]) => [
@@ -154,5 +162,44 @@ export const crmSetChannelVariables: McpToolDefinition<typeof variaveisShape> = 
       actorUserId: ctx.actor.type === "user" ? ctx.actor.id : null,
     });
     return { gravadas: Object.keys(input.valores) };
+  },
+};
+
+const horarioShape = {
+  channel_session_id: z.string().uuid(),
+  /** Vazio = sem horário comercial (envia dentro da janela normal do número). */
+  blocos: z
+    .array(
+      z.object({
+        dias: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+        das: z.string().regex(/^\d{1,2}:\d{2}$/),
+        ate: z.string().regex(/^\d{1,2}:\d{2}$/),
+      }),
+    )
+    .max(14),
+};
+
+export const crmSetChannelBusinessHours: McpToolDefinition<typeof horarioShape> = {
+  name: "crm_set_channel_business_hours",
+  description:
+    "Define o horário comercial de um número, por dia da semana (0=domingo … 6=sábado), que vale para mensagens " +
+    "automáticas (regras e fluxos): fora dele a mensagem espera a próxima abertura. Troca a grade INTEIRA do número; " +
+    "blocos vazios remove a restrição. Ex.: {dias:[1,2,3,4,5], das:'09:30', ate:'18:00'}. Horas em HH:MM no fuso da empresa; " +
+    "'24:00' só como fim.",
+  inputSchema: horarioShape,
+  category: "write",
+  requiresRole: "manager",
+  requiresScope: "mcp:write",
+  handler: async (input, ctx) => {
+    const expandido = faixasDosBlocos(input.blocos);
+    if (!expandido.ok) throw new Error(`validation_failed: ${expandido.motivo}`);
+    await gravarHorarioComercial(ctx.supabase, {
+      organizationId: ctx.organizationId,
+      channelSessionId: input.channel_session_id,
+      faixas: expandido.faixas,
+      requestId: ctx.requestId,
+      actorUserId: ctx.actor.type === "user" ? ctx.actor.id : null,
+    });
+    return { faixas: expandido.faixas.length };
   },
 };
