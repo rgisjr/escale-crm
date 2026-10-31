@@ -46,6 +46,8 @@ const TAG = "designer-e2e";
 const TITULO = "Ligar para {{contact.name}}";
 
 async function login(page: Page, email: string): Promise<void> {
+  // FORK ESCALE · Fase 5B: o spec prova o designer ORIGINAL; sem o cookie, a casca (padrão desde 24/10) abre o fluxo novo (D20).
+  await page.context().addCookies([{ name: "escale_menu", value: "lateral", url: APP_URL }]);
   await page.goto(`${APP_URL}/login`);
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(creds.password);
