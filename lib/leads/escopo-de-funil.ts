@@ -128,6 +128,21 @@ export const ALVO_DE_FUNIL: Record<string, AlvoDeFunil> = {
 
   // ---- não têm funil, e isso é declarado ----
   crm_send_whatsapp_message: "sem_funil",
+  // Configuração da operação por MCP (regras, fluxos, funis, respostas rápidas, números e biblioteca de mídia):
+  // não recebem `lead_id` nem `pipeline_id` de negócio. A barreira delas é outra — `requiresRole: manager` +
+  // `apenasHumano` no catálogo as tiram do alcance do agente publicado, e a regra/fluxo nasce desligada.
+  crm_create_automation_rule: "sem_funil",
+  crm_update_automation_rule: "sem_funil",
+  crm_create_followup_flow: "sem_funil",
+  crm_update_followup_flow: "sem_funil",
+  crm_publish_followup_flow: "sem_funil",
+  crm_create_pipeline: "sem_funil",
+  crm_create_quick_reply: "sem_funil",
+  crm_update_quick_reply: "sem_funil",
+  crm_delete_quick_reply: "sem_funil",
+  crm_set_channel_variables: "sem_funil",
+  crm_set_channel_business_hours: "sem_funil",
+  crm_upload_media_asset: "sem_funil",
   // Abre conversa nova (contato pode nem ter negócio ainda) e manda a primeira
   // mensagem — não recebe `lead_id` nem `pipeline_id`. Como as de configuração
   // logo abaixo, a barreira dela é OUTRA: `requiresRole: manager` +

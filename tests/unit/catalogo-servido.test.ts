@@ -58,6 +58,7 @@ describe("juntar as duas metades do catálogo", () => {
       pacotes: ["atender"],
       marcavel: true,
       motivo_nao_marcavel: null,
+      apenas_humano: false,
     });
   });
 

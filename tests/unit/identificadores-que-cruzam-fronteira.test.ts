@@ -188,6 +188,9 @@ const SITES: { arquivo: string; fronteira: string; papel?: "gerador" | "validado
   // FORK ESCALE · Fase 2B: o CSV da exportação em massa. Chave `{org}/{ação}/{nome}.csv`: org e ação são uuids
   // da própria linha, e o nome sai de `nomeDoArquivoDeContatos` (data e hora numéricas).
   { arquivo: "lib/escale/massa/executar.ts", fronteira: "storage.chave-de-objeto" },
+  // FORK ESCALE · biblioteca de mídia: `{org}/assets/{uuid}/{nome limpo}` — org e uuid são da própria linha e o nome sai de
+  // `caminhoDoAtivo` (sem acento, barra nem `..`).
+  { arquivo: "lib/midia/ativos-banco.ts", fronteira: "storage.chave-de-objeto" },
   // Chave de idempotência: os geradores (manda UUID) e os validadores (exige UUID).
   { arquivo: "app/onboarding/connect-whatsapp/_client.tsx", fronteira: "api.idempotency-key", papel: "gerador" },
   { arquivo: "components/extensions/ExtensionsManager.tsx", fronteira: "api.idempotency-key", papel: "gerador" },

@@ -98,6 +98,12 @@ export interface CapacidadeSelecionavel {
    * capacidade à mão (teste, catálogo de terceiro) não tem como saber disto.
    */
   marcavel?: boolean;
+  /**
+   * `true` = a capacidade é operada por pessoa (pelo MCP) e o turno do agente nem a monta
+   * (`lib/ai/runtime/tools.ts`). Ela continua visível e marcável à mão, mas o PACOTE não a oferece: ligar a
+   * jornada não pode gastar vaga do teto com o que o agente nunca chama. Ausente = conta.
+   */
+  apenasHumano?: boolean;
 }
 
 export type EstadoPacote = "ligado" | "parcial" | "desligado";
@@ -106,7 +112,7 @@ function doPacote(
   catalogo: ReadonlyArray<CapacidadeSelecionavel>,
   pacote: ToolBundle,
 ): CapacidadeSelecionavel[] {
-  return catalogo.filter((c) => c.pacotes.includes(pacote) && c.marcavel !== false);
+  return catalogo.filter((c) => c.pacotes.includes(pacote) && c.marcavel !== false && c.apenasHumano !== true);
 }
 
 /** As que o toggle do pacote liga sozinho — tudo que não é `critico`. */

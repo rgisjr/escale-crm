@@ -77,6 +77,9 @@ function makeDb(pointers: Row[], versions: Row[], stages: Row[] = [], conexoes: 
     // O publish lê os providers das conexões: o plano B da IA só é exigido de
     // quem tem canal com janela de 24 h (revisão do #1729).
     channel_sessions: conexoes,
+    // O publish confere a biblioteca de mídia da organização (passos de áudio/arquivo).
+    org_media_assets: [],
+    channel_variables: [],
   };
 
   function builder(table: string) {
@@ -193,6 +196,10 @@ function makeDb(pointers: Row[], versions: Row[], stages: Row[] = [], conexoes: 
       },
       is(col: string, val: null) {
         filters.push([col, val]);
+        return b;
+      },
+      // `not(col, "is", null)`: o mock só precisa deixar a cadeia passar (as tabelas de mídia estão vazias).
+      not(_col: string, _op: string, _val: unknown) {
         return b;
       },
       in(col: string, vals: unknown[]) {

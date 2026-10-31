@@ -262,6 +262,7 @@ export const TOOLS_OPERACAO = declararTools([
     oQueToca: "Fluxos de follow-up",
     risco: "atencao",
     pacotes: ["escalar", "organizar"],
+    apenasHumano: true,
   },
   {
     name: "crm_update_followup_flow",
@@ -295,6 +296,7 @@ export const TOOLS_OPERACAO = declararTools([
     oQueToca: "Funil de vendas",
     risco: "atencao",
     pacotes: ["organizar"],
+    apenasHumano: true,
   },
   {
     name: "crm_list_channels",
@@ -305,6 +307,7 @@ export const TOOLS_OPERACAO = declararTools([
     oQueToca: "Números de WhatsApp",
     risco: "seguro",
     pacotes: ["organizar", "escalar"],
+    apenasHumano: true,
   },
   {
     name: "crm_set_channel_variables",
@@ -315,6 +318,7 @@ export const TOOLS_OPERACAO = declararTools([
     oQueToca: "Números de WhatsApp",
     risco: "atencao",
     pacotes: ["organizar"],
+    apenasHumano: true,
   },
 
   {
@@ -326,6 +330,7 @@ export const TOOLS_OPERACAO = declararTools([
     oQueToca: "Números de WhatsApp",
     risco: "atencao",
     pacotes: ["organizar"],
+    apenasHumano: true,
   },
 
   {
@@ -337,6 +342,7 @@ export const TOOLS_OPERACAO = declararTools([
     oQueToca: "Biblioteca de mídia",
     risco: "atencao",
     pacotes: ["organizar"],
+    apenasHumano: true,
   },
   {
     name: "crm_list_media_assets",
@@ -346,6 +352,7 @@ export const TOOLS_OPERACAO = declararTools([
     oQueToca: "Biblioteca de mídia",
     risco: "seguro",
     pacotes: ["organizar"],
+    apenasHumano: true,
   },
 
   // ---- time ----

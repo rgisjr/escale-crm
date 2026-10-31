@@ -83,6 +83,14 @@ const MOTIVO_DA_PARADA: Record<string, string> = {
   ia_indisponivel:
     "A IA não está configurada nesta instalação — cadastre uma chave em Provedores de IA.",
   texto_vazio: "A IA não devolveu texto. Revise o contexto que você escreveu para ela.",
+  passos_invalidos:
+    "A sequência de mensagens desta ação está inválida. Abra a automação e revise os passos.",
+  sem_canal:
+    "Não há conversa nem número para tirar o responsável do canal desta ação.",
+  sem_responsavel_no_canal:
+    "Este número não tem responsável definido. Escolha o responsável em Conexões.",
+  varios_responsaveis:
+    "Este número tem mais de um responsável, então não dá para escolher um sozinho. Deixe só um em Conexões ou escolha a pessoa na ação.",
   /*
    * Os motivos abaixo chegam à tela pelos mesmos dois canais que os de cima
    * (`detail.reason` e `action.error`) e NÃO tinham frase: quem opera a

@@ -22,7 +22,7 @@ export const TOOLS_ATENDIMENTO = declararTools([
       "Lista os atalhos de resposta pronta da equipe, com o texto de cada um e para quais números e setores eles valem.",
     oQueToca: "Respostas rápidas",
     risco: "seguro",
-    pacotes: ["atender"],
+    pacotes: ["organizar"],
   },
   {
     name: "crm_create_quick_reply",
@@ -33,6 +33,7 @@ export const TOOLS_ATENDIMENTO = declararTools([
     oQueToca: "Respostas rápidas",
     risco: "atencao",
     pacotes: ["atender"],
+    apenasHumano: true,
   },
   {
     name: "crm_update_quick_reply",
@@ -43,6 +44,7 @@ export const TOOLS_ATENDIMENTO = declararTools([
     oQueToca: "Respostas rápidas",
     risco: "atencao",
     pacotes: ["atender"],
+    apenasHumano: true,
   },
   {
     name: "crm_delete_quick_reply",
@@ -53,6 +55,7 @@ export const TOOLS_ATENDIMENTO = declararTools([
     oQueToca: "Respostas rápidas",
     risco: "atencao",
     pacotes: ["atender"],
+    apenasHumano: true,
   },
   // ── `risco` DESTAS DUAS REAVALIADO (#2158) ────────────────────────────────
   //

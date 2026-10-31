@@ -5758,6 +5758,22 @@ export const DICIONARIO: Traducoes = {
     es: "Secuencia de mensajes configurada por el MCP. Edítala desde el asistente.",
   },
   "mensagens em sequência": { es: "mensajes en secuencia" },
+  "A sequência de mensagens desta ação está inválida. Abra a automação e revise os passos.": {
+    es: "La secuencia de mensajes de esta acción no es válida. Abre la automatización y revisa los pasos.",
+  },
+  "Não há conversa nem número para tirar o responsável do canal desta ação.": {
+    es: "No hay conversación ni número para obtener el responsable del canal de esta acción.",
+  },
+  "Este número não tem responsável definido. Escolha o responsável em Conexões.": {
+    es: "Este número no tiene un responsable definido. Elige el responsable en Conexiones.",
+  },
+  "Este número tem mais de um responsável, então não dá para escolher um sozinho. Deixe só um em Conexões ou escolha a pessoa na ação.": {
+    es: "Este número tiene más de un responsable, así que no se puede elegir uno solo. Deja solo uno en Conexiones o elige la persona en la acción.",
+  },
+  "Quando algo acontece, o sistema faz por você: move o negócio, põe tag, manda a mensagem.": {
+    es: "Cuando algo ocurre, el sistema lo hace por ti: mueve el negocio, pone etiqueta, envía el mensaje.",
+  },
+
   "Sequência": { es: "Secuencia" },
   "Sequência de mensagens": { es: "Secuencia de mensajes" },
   "Sequência configurada pelo MCP. Edite pelo assistente.": {
