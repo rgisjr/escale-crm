@@ -78,7 +78,10 @@ describe("organizarNaHorizontal", () => {
 describe("gatilhos", () => {
   it("cada TRIGGER_EVENT aparece uma vez, nas 5 fontes em ordem", () => {
     const eventos = FONTES_DOS_GATILHOS.flatMap((f) => f.opcoes.map((o) => o.evento));
-    expect([...eventos].sort()).toEqual([...TRIGGER_EVENTS].sort());
+    // `message.sent` exige a palavra-chave em `trigger_config`, que o fluxo ainda não sabe configurar:
+    // ele segue só no editor em formulário (lacuna registrada no PR da 5B).
+    const SEM_TELA_NO_FLUXO = ["message.sent"];
+    expect([...eventos].sort()).toEqual(TRIGGER_EVENTS.filter((e) => !SEM_TELA_NO_FLUXO.includes(e)).sort());
     expect(new Set(eventos).size).toBe(eventos.length);
     expect(FONTES_DOS_GATILHOS.map((f) => f.fonte)).toEqual(["negocios", "contatos", "mensagens", "agenda", "datas"]);
   });
@@ -121,15 +124,15 @@ describe("paleta e modal Ações", () => {
     expect(filtrarPaleta("logica", id)).toEqual([]);
   });
 
-  it("as abas do modal + os canais da paleta cobrem os 10 ActionType uma vez", () => {
+  it("as abas do modal + os canais da paleta cobrem os 11 ActionType uma vez", () => {
     const doModal = ABAS_DAS_ACOES.flatMap((a) => a.cartoes.map((c) => c.tipo));
     const daPaleta = ITENS_DA_PALETA.map((i) => i.passo).filter(
       (p) => p !== "gatilho" && p !== "acoes" && p !== "condicoes",
     ) as unknown as ActionType[];
     const todos = [...doModal, ...daPaleta];
-    expect(new Set(todos).size).toBe(10);
-    expect(todos).toHaveLength(10);
-    expect(ABAS_DAS_ACOES.map((a) => a.aba)).toEqual(["crm", "contatos", "integracoes"]);
+    expect(new Set(todos).size).toBe(11);
+    expect(todos).toHaveLength(11);
+    expect(ABAS_DAS_ACOES.map((a) => a.aba)).toEqual(["contatos", "integracoes", "crm"]);
   });
 
   it("tipoDoNo", () => {

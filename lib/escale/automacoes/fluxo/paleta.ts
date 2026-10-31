@@ -46,7 +46,7 @@ export function filtrarPaleta(busca: string, t: (s: string) => string): ItemDaPa
   return ITENS_DA_PALETA.filter((i) => semAcento(`${t(i.titulo)} ${t(i.descricao)}`).includes(termo));
 }
 
-export type AbaDasAcoes = "crm" | "contatos" | "integracoes";
+export type AbaDasAcoes = "contatos" | "integracoes" | "crm";
 export interface CartaoDeAcao {
   tipo: ActionType;
   titulo: string;
@@ -59,7 +59,27 @@ export interface AbaDeAcoes {
   cartoes: readonly CartaoDeAcao[];
 }
 
+/**
+ * As abas do modal "Realizar ação" (07, ao vivo): Dados do contato, Conversas, Integrações
+ * e CRM na Clint. Aqui só as que têm ação no nosso motor: sem Conversas, e só com os
+ * cartões que funcionam (nada de "Meta Ads" ou "Salvar campos").
+ */
 export const ABAS_DAS_ACOES: readonly AbaDeAcoes[] = [
+  {
+    aba: "contatos",
+    titulo: "Dados do contato",
+    descricao: "Gerencie as informações relacionadas ao contato",
+    cartoes: [
+      { tipo: "add_tag", titulo: "Adicionar tag", descricao: "Inclua tags aos seus contatos para facilitar a organização" },
+      { tipo: "remove_tag", titulo: "Remover tag", descricao: "Remova tags dos seus contatos para reorganizar sua base" },
+    ],
+  },
+  {
+    aba: "integracoes",
+    titulo: "Integrações",
+    descricao: "Gerencie as informações relacionadas a integrações",
+    cartoes: [{ tipo: "call_webhook", titulo: "Enviar Webhook", descricao: "Envie um Webhook quando uma determinada ação acontecer" }],
+  },
   {
     aba: "crm",
     titulo: "CRM",
@@ -70,18 +90,6 @@ export const ABAS_DAS_ACOES: readonly AbaDeAcoes[] = [
       { tipo: "create_task", titulo: "Tarefa interna", descricao: "Cria uma tarefa para a equipe, sem mensagem ao cliente" },
       { tipo: "apply_task_plan", titulo: "Plano de tarefas", descricao: "Aplica uma sequência de tarefas salva" },
     ],
-  },
-  {
-    aba: "contatos",
-    titulo: "Contatos",
-    descricao: "Gerencie as informações relacionadas ao contato",
-    cartoes: [{ tipo: "add_tag", titulo: "Adicionar tag", descricao: "Inclua tags aos seus contatos para facilitar a organização" }],
-  },
-  {
-    aba: "integracoes",
-    titulo: "Integrações",
-    descricao: "Gerencie as informações relacionadas a integrações",
-    cartoes: [{ tipo: "call_webhook", titulo: "Enviar Webhook", descricao: "Envie um Webhook quando uma determinada ação acontecer" }],
   },
 ];
 

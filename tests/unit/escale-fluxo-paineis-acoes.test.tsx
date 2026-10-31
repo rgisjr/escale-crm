@@ -31,6 +31,7 @@ vi.mock("@/components/escale/variaveis/SeletorDeVariaveis", () => ({
   ),
 }));
 vi.mock("@/app/app/webhooks/_components/ActionConfigForm", () => ({
+  defaultActionConfig: (type: string) => (type === "call_webhook" ? { type, config: { url: "" } } : { type, config: {} }),
   ActionConfigForm: ({ onChange }: { onChange: (a: unknown) => void }) => (
     <button type="button" onClick={() => onChange({ type: "add_tag", config: { tags: ["nova"] } })}>
       form-da-acao
@@ -39,6 +40,8 @@ vi.mock("@/app/app/webhooks/_components/ActionConfigForm", () => ({
 }));
 
 import { PainelDaAcao } from "@/components/escale/automacoes/fluxo/painel/PainelDaAcao";
+import { PainelDoGrupo } from "@/components/escale/automacoes/fluxo/painel/PainelDoGrupo";
+import { dadosDoGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { PainelDaMensagem } from "@/components/escale/automacoes/fluxo/painel/PainelDaMensagem";
 import { PainelDasCondicoes } from "@/components/escale/automacoes/fluxo/painel/PainelDasCondicoes";
 import { MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
@@ -230,5 +233,58 @@ describe("PainelDaAcao", () => {
     );
     expect(screen.getByRole("alert").textContent).toContain("Para salvar, corrija:");
     expect(screen.getByText("Revise os campos desta ação.")).toBeTruthy();
+  });
+});
+
+describe("PainelDoGrupo", () => {
+  const montarGrupo = (acoes: Parameters<typeof dadosDoGrupo>[0], evento = "contact.tag_added") => {
+    const aoSalvar = vi.fn();
+    envolver(<PainelDoGrupo dados={dadosDoGrupo(acoes)} evento={evento} aoCancelar={vi.fn()} aoSalvar={aoSalvar} />);
+    return aoSalvar;
+  };
+
+  it("mostra 'Realizar ação:', cada ação com a sua configuração e o '+ Adicionar ação'", () => {
+    montarGrupo([{ type: "add_tag", config: { tags: ["a"] } }]);
+    expect(screen.getByText("Realizar ação:")).toBeTruthy();
+    expect(screen.getByTestId("acao-do-grupo-0")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "form-da-acao" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Adicionar ação" })).toBeTruthy();
+  });
+
+  it("'+ Adicionar ação' abre o modal e escolher um cartão acrescenta a ação ao fim", async () => {
+    const aoSalvar = montarGrupo([{ type: "add_tag", config: { tags: ["a"] } }]);
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar ação" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Integrações" }));
+    await userEvent.click(screen.getByText("Enviar Webhook"));
+    expect(screen.getAllByTestId(/^acao-do-grupo-/)).toHaveLength(2);
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(aoSalvar).toHaveBeenCalledWith(
+      dadosDoGrupo([
+        { type: "add_tag", config: { tags: ["a"] } },
+        { type: "call_webhook", config: { url: "" } },
+      ]),
+    );
+  });
+
+  it("a lixeira tira só aquela ação; editar o formulário muda só aquela ação", async () => {
+    const aoSalvar = montarGrupo([
+      { type: "add_tag", config: { tags: ["a"] } },
+      { type: "add_tag", config: { tags: ["b"] } },
+    ]);
+    await userEvent.click(screen.getAllByRole("button", { name: "form-da-acao" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "Remover ação" })[0]!);
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(aoSalvar).toHaveBeenCalledWith(dadosDoGrupo([{ type: "add_tag", config: { tags: ["nova"] } }]));
+  });
+
+  it("Salvar fica desligado sem mudança e o passo vazio abre só com o convite", () => {
+    montarGrupo([]);
+    expect((screen.getByRole("button", { name: "Salvar" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByTestId("acao-do-grupo-0")).toBeNull();
+  });
+
+  it("ação que fecha laço mostra o aviso na própria ação", () => {
+    montarGrupo([{ type: "assign_owner", config: { user_id: "" } }], "lead.assigned");
+    expect(screen.getByText(MENSAGEM_DO_LACO_DE_LEAD)).toBeTruthy();
   });
 });

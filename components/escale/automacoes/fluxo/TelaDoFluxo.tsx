@@ -9,6 +9,7 @@ import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao"
 import { useT } from "@/hooks/i18n/useT";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
 import type { DadosDaCaixa } from "@/lib/automation/desenho-da-regra";
+import { ehGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import type { PassoDaPaleta } from "@/lib/escale/automacoes/fluxo/paleta";
 import { ROTA_DA_LISTA_DE_AUTOMACOES, rotaDoEditor } from "@/lib/escale/automacoes/rotas";
 
@@ -16,10 +17,10 @@ import type { AbaDoFluxo } from "./AbasDoFluxo";
 import { AcoesDoNoContext, type AcoesDoNo } from "./BarraDoNo";
 import { CabecalhoDoFluxo } from "./CabecalhoDoFluxo";
 import { CanvasDoFluxo } from "./CanvasDoFluxo";
-import { JanelaDeAcoes } from "./JanelaDeAcoes";
 import { MenuDoFluxo } from "./MenuDoFluxo";
 import { PaletaDoFluxo } from "./PaletaDoFluxo";
 import { PainelDaAcao } from "./painel/PainelDaAcao";
+import { PainelDoGrupo } from "./painel/PainelDoGrupo";
 import { PainelDaMensagem } from "./painel/PainelDaMensagem";
 import { PainelDasCondicoes } from "./painel/PainelDasCondicoes";
 import { PainelDoGatilho } from "./painel/PainelDoGatilho";
@@ -57,7 +58,6 @@ export function TelaDoFluxo({
   const [saindo, setSaindo] = useState<string | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
   const [renomeando, setRenomeando] = useState(false);
-  const [modalAcoes, setModalAcoes] = useState<{ posicao?: { x: number; y: number } } | null>(null);
 
   // O aviso do navegador ao fechar ou recarregar a aba com alterações (D17).
   useEffect(() => {
@@ -91,7 +91,7 @@ export function TelaDoFluxo({
       comGuarda(() => {
         setPainelSujo(false);
         if (passo === "gatilho") fluxo.selecionar("gatilho");
-        else if (passo === "acoes") setModalAcoes({ posicao });
+        else if (passo === "acoes") fluxo.adicionar("grupo", posicao);
         else fluxo.adicionar(passo === "condicoes" ? "condicoes" : (passo as ActionType), posicao);
       });
     },
@@ -142,6 +142,18 @@ export function TelaDoFluxo({
     if (dados.kind === "condicoes") {
       return (
         <PainelDasCondicoes
+          key={noAberto.id}
+          dados={dados}
+          evento={fluxo.evento}
+          aoCancelar={fechar}
+          aoSalvar={aplicarNoPainel}
+          aoMudarRascunho={setPainelSujo}
+        />
+      );
+    }
+    if (ehGrupo(dados)) {
+      return (
+        <PainelDoGrupo
           key={noAberto.id}
           dados={dados}
           evento={fluxo.evento}
@@ -221,16 +233,6 @@ export function TelaDoFluxo({
           aoSalvar={(nome) => {
             fluxo.setNome(nome);
             setRenomeando(false);
-          }}
-        />
-        <JanelaDeAcoes
-          aberta={modalAcoes !== null}
-          evento={fluxo.evento}
-          aoFechar={() => setModalAcoes(null)}
-          aoRealizar={(tipo) => {
-            const posicao = modalAcoes?.posicao;
-            setModalAcoes(null);
-            fluxo.adicionar(tipo, posicao);
           }}
         />
         <JanelaDeConfirmacao

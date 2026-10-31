@@ -23,6 +23,7 @@ import type { NoDaAutomacao } from "@/app/app/webhooks/automacoes/[id]/_componen
 import { AcoesDoNoContext } from "@/components/escale/automacoes/fluxo/BarraDoNo";
 import { NoDoFluxo } from "@/components/escale/automacoes/fluxo/NoDoFluxo";
 import type { DadosDaCaixa, TelaDoGatilho } from "@/lib/automation/desenho-da-regra";
+import { dadosDoGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 
 const TELA: TelaDoGatilho = {
   fonte: null,
@@ -111,6 +112,28 @@ describe("nó do fluxo", () => {
     expect(screen.getByText("Ações")).toBeTruthy();
     expect(screen.getByText("Adicionar tag")).toBeTruthy();
     expect(screen.getByText("vip, novo")).toBeTruthy();
+  });
+
+  it("passo 'Ações' mostra o título grande e as ações dentro, na ordem", () => {
+    montar(
+      "acao-1",
+      dadosDoGrupo([
+        { type: "add_tag", config: { tags: ["vip"] } },
+        { type: "create_task", config: { titulo: "Ligar", vence_em_dias: 1, atribuir_a: "dono_do_lead", prioridade: "medium" } },
+      ]),
+    );
+    expect(screen.getByText("Ações")).toBeTruthy();
+    const itens = screen.getAllByRole("listitem").map((li) => li.textContent);
+    expect(itens[0]).toContain("Adicionar tag");
+    expect(itens[0]).toContain("vip");
+    expect(itens[1]).toContain("Tarefa interna");
+    expect(screen.getByRole("button", { name: "Duplicar passo" })).toBeTruthy();
+  });
+
+  it("passo 'Ações' vazio mostra o '+ Adicionar ação' tracejado", () => {
+    montar("acao-1", dadosDoGrupo([]));
+    expect(screen.getByText(/Adicionar ação/)).toBeTruthy();
+    expect(screen.queryByRole("listitem")).toBeNull();
   });
 
   it("send_ai_message: rótulo Inteligência Artificial", () => {

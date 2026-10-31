@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { desenhoDaRegra, organizar, validarDesenho, type RegraGravada } from "@/lib/automation/desenho-da-regra";
+import { achatar, agrupar } from "@/lib/escale/automacoes/fluxo/grupos";
 import { organizarNaHorizontal } from "@/lib/escale/automacoes/fluxo/layout";
 
 /**
@@ -74,6 +75,14 @@ describe("o fluxo da casca grava o mesmo corpo do designer de hoje", () => {
       const { name, ...regra } = r;
       const daCasca = validarDesenho({ nome: name, desenho: organizarNaHorizontal(desenhoDaRegra(regra)), regraGravada: regra });
       const deHoje = validarDesenho({ nome: name, desenho: organizar(desenhoDaRegra(regra)), regraGravada: regra });
+      // O fluxo da casca agrupa as ações em passos "Ações" na tela e as achata ao gravar.
+      const comGrupos = validarDesenho({
+        nome: name,
+        desenho: achatar(organizarNaHorizontal(agrupar(desenhoDaRegra(regra)))),
+        regraGravada: regra,
+      });
+      expect(comGrupos.ok, JSON.stringify(comGrupos.problemas)).toBe(true);
+      expect(comGrupos.corpo).toEqual(deHoje.corpo);
       expect(daCasca.ok, JSON.stringify(daCasca.problemas)).toBe(true);
       expect(daCasca.corpo).toEqual(deHoje.corpo);
       expect(daCasca.corpo).toEqual({

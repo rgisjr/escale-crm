@@ -19068,6 +19068,10 @@ export const DICIONARIO: Traducoes = {
   "Você está saindo do editor da automação": { es: "Está saliendo del editor de la automatización" },
   "as condições": { es: "las condiciones" },
   "É necessário configurar o gatilho para salvar a automação.": { es: "Es necesario configurar el disparador para guardar la automatización." },
+  // FORK ESCALE · Fase 5B (ajuste): passo "Ações" com várias ações e modal "Realizar ação".
+  "Dados do contato": { es: "Datos del contacto" },
+  "Realizar ação:": { es: "Realizar acción:" },
+  "Adicione pelo menos uma ação neste passo.": { es: "Agregue al menos una acción en este paso." },
 };
 
 /**
