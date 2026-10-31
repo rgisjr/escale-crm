@@ -101,6 +101,9 @@ describe("nó do fluxo", () => {
     montar("acao-2", acao("send_whatsapp_message", { channel_session_id: "s1", template: "Olá!" }));
     expect(screen.getByText("Bathully")).toBeTruthy();
     expect(screen.getByText("Olá!")).toBeTruthy();
+    unmount();
+    montar("acao-3", acao("send_whatsapp_message", { channel_session_id: "conversation", template: "Oi" }));
+    expect(screen.getByText("Canal da conversa")).toBeTruthy();
   });
 
   it("add_tag: rótulo Ações, título e as tags", () => {

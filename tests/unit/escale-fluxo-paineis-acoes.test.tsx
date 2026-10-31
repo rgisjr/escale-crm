@@ -129,12 +129,26 @@ describe("PainelDaMensagem", () => {
     await userEvent.click(screen.getByRole("combobox", { name: "Número de WhatsApp" }));
     const desligado = screen.getByRole("option", { name: /Caído/ });
     expect(desligado.getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByRole("option", { name: "Canal da conversa" })).toBeTruthy();
     await userEvent.click(screen.getByRole("option", { name: "Bathully" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Mensagem" }), "Olá");
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
     expect(aoSalvar).toHaveBeenCalledWith({
       kind: "acao",
       acao: { type: "send_whatsapp_message", config: { channel_session_id: "s1", template: "Olá" } },
+    });
+  });
+
+  it("'Canal da conversa' é uma escolha válida e vai como 'conversation'", async () => {
+    const aoSalvar = vi.fn();
+    envolver(<PainelDaMensagem dados={whatsapp} aoCancelar={vi.fn()} aoSalvar={aoSalvar} />);
+    await userEvent.click(screen.getByRole("combobox", { name: "Número de WhatsApp" }));
+    await userEvent.click(screen.getByRole("option", { name: "Canal da conversa" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Mensagem" }), "Oi");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(aoSalvar).toHaveBeenCalledWith({
+      kind: "acao",
+      acao: { type: "send_whatsapp_message", config: { channel_session_id: "conversation", template: "Oi" } },
     });
   });
 

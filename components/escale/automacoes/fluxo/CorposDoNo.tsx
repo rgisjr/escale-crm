@@ -112,7 +112,11 @@ export function CorpoDoWhatsapp({ dados }: { dados: DadosDaAcao }) {
   return (
     <div className="flex flex-col gap-2">
       <span className="w-fit rounded-md bg-casca-raia px-2 py-0.5 text-[12px] text-casca-texto-2">
-        {sessao ? channelLabel(sessao, t) : t("Dispositivo não configurado")}
+        {config.channel_session_id === "conversation"
+          ? t("Canal da conversa")
+          : sessao
+            ? channelLabel(sessao, t)
+            : t("Dispositivo não configurado")}
       </span>
       <p className="line-clamp-4 rounded-lg border border-casca-divisoria px-3 py-2 text-[12px] whitespace-pre-wrap text-casca-texto">
         {texto || t("Escreva a mensagem")}

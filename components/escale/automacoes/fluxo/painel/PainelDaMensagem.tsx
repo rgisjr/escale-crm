@@ -74,11 +74,15 @@ export function PainelDaMensagem({
             valor={canal}
             vazio={t("Escolha o número")}
             aoMudar={(v) => mudar({ channel_session_id: v })}
-            opcoes={lista.map((s) => ({
-              valor: s.id,
-              rotulo: channelLabel(s, t) + (s.status !== "WORKING" ? ` — ${t("desconectado")}` : ""),
-              desabilitada: s.status !== "WORKING",
-            }))}
+            opcoes={[
+              // O número pelo qual a conversa acontece (uma automação, N canais).
+              { valor: "conversation", rotulo: t("Canal da conversa") },
+              ...lista.map((s) => ({
+                valor: s.id,
+                rotulo: channelLabel(s, t) + (s.status !== "WORKING" ? ` — ${t("desconectado")}` : ""),
+                  desabilitada: s.status !== "WORKING",
+              })),
+            ]}
           />
           {lista.some((s) => s.status !== "WORKING") ? (
             <p className="text-[12px] text-casca-suave">
