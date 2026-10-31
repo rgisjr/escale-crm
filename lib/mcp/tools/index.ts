@@ -71,6 +71,7 @@ import {
   crmSetWebhookSourceActive,
   crmUpdateStage,
 } from "./operacao";
+import { crmCreatePipeline, crmListChannels, crmSetChannelVariables } from "./canais-escrita";
 import { crmCreateAutomationRule, crmUpdateAutomationRule } from "./automacao-escrita";
 import {
   crmCreateFollowupFlow,
@@ -182,6 +183,9 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmCreateFollowupFlow,
   crmUpdateFollowupFlow,
   crmPublishFollowupFlow,
+  crmCreatePipeline,
+  crmListChannels,
+  crmSetChannelVariables,
   crmScheduleFollowup,
   crmEnrollFollowupFlow,
   crmCancelFollowup,

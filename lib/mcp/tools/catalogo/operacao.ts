@@ -286,6 +286,37 @@ export const TOOLS_OPERACAO = declararTools([
     apenasHumano: true,
   },
 
+  {
+    name: "crm_create_pipeline",
+    category: "write",
+    rotulo: "Criar um funil de vendas",
+    explicacao:
+      "Cria um funil novo, com as etapas que você definir (ou com as quatro de sempre), e marca quais fecham o negócio como ganho ou perdido.",
+    oQueToca: "Funil de vendas",
+    risco: "atencao",
+    pacotes: ["organizar"],
+  },
+  {
+    name: "crm_list_channels",
+    category: "read",
+    rotulo: "Ver os números de WhatsApp da empresa",
+    explicacao:
+      "Lista os números conectados, quem responde por cada um e os dados de cada número (como a chave PIX), com o valor cortado para não expor o dado inteiro.",
+    oQueToca: "Números de WhatsApp",
+    risco: "seguro",
+    pacotes: ["organizar", "escalar"],
+  },
+  {
+    name: "crm_set_channel_variables",
+    category: "write",
+    rotulo: "Gravar os dados de um número de WhatsApp",
+    explicacao:
+      "Guarda dados que mudam de número para número, como chave PIX e telefone do suporte, para as mensagens automáticas usarem o certo em cada conversa.",
+    oQueToca: "Números de WhatsApp",
+    risco: "atencao",
+    pacotes: ["organizar"],
+  },
+
   // ---- time ----
   {
     name: "crm_list_team_members",
