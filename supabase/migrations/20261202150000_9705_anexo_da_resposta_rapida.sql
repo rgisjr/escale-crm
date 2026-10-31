@@ -16,11 +16,11 @@ create policy crm_respostas_rapidas_anexos_select on public.crm_respostas_rapida
 create policy crm_respostas_rapidas_anexos_write on public.crm_respostas_rapidas_anexos
   for all using (exists (select 1 from public.message_templates t
                           where t.id = template_id and t.organization_id = crm_respostas_rapidas_anexos.organization_id
-                            and ((t.owner_user_id = auth.uid() and public.fn_role_at_least(t.organization_id, 'agent'))
+                            and ((t.owner_user_id = (select auth.uid()) and public.fn_role_at_least(t.organization_id, 'agent'))
                                  or (t.owner_user_id is null and public.fn_role_at_least(t.organization_id, 'manager')))))
   with check (exists (select 1 from public.message_templates t
                        where t.id = template_id and t.organization_id = crm_respostas_rapidas_anexos.organization_id
-                         and ((t.owner_user_id = auth.uid() and public.fn_role_at_least(t.organization_id, 'agent'))
+                         and ((t.owner_user_id = (select auth.uid()) and public.fn_role_at_least(t.organization_id, 'agent'))
                               or (t.owner_user_id is null and public.fn_role_at_least(t.organization_id, 'manager')))));
 revoke all on public.crm_respostas_rapidas_anexos from anon;
 grant select, insert, update, delete on public.crm_respostas_rapidas_anexos to authenticated;
