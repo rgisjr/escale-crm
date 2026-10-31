@@ -328,6 +328,26 @@ export const TOOLS_OPERACAO = declararTools([
     pacotes: ["organizar"],
   },
 
+  {
+    name: "crm_upload_media_asset",
+    category: "write",
+    rotulo: "Guardar um áudio, imagem ou arquivo",
+    explicacao:
+      "Traz um arquivo de um endereço da internet para a biblioteca da empresa, para as mensagens automáticas e respostas rápidas usarem.",
+    oQueToca: "Biblioteca de mídia",
+    risco: "atencao",
+    pacotes: ["organizar"],
+  },
+  {
+    name: "crm_list_media_assets",
+    category: "read",
+    rotulo: "Ver a biblioteca de mídia",
+    explicacao: "Lista os áudios, imagens e arquivos guardados pela empresa, com o nome e o tipo de cada um.",
+    oQueToca: "Biblioteca de mídia",
+    risco: "seguro",
+    pacotes: ["organizar"],
+  },
+
   // ---- time ----
   {
     name: "crm_list_team_members",

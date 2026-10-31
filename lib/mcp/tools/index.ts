@@ -77,6 +77,7 @@ import {
   crmListQuickReplies,
   crmUpdateQuickReply,
 } from "./respostas-escrita";
+import { crmListMediaAssets, crmUploadMediaAsset } from "./midia-escrita";
 import { crmCreatePipeline, crmListChannels, crmSetChannelBusinessHours, crmSetChannelVariables } from "./canais-escrita";
 import { crmCreateAutomationRule, crmUpdateAutomationRule } from "./automacao-escrita";
 import {
@@ -193,6 +194,8 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmListChannels,
   crmSetChannelVariables,
   crmSetChannelBusinessHours,
+  crmUploadMediaAsset,
+  crmListMediaAssets,
   crmListQuickReplies,
   crmCreateQuickReply,
   crmUpdateQuickReply,

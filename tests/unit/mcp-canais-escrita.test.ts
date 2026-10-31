@@ -54,9 +54,18 @@ describe("crm_set_channel_variables", () => {
     expect(JSON.stringify(args)).not.toContain("51999600190");
     expect(args.valores).toEqual(["pix_chave"]);
   });
-  it("aceita null (padrão da organização) e recusa objeto vazio", () => {
+  it("aceita null (padrão da organização) e recusa pedido sem valores nem ativos", async () => {
     const schema = z.object(crmSetChannelVariables.inputSchema);
     expect(schema.safeParse({ channel_session_id: null, valores: { a: "1" } }).success).toBe(true);
-    expect(schema.safeParse({ channel_session_id: null, valores: {} }).success).toBe(false);
+    await expect(crmSetChannelVariables.handler({ channel_session_id: null, valores: {} } as never, ctx)).rejects.toThrow(
+      "Informe de 1 a 30",
+    );
+  });
+  it("grava só ativos (áudio por número) e devolve a chave", async () => {
+    gravar.mockResolvedValue(undefined);
+    const ativos = { bv1: "33333333-3333-4333-8333-333333333333" };
+    const r = await crmSetChannelVariables.handler({ channel_session_id: CANAL, valores: {}, ativos } as never, ctx);
+    expect(r).toEqual({ gravadas: ["bv1"] });
+    expect(gravar).toHaveBeenCalledWith(ctx.supabase, expect.objectContaining({ ativos }));
   });
 });

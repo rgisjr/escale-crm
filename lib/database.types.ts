@@ -1181,31 +1181,34 @@ export type Database = {
       }
       channel_variables: {
         Row: {
+          asset_id: string | null
           channel_session_id: string | null
           chave: string
           created_at: string
           id: string
           organization_id: string
           updated_at: string
-          value_text: string
+          value_text: string | null
         }
         Insert: {
+          asset_id?: string | null
           channel_session_id?: string | null
           chave: string
           created_at?: string
           id?: string
           organization_id: string
           updated_at?: string
-          value_text: string
+          value_text?: string | null
         }
         Update: {
+          asset_id?: string | null
           channel_session_id?: string | null
           chave?: string
           created_at?: string
           id?: string
           organization_id?: string
           updated_at?: string
-          value_text?: string
+          value_text?: string | null
         }
         Relationships: [
           {
@@ -1219,6 +1222,43 @@ export type Database = {
             columns: ["organization_id", "channel_session_id"]
             referencedRelation: "channel_sessions"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      org_media_assets: {
+        Row: {
+          created_at: string
+          id: string
+          mime: string
+          nome: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mime: string
+          nome: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mime?: string
+          nome?: string
+          organization_id?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_media_assets_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
         ]
       }
