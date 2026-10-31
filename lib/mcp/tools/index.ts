@@ -71,6 +71,12 @@ import {
   crmSetWebhookSourceActive,
   crmUpdateStage,
 } from "./operacao";
+import {
+  crmCreateQuickReply,
+  crmDeleteQuickReply,
+  crmListQuickReplies,
+  crmUpdateQuickReply,
+} from "./respostas-escrita";
 import { crmCreatePipeline, crmListChannels, crmSetChannelVariables } from "./canais-escrita";
 import { crmCreateAutomationRule, crmUpdateAutomationRule } from "./automacao-escrita";
 import {
@@ -186,6 +192,10 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmCreatePipeline,
   crmListChannels,
   crmSetChannelVariables,
+  crmListQuickReplies,
+  crmCreateQuickReply,
+  crmUpdateQuickReply,
+  crmDeleteQuickReply,
   crmScheduleFollowup,
   crmEnrollFollowupFlow,
   crmCancelFollowup,
