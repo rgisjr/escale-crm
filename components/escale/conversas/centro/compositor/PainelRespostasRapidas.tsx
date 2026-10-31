@@ -89,7 +89,7 @@ export function PainelRespostasRapidas({
             key={r.id}
             type="button"
             className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-casca-raia"
-            onClick={() => void escolher(r.corpo)}
+            onClick={() => void escolher(r.corpo_pronto ?? r.corpo)}
           >
             <span className="shrink-0 rounded-casca-gatilho bg-casca-raia px-1.5 py-0.5 font-mono text-[12px] text-casca-suave">
               {comBarra(r.atalho)}

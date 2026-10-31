@@ -59,6 +59,7 @@ import { getAction } from "@/lib/automation/actions";
 // automação usa. A tag do follow-up é a tag da automação — não uma segunda.
 import "@/lib/automation/actions/add-tag";
 import { renderizarTextoDeFollowup } from "@/lib/automation/texto-do-followup";
+import { anexarCanalAoContexto } from "@/lib/canais/anexar-ao-contexto";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { quandoDoRetornoVivo, reavaliarDepoisDoRetorno } from "./retorno-segura-o-fluxo";
 import { triggerConfigSchema } from "./api-schemas";
@@ -146,7 +147,12 @@ export interface AdminClient {
    * estavam (comportamento de antes da correção) — NUNCA com marcação vazia
    * no lugar, que seria pior que a marcação crua.
    */
-  loadRenderContext?(orgId: string, contactId: string): Promise<Record<string, unknown> | null>;
+  loadRenderContext?(
+    orgId: string,
+    contactId: string,
+    /** A conversa da inscrição: dela sai o canal de `{{canal.*}}` e `{{atendente.*}}`. */
+    conversationId?: string | null,
+  ): Promise<Record<string, unknown> | null>;
   /** Latest inbound `messages.body` for the contact (optionally scoped to the enrollment conversation). */
   loadLastInboundBody(
     orgId: string,
@@ -946,7 +952,7 @@ async function processEnrollment(
   // texto paga a leitura — os demais não renderizam nada.
   const contexto =
     result.kind === "enqueue_turn" && node.type === "action" && node.config.mode === "text"
-      ? await db.loadRenderContext?.(enrollment.organization_id, enrollment.contact_id)
+      ? await db.loadRenderContext?.(enrollment.organization_id, enrollment.contact_id, enrollment.conversation_id)
       : null;
 
   await applyResult(
@@ -1074,7 +1080,7 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
      * `{{lead.title}}`) — e o MESMO negócio que `loadLeadFacts` escolhe
      * (`updated_at desc`), senão dois caminhos dariam dados diferentes.
      */
-    async loadRenderContext(orgId, contactId) {
+    async loadRenderContext(orgId, contactId, conversationId) {
       const [{ data: lead, error: leadErr }, { data: contact, error: contactErr }] = await Promise.all([
         admin
           .from("crm_leads")
@@ -1091,7 +1097,7 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
       const contexto: Record<string, unknown> = {};
       if (contact) contexto.contact = contact;
       if (lead) contexto.lead = lead;
-      return contexto;
+      return anexarCanalAoContexto(admin, orgId, contexto, conversationId ?? null, contactId);
     },
     async loadLastInboundBody(orgId, contactId, conversationId, naoAntesDe) {
       const ids = await idsDoContatoEGemeos(admin, orgId, contactId);

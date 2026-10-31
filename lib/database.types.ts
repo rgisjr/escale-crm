@@ -1133,6 +1133,49 @@ export type Database = {
           },
         ]
       }
+      channel_variables: {
+        Row: {
+          channel_session_id: string | null
+          chave: string
+          created_at: string
+          id: string
+          organization_id: string
+          updated_at: string
+          value_text: string
+        }
+        Insert: {
+          channel_session_id?: string | null
+          chave: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+          value_text: string
+        }
+        Update: {
+          channel_session_id?: string | null
+          chave?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+          value_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_variables_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_variables_canal_fk"
+            columns: ["organization_id", "channel_session_id"]
+            referencedRelation: "channel_sessions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       channel_connection_requests: {
         Row: {
           channel_session_id: string | null

@@ -1,6 +1,7 @@
 import { assertAgendaEffectSupabase } from "@/lib/agenda/efeito";
 import { protecaoAgendaSupabase } from "@/lib/agenda/protecao-followup";
 import { registerAction } from "@/lib/automation/actions";
+import { resolverCanalDaAcao } from "@/lib/automation/canal-da-acao";
 import type { ActionCtx, ActionResultDetail } from "@/lib/automation/types";
 import { renderTemplate } from "@/lib/automation/template";
 import { fontesDaAutomacao } from "@/lib/automation/fontes-da-automacao";
@@ -18,7 +19,7 @@ async function postponeUntil(ctx: ActionCtx, config: Record<string, unknown>): P
     if (protection.motivo === "leitura_indisponivel") throw new Error("agenda_read_failed");
     if (protection.adiar) return protection.reavaliar_em;
   }
-  const sessionId = typeof config.channel_session_id === "string" ? config.channel_session_id : null;
+  const sessionId = await resolverCanalDaAcao(ctx, config.channel_session_id);
   if (!sessionId) return null; // config inválida falha no execute, não adia
 
   // A janela vem dos knobs DO NÚMERO (fuso do tenant, domingo configurável) —
@@ -31,7 +32,7 @@ async function postponeUntil(ctx: ActionCtx, config: Record<string, unknown>): P
 }
 
 async function execute(ctx: ActionCtx, config: Record<string, unknown>): Promise<ActionResultDetail> {
-  const sessionId = typeof config.channel_session_id === "string" ? config.channel_session_id : null;
+  const sessionId = await resolverCanalDaAcao(ctx, config.channel_session_id);
   const template = typeof config.template === "string" ? config.template : null;
   if (!sessionId || !template) {
     return { type: "send_whatsapp_message", status: "failed", error: "missing_config" };

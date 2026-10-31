@@ -27,6 +27,8 @@ export interface RespostaLida {
   id: string;
   atalho: string;
   corpo: string;
+  /** Só na resposta do painel da conversa: o corpo com `{{canal.*}}` e `{{atendente.*}}` já trocados. */
+  corpo_pronto?: string;
   canais: CanalDaResposta[];
   compartilhada: boolean;
   todos_os_setores: boolean;

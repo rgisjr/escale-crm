@@ -51,7 +51,7 @@ export type ActionItem =
       type: "add_tag";
       config: { tags: string[]; destino?: "card" | "contato" };
     }
-  | { type: "assign_owner"; config: { user_id: string } }
+  | { type: "assign_owner"; config: { user_id?: string; modo?: "responsavel_do_canal" } }
   | { type: "call_webhook"; config: { url: string; secret?: string; secret_enc?: string; include_owner?: boolean } }
   | { type: "start_message_flow"; config: { flow_pointer_id: string } }
   // #1540 — o lembrete interno: mesmos campos do schema da API e do nó de fluxo.
@@ -230,6 +230,7 @@ function SendWhatsappForm({
             <SelectValue placeholder={t("Escolha o número")} />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="conversation">{t("Canal da conversa")}</SelectItem>
             {(sessions ?? []).map((s) => (
               <SelectItem key={s.id} value={s.id} disabled={s.status !== "WORKING"}>
                 {channelLabel(s) + (s.status !== "WORKING" ? " — desconectado" : "")}
@@ -527,17 +528,30 @@ function AddTagForm({
   );
 }
 
-function AssignOwnerForm({ config, onChange }: FormProps<{ user_id: string }>) {
+/** Valor do seletor que significa "quem responde pelo número da conversa" (não é um uuid). */
+const RESPONSAVEL_DO_CANAL = "__responsavel_do_canal__";
+
+function AssignOwnerForm({
+  config,
+  onChange,
+}: FormProps<{ user_id?: string; modo?: "responsavel_do_canal" }>) {
   const t = useT();
   const { data: members } = useAssignableMembers(true);
+  const valor = config.modo === "responsavel_do_canal" ? RESPONSAVEL_DO_CANAL : (config.user_id ?? "");
   return (
     <div className="space-y-1">
       <Label>{t("Atendente")}</Label>
-      <Select value={config.user_id} onValueChange={(v) => onChange({ user_id: v })}>
+      <Select
+        value={valor}
+        onValueChange={(v) =>
+          onChange(v === RESPONSAVEL_DO_CANAL ? { modo: "responsavel_do_canal" } : { user_id: v })
+        }
+      >
         <SelectTrigger>
           <SelectValue placeholder={t("Escolha o atendente")} />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value={RESPONSAVEL_DO_CANAL}>{t("Responsável do canal")}</SelectItem>
           {(members ?? []).map((m) => (
             <SelectItem key={m.user_id} value={m.user_id}>
               {m.full_name ?? m.user_id.slice(0, 8)}

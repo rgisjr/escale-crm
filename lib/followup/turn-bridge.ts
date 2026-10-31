@@ -24,6 +24,8 @@ import { EVENTO_ACAO_ADIADA, EVENTO_CLASSIFICACAO_ESPERANDO, classEdgeMatch, sel
 import { coletarEsperasAdaptativas, montarTimingPlan, type PropostaDeEspera } from "./timing-plan";
 import { persistirRespostaFollowupPg } from "./persistir-resposta";
 import { contextoDoContato } from "@/lib/automation/texto-do-followup";
+import { anexarCanalAoContexto } from "@/lib/canais/anexar-ao-contexto";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Superset de AdminClient: a ponte precisa do snapshot COMPLETO do enrollment
  *  (current_node_id/version_id/steps_taken) pra montar o passo de conclusão —
@@ -382,7 +384,14 @@ export function createPgAdminClient(pool: pg.Pool): TurnBridgeAdminClient {
       };
     },
     /** #2528 — contexto do render das mensagens de follow-up (o MESMO par de leituras de `loadLeadFacts`, com as linhas inteiras). */
-    loadRenderContext: (orgId, contactId) => contextoDoContato(pool, orgId, contactId),
+    loadRenderContext: async (orgId, contactId, conversationId) =>
+      anexarCanalAoContexto(
+        createAdminClient(),
+        orgId,
+        (await contextoDoContato(pool, orgId, contactId)) ?? {},
+        conversationId ?? null,
+        contactId,
+      ),
     async loadLastInboundBody(orgId, contactId, conversationId, naoAntesDe) {
       const params: unknown[] = [orgId, contactId, conversationId ?? null];
       const desde = naoAntesDe ? "and sent_at >= $4" : "";
