@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { BotaoDaJanela } from "@/components/escale/origens/JanelaDaCasca";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useT } from "@/hooks/i18n/useT";
 import type { ProblemaDoDesenho } from "@/lib/automation/desenho-da-regra";
 import type { TipoDoNo } from "@/lib/escale/automacoes/fluxo/paleta";
@@ -83,7 +84,10 @@ export function PainelDoNo({
         <Icone size={18} className={visual.texto} aria-hidden />
         <h2 className="text-[14px] font-medium text-casca-texto">{titulo}</h2>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+      {/* A ajuda "?" precisa de um provedor de dicas acima; sem ele o painel cairia. */}
+      <TooltipProvider>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+      </TooltipProvider>
       {comRodape ? (
         <footer className="flex h-16 shrink-0 items-center justify-end gap-2 border-t border-casca-divisoria px-6">
           <BotaoDaJanela variante="cancelar" onClick={aoCancelar}>
