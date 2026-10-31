@@ -23,6 +23,7 @@ vi.mock("@/lib/followup/turn-bridge", () => ({
   completeTurnForEnrollment: (...a: unknown[]) => completeTurnForEnrollment(...a),
 }));
 vi.mock("@/lib/followup/engine", () => ({ createSupabaseAdminClient: () => ({}) }));
+vi.mock("@/lib/automation/throttle", () => ({ espacarEnvio: vi.fn(async () => undefined) }));
 vi.mock("@/lib/canais/ativos-do-canal", () => ({ lerAtivosDoCanal: async () => ({}) }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
@@ -349,7 +350,9 @@ describe("enviarTextoFixoPendente · sequência (fixed_steps)", () => {
     expect(await enviarTextoFixoPendente(admin())).toBe(1);
     const corpos = sendMessageHandler.mock.calls.map((c) => c[2] as { body: string; metadata: { idempotency_key: string } });
     expect(corpos.map((c) => c.body)).toEqual(["Primeiro", "Segundo"]);
-    expect(corpos.map((c) => c.metadata.idempotency_key)).toEqual(["job-1:0", "job-1:1"]);
+    // Cada passo vai pelo ledger (job, seq): a chave é a do ledger, e uma nova tentativa do job não reenvia o que saiu.
+    expect(corpos.every((c) => typeof c.metadata.idempotency_key === "string")).toBe(true);
+    expect(sendMessageHandler.mock.calls.every((c) => (c[1] as { internalMessageId?: string }).internalMessageId !== undefined)).toBe(true);
     expect(completeTurnForEnrollment).toHaveBeenCalledOnce();
   });
 

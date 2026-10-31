@@ -24,6 +24,35 @@ export interface AtivoLido {
   tipo: TipoDeMidia;
 }
 
+/** Lê o corpo aos pedaços e aborta ao passar do teto: sem Content-Length (ou com valor falso) nada vai inteiro para a memória. */
+async function lerComTeto(resposta: Response): Promise<Uint8Array> {
+  if (!resposta.body) {
+    const bytes = new Uint8Array(await resposta.arrayBuffer());
+    if (bytes.byteLength > TAMANHO_MAXIMO_DO_ATIVO) throw new Error("ativo_grande_demais");
+    return bytes;
+  }
+  const leitor = resposta.body.getReader();
+  const pedacos: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > TAMANHO_MAXIMO_DO_ATIVO) {
+      await leitor.cancel();
+      throw new Error("ativo_grande_demais");
+    }
+    pedacos.push(value);
+  }
+  const inteiro = new Uint8Array(total);
+  let posicao = 0;
+  for (const p of pedacos) {
+    inteiro.set(p, posicao);
+    posicao += p.byteLength;
+  }
+  return inteiro;
+}
+
 async function baixar(url: string): Promise<{ bytes: Uint8Array; mime: string }> {
   await assertUrlDeMidiaSegura(url);
   const resposta = await fetch(url, { signal: AbortSignal.timeout(TEMPO_LIMITE_DO_DOWNLOAD_MS), redirect: "error" });
@@ -33,9 +62,8 @@ async function baixar(url: string): Promise<{ bytes: Uint8Array; mime: string }>
   const mime = resposta.headers.get("content-type") ?? "application/octet-stream";
   const validacao = validarMimeDoAtivo(mime);
   if (!validacao.ok) throw new Error(validacao.motivo);
-  const bytes = new Uint8Array(await resposta.arrayBuffer());
+  const bytes = await lerComTeto(resposta);
   if (bytes.byteLength === 0) throw new Error("ativo_vazio");
-  if (bytes.byteLength > TAMANHO_MAXIMO_DO_ATIVO) throw new Error("ativo_grande_demais");
   return { bytes, mime: mime.split(";")[0]!.trim().toLowerCase() };
 }
 
@@ -118,8 +146,13 @@ export async function copiarAtivoParaConversa(
   if (!ativo) throw new Error("ativo_nao_encontrado");
   if (!conversa) throw new Error("conversa_nao_encontrada");
   const { storage_path: origem, mime } = ativo as { storage_path: string; mime: string };
-  const destino = `${entrada.organizationId}/${entrada.conversationId}/auto-${randomUUID()}.${extensaoDoMime(mime)}`;
+  // Defesa em profundidade além do CHECK do banco: o objeto de origem tem de ser DESTE ativo, desta organização.
+  if (!origem.startsWith(`${entrada.organizationId}/assets/${entrada.assetId}/`) || origem.includes("..")) {
+    throw new Error("ativo_com_caminho_invalido");
+  }
+  // Destino determinístico: a nova tentativa de um passo reaproveita a cópia em vez de deixar objeto órfão.
+  const destino = `${entrada.organizationId}/${entrada.conversationId}/auto-${entrada.assetId}.${extensaoDoMime(mime)}`;
   const { error } = await admin.storage.from(BUCKET).copy(origem, destino);
-  if (error) throw new Error(`copia_falhou:${error.message}`);
+  if (error && !/already exists|duplicate|409/i.test(error.message)) throw new Error(`copia_falhou:${error.message}`);
   return { storagePath: destino, mime, tipo: tipoDaMidia(mime) };
 }

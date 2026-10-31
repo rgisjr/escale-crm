@@ -9,7 +9,7 @@ create table if not exists public.org_media_assets (
   created_at timestamptz not null default now(),
   constraint org_media_assets_nome_tamanho check (char_length(nome) between 1 and 120),
   constraint org_media_assets_tamanho check (size_bytes between 1 and 16777216),
-  constraint org_media_assets_caminho check (position('/assets/' in storage_path) > 0)
+  constraint org_media_assets_caminho check (storage_path like organization_id::text || '/assets/' || id::text || '/%' and position('..' in storage_path) = 0)
 );
 create unique index if not exists org_media_assets_org_id_unica on public.org_media_assets (organization_id, id);
 create index if not exists idx_org_media_assets_org on public.org_media_assets (organization_id, created_at desc);
