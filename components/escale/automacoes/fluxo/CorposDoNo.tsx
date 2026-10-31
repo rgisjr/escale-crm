@@ -38,9 +38,19 @@ function useDetalheDoGatilho(dados: DadosDoGatilho): string {
   return "";
 }
 
+/** O chip do detalhe do gatilho; sem detalhe, nada. */
+export function DetalheDoGatilho({ dados }: { dados: DadosDoGatilho }) {
+  const detalhe = useDetalheDoGatilho(dados);
+  if (!detalhe) return null;
+  return (
+    <span className="w-fit rounded-md bg-casca-raia px-2 py-0.5 text-[12px] text-casca-texto-2" data-testid="detalhe-do-gatilho">
+      {detalhe}
+    </span>
+  );
+}
+
 export function CorpoDoGatilho({ dados }: { dados: DadosDoGatilho }) {
   const t = useT();
-  const detalhe = useDetalheDoGatilho(dados);
   const opcao = opcaoDoEvento(dados.evento);
   if (!opcao) {
     return <p className="text-[12px] text-casca-suave">{t("Escolha o gatilho que dará início à automação")}</p>;
@@ -53,9 +63,7 @@ export function CorpoDoGatilho({ dados }: { dados: DadosDoGatilho }) {
         <span className="text-[11px] font-semibold tracking-wide text-casca-texto-2 uppercase">{t(opcao.titulo)}</span>
         <span className="flex-1 border-t border-casca-divisoria" aria-hidden />
       </div>
-      {detalhe ? (
-        <span className="w-fit rounded-md bg-casca-raia px-2 py-0.5 text-[12px] text-casca-texto-2">{detalhe}</span>
-      ) : null}
+      <DetalheDoGatilho dados={dados} />
     </div>
   );
 }
