@@ -45,6 +45,7 @@ function DescricaoDoMover({ config }: { config: Record<string, unknown> }) {
 function DescricaoDoAtendente({ config }: { config: Record<string, unknown> }) {
   const t = useT();
   const { data: membros } = useAssignableMembers(true);
+  if (config.modo === "responsavel_do_canal") return <>{t("Responsável do canal")}</>;
   const membro = membros?.find((m) => m.user_id === config.user_id);
   return <>{membro ? (membro.full_name ?? membro.user_id.slice(0, 8)) : t("Escolha o atendente")}</>;
 }

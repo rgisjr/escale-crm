@@ -12,12 +12,22 @@
  * está certo.
  */
 import { registerAction } from "@/lib/automation/actions";
+import { CANAL_DA_CONVERSA, resolverCanalDaAcao } from "@/lib/automation/canal-da-acao";
+import { responsavelDoCanal } from "@/lib/canais/responsavel";
 import type { ActionCtx, ActionResultDetail } from "@/lib/automation/types";
 import { resolveOwnerPatch } from "@/lib/leads/owner-patch";
 
 async function execute(ctx: ActionCtx, config: Record<string, unknown>): Promise<ActionResultDetail> {
-  const userId = typeof config.user_id === "string" ? config.user_id : null;
+  let userId = typeof config.user_id === "string" ? config.user_id : null;
   const lead = ctx.context.lead as { id: string } | undefined;
+  if (userId === null && config.modo === "responsavel_do_canal" && lead) {
+    const canalId = await resolverCanalDaAcao(ctx, CANAL_DA_CONVERSA);
+    if (canalId === null) return { type: "assign_owner", status: "skipped", detail: { reason: "sem_canal" } };
+    const r = await responsavelDoCanal(ctx.admin, ctx.organizationId, canalId);
+    if (r.tipo === "varios") return { type: "assign_owner", status: "skipped", detail: { reason: "varios_responsaveis" } };
+    if (r.tipo === "nenhum") return { type: "assign_owner", status: "skipped", detail: { reason: "sem_responsavel_no_canal" } };
+    userId = r.userId;
+  }
   if (!userId || !lead) return { type: "assign_owner", status: "skipped", detail: { reason: "missing_input" } };
 
   const { data: member, error: erroDaConsulta } = await ctx.admin

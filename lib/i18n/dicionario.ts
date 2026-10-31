@@ -7477,6 +7477,8 @@ export const DICIONARIO: Traducoes = {
   "Número sem nome": { es: "Número sin nombre" },
   Etapa: { es: "Etapa" },
   "Escolha o número": { es: "Elige el número" },
+  "Canal da conversa": { es: "Canal de la conversación" },
+  "Responsável do canal": { es: "Responsable del canal" },
   Mensagem: { es: "Mensaje" },
   "Escolha o agente": { es: "Elige el agente" },
   "E-mail": { es: "Correo" },
