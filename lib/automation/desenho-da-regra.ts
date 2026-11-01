@@ -61,6 +61,8 @@ export type TelaDoGatilho = {
   fonte: string | null;
   data: { pipeline_id: string; campo: string; dias: string };
   tempo: { dias: string; direcao: DirecaoDoSilencio; proteger_pela_agenda: boolean };
+  /** FORK ESCALE · Fase 10B: gatilho cuja configuração a casca monta inteira (comentário). */
+  configPropria?: Record<string, unknown>;
 };
 
 export type AcaoDaRegra = { type: string; config: Record<string, unknown> };
@@ -193,6 +195,8 @@ export function triggerConfigDaTela(
   tela: TelaDoGatilho,
   regraGravada: Pick<RegraGravada, "trigger_event" | "trigger_config"> | null,
 ): Record<string, unknown> {
+  // FORK ESCALE · Fase 10B: o gatilho de comentário carrega a configuração inteira na tela.
+  if (tela.configPropria) return tela.configPropria;
   const base = {
     gatilhoDaRegra: regraGravada?.trigger_event,
     configDaRegra: regraGravada?.trigger_config,
