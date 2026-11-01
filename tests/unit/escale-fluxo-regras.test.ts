@@ -76,24 +76,26 @@ describe("organizarNaHorizontal", () => {
 });
 
 describe("gatilhos", () => {
-  it("cada TRIGGER_EVENT aparece uma vez, nas 5 fontes em ordem", () => {
+  it("cada TRIGGER_EVENT aparece uma vez, nas 6 fontes em ordem", () => {
     const eventos = FONTES_DOS_GATILHOS.flatMap((f) => f.opcoes.map((o) => o.evento));
     // `message.sent` exige a palavra-chave em `trigger_config`, que o fluxo ainda não sabe configurar:
     // ele segue só no editor em formulário (lacuna registrada no PR da 5B).
     const SEM_TELA_NO_FLUXO = ["message.sent"];
     expect([...eventos].sort()).toEqual(TRIGGER_EVENTS.filter((e) => !SEM_TELA_NO_FLUXO.includes(e)).sort());
     expect(new Set(eventos).size).toBe(eventos.length);
-    expect(FONTES_DOS_GATILHOS.map((f) => f.fonte)).toEqual(["negocios", "contatos", "mensagens", "agenda", "datas"]);
+    expect(FONTES_DOS_GATILHOS.map((f) => f.fonte)).toEqual(["negocios", "contatos", "mensagens", "instagram", "agenda", "datas"]);
   });
 
   it("fonteDoEvento, opcaoDoEvento e precisaDeFormulario", () => {
     expect(fonteDoEvento("appointment.cancelled")).toBe("agenda");
     expect(fonteDoEvento("x")).toBe("negocios");
     expect(fonteDoEvento("")).toBe("negocios");
+    expect(fonteDoEvento("comment.received")).toBe("instagram");
     expect(opcaoDoEvento("contact.tag_added")?.titulo).toBe("Tag adicionada ao contato");
     expect(opcaoDoEvento("nada")).toBeNull();
     const comFormulario = TRIGGER_EVENTS.filter((e) => precisaDeFormulario(e));
     expect([...comFormulario].sort()).toEqual([
+      "comment.received",
       "lead.created",
       "lead.date_field_due",
       "lead.silent_for",

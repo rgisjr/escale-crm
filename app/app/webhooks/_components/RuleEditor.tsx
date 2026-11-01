@@ -24,7 +24,7 @@ import {
   acoesQueFechamLaco,
   configDaPalavraChaveSchema,
   createAutomationRuleSchema,
-  TRIGGER_EVENTS,
+  TRIGGER_EVENTS_DO_ORIGINAL,
 } from "@/lib/schemas/webhooks";
 import {
   DIAS_MAX,
@@ -190,6 +190,8 @@ export const CURATED_FIELDS: Record<TriggerEvent, CuratedField[]> = {
   // funil (via etapa/tags) e tags do contato.
   "lead.silent_for": LEAD_FIELDS,
   "lead.stage_stale": [...LEAD_FIELDS, STAGE_FIELD],
+  // FORK ESCALE · Fase 10B: o Record exige; o designer original não oferece este gatilho.
+  "comment.received": [],
 };
 
 export const OP_LABELS: Record<Op, string> = { eq: "é", neq: "não é", contains: "contém" };
@@ -510,7 +512,8 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
                 <SelectValue placeholder={t("Escolha o gatilho")} />
               </SelectTrigger>
               <SelectContent>
-                {TRIGGER_EVENTS.map((ev) => (
+                {/* FORK ESCALE · Fase 10B: o gatilho de comentário é só da casca. */}
+                {TRIGGER_EVENTS_DO_ORIGINAL.map((ev) => (
                   <SelectItem key={ev} value={ev}>
                     {t(TRIGGER_LABELS[ev])}
                   </SelectItem>

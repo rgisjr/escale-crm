@@ -8,7 +8,7 @@ import { Plus, Trash } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 import { useT } from "@/hooks/i18n/useT";
 import { usePipelineStages, usePipelines, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
-import { acoesQueFechamLaco, MENSAGEM_DO_LACO_DE_LEAD, TRIGGER_EVENTS } from "@/lib/schemas/webhooks";
+import { acoesQueFechamLaco, MENSAGEM_DO_LACO_DE_LEAD, TRIGGER_EVENTS_DO_ORIGINAL } from "@/lib/schemas/webhooks";
 import { DIAS_MAX, DIAS_MIN, GATILHO_DE_DATA_DO_FUNIL } from "@/lib/automation/gatilho-de-data-do-funil";
 import {
   DIRECOES_DO_SILENCIO,
@@ -101,7 +101,8 @@ export function PainelDoGatilho({
             <SelectValue placeholder={t("Escolha o gatilho")} />
           </SelectTrigger>
           <SelectContent>
-            {TRIGGER_EVENTS.map((ev) => (
+            {/* FORK ESCALE · Fase 10B: o gatilho de comentário é só da casca. */}
+            {TRIGGER_EVENTS_DO_ORIGINAL.map((ev) => (
               <SelectItem key={ev} value={ev}>
                 {t(TRIGGER_LABELS[ev])}
               </SelectItem>

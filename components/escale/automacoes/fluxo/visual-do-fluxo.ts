@@ -17,6 +17,7 @@ import {
   CircleX,
   Clock,
   Flag,
+  InstagramLogo,
   ListChecks,
   Mail,
   MessageCircle,
@@ -86,12 +87,14 @@ export const ICONE_DO_GATILHO: Record<IconeDoGatilho, IconeDoFluxo> = {
   faltou: UserX,
   data: CalendarDays,
   aniversario: Cake,
+  instagram: InstagramLogo as IconeDoFluxo,
 };
 
 export const ICONE_DA_FONTE: Record<FonteDoGatilho, IconeDoFluxo> = {
   negocios: Briefcase,
   contatos: UserRound,
   mensagens: MessageCircle,
+  instagram: InstagramLogo as IconeDoFluxo,
   agenda: CalendarDays,
   datas: CalendarClock,
 };

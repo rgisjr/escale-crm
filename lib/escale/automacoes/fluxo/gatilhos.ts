@@ -6,7 +6,8 @@ import type { TriggerEvent } from "@/app/app/webhooks/_components/labels";
  * Instagram, Atendimento e CTWA ficam de fora. Títulos entre aspas no plano são
  * os da Clint; os outros são nossos, no mesmo molde. Tudo passa por `t()`.
  */
-export type FonteDoGatilho = "negocios" | "contatos" | "mensagens" | "agenda" | "datas";
+// FORK ESCALE · Fase 10B: a fonte "instagram" (comentário em post).
+export type FonteDoGatilho = "negocios" | "contatos" | "mensagens" | "instagram" | "agenda" | "datas";
 
 /** Chaves de ícone (o mapa para componente fica em `visual-do-fluxo.ts`; aqui não entra React). */
 export type IconeDoGatilho =
@@ -28,7 +29,8 @@ export type IconeDoGatilho =
   | "compareceu"
   | "faltou"
   | "data"
-  | "aniversario";
+  | "aniversario"
+  | "instagram";
 
 export interface OpcaoDeGatilho {
   evento: TriggerEvent;
@@ -40,6 +42,8 @@ export interface FonteDosGatilhos {
   fonte: FonteDoGatilho;
   rotulo: string;
   opcoes: readonly OpcaoDeGatilho[];
+  /** FORK ESCALE · Fase 10B: cartões que a Clint mostra e ainda não funcionam aqui (selo "Em breve", sem clique). */
+  emBreve?: readonly { titulo: string; descricao: string }[];
 }
 
 export const FONTES_DOS_GATILHOS: readonly FonteDosGatilhos[] = [
@@ -75,6 +79,19 @@ export const FONTES_DOS_GATILHOS: readonly FonteDosGatilhos[] = [
     ],
   },
   {
+    // FORK ESCALE · Fase 10B (07-020): a fonte Instagram. Só o comentário funciona; os outros três aparecem "Em breve".
+    fonte: "instagram",
+    rotulo: "Instagram",
+    opcoes: [
+      { evento: "comment.received", titulo: "Alguém comenta em um post", descricao: "Quando alguém comenta em um post da conta do Instagram", icone: "instagram" },
+    ],
+    emBreve: [
+      { titulo: "Contato envia uma mensagem", descricao: "O contato envia uma mensagem para o Instagram" },
+      { titulo: "Alguém marca a conta em um story", descricao: "Quando alguém menciona a conta do Instagram em um story" },
+      { titulo: "Alguém responde a um story", descricao: "Quando alguém responde a um story da conta do Instagram" },
+    ],
+  },
+  {
     fonte: "agenda",
     rotulo: "Agenda",
     opcoes: [
@@ -96,7 +113,13 @@ export const FONTES_DOS_GATILHOS: readonly FonteDosGatilhos[] = [
   },
 ];
 
-const COM_FORMULARIO: ReadonlySet<string> = new Set(["lead.created", "lead.date_field_due", "lead.silent_for", "lead.stage_stale"]);
+const COM_FORMULARIO: ReadonlySet<string> = new Set([
+  "lead.created",
+  "lead.date_field_due",
+  "lead.silent_for",
+  "lead.stage_stale",
+  "comment.received",
+]);
 
 /** Fonte do evento; evento desconhecido (ou vazio) → "negocios", a primeira. */
 export function fonteDoEvento(evento: string): FonteDoGatilho {
