@@ -20,9 +20,9 @@ import { NoDoFluxo } from "./NoDoFluxo";
 import type { EstadoDoFluxo } from "./useFluxo";
 
 // Fora do componente: o React Flow remonta os nós se `nodeTypes` muda a cada render.
-const nodeTypes: NodeTypes = { gatilho: NoDoFluxo, condicoes: NoDoFluxo, acao: NoDoFluxo };
+export const nodeTypes: NodeTypes = { gatilho: NoDoFluxo, condicoes: NoDoFluxo, acao: NoDoFluxo };
 
-const OPCOES_DA_ARESTA = {
+export const OPCOES_DA_ARESTA = {
   type: "default",
   markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "var(--color-casca-fluxo-aresta)" },
 } as const;

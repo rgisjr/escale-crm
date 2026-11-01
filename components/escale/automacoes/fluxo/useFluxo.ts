@@ -56,6 +56,7 @@ import {
   novoGrupo,
 } from "@/lib/escale/automacoes/fluxo/grupos";
 import { organizarNaHorizontal } from "@/lib/escale/automacoes/fluxo/layout";
+import { paraLigacoes, paraNos } from "@/lib/escale/automacoes/fluxo/nos";
 import { rotaDoFluxo } from "@/lib/escale/automacoes/rotas";
 import { acoesQueFechamLaco, MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
 
@@ -103,13 +104,6 @@ export interface EstadoDoFluxo {
   reorganizar: () => void;
   salvar: () => Promise<ResultadoDoSalvar>;
   alternarAtivo: (ligar: boolean) => void;
-}
-
-function paraNos(desenho: Desenho): NoDaAutomacao[] {
-  return desenho.caixas.map((c) => ({ id: c.id, type: c.type, position: c.position, data: c.data }));
-}
-function paraLigacoes(desenho: Desenho): Edge[] {
-  return desenho.ligacoes.map((l) => ({ id: l.id, source: l.source, target: l.target }));
 }
 
 export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo): EstadoDoFluxo {

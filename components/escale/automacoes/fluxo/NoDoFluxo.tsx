@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 
 import { BarraDoNo } from "./BarraDoNo";
 import { CorpoDaAcao, CorpoDasCondicoes, CorpoDoGatilho, CorpoDoGrupo, CorpoDoWhatsapp } from "./CorposDoNo";
+import { useInsightsDoNo } from "./insights/contexto";
+import { VisaoGeralDoNo } from "./insights/VisaoGeralDoNo";
 import { VISUAL_DO_NO } from "./visual-do-fluxo";
 
 /**
@@ -26,6 +28,8 @@ export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
   const problemas = data.problemas ?? [];
   const temProblema = problemas.length > 0;
   const grupo = ehGrupo(data);
+  // FORK ESCALE · Fase 5C: dentro da aba Insights o nó é só de leitura (sem barra, sem seleção, sem alerta).
+  const nosInsights = useInsightsDoNo() !== null;
 
   let titulo = "";
   if (data.kind === "acao") {
@@ -39,14 +43,16 @@ export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
     <div
       className={cn(
         "group relative w-[352px] rounded-xl border border-casca-divisoria bg-surface shadow-[0_1px_3px_rgb(17_24_39/0.08)]",
-        selected && cn("border-2", visual.borda),
-        temProblema && "border-2 border-casca-alerta",
+        !nosInsights && selected && cn("border-2", visual.borda),
+        !nosInsights && temProblema && "border-2 border-casca-alerta",
       )}
       data-testid={`no-${id}`}
       title={temProblema ? t(problemas[0]!.mensagem) : undefined}
     >
       {data.kind !== "gatilho" && <Handle type="target" position={Position.Left} />}
-      {data.kind !== "gatilho" && <BarraDoNo id={id} podeDuplicar={data.kind === "acao"} selecionado={!!selected} />}
+      {data.kind !== "gatilho" && !nosInsights && <BarraDoNo id={id} podeDuplicar={data.kind === "acao"} selecionado={!!selected} />}
+      {/* FORK ESCALE · Fase 5C: o "Overview de resultados" no topo do nó, só nos Insights. */}
+      {nosInsights && <VisaoGeralDoNo id={id} dados={data} />}
       <div className="flex items-center gap-3 px-5 pt-5 pb-3">
         <Icone size={18} className={cn("shrink-0", visual.texto)} aria-hidden />
         {data.kind === "gatilho" ? (
