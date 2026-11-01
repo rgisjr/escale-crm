@@ -146,7 +146,7 @@ describe("nó nos Insights", () => {
   });
 
   it("sem barra do nó e sem borda de alerta, mesmo com problema", () => {
-    montar("acao-1", { ...acao("send_whatsapp_message"), problemas: [{ mensagem: "x", campo: "y" }] } as DadosDaCaixa, {}, { selected: true });
+    montar("acao-1", { ...acao("send_whatsapp_message"), problemas: [{ caixa: "acao-1", mensagem: "x" }] }, {}, { selected: true });
     expect(screen.queryByRole("button", { name: "Remover passo" })).toBeNull();
     expect(screen.getByTestId("no-acao-1").className).not.toContain("border-casca-alerta");
   });
