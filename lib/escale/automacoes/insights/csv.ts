@@ -42,7 +42,6 @@ export function csvDasExecucoes(
   const corpo = linhas.map((l) => {
     const problema = primeiroPassoComProblema(l.resultados);
     const tipo = problema ? (acoes[problema.indice]?.type ?? problema.resultado.type) : "";
-    const rotuloDaAcao = ACTION_LABELS[tipo as ActionType] ?? tipo;
     return [
       dataEHoraBr(l.criadaEm, fuso),
       l.contato?.nome ?? "",
@@ -50,7 +49,7 @@ export function csvDasExecucoes(
       l.contato?.email ?? "",
       l.negocio?.titulo ?? "",
       t(ROTULO_DO_STATUS_DA_EXECUCAO[l.status]),
-      problema ? `${problema.indice + 1}. ${t(rotuloDaAcao)}` : "",
+      problema ? `${problema.indice + 1}. ${t(ACTION_LABELS[tipo as ActionType] ?? tipo)}` : "",
       problema ? (motivo(problema.resultado) ?? "") : "",
     ];
   });

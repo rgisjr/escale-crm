@@ -42,7 +42,6 @@ export function CartaoDaExecucao({
   const contato = linha.contato;
   const problema = primeiroPassoComProblema(linha.resultados);
   const tipo = problema ? (acoes[problema.indice]?.type ?? problema.resultado.type) : "";
-  const rotuloDaAcao = ACTION_LABELS[tipo as ActionType] ?? tipo;
 
   return (
     <li className="rounded-lg border border-casca-divisoria bg-surface px-6 py-3 shadow-sm">
@@ -101,7 +100,7 @@ export function CartaoDaExecucao({
       {problema ? (
         <p className="mt-2 text-[12px] text-casca-texto-2">
           <span className="font-medium">
-            {t("Passo")} {problema.indice + 1} · {t(rotuloDaAcao)}:
+            {t("Passo")} {problema.indice + 1} · {t(ACTION_LABELS[tipo as ActionType] ?? tipo)}:
           </span>{" "}
           {explicacaoDe(problema.resultado, t) ?? problema.resultado.error ?? t("Essa ação não funcionou.")}
         </p>

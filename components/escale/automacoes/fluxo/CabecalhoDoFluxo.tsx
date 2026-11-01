@@ -104,17 +104,32 @@ export function CabecalhoDoFluxo({
       </div>
       <AbasDoFluxo aba={aba} aoMudar={aoMudarAba} insightsDisponivel={insightsDisponivel && existe} />
       <div className="flex items-center justify-end gap-2">
-        {existe ? (
-          <InterruptorDaCasca
-            ligado={ativo}
-            aoMudar={aoAlternarAtivo}
-            desabilitado={salvando}
-            aria-label={ativo ? t("Pausar automação") : t("Ligar automação")}
-          />
-        ) : null}
-        <BotaoDaCasca variante="marca" tamanho="sm" disabled={!sujo || salvando} onClick={aoSalvar}>
-          {salvando ? t("Salvando…") : t("Salvar")}
-        </BotaoDaCasca>
+        {aba === "insights" ? (
+          // FORK ESCALE · Fase 5C (07-011): nos Insights somem o interruptor e o Salvar; fica "Editar automação".
+          <BotaoDaCasca
+            variante="texto"
+            tamanho="sm"
+            className="gap-1.5 border border-casca-divisoria text-casca-marca-forte"
+            onClick={() => aoMudarAba("editor")}
+          >
+            <Pencil size={14} aria-hidden />
+            {t("Editar automação")}
+          </BotaoDaCasca>
+        ) : (
+          <>
+            {existe ? (
+              <InterruptorDaCasca
+                ligado={ativo}
+                aoMudar={aoAlternarAtivo}
+                desabilitado={salvando}
+                aria-label={ativo ? t("Pausar automação") : t("Ligar automação")}
+              />
+            ) : null}
+            <BotaoDaCasca variante="marca" tamanho="sm" disabled={!sujo || salvando} onClick={aoSalvar}>
+              {salvando ? t("Salvando…") : t("Salvar")}
+            </BotaoDaCasca>
+          </>
+        )}
         {menu}
       </div>
     </header>
