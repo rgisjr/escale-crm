@@ -17,6 +17,7 @@ import type { AbaDoFluxo } from "./AbasDoFluxo";
 import { AcoesDoNoContext, type AcoesDoNo } from "./BarraDoNo";
 import { CabecalhoDoFluxo } from "./CabecalhoDoFluxo";
 import { CanvasDoFluxo } from "./CanvasDoFluxo";
+import { InsightsDoFluxo } from "./insights/InsightsDoFluxo";
 import { MenuDoFluxo } from "./MenuDoFluxo";
 import { PaletaDoFluxo } from "./PaletaDoFluxo";
 import { PainelDaAcao } from "./painel/PainelDaAcao";
@@ -85,6 +86,21 @@ export function TelaDoFluxo({
     setPainelSujo(false);
     fluxo.selecionar(null);
   }, [fluxo]);
+
+  // FORK ESCALE · Fase 5C: entrar em Insights fecha o painel do nó (pelo guarda do rascunho); o desenho sujo fica guardado.
+  const mudarAba = useCallback(
+    (proxima: AbaDoFluxo) => {
+      if (proxima !== "insights") {
+        setAba(proxima);
+        return;
+      }
+      comGuarda(() => {
+        fechar();
+        setAba("insights");
+      });
+    },
+    [comGuarda, fechar],
+  );
 
   const escolherPasso = useCallback(
     (passo: PassoDaPaleta, posicao?: { x: number; y: number }) => {
@@ -200,8 +216,8 @@ export function TelaDoFluxo({
           atualizadoEm={fluxo.versao}
           fuso={fuso}
           aba={aba}
-          insightsDisponivel={false}
-          aoMudarAba={setAba}
+          insightsDisponivel={regra !== null}
+          aoMudarAba={mudarAba}
           aoVoltar={() => sairPara(ROTA_DA_LISTA_DE_AUTOMACOES)}
           aoRenomear={() => setRenomeando(true)}
           aoSalvar={() => void fluxo.salvar()}
@@ -215,17 +231,21 @@ export function TelaDoFluxo({
             />
           }
         />
-        <div className="relative flex min-h-0 flex-1">
-          <CanvasDoFluxo
-            fluxo={fluxo}
-            aoClicarNo={(id) => id !== selecionado && comGuarda(() => fluxo.selecionar(id))}
-            aoClicarFundo={() => selecionado && comGuarda(fechar)}
-            aoSoltar={escolherPasso}
-            aoPedirRemover={setRemovendo}
-          />
-          {painel}
-          <PaletaDoFluxo aoEscolher={(passo) => escolherPasso(passo)} />
-        </div>
+        {aba === "insights" && regra ? (
+          <InsightsDoFluxo regra={regra} fuso={fuso} sujo={sujo} />
+        ) : (
+          <div className="relative flex min-h-0 flex-1">
+            <CanvasDoFluxo
+              fluxo={fluxo}
+              aoClicarNo={(id) => id !== selecionado && comGuarda(() => fluxo.selecionar(id))}
+              aoClicarFundo={() => selecionado && comGuarda(fechar)}
+              aoSoltar={escolherPasso}
+              aoPedirRemover={setRemovendo}
+            />
+            {painel}
+            <PaletaDoFluxo aoEscolher={(passo) => escolherPasso(passo)} />
+          </div>
+        )}
 
         <JanelaRenomearAutomacao
           automacao={renomeando ? { id: regra?.id ?? "nova", nome: fluxo.nome } : null}

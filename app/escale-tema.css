@@ -533,6 +533,18 @@ body:has([data-escale-editor-de-automacao]) [role="listbox"] [role="option"][dat
   max-height: 14px;
 }
 
+/* ─── FORK ESCALE · Fase 5C (Insights da automação, 07-011/07-012) ───
+   No canvas só de leitura a aresta não apaga: sem a lixeira e sem engrossar. */
+[data-escale-fluxo-insights] .react-flow__edge {
+  cursor: default;
+}
+[data-escale-fluxo-insights] .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 2px;
+}
+[data-escale-fluxo-insights] .react-flow__handle {
+  cursor: default;
+}
+
 /* ─── FORK ESCALE · Fase 8B (assistente de campanha) ───
    A prévia do celular (amostra de pixel no 09-018 e 09-025: as cores são do
    WhatsApp, não da Clint nem da marca), o balão da prévia do modal "Escolher

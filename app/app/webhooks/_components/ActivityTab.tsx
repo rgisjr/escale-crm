@@ -211,7 +211,8 @@ const MOTIVO_DA_PARADA: Record<string, string> = {
     "O domínio do remetente não está verificado na Resend. Verifique o domínio na conta Resend e tente de novo.",
 };
 
-function explicacaoDe(
+// FORK ESCALE · Fase 5C: o cartão da execução dos Insights usa a mesma frase.
+export function explicacaoDe(
   action: AutomationRuleRunActionResult,
   t: (texto: string) => string,
 ): string | null {
