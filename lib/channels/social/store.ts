@@ -142,6 +142,16 @@ export async function socialChannels(db: SupabaseClient, org: string) {
     metadata: row.metadata as Record<string, unknown>,
   }));
 }
+// FORK ESCALE · Fase 10B: a assinatura também recebe `comment.received` (gatilho de comentário).
+export const EVENTOS_DA_ASSINATURA_SOCIAL = [
+  "message.received",
+  "message.sent",
+  "message.delivered",
+  "message.read",
+  "message.failed",
+  "comment.received",
+] as const;
+
 export async function connectSocialInbox(
   db: SupabaseClient,
   org: string,
@@ -249,13 +259,7 @@ export async function connectSocialInbox(
           name: `CRM ${account.platform} ${accountId.slice(-8)}`,
           url: webhookUrl,
           secret,
-          events: [
-            "message.received",
-            "message.sent",
-            "message.delivered",
-            "message.read",
-            "message.failed",
-          ],
+          events: [...EVENTOS_DA_ASSINATURA_SOCIAL],
           isActive: true,
         }),
       ).webhook._id;

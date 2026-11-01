@@ -43,6 +43,8 @@ import { aplicarEfeitosPosEntrada } from "../pos-entrada";
 
 import { completarLocalizacao, pedirNovaBuscaDoPino, pinoFicouSemCoordenadas } from "./localizacao";
 import { parseZernioInbound, type ZernioIdentity, type ZernioInboundMessage } from "./webhook";
+// FORK ESCALE · Fase 10B: o eco do direct que a automação mandou.
+import { ecoDaMensagemDaAutomacao } from "@/lib/escale/comentarios/eco";
 
 export interface ZernioIngestResult {
   status: "ingested" | "duplicate" | "ignored" | "unknown_account";
@@ -89,6 +91,19 @@ export async function ingestZernioInbound(
   // O pino do WhatsApp chega como "📍 Location", sem coordenadas: elas moram
   // só na API. Rede social não manda pino — a busca é só do WhatsApp.
   const msg = input.socialMessage ? lida : await completarLocalizacao(admin, input.organizationId, lida);
+
+  // FORK ESCALE · Fase 10B: o eco do direct da automação é a mesma mensagem que já gravamos — não vira
+  // outra linha e não pausa a IA.
+  if (
+    input.socialMessage &&
+    (await ecoDaMensagemDaAutomacao(admin, {
+      organizationId: input.organizationId,
+      channelSessionId: input.channelSessionId,
+      msg: input.socialMessage,
+    }))
+  ) {
+    return { status: "duplicate", reason: "eco_da_automacao" };
+  }
 
   // Evento de DESFECHO: a mensagem já existe (ou nem é nossa). Só atualiza o
   // status — inserir aqui criaria uma segunda linha para a mesma mensagem, uma
@@ -718,7 +733,8 @@ export async function aplicarEdicaoZernio(
 }
 
 /** Concurrent first messages share a database uniqueness constraint. */
-async function upsertSocialContact(
+// FORK ESCALE · Fase 10B: exportada — o comentário usa a mesma porta de contato do direct.
+export async function upsertSocialContact(
   admin: SupabaseClient,
   org: string,
   identity: string,
