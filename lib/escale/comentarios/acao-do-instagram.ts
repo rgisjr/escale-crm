@@ -17,7 +17,7 @@ import { EXPLICACAO_DO_MOTIVO, motivoDoErro, respostaPrivada, type MotivoDoDirec
  * manda o direct como resposta privada ao comentário (uma por comentário, até 7 dias), pela API do
  * Zernio. A mensagem entra na conversa antes do envio (sent_via 'automation'), sem pausar a IA.
  */
-const SO_COM_COMENTARIO = "O passo Instagram funciona com o gatilho “Alguém comenta em um post”.";
+const SO_COM_COMENTARIO = "O passo Instagram funciona com os gatilhos do Instagram.";
 const TABELA = "escale_disparos_de_comentario";
 
 const falhou = (motivo: MotivoDoDirect, extra: Record<string, unknown> = {}): ActionResultDetail => ({

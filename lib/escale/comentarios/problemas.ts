@@ -1,4 +1,5 @@
 import { MAXIMO_DA_RESPOSTA, MAXIMO_DE_CAMINHOS, MAXIMO_DE_PUBLICACOES, MAXIMO_DE_VARIACOES } from "./constantes";
+import { lerFiltro } from "./filtro";
 import type { ConfigDoComentario } from "./schema";
 
 /** Fica fora de `caminhos.ts` e de `schema.ts` para os dois poderem usá-lo sem ciclo (só tipos vêm do schema). */
@@ -14,7 +15,7 @@ export function problemasDoGatilho(config: ConfigDoComentario): string[] {
   if (todos && (config.caminhos.length !== 1 || publicacoes.length > 0)) {
     problemas.push("Revise a configuração do gatilho.");
   }
-  if (!todos) {
+  if (config.escopo === "especificos") {
     if (config.caminhos.length === 0) problemas.push("Adicione ao menos uma publicação ao gatilho.");
     if (config.caminhos.length > MAXIMO_DE_CAMINHOS) problemas.push("O gatilho aceita até 10 caminhos de publicação.");
     if (config.caminhos.some((c) => c.publicacoes.length === 0)) {
@@ -31,11 +32,18 @@ export function problemasDoGatilho(config: ConfigDoComentario): string[] {
     if (repetida) problemas.push("Uma publicação só pode estar em um caminho.");
   }
 
-  const semPalavra = config.caminhos.some(
-    (c) => c.filtro.modo === "palavras" && !c.filtro.palavras.some(preenchida),
-  );
-  if (semPalavra) {
+  const comCondicoes = config.caminhos.flatMap((c) => {
+    const f = lerFiltro(c.filtro);
+    return f.modo === "palavras" ? [f.condicoes] : [];
+  });
+  if (comCondicoes.some((condicoes) => condicoes.length === 0)) {
     problemas.push('Preencha a palavra do filtro de cada publicação ou use "Qualquer comentário".');
+  } else if (comCondicoes.some((condicoes) => condicoes.every((c) => c.operador === "nao_contem"))) {
+    problemas.push('Adicione ao menos uma condição que não seja "Não contém".');
+  }
+
+  if (config.escopo === "proxima" && (config.caminhos.length !== 1 || publicacoes.length > 0 || config.proxima === null)) {
+    problemas.push("Revise a configuração do gatilho.");
   }
 
   const respostas = config.caminhos.flatMap((c) => (c.resposta ? [c.resposta.variacoes] : []));

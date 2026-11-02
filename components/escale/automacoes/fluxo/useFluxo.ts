@@ -187,7 +187,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
     (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo", posicao?: { x: number; y: number }) => {
       // FORK ESCALE · Fase 10B: o passo Instagram só funciona com o gatilho de comentário (D9).
       if (passo === PASSO_DO_INSTAGRAM && evento !== GATILHO_DE_COMENTARIO) {
-        toast.error(t("O passo Instagram funciona com o gatilho “Alguém comenta em um post”."));
+        toast.error(t("O passo Instagram funciona com os gatilhos do Instagram."));
         return;
       }
       if (passo === "condicoes" && desenho.caixas.some((c) => c.data.kind === "condicoes")) {

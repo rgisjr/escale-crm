@@ -261,7 +261,7 @@ export function TelaDoFluxo({
               desligados={
                 fluxo.evento === GATILHO_DE_COMENTARIO
                   ? {}
-                  : { [PASSO_DO_INSTAGRAM]: "O passo Instagram funciona com o gatilho “Alguém comenta em um post”." }
+                  : { [PASSO_DO_INSTAGRAM]: "O passo Instagram funciona com os gatilhos do Instagram." }
               }
             />
           </div>

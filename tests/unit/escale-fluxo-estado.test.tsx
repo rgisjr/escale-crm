@@ -326,7 +326,7 @@ describe("useFluxo · gatilho de comentário e passo Instagram", () => {
     const { result } = montar(regra());
     const antes = filaDa(result);
     act(() => result.current.adicionar("send_instagram_message"));
-    expect(toast.error).toHaveBeenCalledWith("O passo Instagram funciona com o gatilho “Alguém comenta em um post”.");
+    expect(toast.error).toHaveBeenCalledWith("O passo Instagram funciona com os gatilhos do Instagram.");
     expect(filaDa(result)).toEqual(antes);
   });
 });

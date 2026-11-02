@@ -85,7 +85,7 @@ export function CaminhoDoComentario({
         </div>
         {filtro.modo === "palavras" ? (
           <>
-            <CampoDePalavras palavras={filtro.palavras} aoMudar={(palavras) => mudarFiltro({ ...filtro, palavras })} />
+            <CampoDePalavras palavras={filtro.palavras ?? []} aoMudar={(palavras) => mudarFiltro({ ...filtro, palavras })} />
             <div className="flex flex-col gap-1">
               <p className="text-[11px] text-casca-suave">{t("Combinar palavras com")}</p>
               <SeletorDaCasca

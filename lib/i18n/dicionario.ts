@@ -19215,7 +19215,7 @@ export const DICIONARIO: Traducoes = {
   "Qualquer palavra": { es: "Cualquier palabra" },
   "Todas as palavras": { es: "Todas las palabras" },
   "Resposta ao comentário": { es: "Respuesta al comentario" },
-  "O passo Instagram funciona com o gatilho “Alguém comenta em um post”.": { es: "El paso Instagram funciona con el disparador “Alguien comenta en una publicación”." },
+  "O passo Instagram funciona com os gatilhos do Instagram.": { es: "El paso Instagram funciona con los disparadores de Instagram." },
   "Esta mensagem sai como resposta privada ao comentário: uma por comentário, até 7 dias depois dele (regra do Instagram). Ela chega em Solicitações de mensagem, por isso o link vai em botão.": { es: "Este mensaje sale como respuesta privada al comentario: una por comentario, hasta 7 días después (regla de Instagram). Llega a Solicitudes de mensajes, por eso el enlace va en un botón." },
   "Botões": { es: "Botones" },
   "Até 3 botões de link. O título aceita até 20 caracteres.": { es: "Hasta 3 botones de enlace. El título acepta hasta 20 caracteres." },

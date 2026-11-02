@@ -6,14 +6,14 @@ import type { DadosDoGatilho } from "@/lib/automation/desenho-da-regra";
 import { configDoComentarioSchema, type CaminhoDoGatilho } from "@/lib/escale/comentarios/schema";
 
 /** O rótulo de um caminho no nó: a legenda, "Qualquer publicação" ou "Grupo · n publicações". */
-function useRotuloDoCaminho(escopo: "todos" | "especificos", caminho: CaminhoDoGatilho): string {
+function useRotuloDoCaminho(escopo: "todos" | "especificos" | "proxima", caminho: CaminhoDoGatilho): string {
   const t = useT();
   if (escopo === "todos") return t("Qualquer publicação");
   if (caminho.publicacoes.length > 1) return t("Grupo · {n} publicações").replace("{n}", String(caminho.publicacoes.length));
   return caminho.publicacoes[0]?.legenda ?? t("Sem legenda");
 }
 
-function LinhaDoCaminho({ escopo, caminho }: { escopo: "todos" | "especificos"; caminho: CaminhoDoGatilho }) {
+function LinhaDoCaminho({ escopo, caminho }: { escopo: "todos" | "especificos" | "proxima"; caminho: CaminhoDoGatilho }) {
   const t = useT();
   const rotulo = useRotuloDoCaminho(escopo, caminho);
   const miniatura = caminho.publicacoes[0]?.miniatura ?? null;
@@ -34,7 +34,7 @@ function LinhaDoCaminho({ escopo, caminho }: { escopo: "todos" | "especificos"; 
           <p className="text-[11px] text-casca-suave">{t("Qualquer comentário")}</p>
         ) : (
           <div className="mt-0.5 flex flex-wrap gap-1">
-            {caminho.filtro.palavras.map((p) => (
+            {(caminho.filtro.palavras ?? []).map((p) => (
               <span key={p} className="rounded bg-surface px-1.5 text-[11px] text-casca-texto-2">
                 {p}
               </span>

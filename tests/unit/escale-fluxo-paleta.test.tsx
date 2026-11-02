@@ -58,7 +58,7 @@ describe("paleta do fluxo", () => {
 });
 
 describe("paleta do fluxo · passo Instagram (Fase 10B)", () => {
-  const frase = "O passo Instagram funciona com o gatilho “Alguém comenta em um post”.";
+  const frase = "O passo Instagram funciona com os gatilhos do Instagram.";
 
   it("com o gatilho de comentário o item Instagram escolhe normalmente", async () => {
     const aoEscolher = vi.fn();
