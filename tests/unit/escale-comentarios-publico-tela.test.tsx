@@ -104,7 +104,7 @@ describe("Público (D12/D13)", () => {
     await userEvent.click(screen.getByRole("option", { name: "Só seguidores" }));
     expect(ultima(aoMudar).publico).toMatchObject({ quem: "seguidores", quando_nao_informado: "enviar" });
     expect(screen.getByText("Siga para liberar")).toBeTruthy();
-    expect(screen.getByText(/\/640/, { selector: "span" })).toBeTruthy();
+    expect(screen.getAllByText(/\/640/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("17/20")).toBeTruthy();
   });
 
