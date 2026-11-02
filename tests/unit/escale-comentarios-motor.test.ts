@@ -186,6 +186,11 @@ describe("schema do motor com o gatilho de comentário", () => {
   it("o designer original não lista o gatilho", () => {
     expect(TRIGGER_EVENTS).toContain("comment.received");
     expect(TRIGGER_EVENTS_DO_ORIGINAL).not.toContain("comment.received");
-    expect(GATILHOS_SO_DA_CASCA).toEqual(["comment.received"]);
+    expect(GATILHOS_SO_DA_CASCA).toEqual([
+      "comment.received",
+      "instagram.message_received",
+      "instagram.story_mention",
+      "instagram.story_reply",
+    ]);
   });
 });

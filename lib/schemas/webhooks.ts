@@ -12,7 +12,9 @@ import { passosSchema } from "@/lib/automation/envio-de-passos";
 // FORK ESCALE · Fase 10B: o gatilho de comentário e o passo Instagram.
 import {
   acaoDoInstagramSchema,
+  exigirAnexoSoNoDirect,
   exigirConfigDoComentario,
+  exigirConfigDoDirect,
   exigirGatilhoDoPassoDoInstagram,
 } from "@/lib/escale/comentarios/schema";
 
@@ -113,6 +115,10 @@ export const ENTIDADE_ESPERADA_POR_GATILHO = {
   // FORK ESCALE · Fase 10B: o comentário do Instagram/Facebook; quem emite é `lib/escale/comentarios/receber.ts`,
   // e a entidade é o contato de quem comentou.
   "comment.received": "contact",
+  // FORK ESCALE · Fase 10D: direct do Instagram; quem emite é `lib/escale/comentarios/direct.ts`.
+  "instagram.message_received": "contact",
+  "instagram.story_mention": "contact",
+  "instagram.story_reply": "contact",
 } as const;
 
 export type GatilhoDeAutomacao = keyof typeof ENTIDADE_ESPERADA_POR_GATILHO;
@@ -230,7 +236,12 @@ export const TRIGGER_EVENTS = Object.keys(ENTIDADE_ESPERADA_POR_GATILHO) as [
 ];
 
 // FORK ESCALE · Fase 10B: gatilhos que só a casca monta. O designer original não os oferece.
-export const GATILHOS_SO_DA_CASCA = ["comment.received"] as const satisfies readonly GatilhoDeAutomacao[];
+export const GATILHOS_SO_DA_CASCA = [
+  "comment.received",
+  "instagram.message_received",
+  "instagram.story_mention",
+  "instagram.story_reply",
+] as const satisfies readonly GatilhoDeAutomacao[];
 export const TRIGGER_EVENTS_DO_ORIGINAL = TRIGGER_EVENTS.filter(
   (evento) => !(GATILHOS_SO_DA_CASCA as readonly string[]).includes(evento),
 );
@@ -507,7 +518,9 @@ export const createAutomationRuleSchema = z
   .superRefine(exigirPalavraChave)
   .superRefine(exigirIdDaFonteWebhook)
   .superRefine(exigirConfigDoComentario)
+  .superRefine(exigirConfigDoDirect)
   .superRefine(exigirGatilhoDoPassoDoInstagram)
+  .superRefine(exigirAnexoSoNoDirect)
   .superRefine(recusarLacoDeLead);
 
 function exigirIdDaFonteWebhook(
@@ -634,9 +647,11 @@ export const updateAutomationRuleSchema = z
     exigirConfigDosGatilhosDeTempo(patch as { trigger_event: string; trigger_config?: Record<string, unknown> }, ctx);
     exigirPalavraChave(patch as { trigger_event: string; trigger_config?: Record<string, unknown> }, ctx);
     exigirConfigDoComentario(patch, ctx);
+    exigirConfigDoDirect(patch, ctx);
   })
   .superRefine(exigirIdDaFonteWebhook)
   .superRefine(exigirGatilhoDoPassoDoInstagram)
+  .superRefine(exigirAnexoSoNoDirect)
   // Só vê o laço quando o PATCH traz gatilho E ações; o PATCH parcial é
   // conferido contra a regra gravada na rota.
   .superRefine(recusarLacoDeLead);

@@ -67,6 +67,10 @@ export const TRIGGER_LABELS: Record<TriggerEvent, string> = {
   "lead.stage_stale": "Quando um lead ficar N dias na mesma etapa",
   // FORK ESCALE · Fase 10B: o Record exige; a aba Atividade mostra o rótulo nas execuções.
   "comment.received": "Quando alguém comentar num post do Instagram ou do Facebook",
+  // FORK ESCALE · Fase 10D
+  "instagram.message_received": "Quando alguém mandar mensagem no Instagram",
+  "instagram.story_mention": "Quando alguém marcar a conta num story",
+  "instagram.story_reply": "Quando alguém responder a um story",
 };
 
 export const ACTION_LABELS: Record<ActionType, string> = {

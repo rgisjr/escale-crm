@@ -192,6 +192,10 @@ export const CURATED_FIELDS: Record<TriggerEvent, CuratedField[]> = {
   "lead.stage_stale": [...LEAD_FIELDS, STAGE_FIELD],
   // FORK ESCALE · Fase 10B: o Record exige; o designer original não oferece este gatilho.
   "comment.received": [],
+  // FORK ESCALE · Fase 10D
+  "instagram.message_received": [],
+  "instagram.story_mention": [],
+  "instagram.story_reply": [],
 };
 
 export const OP_LABELS: Record<Op, string> = { eq: "é", neq: "não é", contains: "contém" };

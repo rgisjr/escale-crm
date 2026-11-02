@@ -49,12 +49,16 @@ const payload = (comentadoEm: string) => ({
 
 const atualizacoes: Array<Record<string, unknown>> = [];
 const admin = {
-  from: () => ({
-    update: (valores: Record<string, unknown>) => {
-      atualizacoes.push(valores);
-      return { eq: async () => ({ error: null }) };
-    },
-  }),
+  from: () => {
+    const leitura = { eq: () => leitura, maybeSingle: async () => ({ data: null, error: null }) };
+    return {
+      select: () => leitura,
+      update: (valores: Record<string, unknown>) => {
+        atualizacoes.push(valores);
+        return { eq: async () => ({ error: null }) };
+      },
+    };
+  },
 } as unknown as SupabaseClient;
 
 function contexto(opcoes: { evento?: string; comentadoEm?: string } = {}): ActionCtx {
@@ -130,7 +134,7 @@ describe("send_instagram_message", () => {
     expect(r).toMatchObject({ status: "success", detail: { message_id: "zm-9" } });
     expect(confirmar).toHaveBeenCalledWith(admin, "org-1", "msg-1", "social:acc-1:zm-9");
     expect(atualizacoes[0]).toMatchObject({ direct: "enviado", direct_message_id: "zm-9" });
-    expect(privada).toHaveBeenCalledWith("chave", expect.objectContaining({ texto: "Oi, aqui o link!", commentId: "c-1", postId: "179", botoes: config.botoes }));
+    expect(privada).toHaveBeenCalledWith("chave", expect.objectContaining({ texto: "Oi, aqui o link!", commentId: "c-1", postId: "179", botoes: [{ tipo: "url", ...config.botoes[0]! }] }));
   });
 
   it("recusa de botão → falharDirect e failed com a explicação", async () => {

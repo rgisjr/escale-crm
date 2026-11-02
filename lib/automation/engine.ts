@@ -40,7 +40,8 @@ import {
 import { logger } from "@/lib/logger";
 // FORK ESCALE · Fase 10B: o gatilho de comentário (caminho, disparo único por comentário e por pessoa).
 import { caminhoDoComentario } from "@/lib/escale/comentarios/caminhos";
-import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
+import { GATILHO_DE_COMENTARIO, GATILHOS_DE_DIRECT } from "@/lib/escale/comentarios/constantes";
+import { directCasa } from "@/lib/escale/comentarios/direct";
 import { concluirDisparo, reivindicarDisparos } from "@/lib/escale/comentarios/disparos";
 
 export const AUTOMATION_CONSUMER_KEY = "automation-rules";
@@ -391,6 +392,8 @@ export async function runAutomationForEvent(
     if (row.event_type === "message.sent" && !mensagemEnviadaCasa(rule.trigger_config, context, row)) return false;
     // FORK ESCALE · Fase 10B: o comentário só casa com a regra que tem caminho para ele.
     if (row.event_type === GATILHO_DE_COMENTARIO && !caminhoDoComentario(rule.trigger_config, row.payload)) return false;
+    // FORK ESCALE · Fase 10D: os gatilhos de direct do Instagram casam por conta e filtro de palavra.
+    if ((GATILHOS_DE_DIRECT as readonly string[]).includes(row.event_type) && !directCasa(row.event_type, rule.trigger_config, row.payload)) return false;
     return evaluateConditions(rule.conditions ?? [], context);
   });
   if (!applicable.length) {

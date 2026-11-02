@@ -40,6 +40,8 @@ import {
 } from "@/lib/escalacao/numero-interno-de-aviso";
 
 import { aplicarEfeitosPosEntrada } from "../pos-entrada";
+// FORK ESCALE · Fase 10D: o direct do Instagram aciona as automações antes do agente.
+import { aoReceberDirect, SEM_EXTRAS } from "@/lib/escale/comentarios/direct";
 
 import { completarLocalizacao, pedirNovaBuscaDoPino, pinoFicouSemCoordenadas } from "./localizacao";
 import { parseZernioInbound, type ZernioIdentity, type ZernioInboundMessage } from "./webhook";
@@ -336,7 +338,7 @@ async function efeitosDaEntrada(
     organizationId: string;
     channelSessionId: string;
     requestId?: string;
-    socialMessage?: Pick<SocialMessage, "platform">;
+    socialMessage?: SocialMessage;
   },
   msg: ZernioInboundMessage,
   contactId: string,
@@ -356,6 +358,19 @@ async function efeitosDaEntrada(
   // exclusivo da Meta), vem no PRÓPRIO texto da mensagem — ver o cabeçalho de
   // `lib/plataformas-de-anuncio/google/atribuicao.ts`. Best-effort, mesma postura.
   await extrairEEstamparAtribuicaoGoogle(admin, input.organizationId, contactId, msg.text);
+
+  // FORK ESCALE · Fase 10D: se uma automação quer este direct, a IA fica quieta antes do despacho.
+  if (input.socialMessage) {
+    await aoReceberDirect(admin, {
+      organizationId: input.organizationId,
+      channelSessionId: input.channelSessionId,
+      contactId,
+      conversationId,
+      messageId,
+      msg: input.socialMessage,
+      extras: input.socialMessage.extras ?? SEM_EXTRAS,
+    });
+  }
 
   await aplicarEfeitosPosEntrada(admin, {
     organizationId: input.organizationId,

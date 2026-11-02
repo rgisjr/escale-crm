@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { inboxSupported, socialMessageId } from "./catalog";
 import type { ZernioInboundMessage } from "../zernio/webhook";
+// FORK ESCALE · Fase 10D: os extras do direct do Instagram (story, botão, seguidor).
+import { extrasDoDirect, type ExtrasDoDirect } from "@/lib/escale/comentarios/direct";
 
 const text = z.string().min(1);
 const schema = z.object({
@@ -36,6 +38,8 @@ const schema = z.object({
 export interface SocialMessage extends ZernioInboundMessage {
   platform: string;
   participantId: string;
+  /** FORK ESCALE · Fase 10D */
+  extras?: ExtrasDoDirect;
 }
 export function parseSocialMessage(
   payload: unknown,
@@ -74,6 +78,8 @@ export function parseSocialMessage(
     sentAt: p.message.sentAt ?? null,
     attachments: p.message.attachments,
     referral: null,
+    // FORK ESCALE · Fase 10D: lê do payload cru; nunca lança.
+    extras: extrasDoDirect(payload),
     identity: {
       phone: null,
       bsuid: null,
