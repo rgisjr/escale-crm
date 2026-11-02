@@ -10,7 +10,6 @@ import {
   GATILHO_DE_MENSAGEM_DO_INSTAGRAM,
   GATILHO_DE_RESPOSTA_A_STORY,
   GATILHOS_DE_DIRECT,
-  MOTIVO_DO_SILENCIO,
   PLATAFORMAS_DE_COMENTARIO,
   SILENCIO_DA_AUTOMACAO_MS,
   type GatilhoDeDirect,
@@ -135,15 +134,14 @@ async function silenciar(admin: SupabaseClient, organizationId: string, conversa
       .maybeSingle();
     const atual = (data as { bot_silenced_until: string | null } | null)?.bot_silenced_until ?? null;
     const novo = Date.now() + SILENCIO_DA_AUTOMACAO_MS;
+    // O handoff formal grava 'infinity': Date.parse dá NaN, e isso nunca pode virar "agora + 10 min".
+    if (atual === "infinity") return;
     const atualMs = atual ? Date.parse(atual) : Number.NaN;
     if (!Number.isNaN(atualMs) && atualMs >= novo) return;
+    // Só o silêncio: `last_handoff_*` contam como "passou para humano" nos Indicadores e na devolução automática.
     const { error } = await admin
       .from("conversations")
-      .update({
-        bot_silenced_until: new Date(novo).toISOString(),
-        last_handoff_at: new Date().toISOString(),
-        last_handoff_reason: MOTIVO_DO_SILENCIO,
-      })
+      .update({ bot_silenced_until: new Date(novo).toISOString() })
       .eq("organization_id", organizationId)
       .eq("id", conversationId);
     if (error) throw new Error(error.message);

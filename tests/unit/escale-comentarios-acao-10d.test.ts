@@ -42,7 +42,11 @@ const admin = {
       select: () => leitura,
       update: (v: Record<string, unknown>) => {
         atualizacoes.push(v);
-        return { eq: async () => ({ error: null }) };
+        const cadeia: { eq: () => typeof cadeia; then: (ok: (v: unknown) => unknown) => unknown } = {
+          eq: () => cadeia,
+          then: (ok) => ok({ error: null }),
+        };
+        return cadeia;
       },
     };
   },

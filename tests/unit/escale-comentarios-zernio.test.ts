@@ -107,6 +107,6 @@ describe("motivoDoErro (D10)", () => {
   });
   it("todo motivo tem explicação", () => {
     expect(EXPLICACAO_DO_MOTIVO.prazo_vencido).toMatch(/7 dias/);
-    expect(Object.keys(EXPLICACAO_DO_MOTIVO)).toHaveLength(9);
+    expect(Object.keys(EXPLICACAO_DO_MOTIVO)).toHaveLength(10);
   });
 });

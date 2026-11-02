@@ -87,6 +87,12 @@ describe("função de reivindicação", () => {
     expect(reivindicar(linha(REGRA, "c-4", "ana"), 1)).toBe("repetido");
   });
 
+  it("linha fora_do_publico não conta como 'já recebeu': a pessoa entra quando passa a estar no público", () => {
+    expect(reivindicar(linha(REGRA_2, "c-fp1", "dora", { direct: "fora_do_publico", motivo: "fora_do_publico" }), null)).toBe("novo");
+    expect(reivindicar(linha(REGRA_2, "c-fp2", "dora"), null)).toBe("novo");
+    expect(reivindicar(linha(REGRA_2, "c-fp3", "dora"), null)).toBe("repetido");
+  });
+
   it("pessoas e regras diferentes não se atrapalham", () => {
     expect(reivindicar(linha(REGRA, "c-5", "bia"), null)).toBe("novo");
     expect(reivindicar(linha(REGRA_2, "c-6", "ana"), null)).toBe("novo");

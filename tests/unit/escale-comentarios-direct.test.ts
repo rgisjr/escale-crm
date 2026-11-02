@@ -157,7 +157,8 @@ describe("aoReceberDirect", () => {
     expect(await aoReceberDirect(banco(e), entrada(msg("oi")))).toEqual({ calarIa: true });
     const ate = Date.parse(String(e.updates[0]?.bot_silenced_until));
     expect(ate).toBeGreaterThanOrEqual(antes + SILENCIO_DA_AUTOMACAO_MS - 1000);
-    expect(e.updates[0]).toMatchObject({ last_handoff_reason: "automacao_do_instagram" });
+    expect(e.updates[0]).not.toHaveProperty("last_handoff_at");
+    expect(e.updates[0]).not.toHaveProperty("last_handoff_reason");
     expect(e.eventos[0]).toMatchObject({ p_event_type: "instagram.message_received", p_entity_kind: "contact", p_entity_id: "c1" });
     expect((e.eventos[0]?.p_payload as { texto: string }).texto).toBe("oi");
   });
@@ -170,6 +171,13 @@ describe("aoReceberDirect", () => {
       leiturasDeRegras: 0,
       eventos: [],
     };
+    await aoReceberDirect(banco(e), entrada(msg("oi")));
+    expect(e.updates).toHaveLength(0);
+    expect(e.eventos).toHaveLength(1);
+  });
+
+  it("silêncio 'infinity' do handoff nunca é encurtado", async () => {
+    const e: Estado = { regras: [regra({ modo: "qualquer" })], silencio: "infinity", updates: [], leiturasDeRegras: 0, eventos: [] };
     await aoReceberDirect(banco(e), entrada(msg("oi")));
     expect(e.updates).toHaveLength(0);
     expect(e.eventos).toHaveLength(1);

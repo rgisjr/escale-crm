@@ -28,6 +28,8 @@ import {
  */
 const SO_COM_COMENTARIO = "O passo Instagram funciona com os gatilhos do Instagram.";
 const TABELA = "escale_disparos_de_comentario";
+/** Margem sob o CHECK de 8192 bytes de `direct_pendente` (9804). */
+const TETO_DO_DIRECT_PENDENTE = 7500;
 
 const falhou = (motivo: MotivoDoDirect, extra: Record<string, unknown> = {}): ActionResultDetail => ({
   type: PASSO_DO_INSTAGRAM,
@@ -110,6 +112,7 @@ async function executar(ctx: ActionCtx, config: Record<string, unknown>): Promis
     ctx.admin
       .from(TABELA)
       .update({ direct, motivo, ...extra, updated_at: new Date().toISOString() })
+      .eq("organization_id", ctx.organizationId)
       .eq("id", disparo.id);
 
   if (!dentroDoPrazo(comentario.comentado_em, new Date())) {
@@ -149,6 +152,13 @@ async function executar(ctx: ActionCtx, config: Record<string, unknown>): Promis
       ? [{ tipo: "postback", titulo: publico.liberar.titulo, payload: payloadDoLiberar(disparo.id) }]
       : botoesDoDirect;
 
+  // O direct guardado tem teto no banco (8 KB). Estourar DEPOIS de mandar o pedido deixaria o link sem sair.
+  const direct_pendente = { texto: mensagem, botoes: botoesDoDirect, post_id: postId, conta_id: evento.conta_id };
+  if (pedirParaSeguir && Buffer.byteLength(JSON.stringify(direct_pendente), "utf8") > TETO_DO_DIRECT_PENDENTE) {
+    await registrar("falhou", "mensagem_grande_demais");
+    return falhou("mensagem_grande_demais");
+  }
+
   const linhaId = await gravarDirectNaConversa(ctx.admin, {
     organizationId: ctx.organizationId,
     channelSessionId: evento.channel_session_id,
@@ -177,7 +187,7 @@ async function executar(ctx: ActionCtx, config: Record<string, unknown>): Promis
   const messageId = enviada.dados.messageId;
   if (pedirParaSeguir) {
     await registrar("aguardando_seguir", null, {
-      direct_pendente: { texto: mensagem, botoes: botoesDoDirect, post_id: postId, conta_id: evento.conta_id },
+      direct_pendente,
       ...(messageId ? { direct_message_id: messageId } : {}),
     });
   } else {

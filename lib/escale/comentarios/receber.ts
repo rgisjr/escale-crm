@@ -19,6 +19,21 @@ export type ResultadoDoComentario = { status: "ingested" | "ignored"; reason?: s
 const ehPlataformaDeComentario = (p: string): p is PlataformaDeComentario =>
   (PLATAFORMAS_DE_COMENTARIO as readonly string[]).includes(p);
 
+/** Quanto tempo uma publicação já conferida para uma regra "Próxima publicação" não é conferida de novo. */
+const REVERIFICACAO_DA_PROXIMA_MS = 10 * 60 * 1000;
+const conferidas = new Map<string, number>();
+
+/** true quando é hora de perguntar ao Zernio por esta publicação nesta regra (e já marca como conferida). */
+function deveConferirProxima(regraId: string, publicacaoId: string): boolean {
+  const agora = Date.now();
+  const chave = `${regraId}:${publicacaoId}`;
+  const ultima = conferidas.get(chave);
+  if (ultima !== undefined && agora - ultima < REVERIFICACAO_DA_PROXIMA_MS) return false;
+  if (conferidas.size > 2000) conferidas.clear();
+  conferidas.set(chave, agora);
+  return true;
+}
+
 export async function receberComentario(
   db: SupabaseClient,
   canal: { organizationId: string; channelSessionId: string; contaId: string; plataforma: string },
@@ -65,7 +80,8 @@ export async function receberComentario(
       lida.data.escopo === "proxima" &&
       lida.data.channel_session_id === canal.channelSessionId &&
       lida.data.proxima?.resolvida === null &&
-      !lida.data.proxima.conhecidas.includes(comentario.publicacaoId);
+      !lida.data.proxima.conhecidas.includes(comentario.publicacaoId) &&
+      deveConferirProxima(r.id, comentario.publicacaoId);
     if (!lida.success || !aberta) {
       configs.push(r.trigger_config);
       continue;
