@@ -13,19 +13,20 @@ import type { BotaoDaResposta } from "./zernio";
  */
 const VIOLACAO_DE_UNICIDADE = "23505";
 
-/** Grava a mensagem `sending` da automação na conversa do contato. Devolve o id da linha, ou null (só loga). */
-export async function gravarDirectNaConversa(
+interface SaidaNaConversa {
+  organizationId: string;
+  channelSessionId: string;
+  contactId: string;
+  plataforma: string;
+  texto: string;
+}
+
+/** O miolo comum: conversa, canal, mensagem `sending` e preview. Devolve os ids, ou null (só loga). */
+async function gravarSaidaNaConversa(
   admin: SupabaseClient,
-  e: {
-    organizationId: string;
-    channelSessionId: string;
-    contactId: string;
-    plataforma: string;
-    texto: string;
-    botoes: readonly BotaoDaResposta[];
-    disparoId: string;
-  },
-): Promise<string | null> {
+  e: SaidaNaConversa,
+  campos: { sent_via: "automation" | "user"; sent_by_user_id?: string; metadata: Record<string, unknown> },
+): Promise<{ mensagemId: string; conversationId: string } | null> {
   try {
     const { data: conversa, error: erroDaConversa } = await admin.rpc("fn_upsert_wa_conversation", {
       p_org: e.organizationId,
@@ -53,12 +54,11 @@ export async function gravarDirectNaConversa(
         channel_session_id: e.channelSessionId,
         external_id: null,
         direction: "outbound",
-        sent_via: "automation",
         status: "sending",
         type: "text",
         body: e.texto,
         sent_at: agora,
-        metadata: { origem: "comentario", disparo_id: e.disparoId, botoes: e.botoes },
+        ...campos,
       })
       .select("id")
       .single();
@@ -72,13 +72,40 @@ export async function gravarDirectNaConversa(
       at: agora,
       canal: "zernio",
     });
-    return (linha as { id: string }).id;
+    return { mensagemId: (linha as { id: string }).id, conversationId };
   } catch (erro) {
     logger.error("[comentarios.conversa] gravar direct falhou", {
       erro: erro instanceof Error ? erro.message : String(erro),
     });
     return null;
   }
+}
+
+/** Grava a mensagem `sending` da automação na conversa do contato. Devolve o id da linha, ou null (só loga). */
+export async function gravarDirectNaConversa(
+  admin: SupabaseClient,
+  e: SaidaNaConversa & { botoes: readonly BotaoDaResposta[]; disparoId: string },
+): Promise<string | null> {
+  const gravada = await gravarSaidaNaConversa(admin, e, {
+    sent_via: "automation",
+    metadata: { origem: "comentario", disparo_id: e.disparoId, botoes: e.botoes },
+  });
+  return gravada?.mensagemId ?? null;
+}
+
+/**
+ * FORK ESCALE · Fase 10A (D9): o direct mandado à mão pela caixa de comentários, como envio de
+ * pessoa. O eco `message.sent` casa com esta linha (`eco.ts` aceita a origem `comentario_manual`).
+ */
+export function gravarDirectManualNaConversa(
+  admin: SupabaseClient,
+  e: SaidaNaConversa & { userId: string; comentarioId: string; acaoId: string },
+): Promise<{ mensagemId: string; conversationId: string } | null> {
+  return gravarSaidaNaConversa(admin, e, {
+    sent_via: "user",
+    sent_by_user_id: e.userId,
+    metadata: { origem: "comentario_manual", comentario_id: e.comentarioId, acao_id: e.acaoId },
+  });
 }
 
 /** O Zernio aceitou: `sent`, com o id dele. 23505 = o eco já gravou com o mesmo id (nada a fazer). */

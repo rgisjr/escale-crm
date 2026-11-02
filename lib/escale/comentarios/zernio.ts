@@ -34,10 +34,11 @@ export type MotivoDoDirect =
 
 const TEMPO_LIMITE_MS = 15_000;
 
-async function pedir<T>(
+/** FORK ESCALE · Fase 10A: exportada (e com `DELETE`) para a caixa de comentários e a 10D. */
+export async function pedir<T>(
   chave: string,
   caminho: string,
-  metodo: "GET" | "POST",
+  metodo: "GET" | "POST" | "DELETE",
   corpo?: unknown,
   idempotencia?: string,
 ): Promise<RespostaDoZernio<T>> {
@@ -98,6 +99,40 @@ export async function responderComentario(
     e.idempotencia,
   );
   return r.ok ? { ok: true, dados: { commentId: texto(objeto(objeto(r.dados).data).commentId) } } : r;
+}
+
+interface AlvoDeModeracao {
+  postId: string;
+  commentId: string;
+  accountId: string;
+}
+
+/** FORK ESCALE · Fase 10A. POST inbox/comments/{postId}/{commentId}/hide com { accountId }. */
+export function ocultarComentario(chave: string, e: AlvoDeModeracao): Promise<RespostaDoZernio<unknown>> {
+  return pedir<unknown>(
+    chave,
+    `inbox/comments/${encodeURIComponent(e.postId)}/${encodeURIComponent(e.commentId)}/hide`,
+    "POST",
+    { accountId: e.accountId },
+  );
+}
+
+/** FORK ESCALE · Fase 10A. DELETE inbox/comments/{postId}/{commentId}/hide?accountId= */
+export function reexibirComentario(chave: string, e: AlvoDeModeracao): Promise<RespostaDoZernio<unknown>> {
+  return pedir<unknown>(
+    chave,
+    `inbox/comments/${encodeURIComponent(e.postId)}/${encodeURIComponent(e.commentId)}/hide?accountId=${encodeURIComponent(e.accountId)}`,
+    "DELETE",
+  );
+}
+
+/** FORK ESCALE · Fase 10A. DELETE inbox/comments/{postId}?accountId=&commentId= */
+export function apagarComentario(chave: string, e: AlvoDeModeracao): Promise<RespostaDoZernio<unknown>> {
+  return pedir<unknown>(
+    chave,
+    `inbox/comments/${encodeURIComponent(e.postId)}?accountId=${encodeURIComponent(e.accountId)}&commentId=${encodeURIComponent(e.commentId)}`,
+    "DELETE",
+  );
 }
 
 /** GET accounts/{accountId}/posts → as 25 mais recentes. */

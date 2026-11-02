@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SocialMessage } from "@/lib/channels/social/parser";
 import { logger } from "@/lib/logger";
 
-import { JANELA_DO_ECO_MS } from "./constantes";
+import { JANELA_DO_ECO_MS, ORIGENS_DO_ECO } from "./constantes";
 
 /**
  * FORK ESCALE · Fase 10B (D13): o eco `message.sent` do Zernio para o direct que a automação mandou.
@@ -45,9 +45,10 @@ export async function ecoDaMensagemDaAutomacao(
       .eq("organization_id", e.organizationId)
       .eq("channel_session_id", e.channelSessionId)
       .eq("contact_id", (contato as { id: string }).id)
-      .eq("sent_via", "automation")
+      // FORK ESCALE · Fase 10A (D10): também o direct mandado à mão pela caixa (`sent_via 'user'`).
+      .in("sent_via", ["automation", "user"])
       .eq("direction", "outbound")
-      .eq("metadata->>origem", "comentario")
+      .in("metadata->>origem", [...ORIGENS_DO_ECO])
       .gte("created_at", desde)
       .order("created_at", { ascending: false })
       .limit(20);

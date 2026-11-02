@@ -27,10 +27,15 @@ const eco = (extra: Partial<SocialMessage> = {}): SocialMessage =>
 type Linha = Record<string, unknown>;
 function banco(opcoes: { contato?: Linha | null; mensagens?: Linha[] }) {
   const atualizacoes: Array<{ tabela: string; valores: Linha }> = [];
+  const filtrosIn: Array<[string, unknown[]]> = [];
   const admin = {
     from: (tabela: string) => {
       const q: Record<string, unknown> = {};
       for (const m of ["select", "eq", "is", "gte", "order", "limit"]) q[m] = () => q;
+      q.in = (coluna: string, valores: unknown[]) => {
+        filtrosIn.push([coluna, valores]);
+        return q;
+      };
       q.maybeSingle = async () => ({ data: opcoes.contato === undefined ? { id: "c-1" } : opcoes.contato, error: null });
       q.then = (ok: (r: unknown) => unknown) => Promise.resolve({ data: opcoes.mensagens ?? [], error: null }).then(ok);
       q.update = (valores: Linha) => {
@@ -43,7 +48,7 @@ function banco(opcoes: { contato?: Linha | null; mensagens?: Linha[] }) {
       return q;
     },
   } as unknown as SupabaseClient;
-  return { admin, atualizacoes };
+  return { admin, atualizacoes, filtrosIn };
 }
 const ENTRADA = { organizationId: "org-1", channelSessionId: "canal-1" };
 const mensagem = (extra: Linha = {}): Linha => ({
@@ -80,6 +85,25 @@ describe("ecoDaMensagemDaAutomacao", () => {
     expect(await ecoDaMensagemDaAutomacao(admin, { ...ENTRADA, msg: eco({ direction: "inbound" }) })).toBe(false);
     expect(await ecoDaMensagemDaAutomacao(admin, { ...ENTRADA, msg: eco({ kind: "status" }) })).toBe(false);
     expect(admin.from).not.toHaveBeenCalled();
+  });
+
+  it("10A (D10): a busca aceita o envio de pessoa e as duas origens do comentário", async () => {
+    const { admin, filtrosIn } = banco({ mensagens: [] });
+    await ecoDaMensagemDaAutomacao(admin, { ...ENTRADA, msg: eco() });
+    expect(filtrosIn).toEqual([
+      ["sent_via", ["automation", "user"]],
+      ["metadata->>origem", ["comentario", "comentario_manual"]],
+    ]);
+  });
+
+  it("10A (D10): o direct à mão (sent_via user, origem comentario_manual) casa pelo texto e não duplica", async () => {
+    const { admin, atualizacoes } = banco({
+      mensagens: [mensagem({ metadata: { origem: "comentario_manual", comentario_id: "c-1" } })],
+    });
+    expect(await ecoDaMensagemDaAutomacao(admin, { ...ENTRADA, msg: eco() })).toBe(true);
+    expect(atualizacoes.find((a) => a.tabela === "messages")?.valores).toMatchObject({
+      metadata: { origem: "comentario_manual", comentario_id: "c-1", eco: true },
+    });
   });
 
   it("contato não achado → false", async () => {

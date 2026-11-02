@@ -7,6 +7,7 @@ import { totalDeCriterios, type FiltrosDoPainel } from "@/lib/escale/conversas/f
 import { Search, Settings, SquarePen } from "@/lib/ui/icons-da-casca";
 
 import { FunilDaFila } from "../filtros/FunilDaFila";
+import { BotaoDosComentarios } from "./BotaoDosComentarios";
 import { MenuDeOrdem } from "./MenuDeOrdem";
 import { MenuDePresets } from "./MenuDePresets";
 import { MenuMaisDaFila } from "./MenuMaisDaFila";
@@ -66,6 +67,8 @@ export function BarraDaFila({
           aria-label={t("Pesquisar")}
           className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-casca-texto placeholder:text-casca-meta focus-visible:outline-none"
         />
+        {/* FORK ESCALE · Fase 10A: a entrada da caixa de comentários (só com conta do Instagram/Facebook). */}
+        <BotaoDosComentarios />
         <Link
           href="/app/inbox/configuracoes"
           aria-label={t("Configurações")}

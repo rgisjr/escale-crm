@@ -39,7 +39,10 @@ const NAV_ALLOWLIST: Record<string, string> = {
   "/app/team/invite": "sub-fluxo de convite, alcançado de dentro de Equipe",
   "/app/inbox/configuracoes":
     "hub de configurações de Conversas da casca Escale (Fase 3C), alcançado pelo ⚙ do cabeçalho da tela de Conversas",
-  "/app/inbox/configuracoes/canais": "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
+  // FORK ESCALE · Fase 10A
+  "/app/inbox/comentarios":
+    "caixa de comentários (Fase 10A), alcançada pelo botão Comentários da barra da fila de Conversas",
+  "/app/inbox/configuracoes/canais":"item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/mensagens-agendadas":
     "item do hub de configurações de Conversas (⚙ da tela de Conversas)",
   "/app/inbox/configuracoes/respostas-rapidas":
