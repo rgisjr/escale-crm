@@ -21,3 +21,18 @@ export const TEXTO_PADRAO_DA_RESPOSTA = "Te respondi no direct, dá uma olhada!"
 export const ID_DO_CAMINHO_UNICO = "qualquer";
 /** Janela em que o eco do Zernio casa com a mensagem que a automação gravou (D13). */
 export const JANELA_DO_ECO_MS = 15 * 60 * 1000;
+
+/** FORK ESCALE · Fase 10A: a caixa de comentários. */
+export const MAXIMO_DO_TEXTO_A_MAO = 1000;
+export const COMENTARIOS_POR_PAGINA = 50;
+export const PUBLICACOES_POR_PAGINA = 25;
+/** D13: uma ação `enviando` mais velha que isto foi interrompida (o processo caiu no meio). */
+export const ACAO_INTERROMPIDA_MS = 2 * 60 * 1000;
+export const ACOES_NO_COMENTARIO = ["resposta", "direct", "ocultar", "reexibir", "apagar", "curtir", "descurtir"] as const;
+export type AcaoNoComentario = (typeof ACOES_NO_COMENTARIO)[number];
+export const PERIODOS_DA_CAIXA = ["7d", "30d", "90d", "tudo"] as const;
+export type PeriodoDaCaixa = (typeof PERIODOS_DA_CAIXA)[number];
+export const ORDENS_DA_CAIXA = ["recentes", "mais_comentarios"] as const;
+export type OrdemDaCaixa = (typeof ORDENS_DA_CAIXA)[number];
+export const FILTROS_DOS_COMENTARIOS = ["todos", "sem_resposta", "respondidos", "ocultos", "contatos"] as const;
+export type FiltroDosComentarios = (typeof FILTROS_DOS_COMENTARIOS)[number];
