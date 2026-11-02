@@ -32,7 +32,8 @@ const publicacaoSchema = z.object({
 });
 const condicaoSchema = z.object({
   operador: z.enum(OPERADORES_DO_FILTRO),
-  valor: z.string().trim().min(1).max(MAXIMO_DA_PALAVRA),
+  /** Vazio é aceito aqui (a linha recém-adicionada na tela); `problemasDoGatilho` recusa salvar assim. */
+  valor: z.string().max(MAXIMO_DA_PALAVRA),
 });
 /** FORK ESCALE · Fase 10D (D3): o filtro novo. O formato da 10B (`palavras`) continua aceito e é lido por `lerFiltro`. */
 const filtroSchema = z.discriminatedUnion("modo", [
@@ -165,7 +166,8 @@ export function exigirConfigDoDirect(
   const { filtro } = lida.data;
   if (filtro.modo === "palavras") {
     const positivas =
-      (filtro.palavras ?? []).length + (filtro.condicoes ?? []).filter((c) => c.operador !== "nao_contem").length;
+      (filtro.palavras ?? []).filter((p) => p.trim() !== "").length +
+      (filtro.condicoes ?? []).filter((c) => c.operador !== "nao_contem" && c.valor.trim() !== "").length;
     if (positivas === 0) recusar('Preencha a palavra do filtro ou use "Qualquer mensagem".');
   }
 }

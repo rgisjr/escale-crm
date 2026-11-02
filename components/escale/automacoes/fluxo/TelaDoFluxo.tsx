@@ -10,7 +10,7 @@ import { useT } from "@/hooks/i18n/useT";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
 import type { DadosDaCaixa } from "@/lib/automation/desenho-da-regra";
 import { ehGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
-import { GATILHO_DE_COMENTARIO, PASSO_DO_INSTAGRAM } from "@/lib/escale/comentarios/constantes";
+import { GATILHOS_DO_PASSO_DO_INSTAGRAM, PASSO_DO_INSTAGRAM } from "@/lib/escale/comentarios/constantes";
 import type { PassoDaPaleta } from "@/lib/escale/automacoes/fluxo/paleta";
 import { ROTA_DA_LISTA_DE_AUTOMACOES, rotaDoEditor } from "@/lib/escale/automacoes/rotas";
 
@@ -259,7 +259,7 @@ export function TelaDoFluxo({
             <PaletaDoFluxo
               aoEscolher={(passo) => escolherPasso(passo)}
               desligados={
-                fluxo.evento === GATILHO_DE_COMENTARIO
+                (GATILHOS_DO_PASSO_DO_INSTAGRAM as readonly string[]).includes(fluxo.evento)
                   ? {}
                   : { [PASSO_DO_INSTAGRAM]: "O passo Instagram funciona com os gatilhos do Instagram." }
               }

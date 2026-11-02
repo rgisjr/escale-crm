@@ -56,7 +56,7 @@ import {
   novoGrupo,
 } from "@/lib/escale/automacoes/fluxo/grupos";
 import { organizarNaHorizontal } from "@/lib/escale/automacoes/fluxo/layout";
-import { GATILHO_DE_COMENTARIO, PASSO_DO_INSTAGRAM } from "@/lib/escale/comentarios/constantes";
+import { GATILHOS_DO_PASSO_DO_INSTAGRAM, PASSO_DO_INSTAGRAM } from "@/lib/escale/comentarios/constantes";
 import { comConfigPropria } from "@/lib/escale/comentarios/tela";
 import { paraLigacoes, paraNos } from "@/lib/escale/automacoes/fluxo/nos";
 import { rotaDoFluxo } from "@/lib/escale/automacoes/rotas";
@@ -186,7 +186,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   const adicionar = useCallback(
     (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo", posicao?: { x: number; y: number }) => {
       // FORK ESCALE · Fase 10B: o passo Instagram só funciona com o gatilho de comentário (D9).
-      if (passo === PASSO_DO_INSTAGRAM && evento !== GATILHO_DE_COMENTARIO) {
+      if (passo === PASSO_DO_INSTAGRAM && !(GATILHOS_DO_PASSO_DO_INSTAGRAM as readonly string[]).includes(evento)) {
         toast.error(t("O passo Instagram funciona com os gatilhos do Instagram."));
         return;
       }
