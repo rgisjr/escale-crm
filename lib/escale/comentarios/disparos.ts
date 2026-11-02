@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { caminhoDoComentario, comentarioDoEvento, sortearVariacao } from "./caminhos";
 import { PASSO_DO_INSTAGRAM } from "./constantes";
 import { configDoComentarioSchema } from "./schema";
+import { colunasDaPublicacao } from "./origem";
 import { motivoDoErro, responderComentario } from "./zernio";
 
 /**
@@ -70,6 +71,7 @@ export async function reivindicarDisparos<R extends RegraDoMotor>(
       autor_nome: comentario.autor.nome,
       texto: comentario.texto.slice(0, 5000),
       comentado_em: comentario.comentado_em,
+      ...colunasDaPublicacao(evento.publicacao),
     };
     const { error } = (await admin.from(TABELA).insert(linha)) as { error: ErroDoBanco };
     if (!error) {
