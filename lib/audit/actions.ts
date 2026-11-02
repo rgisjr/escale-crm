@@ -328,6 +328,8 @@ export const AUDIT_ACTIONS = [
   "automation.rule_deleted",
   "automation.rule_executed",
   "automation.run_resent",
+  // FORK ESCALE · Fase 10B: a assinatura do webhook do canal ganhou `comment.received`.
+  "automation.comment_subscription_ensured",
   "ai.skill_imported",
   "ai.skill_installed",
   "ai.skill_uninstalled",

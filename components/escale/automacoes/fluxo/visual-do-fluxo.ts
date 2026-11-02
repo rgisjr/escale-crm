@@ -17,6 +17,7 @@ import {
   CircleX,
   Clock,
   Flag,
+  InstagramLogo,
   ListChecks,
   Mail,
   MessageCircle,
@@ -61,6 +62,8 @@ export const VISUAL_DO_NO: Record<TipoDoNo, VisualDoNo> = {
   gatilho: { icone: Flag, rotulo: null, texto: "text-casca-fluxo-gatilho", borda: "border-casca-fluxo-gatilho", fundo: "bg-casca-fluxo-gatilho-suave" },
   condicoes: { icone: ArrowLeftRight, rotulo: null, texto: "text-casca-marca", borda: "border-casca-marca", fundo: "bg-casca-marca-suave" },
   whatsapp: { icone: WhatsappLogo as IconeDoFluxo, rotulo: "WhatsApp", texto: "text-casca-fluxo-whatsapp", borda: "border-casca-fluxo-whatsapp", fundo: "bg-casca-fluxo-whatsapp-suave" },
+  // FORK ESCALE · Fase 10B: o rosa do Instagram é cor de tipo de nó, como o verde do WhatsApp.
+  instagram: { icone: InstagramLogo as IconeDoFluxo, rotulo: "Instagram", texto: "text-casca-fluxo-instagram", borda: "border-casca-fluxo-instagram", fundo: "bg-casca-fluxo-instagram-suave" },
   email: { icone: Mail, rotulo: "E-mail", texto: "text-casca-fluxo-canal", borda: "border-casca-fluxo-canal", fundo: "bg-casca-fluxo-canal-suave" },
   acoes: { icone: Zap, rotulo: "Ações", texto: "text-casca-fluxo-acoes", borda: "border-casca-fluxo-acoes", fundo: "bg-casca-fluxo-acoes-suave" },
   ia: { icone: Sparkles, rotulo: "Inteligência Artificial", texto: "text-casca-marca", borda: "border-casca-marca", fundo: "bg-casca-marca-suave" },
@@ -86,12 +89,14 @@ export const ICONE_DO_GATILHO: Record<IconeDoGatilho, IconeDoFluxo> = {
   faltou: UserX,
   data: CalendarDays,
   aniversario: Cake,
+  instagram: InstagramLogo as IconeDoFluxo,
 };
 
 export const ICONE_DA_FONTE: Record<FonteDoGatilho, IconeDoFluxo> = {
   negocios: Briefcase,
   contatos: UserRound,
   mensagens: MessageCircle,
+  instagram: InstagramLogo as IconeDoFluxo,
   agenda: CalendarDays,
   datas: CalendarClock,
 };

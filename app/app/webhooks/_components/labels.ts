@@ -65,6 +65,8 @@ export const TRIGGER_LABELS: Record<TriggerEvent, string> = {
   // funil) ficam embaixo, na configuração da regra.
   "lead.silent_for": "Quando ficar N dias sem mensagem",
   "lead.stage_stale": "Quando um lead ficar N dias na mesma etapa",
+  // FORK ESCALE · Fase 10B: o Record exige; a aba Atividade mostra o rótulo nas execuções.
+  "comment.received": "Quando alguém comentar num post do Instagram ou do Facebook",
 };
 
 export const ACTION_LABELS: Record<ActionType, string> = {

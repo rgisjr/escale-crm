@@ -11,3 +11,5 @@ import "@/lib/automation/actions/send-email";
 import "@/lib/automation/actions/send-whatsapp";
 import "@/lib/automation/actions/start-message-flow";
 import "@/lib/automation/actions/send-ai-message";
+// FORK ESCALE · Fase 10B: o passo Instagram.
+import "@/lib/escale/comentarios/acao-do-instagram";

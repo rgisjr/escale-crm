@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, type ReactNode } from "react";
 
+import type { ResumoDosComentarios } from "@/lib/escale/comentarios/resumo";
 import type { FiltroDasExecucoes, ReferenciaDeAcao, ResumoDaAutomacao } from "@/lib/escale/automacoes/insights/tipos";
 
 /**
@@ -9,6 +10,8 @@ import type { FiltroDasExecucoes, ReferenciaDeAcao, ResumoDaAutomacao } from "@/
  */
 export interface InsightsDoNo {
   resumo: ResumoDaAutomacao | null;
+  /** FORK ESCALE · Fase 10B: os números do gatilho de comentário (só nas automações desse gatilho). */
+  comentarios?: ResumoDosComentarios | null;
   carregando: boolean;
   erro: boolean;
   /** As ações da fila do motor que cada caixa da tela cobre (um passo "Ações" cobre várias). */

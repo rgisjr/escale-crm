@@ -9,11 +9,11 @@ import { PaletaDoFluxo } from "@/components/escale/automacoes/fluxo/PaletaDoFlux
 import { MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
 
 describe("paleta do fluxo", () => {
-  it("fechada mostra 7 botões com título e o botão de abrir", () => {
+  it("fechada mostra 8 botões com título e o botão de abrir", () => {
     render(<PaletaDoFluxo aoEscolher={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Abrir paleta de passos" })).toBeTruthy();
     const botoes = within(screen.getByTestId("paleta-do-fluxo")).getAllByRole("button");
-    expect(botoes).toHaveLength(8);
+    expect(botoes).toHaveLength(9);
     expect(screen.getByTitle("WhatsApp")).toBeTruthy();
     expect(screen.getByTestId("paleta-do-fluxo").className).toContain("w-[78px]");
   });
@@ -47,13 +47,37 @@ describe("paleta do fluxo", () => {
   it("busca pela descrição, esconde a seção sem item e mostra o vazio", async () => {
     render(<PaletaDoFluxo aoEscolher={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: "Abrir paleta de passos" }));
-    await userEvent.type(screen.getByPlaceholderText("Buscar passo…"), "tag");
+    await userEvent.type(screen.getByPlaceholderText("Buscar passo…"), "tags e");
     expect(screen.getAllByRole("button", { name: /Ações/ })).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /WhatsApp/ })).toBeNull();
     expect(screen.queryByText("Canais")).toBeNull();
     await userEvent.clear(screen.getByPlaceholderText("Buscar passo…"));
     await userEvent.type(screen.getByPlaceholderText("Buscar passo…"), "zzz");
     expect(screen.getByText("Sem resultados para “zzz”")).toBeTruthy();
+  });
+});
+
+describe("paleta do fluxo · passo Instagram (Fase 10B)", () => {
+  const frase = "O passo Instagram funciona com o gatilho “Alguém comenta em um post”.";
+
+  it("com o gatilho de comentário o item Instagram escolhe normalmente", async () => {
+    const aoEscolher = vi.fn();
+    render(<PaletaDoFluxo aoEscolher={aoEscolher} />);
+    await userEvent.click(screen.getByRole("button", { name: "Abrir paleta de passos" }));
+    await userEvent.click(screen.getByRole("button", { name: /Instagram/ }));
+    expect(aoEscolher).toHaveBeenCalledWith("send_instagram_message");
+  });
+
+  it("com outro gatilho o item fica desligado: aria-disabled, com a dica e sem escolher", async () => {
+    const aoEscolher = vi.fn();
+    render(<PaletaDoFluxo aoEscolher={aoEscolher} desligados={{ send_instagram_message: frase }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Abrir paleta de passos" }));
+    const botao = screen.getByRole("button", { name: /Instagram/ });
+    expect(botao.getAttribute("aria-disabled")).toBe("true");
+    expect(botao.getAttribute("title")).toBe(frase);
+    expect(botao.getAttribute("draggable")).toBe("false");
+    await userEvent.click(botao);
+    expect(aoEscolher).not.toHaveBeenCalled();
   });
 });
 

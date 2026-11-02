@@ -272,3 +272,61 @@ describe("useFluxo", () => {
   });
 });
 
+// FORK ESCALE · Fase 10B: o gatilho de comentário e o passo Instagram no estado do fluxo.
+describe("useFluxo · gatilho de comentário e passo Instagram", () => {
+  const CANAL = "22222222-2222-4222-8222-222222222222";
+  const configDoComentario = {
+    channel_session_id: CANAL,
+    escopo: "especificos",
+    caminhos: [
+      {
+        id: "caminho-1",
+        publicacoes: [{ id: "179", legenda: "Promo", miniatura: null, tipo: null }],
+        filtro: { modo: "palavras", palavras: ["link"], combinar: "qualquer" },
+        resposta: { variacoes: ["Te respondi no direct!"] },
+      },
+    ],
+  };
+  const passo = { type: "send_instagram_message", config: { texto: "Oi!", botoes: [{ titulo: "Ver", url: "https://a.com" }] } };
+  const regraDeComentario = (over: Partial<AutomationRuleRow> = {}) =>
+    regra({ trigger_event: "comment.received", trigger_config: configDoComentario, conditions: [], actions: [passo], ...over });
+
+  it("abre a regra de comentário e salva sem mexer mandando o mesmo trigger_config e as mesmas ações", async () => {
+    const { result } = montar(regraDeComentario());
+    expect(result.current.sujo).toBe(false);
+    await act(async () => {
+      await result.current.salvar();
+    });
+    expect(h.atualizar).toHaveBeenCalledWith(
+      expect.objectContaining({ trigger_event: "comment.received", trigger_config: configDoComentario, actions: [passo] }),
+    );
+  });
+
+  it("mexer na configuração do gatilho deixa sujo", () => {
+    const { result } = montar(regraDeComentario());
+    const gatilho = result.current.nos.find((n) => n.data.kind === "gatilho")!;
+    act(() => {
+      if (gatilho.data.kind !== "gatilho") return;
+      result.current.aplicarNoNo("gatilho", {
+        ...gatilho.data,
+        tela: { ...gatilho.data.tela, configPropria: { ...configDoComentario, escopo: "todos" } },
+      });
+    });
+    expect(result.current.sujo).toBe(true);
+  });
+
+  it("adicionar o passo Instagram com o gatilho de comentário cria a caixa com texto vazio e sem botões", () => {
+    const { result } = montar(regraDeComentario({ actions: [{ type: "add_tag", config: { tags: ["a"] } }] }));
+    act(() => result.current.adicionar("send_instagram_message"));
+    const acoes = result.current.percurso.acoes.map((c) => (c.data.kind === "acao" ? c.data.acao : null));
+    expect(acoes.at(-1)).toEqual({ type: "send_instagram_message", config: { texto: "", botoes: [] } });
+  });
+
+  it("com outro gatilho o passo Instagram é recusado e nada muda", () => {
+    const { result } = montar(regra());
+    const antes = filaDa(result);
+    act(() => result.current.adicionar("send_instagram_message"));
+    expect(toast.error).toHaveBeenCalledWith("O passo Instagram funciona com o gatilho “Alguém comenta em um post”.");
+    expect(filaDa(result)).toEqual(antes);
+  });
+});

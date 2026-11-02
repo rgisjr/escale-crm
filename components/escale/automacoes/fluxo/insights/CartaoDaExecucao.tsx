@@ -3,6 +3,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { ACTION_LABELS, type ActionType } from "@/app/app/webhooks/_components/labels";
+import { ROTULO_DO_PASSO_DA_CASCA } from "@/lib/escale/automacoes/insights/regras";
 import { explicacaoDe } from "@/app/app/webhooks/_components/ActivityTab";
 import { FotoDaLinha } from "@/components/escale/contatos/FotoDaLinha";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
@@ -100,7 +101,7 @@ export function CartaoDaExecucao({
       {problema ? (
         <p className="mt-2 text-[12px] text-casca-texto-2">
           <span className="font-medium">
-            {t("Passo")} {problema.indice + 1} · {t(ACTION_LABELS[tipo as ActionType] ?? tipo)}:
+            {t("Passo")} {problema.indice + 1} · {t(ROTULO_DO_PASSO_DA_CASCA[tipo] ?? ACTION_LABELS[tipo as ActionType] ?? tipo)}:
           </span>{" "}
           {explicacaoDe(problema.resultado, t) ?? problema.resultado.error ?? t("Essa ação não funcionou.")}
         </p>

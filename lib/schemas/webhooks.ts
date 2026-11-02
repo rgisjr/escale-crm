@@ -9,6 +9,12 @@
 import { z } from "zod";
 import { webhookFormFieldsSchema } from "@/lib/webhooks/formulario";
 import { passosSchema } from "@/lib/automation/envio-de-passos";
+// FORK ESCALE · Fase 10B: o gatilho de comentário e o passo Instagram.
+import {
+  acaoDoInstagramSchema,
+  exigirConfigDoComentario,
+  exigirGatilhoDoPassoDoInstagram,
+} from "@/lib/escale/comentarios/schema";
 
 import {
   GATILHO_DE_DATA_DO_FUNIL,
@@ -104,6 +110,9 @@ export const ENTIDADE_ESPERADA_POR_GATILHO = {
   // regras do mesmo gatilho com N diferentes disparariam juntas.
   "lead.silent_for": "crm_lead",
   "lead.stage_stale": "crm_lead",
+  // FORK ESCALE · Fase 10B: o comentário do Instagram/Facebook; quem emite é `lib/escale/comentarios/receber.ts`,
+  // e a entidade é o contato de quem comentou.
+  "comment.received": "contact",
 } as const;
 
 export type GatilhoDeAutomacao = keyof typeof ENTIDADE_ESPERADA_POR_GATILHO;
@@ -219,6 +228,12 @@ export const TRIGGER_EVENTS = Object.keys(ENTIDADE_ESPERADA_POR_GATILHO) as [
   GatilhoDeAutomacao,
   ...GatilhoDeAutomacao[],
 ];
+
+// FORK ESCALE · Fase 10B: gatilhos que só a casca monta. O designer original não os oferece.
+export const GATILHOS_SO_DA_CASCA = ["comment.received"] as const satisfies readonly GatilhoDeAutomacao[];
+export const TRIGGER_EVENTS_DO_ORIGINAL = TRIGGER_EVENTS.filter(
+  (evento) => !(GATILHOS_SO_DA_CASCA as readonly string[]).includes(evento),
+);
 
 export const conditionSchema = z.object({
   field: z.string().min(1).max(200),
@@ -447,7 +462,8 @@ export const aiDecideSchema = z.object({
   }),
 });
 
-export const actionSchema = z.discriminatedUnion("type", [...acoesFixas, aiDecideSchema]);
+// FORK ESCALE · Fase 10B: o passo Instagram fica fora de `acoesFixas` (o `ai_decide` não o escolhe).
+export const actionSchema = z.discriminatedUnion("type", [...acoesFixas, aiDecideSchema, acaoDoInstagramSchema]);
 
 export const createWebhookSourceSchema = z.object({
   name: z.string().min(1).max(120),
@@ -490,6 +506,8 @@ export const createAutomationRuleSchema = z
   .superRefine(exigirConfigDosGatilhosDeTempo)
   .superRefine(exigirPalavraChave)
   .superRefine(exigirIdDaFonteWebhook)
+  .superRefine(exigirConfigDoComentario)
+  .superRefine(exigirGatilhoDoPassoDoInstagram)
   .superRefine(recusarLacoDeLead);
 
 function exigirIdDaFonteWebhook(
@@ -615,8 +633,10 @@ export const updateAutomationRuleSchema = z
     // a varredura não sabe avaliar.
     exigirConfigDosGatilhosDeTempo(patch as { trigger_event: string; trigger_config?: Record<string, unknown> }, ctx);
     exigirPalavraChave(patch as { trigger_event: string; trigger_config?: Record<string, unknown> }, ctx);
+    exigirConfigDoComentario(patch, ctx);
   })
   .superRefine(exigirIdDaFonteWebhook)
+  .superRefine(exigirGatilhoDoPassoDoInstagram)
   // Só vê o laço quando o PATCH traz gatilho E ações; o PATCH parcial é
   // conferido contra a regra gravada na rota.
   .superRefine(recusarLacoDeLead);

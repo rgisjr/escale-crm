@@ -45,6 +45,10 @@ export function EscolhaDoGatilho({ evento, aoEscolher }: { evento: string; aoEsc
         <h3 className="text-[14px] font-semibold text-casca-texto">{t("Gatilhos")}</h3>
         <p className="mb-3 text-[12px] text-casca-suave">{t("Escolha o evento que vai iniciar sua automação")}</p>
         <div className="flex flex-col gap-2">
+          {/* FORK ESCALE · Fase 10B: na fonte Instagram os cartões seguem a ordem da Clint; os que ainda não funcionam ficam "Em breve". */}
+          {atual.emBreve?.slice(0, 1).map((o) => (
+            <CartaoEmBreve key={o.titulo} titulo={t(o.titulo)} descricao={t(o.descricao)} />
+          ))}
           {atual.opcoes.map((o) => {
             const Icone = ICONE_DO_GATILHO[o.icone];
             const marcada = o.evento === evento;
@@ -67,8 +71,30 @@ export function EscolhaDoGatilho({ evento, aoEscolher }: { evento: string; aoEsc
               </button>
             );
           })}
+          {(atual.emBreve ?? []).slice(1).map((o) => (
+            <CartaoEmBreve key={o.titulo} titulo={t(o.titulo)} descricao={t(o.descricao)} />
+          ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Cartão que a Clint mostra e ainda não funciona aqui: opaco, sem clique, com o selo "Em breve". */
+function CartaoEmBreve({ titulo, descricao }: { titulo: string; descricao: string }) {
+  const t = useT();
+  const Icone = ICONE_DO_GATILHO.instagram;
+  return (
+    <div
+      aria-disabled="true"
+      className="flex w-full max-w-[500px] gap-4 rounded-lg border border-casca-divisoria px-3 py-2.5 text-left opacity-60"
+    >
+      <Icone size={16} className="mt-0.5 shrink-0 text-casca-suave" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] text-casca-texto">{titulo}</span>
+        <span className="block text-[12px] text-casca-suave">{descricao}</span>
+      </span>
+      <span className="h-fit rounded bg-casca-raia px-1.5 text-[10px] text-casca-texto-2">{t("Em breve")}</span>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { dataBr, dataEHoraBr } from "@/lib/escale/campanhas/apresentacao";
 import { formatarTelefone } from "@/lib/escale/contatos/regras";
 import { celula } from "@/lib/escale/exportar/csv-do-quadro";
 
-import { primeiroPassoComProblema } from "./regras";
+import { ROTULO_DO_PASSO_DA_CASCA, primeiroPassoComProblema } from "./regras";
 import type { LinhaDaExecucao } from "./tipos";
 
 /**
@@ -49,7 +49,7 @@ export function csvDasExecucoes(
       l.contato?.email ?? "",
       l.negocio?.titulo ?? "",
       t(ROTULO_DO_STATUS_DA_EXECUCAO[l.status]),
-      problema ? `${problema.indice + 1}. ${t(ACTION_LABELS[tipo as ActionType] ?? tipo)}` : "",
+      problema ? `${problema.indice + 1}. ${t(ROTULO_DO_PASSO_DA_CASCA[tipo] ?? ACTION_LABELS[tipo as ActionType] ?? tipo)}` : "",
       problema ? (motivo(problema.resultado) ?? "") : "",
     ];
   });

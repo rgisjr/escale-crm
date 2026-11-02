@@ -38,6 +38,10 @@ import {
   GATILHOS_DO_TRIGGER_DE_LEAD,
 } from "@/lib/schemas/webhooks";
 import { logger } from "@/lib/logger";
+// FORK ESCALE · Fase 10B: o gatilho de comentário (caminho, disparo único por comentário e por pessoa).
+import { caminhoDoComentario } from "@/lib/escale/comentarios/caminhos";
+import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
+import { concluirDisparo, reivindicarDisparos } from "@/lib/escale/comentarios/disparos";
 
 export const AUTOMATION_CONSUMER_KEY = "automation-rules";
 
@@ -385,6 +389,8 @@ export async function runAutomationForEvent(
       return false;
     }
     if (row.event_type === "message.sent" && !mensagemEnviadaCasa(rule.trigger_config, context, row)) return false;
+    // FORK ESCALE · Fase 10B: o comentário só casa com a regra que tem caminho para ele.
+    if (row.event_type === GATILHO_DE_COMENTARIO && !caminhoDoComentario(rule.trigger_config, row.payload)) return false;
     return evaluateConditions(rule.conditions ?? [], context);
   });
   if (!applicable.length) {
@@ -412,7 +418,16 @@ export async function runAutomationForEvent(
     }
   }
 
-  for (const rule of applicable) {
+  // FORK ESCALE · Fase 10B: reivindica o disparo do comentário DEPOIS da checagem de espera (um
+  // evento adiado volta inteiro) e ANTES das ações: quem perde a corrida (reentrega do webhook, pessoa
+  // que já recebeu a automação) não roda. Os demais gatilhos seguem com todas as regras de sempre.
+  const aExecutar =
+    row.event_type === GATILHO_DE_COMENTARIO ? await reivindicarDisparos(admin, row, applicable) : applicable;
+  if (!aExecutar.length) {
+    return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "ok", detail: "comentario_ja_tratado" };
+  }
+
+  for (const rule of aExecutar) {
     const results: ActionResultDetail[] = [];
     // O índice é o da lista INTEIRA — a posição do resultado em
     // `actions_result` e parte do id da entrega do webhook (#1529).
@@ -511,6 +526,10 @@ export async function runAutomationForEvent(
       .select("id")
       .maybeSingle();
     if (runErr) logger.error("[automation.engine] run insert failed", { error: runErr.message });
+    // FORK ESCALE · Fase 10B: fecha o disparo do comentário (execução, desfecho do direct, resposta pública).
+    if (row.event_type === GATILHO_DE_COMENTARIO) {
+      await concluirDisparo(admin, { row, rule, runId: runRow?.id ?? null });
+    }
 
     // Audit só em falha/partial (spec §9) — não inflar audit em toda run.
     if (status !== "success") {
