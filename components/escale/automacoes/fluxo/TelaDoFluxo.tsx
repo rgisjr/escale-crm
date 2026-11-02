@@ -197,6 +197,7 @@ export function TelaDoFluxo({
         <PainelDoInstagram
           key={noAberto.id}
           dados={dados}
+          evento={fluxo.evento}
           aoCancelar={fechar}
           aoSalvar={aplicarNoPainel}
           aoMudarRascunho={setPainelSujo}

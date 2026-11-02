@@ -3,12 +3,15 @@
 import { useContasSociais } from "@/hooks/escale/useComentarios";
 import { useT } from "@/hooks/i18n/useT";
 import type { DadosDoGatilho } from "@/lib/automation/desenho-da-regra";
+import { ROTULO_DO_OPERADOR, type OperadorDoFiltro } from "@/lib/escale/comentarios/constantes";
+import { lerFiltro } from "@/lib/escale/comentarios/filtro";
 import { configDoComentarioSchema, type CaminhoDoGatilho } from "@/lib/escale/comentarios/schema";
 
 /** O rótulo de um caminho no nó: a legenda, "Qualquer publicação" ou "Grupo · n publicações". */
 function useRotuloDoCaminho(escopo: "todos" | "especificos" | "proxima", caminho: CaminhoDoGatilho): string {
   const t = useT();
   if (escopo === "todos") return t("Qualquer publicação");
+  if (escopo === "proxima") return caminho.publicacoes[0]?.legenda ?? t("Próxima publicação");
   if (caminho.publicacoes.length > 1) return t("Grupo · {n} publicações").replace("{n}", String(caminho.publicacoes.length));
   return caminho.publicacoes[0]?.legenda ?? t("Sem legenda");
 }
@@ -34,13 +37,20 @@ function LinhaDoCaminho({ escopo, caminho }: { escopo: "todos" | "especificos" |
           <p className="text-[11px] text-casca-suave">{t("Qualquer comentário")}</p>
         ) : (
           <div className="mt-0.5 flex flex-wrap gap-1">
-            {(caminho.filtro.palavras ?? []).map((p) => (
-              <span key={p} className="rounded bg-surface px-1.5 text-[11px] text-casca-texto-2">
-                {p}
-              </span>
-            ))}
+            {lerFiltro(caminho.filtro).modo === "palavras" &&
+              (lerFiltro(caminho.filtro) as { condicoes: { operador: OperadorDoFiltro; valor: string }[] }).condicoes.map((c, i) => (
+                <span key={i} className="rounded bg-surface px-1.5 text-[11px] text-casca-texto-2">
+                  {`${t(ROTULO_DO_OPERADOR[c.operador])} · ${c.valor}`}
+                </span>
+              ))}
           </div>
         )}
+        {caminho.ocultar_depois || caminho.curtir ? (
+          <div className="mt-0.5 flex gap-1">
+            {caminho.ocultar_depois ? <span className="rounded bg-surface px-1.5 text-[10px] text-casca-texto-2">{t("Oculta")}</span> : null}
+            {caminho.curtir ? <span className="rounded bg-surface px-1.5 text-[10px] text-casca-texto-2">{t("Curte")}</span> : null}
+          </div>
+        ) : null}
         {resposta ? <p className="line-clamp-1 text-[11px] text-casca-suave italic">{`“${resposta}”`}</p> : null}
       </div>
     </li>
@@ -71,6 +81,16 @@ export function CorpoDoComentario({ dados }: { dados: DadosDoGatilho }) {
       ) : (
         <p className="text-[12px] text-casca-suave">{t("Nenhuma publicação selecionada")}</p>
       )}
+      {config?.publico && config.publico.quem !== "todos" ? (
+        <p className="text-[11px] text-casca-suave">
+          {`${config.publico.quem === "seguidores" ? t("Só seguidores") : t("Só quem não segue")}${
+            config.publico.quem === "seguidores" ? ` · ${t("Siga para liberar")}` : ""
+          }`}
+        </p>
+      ) : null}
+      {config?.repeticao?.modo === "intervalo" ? (
+        <p className="text-[11px] text-casca-suave">{`${t("De novo depois de")} ${config.repeticao.horas} h`}</p>
+      ) : null}
       <p className="text-[11px] text-casca-suave">{t("Caminhos sem conexão seguem pelo Próximo passo da automação.")}</p>
     </div>
   );

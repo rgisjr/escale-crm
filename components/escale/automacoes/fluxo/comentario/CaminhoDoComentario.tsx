@@ -1,6 +1,8 @@
 "use client";
 import { useT } from "@/hooks/i18n/useT";
 import type { CaminhoDoGatilho, FiltroDoCaminho } from "@/lib/escale/comentarios/schema";
+import { InterruptorDaCasca } from "@/components/escale/ui/InterruptorDaCasca";
+import { AjudaDaCasca } from "@/components/escale/ui/AjudaDaCasca";
 import { Trash2 } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
@@ -14,10 +16,13 @@ import { RespostaAoComentario } from "./RespostaAoComentario";
 export function CaminhoDoComentario({
   caminho,
   titulo,
+  plataforma,
   aoMudar,
   aoRemover,
 }: {
   caminho: CaminhoDoGatilho;
+  /** FORK ESCALE · Fase 10D: "Curtir o comentário" só aparece no Facebook. */
+  plataforma?: string;
   /** Só em "Posts específicos"; em "Todos os posts" o cartão não tem cabeçalho de publicação. */
   titulo?: { rotulo: string; miniaturas: readonly (string | null)[]; remover: string };
   aoMudar: (caminho: CaminhoDoGatilho) => void;
@@ -88,6 +93,28 @@ export function CaminhoDoComentario({
       </div>
 
       <RespostaAoComentario resposta={caminho.resposta} aoMudar={(resposta) => aoMudar({ ...caminho, resposta })} />
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="flex items-center gap-1.5 text-[12px] text-casca-texto">
+          {t("Ocultar o comentário depois do direct")}
+          <AjudaDaCasca texto={t("O comentário continua visível para quem comentou e para a conta.")} />
+        </p>
+        <InterruptorDaCasca
+          aria-label={t("Ocultar o comentário depois do direct")}
+          ligado={caminho.ocultar_depois ?? false}
+          aoMudar={(ocultar_depois) => aoMudar({ ...caminho, ocultar_depois })}
+        />
+      </div>
+      {plataforma === "facebook" ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[12px] text-casca-texto">{t("Curtir o comentário")}</p>
+          <InterruptorDaCasca
+            aria-label={t("Curtir o comentário")}
+            ligado={caminho.curtir ?? false}
+            aoMudar={(curtir) => aoMudar({ ...caminho, curtir })}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

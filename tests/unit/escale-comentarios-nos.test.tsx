@@ -91,8 +91,8 @@ describe("nó do gatilho de comentário", () => {
     }));
     expect(screen.getAllByTestId("caminho-do-no")).toHaveLength(2);
     expect(screen.getByText("Promo de Março")).toBeTruthy();
-    expect(screen.getByText("link")).toBeTruthy();
-    expect(screen.getByText("preço")).toBeTruthy();
+    expect(screen.getByText("Contém · link")).toBeTruthy();
+    expect(screen.getByText("Contém · preço")).toBeTruthy();
     expect(screen.getByText("“Te respondi no direct!”")).toBeTruthy();
     expect(screen.getByText("Grupo · 3 publicações")).toBeTruthy();
   });
