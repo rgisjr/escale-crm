@@ -37,9 +37,9 @@ export async function POST(req: NextRequest): Promise<Response> {
         actorUserId: auth.user.id,
         organizationId: auth.org.orgId,
         resourceType: "channel_session",
-        resourceId: corpo.data.canal,
+        resourceId: null,
         requestId,
-        metadata: { evento: "comment.received" },
+        metadata: { evento: "comment.received", canal: corpo.data.canal },
       });
     }
     return ok({ estado }, { requestId });
