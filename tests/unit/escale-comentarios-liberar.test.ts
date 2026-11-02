@@ -62,6 +62,8 @@ const disparo = (extra: Record<string, unknown> = {}) => ({
 });
 
 const atualizacoes: Array<Record<string, unknown>> = [];
+/** Quantas linhas o update condicional "ganha" (0 = outro toque chegou primeiro). */
+let linhasGanhas = 1;
 function banco(linha: unknown): SupabaseClient {
   return {
     from: (tabela: string) => {
@@ -71,7 +73,16 @@ function banco(linha: unknown): SupabaseClient {
         maybeSingle: async () => ({ data: tabela === "automation_rules" ? regra : linha, error: null }),
         update: (v: Record<string, unknown>) => {
           atualizacoes.push(v);
-          return { eq: async () => ({ error: null }) };
+          const cadeia: {
+            eq: () => typeof cadeia;
+            select: () => Promise<{ data: Array<{ id: string }>; error: null }>;
+            then: (ok: (v: unknown) => unknown) => unknown;
+          } = {
+            eq: () => cadeia,
+            select: async () => ({ data: Array.from({ length: linhasGanhas }, () => ({ id: "x" })), error: null }),
+            then: (ok) => ok({ error: null }),
+          };
+          return cadeia;
         },
       };
       return q;
@@ -81,6 +92,7 @@ function banco(linha: unknown): SupabaseClient {
 
 beforeEach(() => {
   atualizacoes.length = 0;
+  linhasGanhas = 1;
   for (const f of [enviar, responder, ocultar, gravar, credenciais]) f.mockReset();
   credenciais.mockResolvedValue({ apiKey: "chave" });
   gravar.mockResolvedValue("msg-1");
@@ -109,7 +121,20 @@ describe("liberarDirect", () => {
       "chave",
       expect.objectContaining({ texto: "Siga e toque de novo", botoes: [{ tipo: "postback", titulo: "Já estou seguindo", payload: `escale:liberar:${DISPARO}` }] }),
     );
-    expect(atualizacoes.at(-1)).toMatchObject({ toques_no_liberar: 1 });
+    expect(atualizacoes[0]).toMatchObject({ toques_no_liberar: 1 });
+  });
+
+  it("outro toque chegou primeiro (a linha já mudou): ignora e não manda nada", async () => {
+    linhasGanhas = 0;
+    expect(await liberarDirect(banco(disparo()), { ...base, seguidor: true })).toBe("ignorado");
+    expect(await liberarDirect(banco(disparo()), { ...base, seguidor: false })).toBe("ignorado");
+    expect(enviar).not.toHaveBeenCalled();
+    expect(responder).not.toHaveBeenCalled();
+  });
+
+  it("seguidor: reivindica a linha ANTES de enviar", async () => {
+    await liberarDirect(banco(disparo()), { ...base, seguidor: true });
+    expect(atualizacoes[0]).toMatchObject({ direct: "pendente" });
   });
 
   it("terceiro toque sem seguir: desiste com nao_seguiu", async () => {

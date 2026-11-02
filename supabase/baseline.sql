@@ -62456,7 +62456,7 @@ create index if not exists idx_escale_disparos_de_comentario_pessoa
 -- Decide e grava o disparo de UM comentário numa regra, sem corrida entre dois
 -- comentários da mesma pessoa: a trava é por (regra, rede, autor).
 -- Devolve 'novo' | 'repetido' | 'ja_existe' (reentrega do mesmo comentário).
--- p_intervalo_horas null = "uma vez por pessoa".
+-- p_intervalo_horas null = "uma vez por pessoa" (linha `fora_do_publico` não conta: nada foi enviado).
 create or replace function public.fn_escale_reivindicar_disparo(p_linha jsonb, p_intervalo_horas integer)
 returns text
 language plpgsql
@@ -62483,7 +62483,8 @@ begin
 
   select max(d.created_at) into v_ultimo
     from public.escale_disparos_de_comentario d
-   where d.rule_id = v_rule and d.plataforma = v_plat and d.autor_id = v_autor and not d.repetido;
+   where d.rule_id = v_rule and d.plataforma = v_plat and d.autor_id = v_autor and not d.repetido
+      and d.direct <> 'fora_do_publico';
 
   v_repetido := v_ultimo is not null
     and (p_intervalo_horas is null or v_ultimo > now() - make_interval(hours => p_intervalo_horas));
