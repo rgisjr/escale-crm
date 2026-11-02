@@ -95,9 +95,10 @@ describe("índices únicos", () => {
     );
   });
 
-  it("a mesma pessoa na mesma regra → 23505, salvo quando repetido", () => {
-    expect(tentar(`set role service_role; insert into public.escale_disparos_de_comentario (organization_id, rule_id, caminho_id, plataforma, comentario_id, publicacao_id, autor_id, texto, comentado_em) values ('${GOV_ORG}', '${REGRA}', 'q', 'instagram', 'c-novo', 'p', 'a-1', 'oi', now());`)).toMatch(
-      /uq_escale_disparos_de_comentario_pessoa/,
+  it("a mesma pessoa na mesma regra já não é barrada por índice", () => {
+    // 9804 trocou o índice pela função fn_escale_reivindicar_disparo (provada em escale-comentarios-9804).
+    expect(tentar(`begin; set local role service_role; insert into public.escale_disparos_de_comentario (organization_id, rule_id, caminho_id, plataforma, comentario_id, publicacao_id, autor_id, texto, comentado_em) values ('${GOV_ORG}', '${REGRA}', 'q', 'instagram', 'c-novo', 'p', 'a-1', 'oi', now()); rollback;`)).not.toMatch(
+      /error/i,
     );
     expect(gravar(GOV_ORG, REGRA, { comentario_id: "c-4", autor_id: "a-1", repetido: true })).not.toMatch(/error/i);
   });
