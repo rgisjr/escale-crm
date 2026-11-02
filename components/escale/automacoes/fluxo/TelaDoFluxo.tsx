@@ -28,6 +28,7 @@ import { PainelDaMensagem } from "./painel/PainelDaMensagem";
 import { PainelDasCondicoes } from "./painel/PainelDasCondicoes";
 import { PainelDoGatilho } from "./painel/PainelDoGatilho";
 import { useFluxo } from "./useFluxo";
+import { REENQUADRAR_O_FLUXO } from "./zoom";
 
 /**
  * A TELA DO FLUXO (07-013): cabeçalho em cima; embaixo o canvas, o painel do nó por
@@ -50,7 +51,7 @@ export function TelaDoFluxo({
   const router = useRouter();
   const { fitView } = useReactFlow();
   const aoReorganizar = useCallback(() => {
-    window.setTimeout(() => void fitView({ padding: 0.2, duration: 200 }), 0);
+    window.setTimeout(() => void fitView(REENQUADRAR_O_FLUXO), 0);
   }, [fitView]);
   const fluxo = useFluxo(regra, { nomeInicial, aoCriar, aoReorganizar });
   const { selecionado, sujo } = fluxo;
