@@ -4,9 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const responder = vi.hoisted(() => vi.fn());
 const credenciais = vi.hoisted(() => vi.fn());
+const ocultar = vi.hoisted(() => vi.fn());
+const curtir = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/escale/comentarios/zernio", async (original) => ({
   ...((await original()) as object),
   responderComentario: responder,
+  ocultarComentario: ocultar,
+  curtirComentario: curtir,
 }));
 vi.mock("@/lib/channels/zernio/credentials", () => ({ zernioCredsForAccountId: credenciais }));
 
@@ -58,23 +62,27 @@ const evento: EventRow = {
 };
 
 type Linha = Record<string, unknown>;
-type ErroFalso = { code: string; message: string } | null;
 
-/** Banco falso: `inserts` recebe cada insert; `respostasDoInsert` é a fila de erros (null = ok). */
-function bancoFalso(opcoes: { respostasDoInsert?: ErroFalso[]; disparo?: Linha | null } = {}) {
-  const inserts: Linha[] = [];
+/** Banco falso: `chamadas` recebe cada RPC de reivindicar; `respostasDaRpc` é a fila de resultados. */
+function bancoFalso(opcoes: { respostasDaRpc?: Array<string | { erro: { code: string; message: string } }>; disparo?: Linha | null } = {}) {
+  const chamadas: Array<{ nome: string; args: Linha }> = [];
   const updates: Linha[] = [];
-  const fila = [...(opcoes.respostasDoInsert ?? [])];
+  const fila = [...(opcoes.respostasDaRpc ?? [])];
   const admin = {
+    rpc: async (nome: string, args: Linha) => {
+      chamadas.push({ nome, args });
+      const proxima = fila.shift() ?? "novo";
+      return typeof proxima === "string" ? { data: proxima, error: null } : { data: null, error: proxima.erro };
+    },
     from: () => {
       const q = {
-        insert: async (linha: Linha) => {
-          inserts.push(linha);
-          return { error: fila.shift() ?? null };
-        },
         update: (valores: Linha) => {
           updates.push(valores);
-          return { eq: async () => ({ error: null }) };
+          const cadeia: { eq: () => typeof cadeia; then: (ok: (v: unknown) => unknown) => unknown } = {
+            eq: () => cadeia,
+            then: (ok) => ok({ error: null }),
+          };
+          return cadeia;
         },
         select: () => q,
         eq: () => q,
@@ -83,7 +91,8 @@ function bancoFalso(opcoes: { respostasDoInsert?: ErroFalso[]; disparo?: Linha |
       return q;
     },
   } as unknown as SupabaseClient;
-  return { admin, inserts, updates };
+  const linhas = () => chamadas.map((c) => c.args.p_linha as Linha);
+  return { admin, chamadas, linhas, updates };
 }
 
 const disparo = (extra: Linha = {}) => ({
@@ -93,24 +102,36 @@ const disparo = (extra: Linha = {}) => ({
   resposta: "pendente",
   repetido: false,
   motivo: null,
+  ocultar: "nao_pedido",
+  curtir: "nao_pedido",
   ...extra,
 });
 
 beforeEach(() => {
+  ocultar.mockReset();
+  curtir.mockReset();
   responder.mockReset();
   credenciais.mockReset();
   credenciais.mockResolvedValue({ apiKey: "chave", accountId: "acc-1", baseUrl: "x", source: "session" });
 });
 
 describe("reivindicarDisparos", () => {
-  it("insert ok → a regra fica", async () => {
-    const { admin, inserts } = bancoFalso();
+  it("novo → a regra fica, e a RPC leva a linha e o intervalo", async () => {
+    const { admin, chamadas, linhas } = bancoFalso();
     const regras = [regra([])];
     expect(await reivindicarDisparos(admin, evento, regras)).toEqual(regras);
-    expect(inserts[0]).toMatchObject({ rule_id: REGRA, caminho_id: "qualquer", comentario_id: "c-1", autor_id: "u-1" });
+    expect(chamadas[0]).toMatchObject({ nome: "fn_escale_reivindicar_disparo", args: { p_intervalo_horas: null } });
+    expect(linhas()[0]).toMatchObject({ rule_id: REGRA, caminho_id: "qualquer", comentario_id: "c-1", autor_id: "u-1", ocultar: "nao_pedido", curtir: "nao_pedido" });
   });
 
-  it("grava a publicação saneada no disparo e também na linha repetido", async () => {
+  it("intervalo da repetição vai como p_intervalo_horas", async () => {
+    const { admin, chamadas } = bancoFalso();
+    const r = { ...regra([]), trigger_config: { ...config(), repeticao: { modo: "intervalo", horas: 24 } } };
+    await reivindicarDisparos(admin, evento, [r]);
+    expect(chamadas[0]!.args.p_intervalo_horas).toBe(24);
+  });
+
+  it("grava a publicação saneada na linha", async () => {
     const comLink = {
       ...evento,
       payload: {
@@ -122,17 +143,13 @@ describe("reivindicarDisparos", () => {
         },
       },
     } as EventRow;
-    const { admin, inserts } = bancoFalso({
-      respostasDoInsert: [{ code: "23505", message: 'violates "uq_escale_disparos_de_comentario_pessoa"' }],
-    });
+    const { admin, linhas } = bancoFalso();
     await reivindicarDisparos(admin, comLink, [regra([])]);
-    const esperado = {
+    expect(linhas()[0]).toMatchObject({
       publicacao_legenda: "Meu reels",
       publicacao_miniatura: "https://scontent.cdninstagram.com/a.jpg",
       publicacao_link: "https://www.instagram.com/reel/abc/",
-    };
-    expect(inserts[0]).toMatchObject(esperado);
-    expect(inserts[1]).toMatchObject({ repetido: true, ...esperado });
+    });
   });
 
   it("link http do payload grava publicacao_link null", async () => {
@@ -143,30 +160,42 @@ describe("reivindicarDisparos", () => {
         publicacao: { legenda: null, miniatura: null, link: "http://instagram.com/p/x" },
       },
     } as EventRow;
-    const { admin, inserts } = bancoFalso();
+    const { admin, linhas } = bancoFalso();
     await reivindicarDisparos(admin, http, [regra([])]);
-    expect(inserts[0]).toMatchObject({ publicacao_link: null });
+    expect(linhas()[0]).toMatchObject({ publicacao_link: null });
   });
 
-  it("23505 do índice do comentário → reentrega: sai sem gravar mais nada", async () => {
-    const { admin, inserts } = bancoFalso({
-      respostasDoInsert: [{ code: "23505", message: 'violates "uq_escale_disparos_de_comentario_comentario"' }],
-    });
-    expect(await reivindicarDisparos(admin, evento, [regra([])])).toEqual([]);
-    expect(inserts).toHaveLength(1);
+  it("ja_existe (reentrega) e repetido → a regra não roda", async () => {
+    for (const resposta of ["ja_existe", "repetido"]) {
+      const { admin } = bancoFalso({ respostasDaRpc: [resposta] });
+      expect(await reivindicarDisparos(admin, evento, [regra([])])).toEqual([]);
+    }
   });
 
-  it("23505 do índice da pessoa → grava a linha repetido e sai", async () => {
-    const { admin, inserts } = bancoFalso({
-      respostasDoInsert: [{ code: "23505", message: 'violates "uq_escale_disparos_de_comentario_pessoa"' }],
-    });
-    expect(await reivindicarDisparos(admin, evento, [regra([])])).toEqual([]);
-    expect(inserts[1]).toMatchObject({ repetido: true, direct: "pulado", resposta: "pulada", motivo: "ja_recebeu" });
-  });
-
-  it("outro erro do banco lança", async () => {
-    const { admin } = bancoFalso({ respostasDoInsert: [{ code: "XX000", message: "boom" }] });
+  it("erro da RPC lança", async () => {
+    const { admin } = bancoFalso({ respostasDaRpc: [{ erro: { code: "XX000", message: "boom" } }] });
     await expect(reivindicarDisparos(admin, evento, [regra([])])).rejects.toThrow(/disparo_de_comentario_falhou/);
+  });
+
+  it("fora do público grava fora_do_publico, fecha a resposta e não roda", async () => {
+    const publico = { quem: "seguidores", quando_nao_informado: "nao_enviar", liberar: { texto: "t", titulo: "ti", texto_de_quem_nao_segue: "n" } };
+    const r = { ...regra([]), trigger_config: { ...config(), publico } };
+    const { admin, linhas, updates } = bancoFalso();
+    expect(await reivindicarDisparos(admin, evento, [r])).toEqual([]);
+    expect(linhas()[0]).toMatchObject({ direct: "fora_do_publico", motivo: "fora_do_publico", ocultar: "nao_pedido" });
+    expect(updates[0]).toMatchObject({ resposta: "pulada" });
+  });
+
+  it("ocultar e curtir pendentes só quando o caminho pede; curtir só no Facebook", async () => {
+    const cfg = { ...config(), caminhos: [{ id: "qualquer", publicacoes: [], filtro: { modo: "qualquer" }, resposta: null, ocultar_depois: true, curtir: true }] };
+    const r = { ...regra([]), trigger_config: cfg };
+    const insta = bancoFalso();
+    await reivindicarDisparos(insta.admin, evento, [r]);
+    expect(insta.linhas()[0]).toMatchObject({ ocultar: "pendente", curtir: "nao_pedido" });
+    const face = bancoFalso();
+    const noFace = { ...evento, payload: { ...(evento.payload as object), plataforma: "facebook" } } as EventRow;
+    await reivindicarDisparos(face.admin, noFace, [r]);
+    expect(face.linhas()[0]).toMatchObject({ ocultar: "pendente", curtir: "pendente" });
   });
 });
 
@@ -228,5 +257,44 @@ describe("concluirDisparo", () => {
       },
     } as unknown as SupabaseClient;
     await expect(fechar(admin, regra([]))).resolves.toBeUndefined();
+  });
+});
+
+describe("concluirDisparo: ações no comentário (10D, D14)", () => {
+  const fechar = (admin: SupabaseClient, rule: ReturnType<typeof regra>) =>
+    concluirDisparo(admin, { row: evento, rule, runId: "run-1" });
+
+  it("direct enviado → oculta e curta o que foi pedido", async () => {
+    responder.mockResolvedValue({ ok: true, dados: { commentId: null } });
+    ocultar.mockResolvedValue({ ok: true, dados: {} });
+    curtir.mockResolvedValue({ ok: false, status: 500, corpo: null });
+    const { admin, updates } = bancoFalso({ disparo: disparo({ direct: "enviado", ocultar: "pendente", curtir: "pendente" }) });
+    const face = { ...evento, payload: { ...(evento.payload as object), plataforma: "facebook" } } as EventRow;
+    await concluirDisparo(admin, { row: face, rule: regra([{ type: "send_instagram_message" }]), runId: "r" });
+    expect(ocultar).toHaveBeenCalledWith("chave", { postId: "zp-1", commentId: "c-1", accountId: "acc-1" });
+    expect(updates[0]).toMatchObject({ ocultar: "feito", curtir: "falhou" });
+    expect(updates[0]).not.toHaveProperty("motivo");
+  });
+
+  it("curtir fora do Facebook não chama o Zernio", async () => {
+    responder.mockResolvedValue({ ok: true, dados: { commentId: null } });
+    const { admin } = bancoFalso({ disparo: disparo({ direct: "enviado", curtir: "pendente" }) });
+    await fechar(admin, regra([{ type: "send_instagram_message" }]));
+    expect(curtir).not.toHaveBeenCalled();
+  });
+
+  it("aguardando_seguir não publica, não oculta e não curte", async () => {
+    const { admin, updates } = bancoFalso({ disparo: disparo({ direct: "aguardando_seguir", ocultar: "pendente" }) });
+    await fechar(admin, regra([{ type: "send_instagram_message" }]));
+    expect(responder).not.toHaveBeenCalled();
+    expect(ocultar).not.toHaveBeenCalled();
+    expect(updates[0]).toMatchObject({ resposta: "pendente" });
+    expect(updates[0]).not.toHaveProperty("ocultar");
+  });
+
+  it("direct falhou → ações esperam (não oculta)", async () => {
+    const { admin } = bancoFalso({ disparo: disparo({ direct: "falhou", ocultar: "pendente" }) });
+    await fechar(admin, regra([{ type: "send_instagram_message" }]));
+    expect(ocultar).not.toHaveBeenCalled();
   });
 });

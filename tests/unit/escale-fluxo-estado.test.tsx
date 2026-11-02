@@ -1,3 +1,4 @@
+import { configDoComentarioSchema } from "@/lib/escale/comentarios/schema";
 import { act, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -287,7 +288,7 @@ describe("useFluxo · gatilho de comentário e passo Instagram", () => {
       },
     ],
   };
-  const passo = { type: "send_instagram_message", config: { texto: "Oi!", botoes: [{ titulo: "Ver", url: "https://a.com" }] } };
+  const passo = { type: "send_instagram_message", config: { texto: "Oi!", botoes: [{ titulo: "Ver", url: "https://a.com" }], anexo: null } };
   const regraDeComentario = (over: Partial<AutomationRuleRow> = {}) =>
     regra({ trigger_event: "comment.received", trigger_config: configDoComentario, conditions: [], actions: [passo], ...over });
 
@@ -298,7 +299,7 @@ describe("useFluxo · gatilho de comentário e passo Instagram", () => {
       await result.current.salvar();
     });
     expect(h.atualizar).toHaveBeenCalledWith(
-      expect.objectContaining({ trigger_event: "comment.received", trigger_config: configDoComentario, actions: [passo] }),
+      expect.objectContaining({ trigger_event: "comment.received", trigger_config: configDoComentarioSchema.parse(configDoComentario), actions: [passo] }),
     );
   });
 
@@ -326,7 +327,7 @@ describe("useFluxo · gatilho de comentário e passo Instagram", () => {
     const { result } = montar(regra());
     const antes = filaDa(result);
     act(() => result.current.adicionar("send_instagram_message"));
-    expect(toast.error).toHaveBeenCalledWith("O passo Instagram funciona com o gatilho “Alguém comenta em um post”.");
+    expect(toast.error).toHaveBeenCalledWith("O passo Instagram funciona com os gatilhos do Instagram.");
     expect(filaDa(result)).toEqual(antes);
   });
 });

@@ -2,28 +2,39 @@
 import { useState } from "react";
 
 import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao";
-import { useContasSociais } from "@/hooks/escale/useComentarios";
+import { useContasSociais, usePublicacoesDaConta } from "@/hooks/escale/useComentarios";
 import { useT } from "@/hooks/i18n/useT";
 import { ID_DO_CAMINHO_UNICO } from "@/lib/escale/comentarios/constantes";
 import type { CaminhoDoGatilho, ConfigDoComentario, PublicacaoDoCaminho } from "@/lib/escale/comentarios/schema";
-import { caminhosDasPublicacoes, resumoDosCaminhos } from "@/lib/escale/comentarios/tela";
+import { quandoBr } from "@/lib/escale/comentarios/formato";
+import { armarProxima, caminhosDasPublicacoes, resumoDosCaminhos } from "@/lib/escale/comentarios/tela";
 import { Plus } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 import { CaminhoDoComentario } from "./CaminhoDoComentario";
+import { PublicoDoComentario } from "./PublicoDoComentario";
+import { RepeticaoDoComentario } from "./RepeticaoDoComentario";
 import { SeletorDeConta } from "./SeletorDeConta";
 import { SeletorDePublicacoes } from "./SeletorDePublicacoes";
 
 type Escopo = ConfigDoComentario["escopo"];
 
 /** A ordem dos cartões: todos os posts, depois posts específicos. */
-const ESCOPOS: readonly Escopo[] = ["todos", "especificos"];
+const ESCOPOS: readonly Escopo[] = ["todos", "especificos", "proxima"];
+
+const TEXTO_DO_ESCOPO: Record<Escopo, [string, string]> = {
+  todos: ["Todos os posts", "Um único caminho para comentários em qualquer publicação"],
+  especificos: ["Posts específicos", "Cada publicação vira um caminho no fluxo"],
+  proxima: ["Próxima publicação", "Um caminho para a primeira publicação feita depois de salvar"],
+};
 
 const caminhoUnico = (do_: CaminhoDoGatilho | undefined): CaminhoDoGatilho => ({
   id: ID_DO_CAMINHO_UNICO,
   publicacoes: [],
   filtro: do_?.filtro ?? { modo: "qualquer" },
   resposta: do_?.resposta ?? null,
+  ocultar_depois: do_?.ocultar_depois ?? false,
+  curtir: do_?.curtir ?? false,
 });
 
 /**
@@ -41,6 +52,7 @@ export function FormularioDoComentario({
   const t = useT();
   const { contas } = useContasSociais();
   const conta = contas.find((c) => c.id === config.channel_session_id) ?? null;
+  const publicacoesDaConta = usePublicacoesDaConta(conta?.id ?? null);
   const [trocandoConta, setTrocandoConta] = useState<string | null>(null);
   const [trocandoEscopo, setTrocandoEscopo] = useState<Escopo | null>(null);
   const [escolhendo, setEscolhendo] = useState(false);
@@ -51,7 +63,13 @@ export function FormularioDoComentario({
   const emUso = new Set(config.caminhos.flatMap((c) => c.publicacoes.map((p) => p.id)));
 
   function aplicarConta(id: string) {
-    aoMudar({ ...config, channel_session_id: id, caminhos: config.escopo === "todos" ? config.caminhos : [] });
+    aoMudar({
+      ...config,
+      channel_session_id: id,
+      caminhos: config.escopo === "especificos" ? [] : config.caminhos,
+      proxima: config.escopo === "proxima" ? null : config.proxima,
+      escopo: config.escopo === "proxima" ? "todos" : config.escopo,
+    });
   }
   function escolherConta(id: string) {
     if (id === config.channel_session_id) return;
@@ -59,7 +77,13 @@ export function FormularioDoComentario({
     else aplicarConta(id);
   }
   function aplicarEscopo(escopo: Escopo) {
-    aoMudar({ ...config, escopo, caminhos: escopo === "todos" ? [caminhoUnico(config.caminhos[0])] : [] });
+    const unico = escopo === "todos" || escopo === "proxima";
+    aoMudar({
+      ...config,
+      escopo,
+      caminhos: unico ? [caminhoUnico(config.caminhos[0])] : [],
+      proxima: escopo === "proxima" ? armarProxima(publicacoesDaConta.data ?? [], new Date()) : null,
+    });
   }
   function escolherEscopo(escopo: Escopo) {
     if (escopo === config.escopo) return;
@@ -82,27 +106,52 @@ export function FormularioDoComentario({
               type="button"
               aria-pressed={config.escopo === escopo}
               onClick={() => escolherEscopo(escopo)}
+              disabled={escopo === "proxima" && !conta}
+              title={escopo === "proxima" && !conta ? t("Selecione um dispositivo para ver as publicações.") : undefined}
               className={cn(
-                "flex-1 rounded-lg border p-3 text-left",
+                "flex-1 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50",
                 config.escopo === escopo ? "border-casca-marca bg-casca-marca-suave" : "border-casca-divisoria hover:bg-casca-raia",
               )}
             >
-              <span className="block text-[13px] font-medium text-casca-texto">
-                {escopo === ESCOPOS[0] ? t("Todos os posts") : t("Posts específicos")}
-              </span>
-              <span className="block text-[11px] text-casca-suave">
-                {escopo === ESCOPOS[0]
-                  ? t("Um único caminho para comentários em qualquer publicação")
-                  : t("Cada publicação vira um caminho no fluxo")}
-              </span>
+              <span className="block text-[13px] font-medium text-casca-texto">{t(TEXTO_DO_ESCOPO[escopo][0])}</span>
+              <span className="block text-[11px] text-casca-suave">{t(TEXTO_DO_ESCOPO[escopo][1])}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {config.escopo === "todos" ? (
+      {config.escopo === "proxima" ? (
+        <div className="flex flex-col gap-3">
+          {config.proxima?.resolvida ? (
+            <div className="flex items-center gap-3 rounded-lg bg-casca-raia p-3">
+              {config.proxima.resolvida.miniatura ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={config.proxima.resolvida.miniatura} alt="" className="size-10 rounded-md object-cover" />
+              ) : (
+                <span className="size-10 rounded-md bg-surface" aria-hidden />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-[12px] text-casca-texto">{config.proxima.resolvida.legenda ?? t("Sem legenda")}</p>
+                {config.proxima.resolvida.publicada_em ? (
+                  <p className="text-[11px] text-casca-suave">
+                    {t("Publicada em {data}").replace("{data}", quandoBr(config.proxima.resolvida.publicada_em))}
+                  </p>
+                ) : null}
+                <p className="text-[11px] text-casca-suave">{t("Esta automação agora vale só para esta publicação.")}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[12px] text-casca-suave">
+              {t("Aguardando a próxima publicação da conta. Ela vira o caminho do fluxo assim que alguém comentar nela.")}
+            </p>
+          )}
+          {config.caminhos[0] ? (
+            <CaminhoDoComentario caminho={config.caminhos[0]} plataforma={conta?.plataforma} aoMudar={(c) => mudarCaminho(0, c)} />
+          ) : null}
+        </div>
+      ) : config.escopo === "todos" ? (
         config.caminhos[0] ? (
-          <CaminhoDoComentario caminho={config.caminhos[0]} aoMudar={(c) => mudarCaminho(0, c)} />
+          <CaminhoDoComentario caminho={config.caminhos[0]} plataforma={conta?.plataforma} aoMudar={(c) => mudarCaminho(0, c)} />
         ) : null
       ) : (
         <div className="flex flex-col gap-3">
@@ -115,6 +164,7 @@ export function FormularioDoComentario({
             <CaminhoDoComentario
               key={caminho.id}
               caminho={caminho}
+              plataforma={conta?.plataforma}
               titulo={{
                 rotulo:
                   caminho.publicacoes.length > 1
@@ -139,6 +189,14 @@ export function FormularioDoComentario({
           </button>
         </div>
       )}
+
+      {conta?.plataforma === "instagram" ? (
+        <PublicoDoComentario publico={config.publico ?? null} aoMudar={(publico) => aoMudar({ ...config, publico })} />
+      ) : null}
+      <RepeticaoDoComentario
+        repeticao={config.repeticao ?? { modo: "uma_vez" }}
+        aoMudar={(repeticao) => aoMudar({ ...config, repeticao })}
+      />
 
       {conta ? (
         <SeletorDePublicacoes

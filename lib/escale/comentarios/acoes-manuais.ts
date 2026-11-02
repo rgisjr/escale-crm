@@ -13,6 +13,8 @@ import type { ContextoDaAcao } from "./rota-da-acao";
 import {
   EXPLICACAO_DO_MOTIVO,
   apagarComentario,
+  curtirComentario,
+  descurtirComentario,
   motivoDoErro,
   ocultarComentario,
   reexibirComentario,
@@ -268,6 +270,19 @@ export function ocultarAMao(ctx: ContextoDaAcao, ocultar: boolean, autorId: stri
     auditoria: ocultar ? "comment.hidden" : "comment.unhidden",
     enviar: () => (ocultar ? ocultarComentario(ctx.chave, alvo) : reexibirComentario(ctx.chave, alvo)),
     dadosDoSucesso: () => ({ oculto: ocultar }),
+  });
+}
+
+/** FORK ESCALE · Fase 10D (D15): curtir (POST) ou descurtir (DELETE) à mão. A rota recusa conta do Instagram antes. */
+export function curtirAMao(ctx: ContextoDaAcao, curtir: boolean, autorId: string | null): Promise<ResultadoDaAcao> {
+  const alvo = { postId: ctx.publicacaoId, commentId: ctx.comentarioId, accountId: ctx.conta.contaId };
+  return agirNoZernio(ctx, {
+    acao: curtir ? "curtir" : "descurtir",
+    autorId,
+    texto: null,
+    auditoria: curtir ? "comment.liked" : "comment.unliked",
+    enviar: () => (curtir ? curtirComentario(ctx.chave, alvo) : descurtirComentario(ctx.chave, alvo)),
+    dadosDoSucesso: () => ({ curtido: curtir }),
   });
 }
 

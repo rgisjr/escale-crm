@@ -181,11 +181,16 @@ describe("schema do motor com o gatilho de comentário", () => {
   it("recusa o passo Instagram com outro gatilho", () => {
     const r = createAutomationRuleSchema.safeParse(corpo({ trigger_event: "lead.won", trigger_config: {} }));
     expect(r.success).toBe(false);
-    expect(JSON.stringify(r.error?.issues)).toContain("O passo Instagram funciona com o gatilho");
+    expect(JSON.stringify(r.error?.issues)).toContain("O passo Instagram funciona com os gatilhos");
   });
   it("o designer original não lista o gatilho", () => {
     expect(TRIGGER_EVENTS).toContain("comment.received");
     expect(TRIGGER_EVENTS_DO_ORIGINAL).not.toContain("comment.received");
-    expect(GATILHOS_SO_DA_CASCA).toEqual(["comment.received"]);
+    expect(GATILHOS_SO_DA_CASCA).toEqual([
+      "comment.received",
+      "instagram.message_received",
+      "instagram.story_mention",
+      "instagram.story_reply",
+    ]);
   });
 });

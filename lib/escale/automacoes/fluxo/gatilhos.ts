@@ -82,14 +82,14 @@ export const FONTES_DOS_GATILHOS: readonly FonteDosGatilhos[] = [
     // FORK ESCALE · Fase 10B (07-020): a fonte Instagram. Só o comentário funciona; os outros três aparecem "Em breve".
     fonte: "instagram",
     rotulo: "Instagram",
+    // Fase 10D: os três que estavam "Em breve" funcionam, na ordem da captura 07-020.
     opcoes: [
+      { evento: "instagram.message_received", titulo: "Contato envia uma mensagem", descricao: "O contato envia uma mensagem para o Instagram", icone: "mensagem" },
       { evento: "comment.received", titulo: "Alguém comenta em um post", descricao: "Quando alguém comenta em um post da conta do Instagram", icone: "instagram" },
+      { evento: "instagram.story_mention", titulo: "Alguém marca a conta em um story", descricao: "Quando alguém menciona a conta do Instagram em um story", icone: "instagram" },
+      { evento: "instagram.story_reply", titulo: "Alguém responde a um story", descricao: "Quando alguém responde a um story da conta do Instagram", icone: "instagram" },
     ],
-    emBreve: [
-      { titulo: "Contato envia uma mensagem", descricao: "O contato envia uma mensagem para o Instagram" },
-      { titulo: "Alguém marca a conta em um story", descricao: "Quando alguém menciona a conta do Instagram em um story" },
-      { titulo: "Alguém responde a um story", descricao: "Quando alguém responde a um story da conta do Instagram" },
-    ],
+    emBreve: [],
   },
   {
     fonte: "agenda",
@@ -119,6 +119,9 @@ const COM_FORMULARIO: ReadonlySet<string> = new Set([
   "lead.silent_for",
   "lead.stage_stale",
   "comment.received",
+  "instagram.message_received",
+  "instagram.story_mention",
+  "instagram.story_reply",
 ]);
 
 /** Fonte do evento; evento desconhecido (ou vazio) → "negocios", a primeira. */

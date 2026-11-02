@@ -13,7 +13,16 @@ const NOME_DA_REDE = { instagram: "Instagram", facebook: "Facebook" } as const;
  * Facebook; ao escolher (e ao abrir com conta já escolhida) garante a assinatura de `comment.received`
  * do canal e mostra o estado. A conta desconectada aparece desabilitada.
  */
-export function SeletorDeConta({ canal, aoEscolher }: { canal: string; aoEscolher: (id: string) => void }) {
+export function SeletorDeConta({
+  canal,
+  aoEscolher,
+  soInstagram = false,
+}: {
+  canal: string;
+  aoEscolher: (id: string) => void;
+  /** Fase 10D: os gatilhos de story são só do Instagram, então as páginas do Facebook somem. */
+  soInstagram?: boolean;
+}) {
   const t = useT();
   const { contas } = useContasSociais();
   const assinatura = useGarantirAssinatura();
@@ -38,7 +47,7 @@ export function SeletorDeConta({ canal, aoEscolher }: { canal: string; aoEscolhe
         valor={canal}
         vazio={t("Escolha a conta")}
         aoMudar={(v) => v && aoEscolher(v)}
-        opcoes={contas.map((c) => ({
+        opcoes={contas.filter((c) => !soInstagram || c.plataforma === "instagram").map((c) => ({
           valor: c.id,
           rotulo: `${c.nome} · ${NOME_DA_REDE[c.plataforma]}${c.conectada ? "" : ` — ${t("desconectada")}`}`,
           desabilitada: !c.conectada,

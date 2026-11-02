@@ -5,13 +5,14 @@ import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao"
 import { useT } from "@/hooks/i18n/useT";
 import type { DadosDoGatilho, TelaDoGatilho } from "@/lib/automation/desenho-da-regra";
 import { opcaoDoEvento, precisaDeFormulario } from "@/lib/escale/automacoes/fluxo/gatilhos";
-import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
-import { configInicialDoComentario, telaInicialDoGatilho } from "@/lib/escale/comentarios/tela";
-import { configDoComentarioSchema } from "@/lib/escale/comentarios/schema";
+import { GATILHO_DE_COMENTARIO, GATILHOS_DE_DIRECT, type GatilhoDeDirect } from "@/lib/escale/comentarios/constantes";
+import { configInicialDoComentario, configInicialDoDirect, telaInicialDoGatilho } from "@/lib/escale/comentarios/tela";
+import { configDoComentarioSchema, configDoDirectSchema } from "@/lib/escale/comentarios/schema";
 import { Plus } from "@/lib/ui/icons-da-casca";
 
 import { DetalheDoGatilho } from "../CorposDoNo";
 import { FormularioDoComentario } from "../comentario/FormularioDoComentario";
+import { FormularioDoDirect } from "../comentario/FormularioDoDirect";
 import { ICONE_DO_GATILHO } from "../visual-do-fluxo";
 import { EscolhaDoGatilho } from "./EscolhaDoGatilho";
 import { FormularioDoGatilho } from "./FormularioDoGatilho";
@@ -117,6 +118,12 @@ export function PainelDoGatilho({
           {evento === GATILHO_DE_COMENTARIO ? (
             <FormularioDoComentario
               config={configDoComentarioSchema.safeParse(tela.configPropria).data ?? configInicialDoComentario()}
+              aoMudar={(configPropria) => setTela({ ...tela, configPropria })}
+            />
+          ) : (GATILHOS_DE_DIRECT as readonly string[]).includes(evento) ? (
+            <FormularioDoDirect
+              evento={evento}
+              config={configDoDirectSchema.safeParse(tela.configPropria).data ?? configInicialDoDirect(evento as GatilhoDeDirect)}
               aoMudar={(configPropria) => setTela({ ...tela, configPropria })}
             />
           ) : (

@@ -4,7 +4,7 @@ import { ehCanalDeConversa } from "@/lib/channels/canais-de-conversa";
 import { marcarConversaComMensagem } from "@/lib/channels/marcar-conversa";
 import { logger } from "@/lib/logger";
 
-import type { BotaoDaResposta } from "./zernio";
+import type { BotaoDaResposta, BotaoDoDirect } from "./zernio";
 
 /**
  * FORK ESCALE · Fase 10B: o direct do passo Instagram na conversa. A linha é gravada ANTES do envio
@@ -84,11 +84,22 @@ async function gravarSaidaNaConversa(
 /** Grava a mensagem `sending` da automação na conversa do contato. Devolve o id da linha, ou null (só loga). */
 export async function gravarDirectNaConversa(
   admin: SupabaseClient,
-  e: SaidaNaConversa & { botoes: readonly BotaoDaResposta[]; disparoId: string },
+  e: SaidaNaConversa & {
+    botoes: readonly (BotaoDaResposta | BotaoDoDirect)[];
+    disparoId?: string;
+    /** FORK ESCALE · Fase 10D: "direct" = mensagem comum (gatilhos de direct e o liberar); o eco a reconhece. */
+    origem?: "comentario" | "direct";
+    anexo?: { tipo: string; url: string; nome: string | null } | null;
+  },
 ): Promise<string | null> {
   const gravada = await gravarSaidaNaConversa(admin, e, {
     sent_via: "automation",
-    metadata: { origem: "comentario", disparo_id: e.disparoId, botoes: e.botoes },
+    metadata: {
+      origem: e.origem ?? "comentario",
+      ...(e.disparoId ? { disparo_id: e.disparoId } : {}),
+      botoes: e.botoes,
+      ...(e.anexo ? { anexo: e.anexo } : {}),
+    },
   });
   return gravada?.mensagemId ?? null;
 }

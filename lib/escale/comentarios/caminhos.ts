@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { casaComPalavraChave } from "@/lib/automation/palavra-chave";
+import { JANELA_DA_MENSAGEM_MS, PLATAFORMAS_DE_COMENTARIO, PRAZO_DA_RESPOSTA_PRIVADA_MS } from "./constantes";
+import { casaComFiltro } from "./filtro";
+import { configDoComentarioSchema, type CaminhoDoGatilho } from "./schema";
 
-import { PLATAFORMAS_DE_COMENTARIO, PRAZO_DA_RESPOSTA_PRIVADA_MS } from "./constantes";
-import { configDoComentarioSchema, type CaminhoDoGatilho, type FiltroDoCaminho } from "./schema";
-
+export { casaComFiltro } from "./filtro";
 export { problemasDoGatilho } from "./problemas";
 
 /** O que o evento `comment.received` emitido por `receberComentario` traz (plano 10B, seção 3.1). */
@@ -19,7 +19,13 @@ export const comentarioDoEventoSchema = z.object({
     comentado_em: z.string(),
     publicacao_id: z.string().min(1),
     publicacao_zernio_id: z.string().nullable(),
-    autor: z.object({ id: z.string().min(1), usuario: z.string().nullable(), nome: z.string().nullable() }),
+    autor: z.object({
+      id: z.string().min(1),
+      usuario: z.string().nullable(),
+      nome: z.string().nullable(),
+      /** FORK ESCALE · Fase 10D (D12): isFollower do Instagram; null = não informado. */
+      seguidor: z.boolean().nullable().default(null),
+    }),
   }),
   publicacao: z.object({
     legenda: z.string().nullable(),
@@ -40,14 +46,6 @@ const payloadParcialSchema = z.object({
   comentario: z.object({ publicacao_id: z.string().min(1), texto: z.string() }),
 });
 
-export function casaComFiltro(texto: string, filtro: FiltroDoCaminho): boolean {
-  if (filtro.modo === "qualquer") return true;
-  const palavras = filtro.palavras.filter((p) => p.trim() !== "");
-  if (palavras.length === 0) return false;
-  const casa = (p: string) => casaComPalavraChave(texto, p, "contem");
-  return filtro.combinar === "todas" ? palavras.every(casa) : palavras.some(casa);
-}
-
 /**
  * O caminho que o comentário pega nesta regra, ou null. Conta errada, config ilegível ou
  * nenhum caminho com a publicação → null. "todos" = o primeiro caminho, sem olhar publicação.
@@ -60,8 +58,11 @@ export function caminhoDoComentario(triggerConfig: unknown, payload: unknown): C
   if (config.data.channel_session_id !== evento.data.channel_session_id) return null;
 
   const { publicacao_id: publicacaoId, texto } = evento.data.comentario;
+  const { escopo, proxima } = config.data;
+  // FORK ESCALE · Fase 10D (D11): "próxima" só vale depois de resolvida, e só para a publicação resolvida.
+  if (escopo === "proxima" && proxima?.resolvida?.id !== publicacaoId) return null;
   const caminho =
-    config.data.escopo === "todos"
+    escopo === "todos" || escopo === "proxima"
       ? config.data.caminhos[0]
       : config.data.caminhos.find((c) => c.publicacoes.some((p) => p.id === publicacaoId));
   if (!caminho) return null;
@@ -80,4 +81,11 @@ export function dentroDoPrazo(comentadoEm: string, agora: Date): boolean {
   const quando = Date.parse(comentadoEm);
   if (Number.isNaN(quando)) return false;
   return agora.getTime() - quando <= PRAZO_DA_RESPOSTA_PRIVADA_MS;
+}
+
+/** D8: a Meta aceita mensagem comum até 24 h depois da última da pessoa. Data ilegível → false. */
+export function dentroDaJanela(recebidaEm: string, agora: Date): boolean {
+  const quando = Date.parse(recebidaEm);
+  if (Number.isNaN(quando)) return false;
+  return agora.getTime() - quando <= JANELA_DA_MENSAGEM_MS;
 }

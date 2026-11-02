@@ -8,7 +8,7 @@ import { EscolhaDoGatilho } from "@/components/escale/automacoes/fluxo/painel/Es
 
 /** Fase 10B (07-020): a fonte Instagram na escolha do gatilho. */
 describe("EscolhaDoGatilho · fonte Instagram", () => {
-  it("mostra os quatro cartões na ordem da Clint: três 'Em breve' sem clique e o comentário que escolhe", async () => {
+  it("mostra os quatro cartões na ordem da Clint, todos clicáveis e sem 'Em breve' (10D)", async () => {
     const aoEscolher = vi.fn();
     render(<EscolhaDoGatilho evento="lead.won" aoEscolher={aoEscolher} />);
     await userEvent.click(screen.getByRole("button", { name: "Instagram" }));
@@ -22,12 +22,14 @@ describe("EscolhaDoGatilho · fonte Instagram", () => {
       "Alguém marca a conta em um story",
       "Alguém responde a um story",
     ]);
-    expect(screen.getAllByText("Em breve")).toHaveLength(3);
+    expect(screen.queryByText("Em breve")).toBeNull();
 
-    const emBreve = screen.getByText("Alguém marca a conta em um story").closest("[aria-disabled]") as HTMLElement;
-    expect(emBreve.getAttribute("aria-disabled")).toBe("true");
-    await userEvent.click(emBreve);
-    expect(aoEscolher).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: /Alguém marca a conta em um story/ }));
+    expect(aoEscolher).toHaveBeenLastCalledWith("instagram.story_mention");
+    await userEvent.click(screen.getByRole("button", { name: /Alguém responde a um story/ }));
+    expect(aoEscolher).toHaveBeenLastCalledWith("instagram.story_reply");
+    await userEvent.click(screen.getByRole("button", { name: /Contato envia uma mensagem/ }));
+    expect(aoEscolher).toHaveBeenLastCalledWith("instagram.message_received");
 
     const comentario = screen.getByRole("button", { name: /Alguém comenta em um post/ });
     expect(within(comentario).getByText("Quando alguém comenta em um post da conta do Instagram")).toBeTruthy();

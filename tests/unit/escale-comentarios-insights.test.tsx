@@ -48,6 +48,9 @@ const COMENTARIOS: ResumoDosComentarios = {
   directs_com_falha: 1,
   respostas: 9,
   respostas_com_falha: 1,
+  fora_do_publico: 2,
+  aguardando_seguir: 1,
+  ocultados: 3,
 };
 
 function montar(data: DadosDaCaixa, insights: Partial<InsightsDoNo>, evento = "comment.received") {
@@ -97,9 +100,17 @@ describe("nó do gatilho de comentário nos Insights", () => {
 });
 
 describe("cartões e rótulos", () => {
-  it("cartoesDoGatilhoDeComentario traz os quatro sem filtro", () => {
+  it("cartoesDoGatilhoDeComentario traz os sete sem filtro", () => {
     const cartoes = cartoesDoGatilhoDeComentario(COMENTARIOS);
-    expect(cartoes.map((c) => c.chave)).toEqual(["comentarios", "repetidos", "respostas", "respostas_com_falha"]);
+    expect(cartoes.map((c) => c.chave)).toEqual([
+      "comentarios",
+      "repetidos",
+      "respostas",
+      "respostas_com_falha",
+      "fora_do_publico",
+      "aguardando_seguir",
+      "ocultados",
+    ]);
     expect(cartoes.every((c) => c.filtro === null)).toBe(true);
   });
 

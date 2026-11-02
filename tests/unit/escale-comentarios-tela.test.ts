@@ -9,7 +9,7 @@ import {
   resumoDosCaminhos,
   telaInicialDoGatilho,
 } from "@/lib/escale/comentarios/tela";
-import type { CaminhoDoGatilho, ConfigDoComentario } from "@/lib/escale/comentarios/schema";
+import { configDoComentarioSchema, type CaminhoDoGatilho, type ConfigDoComentario } from "@/lib/escale/comentarios/schema";
 
 /** Fase 10B: as puras da casca para o gatilho de comentário. */
 const pub = (id: string) => ({ id, legenda: null, miniatura: null, tipo: null });
@@ -48,7 +48,7 @@ describe("comConfigPropria", () => {
     const desenho = Object.freeze(desenhoDaRegra(regra)) as ReturnType<typeof desenhoDaRegra>;
     const novo = comConfigPropria(desenho, regra);
     const gatilho = novo.caixas.find((c) => c.id === "gatilho");
-    expect(gatilho?.data.kind === "gatilho" && gatilho.data.tela.configPropria).toEqual(config);
+    expect(gatilho?.data.kind === "gatilho" && gatilho.data.tela.configPropria).toEqual(configDoComentarioSchema.parse(config));
     const original = desenho.caixas.find((c) => c.id === "gatilho");
     expect(original?.data.kind === "gatilho" && original.data.tela.configPropria).toBeUndefined();
   });
@@ -62,7 +62,7 @@ describe("comConfigPropria", () => {
     const novo = comConfigPropria(desenhoDaRegra(regra), regra);
     const gatilho = novo.caixas.find((c) => c.id === "gatilho");
     expect(gatilho?.data.kind === "gatilho" && triggerConfigDaTela(GATILHO_DE_COMENTARIO, gatilho.data.tela, regra)).toEqual(
-      config,
+      configDoComentarioSchema.parse(config),
     );
   });
 });

@@ -153,16 +153,25 @@ describe("FormularioDoComentario · escopo e caminhos", () => {
 describe("FormularioDoComentario · filtro e resposta", () => {
   const base = (): ConfigDoComentario => ({ ...configInicialDoComentario(), channel_session_id: IG });
 
-  it("'Com palavras': Enter adiciona, × tira e 'Combinar palavras com' troca", async () => {
+  it("'Com palavras' (10D): condições com operador, 'Combinar' só com duas positivas e remover", async () => {
     const aoMudar = montar(base());
     await userEvent.click(screen.getByRole("button", { name: "Com palavras" }));
-    await userEvent.type(screen.getByLabelText("Palavras do filtro"), "link{Enter}");
-    expect(ultima(aoMudar).caminhos[0]!.filtro).toEqual({ modo: "palavras", palavras: ["link"], combinar: "qualquer" });
+    expect(ultima(aoMudar).caminhos[0]!.filtro).toEqual({
+      modo: "palavras",
+      condicoes: [{ operador: "contem", valor: "" }],
+      combinar: "qualquer",
+    });
+    await userEvent.type(screen.getByLabelText("Palavra do filtro"), "link");
+    expect(ultima(aoMudar).caminhos[0]!.filtro).toMatchObject({ condicoes: [{ operador: "contem", valor: "link" }] });
+    expect(screen.queryByRole("combobox", { name: "Combinar palavras com" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar condição" }));
+    expect(screen.getAllByLabelText("Palavra do filtro")).toHaveLength(2);
+    await userEvent.type(screen.getAllByLabelText("Palavra do filtro")[1]!, "preço");
     await userEvent.click(screen.getByRole("combobox", { name: "Combinar palavras com" }));
     await userEvent.click(screen.getByRole("option", { name: "Todas as palavras" }));
     expect(ultima(aoMudar).caminhos[0]!.filtro).toMatchObject({ combinar: "todas" });
-    await userEvent.click(screen.getByRole("button", { name: "Remover link" }));
-    expect(ultima(aoMudar).caminhos[0]!.filtro).toMatchObject({ palavras: [] });
+    await userEvent.click(screen.getAllByRole("button", { name: "Remover condição" })[0]!);
+    expect(ultima(aoMudar).caminhos[0]!.filtro).toMatchObject({ condicoes: [{ valor: "preço" }] });
   });
 
   it("resposta: cria com o texto padrão, adiciona variação até 5 e remove", async () => {

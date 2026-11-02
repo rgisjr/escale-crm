@@ -96,6 +96,9 @@ describe("gatilhos", () => {
     const comFormulario = TRIGGER_EVENTS.filter((e) => precisaDeFormulario(e));
     expect([...comFormulario].sort()).toEqual([
       "comment.received",
+      "instagram.message_received",
+      "instagram.story_mention",
+      "instagram.story_reply",
       "lead.created",
       "lead.date_field_due",
       "lead.silent_for",

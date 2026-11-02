@@ -1,9 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { zernioCredsForAccountId } from "@/lib/channels/zernio/credentials";
 import { upsertSocialContact } from "@/lib/channels/zernio/ingest";
 
 import { caminhoDoComentario, type ComentarioDoEvento } from "./caminhos";
 import { GATILHO_DE_COMENTARIO, PLATAFORMAS_DE_COMENTARIO, type PlataformaDeComentario } from "./constantes";
+import { resolverProximaPublicacao } from "./proxima";
+import { configDoComentarioSchema } from "./schema";
 import { lerComentarioDoWebhook } from "./webhook";
 
 /**
@@ -32,7 +35,7 @@ export async function receberComentario(
 
   const { data: regras, error: erroDasRegras } = await db
     .from("automation_rules")
-    .select("trigger_config")
+    .select("id, trigger_config, updated_at")
     .eq("organization_id", canal.organizationId)
     .eq("trigger_event", GATILHO_DE_COMENTARIO)
     .eq("is_active", true);
@@ -49,11 +52,42 @@ export async function receberComentario(
       comentado_em: comentario.comentadoEm,
       publicacao_id: comentario.publicacaoId,
       publicacao_zernio_id: comentario.publicacaoZernioId,
-      autor: { id: autor.id, usuario: autor.usuario, nome: autor.nome },
+      autor: { id: autor.id, usuario: autor.usuario, nome: autor.nome, seguidor: autor.seguidor },
     },
     publicacao: { legenda: publicacao.legenda, miniatura: publicacao.miniatura, link: publicacao.link },
   };
-  const algumaQuer = (regras ?? []).some((r) => caminhoDoComentario((r as { trigger_config: unknown }).trigger_config, semContato));
+  // FORK ESCALE · Fase 10D (D11): resolve "Próxima publicação" antes de procurar o caminho.
+  const configs: unknown[] = [];
+  for (const r of (regras ?? []) as Array<{ id: string; trigger_config: unknown; updated_at: string }>) {
+    const lida = configDoComentarioSchema.safeParse(r.trigger_config);
+    const aberta =
+      lida.success &&
+      lida.data.escopo === "proxima" &&
+      lida.data.channel_session_id === canal.channelSessionId &&
+      lida.data.proxima?.resolvida === null &&
+      !lida.data.proxima.conhecidas.includes(comentario.publicacaoId);
+    if (!lida.success || !aberta) {
+      configs.push(r.trigger_config);
+      continue;
+    }
+    const credencial = await zernioCredsForAccountId(db, {
+      organizationId: canal.organizationId,
+      accountId: lido.contaId,
+    });
+    const resolvida = credencial
+      ? await resolverProximaPublicacao(db, {
+          organizationId: canal.organizationId,
+          regraId: r.id,
+          atualizadoEm: r.updated_at,
+          triggerConfig: lida.data,
+          chave: credencial.apiKey,
+          contaId: lido.contaId,
+          publicacaoDoComentario: comentario.publicacaoId,
+        })
+      : null;
+    configs.push(resolvida ?? r.trigger_config);
+  }
+  const algumaQuer = configs.some((config) => caminhoDoComentario(config, semContato));
   if (!algumaQuer) return { status: "ignored", reason: "nenhum_caminho_casou" };
 
   const contactId = await upsertSocialContact(

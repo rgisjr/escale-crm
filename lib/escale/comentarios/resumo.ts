@@ -8,6 +8,10 @@ export interface ResumoDosComentarios {
   directs_com_falha: number;
   respostas: number;
   respostas_com_falha: number;
+  /** FORK ESCALE · Fase 10D (9804) */
+  fora_do_publico: number;
+  aguardando_seguir: number;
+  ocultados: number;
 }
 
 /**
@@ -26,5 +30,8 @@ export function cartoesDoGatilhoDeComentario(resumo: ResumoDosComentarios): Cart
     },
     { chave: "respostas", rotulo: "Respostas públicas", valor: resumo.respostas, filtro: null },
     { chave: "respostas_com_falha", rotulo: "Respostas com falha", valor: resumo.respostas_com_falha, filtro: null },
+    { chave: "fora_do_publico", rotulo: "Fora do público", valor: resumo.fora_do_publico, filtro: null },
+    { chave: "aguardando_seguir", rotulo: "Aguardando seguir", valor: resumo.aguardando_seguir, filtro: null },
+    { chave: "ocultados", rotulo: "Ocultados", valor: resumo.ocultados, filtro: null },
   ];
 }
