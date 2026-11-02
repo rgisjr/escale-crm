@@ -3,11 +3,15 @@ import { useEffect, useState } from "react";
 
 import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao";
 import { useT } from "@/hooks/i18n/useT";
-import { telaDoGatilho, type DadosDoGatilho, type TelaDoGatilho } from "@/lib/automation/desenho-da-regra";
+import type { DadosDoGatilho, TelaDoGatilho } from "@/lib/automation/desenho-da-regra";
 import { opcaoDoEvento, precisaDeFormulario } from "@/lib/escale/automacoes/fluxo/gatilhos";
+import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
+import { configInicialDoComentario, telaInicialDoGatilho } from "@/lib/escale/comentarios/tela";
+import { configDoComentarioSchema } from "@/lib/escale/comentarios/schema";
 import { Plus } from "@/lib/ui/icons-da-casca";
 
 import { DetalheDoGatilho } from "../CorposDoNo";
+import { FormularioDoComentario } from "../comentario/FormularioDoComentario";
 import { ICONE_DO_GATILHO } from "../visual-do-fluxo";
 import { EscolhaDoGatilho } from "./EscolhaDoGatilho";
 import { FormularioDoGatilho } from "./FormularioDoGatilho";
@@ -60,7 +64,7 @@ export function PainelDoGatilho({
 
   function escolher(novo: string) {
     setEvento(novo);
-    setTela(telaDoGatilho(null));
+    setTela(telaInicialDoGatilho(novo));
     setVista(precisaDeFormulario(novo) ? "formulario" : "lista");
   }
 
@@ -109,7 +113,15 @@ export function PainelDoGatilho({
           aoSalvar={salvar}
           salvarDesabilitado={!evento}
         >
-          <FormularioDoGatilho evento={evento} tela={tela} aoMudarTela={setTela} />
+          {/* FORK ESCALE · Fase 10B: o gatilho de comentário tem formulário próprio. */}
+          {evento === GATILHO_DE_COMENTARIO ? (
+            <FormularioDoComentario
+              config={configDoComentarioSchema.safeParse(tela.configPropria).data ?? configInicialDoComentario()}
+              aoMudar={(configPropria) => setTela({ ...tela, configPropria })}
+            />
+          ) : (
+            <FormularioDoGatilho evento={evento} tela={tela} aoMudarTela={setTela} />
+          )}
         </PainelDoNo>
         {confirmar}
       </>

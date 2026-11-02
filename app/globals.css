@@ -265,6 +265,9 @@
   --color-casca-fluxo-gatilho-suave: var(--color-info-bg);
   --color-casca-fluxo-whatsapp: var(--color-success);
   --color-casca-fluxo-whatsapp-suave: var(--color-success-bg);
+  /* FORK ESCALE · Fase 10B: passo e gatilho do Instagram */
+  --color-casca-fluxo-instagram: var(--color-error);
+  --color-casca-fluxo-instagram-suave: var(--color-error-bg);
   --color-casca-fluxo-canal: var(--color-info);
   --color-casca-fluxo-canal-suave: var(--color-info-bg);
   --color-casca-fluxo-acoes: var(--color-warning);
@@ -684,6 +687,9 @@
   --color-casca-fluxo-gatilho-suave: var(--color-casca-fluxo-gatilho-suave);
   --color-casca-fluxo-whatsapp: var(--color-casca-fluxo-whatsapp);
   --color-casca-fluxo-whatsapp-suave: var(--color-casca-fluxo-whatsapp-suave);
+  /* FORK ESCALE · Fase 10B: passo e gatilho do Instagram */
+  --color-casca-fluxo-instagram: var(--color-casca-fluxo-instagram);
+  --color-casca-fluxo-instagram-suave: var(--color-casca-fluxo-instagram-suave);
   --color-casca-fluxo-canal: var(--color-casca-fluxo-canal);
   --color-casca-fluxo-canal-suave: var(--color-casca-fluxo-canal-suave);
   --color-casca-fluxo-acoes: var(--color-casca-fluxo-acoes);

@@ -9,6 +9,8 @@ export type SecaoDaPaleta = "comecar" | "canais" | "logica" | "ia";
 export type PassoDaPaleta =
   | "gatilho"
   | "send_whatsapp_message"
+  // FORK ESCALE · Fase 10B: o passo Instagram (resposta privada ao comentário).
+  | "send_instagram_message"
   | "send_email"
   | "acoes"
   | "condicoes"
@@ -32,6 +34,7 @@ export const SECOES_DA_PALETA: readonly SecaoDaPaleta[] = ["comecar", "canais", 
 export const ITENS_DA_PALETA: readonly ItemDaPaleta[] = [
   { passo: "gatilho", secao: "comecar", titulo: "Gatilho", descricao: "Quando a automação inicia" },
   { passo: "send_whatsapp_message", secao: "canais", titulo: "WhatsApp", descricao: "Enviar mensagem no WhatsApp" },
+  { passo: "send_instagram_message", secao: "canais", titulo: "Instagram", descricao: "Enviar mensagem no Instagram" },
   { passo: "send_email", secao: "canais", titulo: "E-mail", descricao: "Enviar e-mail" },
   { passo: "acoes", secao: "logica", titulo: "Ações", descricao: "Mover etapa, tags e tarefas" },
   { passo: "condicoes", secao: "logica", titulo: "Condições", descricao: "Filtrar quem segue no fluxo" },
@@ -100,7 +103,7 @@ export function tituloDaAcaoNoFluxo(tipo: string): string | null {
   return ITENS_DA_PALETA.find((i) => i.passo === tipo)?.titulo ?? null;
 }
 
-export type TipoDoNo = "gatilho" | "condicoes" | "whatsapp" | "email" | "acoes" | "ia";
+export type TipoDoNo = "gatilho" | "condicoes" | "whatsapp" | "instagram" | "email" | "acoes" | "ia";
 
 /** send_whatsapp_message → whatsapp; send_email → email; send_ai_message, start_message_flow, ai_decide → ia; o resto (e o desconhecido) → acoes. */
 export function tipoDoNo(
@@ -111,6 +114,8 @@ export function tipoDoNo(
   switch (dados.acao.type) {
     case "send_whatsapp_message":
       return "whatsapp";
+    case "send_instagram_message":
+      return "instagram";
     case "send_email":
       return "email";
     case "send_ai_message":

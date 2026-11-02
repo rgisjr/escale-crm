@@ -9,6 +9,7 @@ import { tipoDoNo, tituloDaAcaoNoFluxo } from "@/lib/escale/automacoes/fluxo/pal
 import { cn } from "@/lib/utils";
 
 import { BarraDoNo } from "./BarraDoNo";
+import { CorpoDoInstagram } from "./comentario/CorpoDoInstagram";
 import { CorpoDaAcao, CorpoDasCondicoes, CorpoDoGatilho, CorpoDoGrupo, CorpoDoWhatsapp } from "./CorposDoNo";
 import { useInsightsDoNo } from "./insights/contexto";
 import { VisaoGeralDoNo } from "./insights/VisaoGeralDoNo";
@@ -35,6 +36,7 @@ export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
   if (data.kind === "acao") {
     if (data.acao.type === "ai_decide") titulo = t("A IA decide");
     else if (tipo === "whatsapp") titulo = t("Enviar mensagem");
+    else if (tipo === "instagram") titulo = t("Enviar mensagem no Instagram");
     else if (tipo === "email") titulo = t("Enviar e-mail");
     else titulo = t(tituloDaAcaoNoFluxo(data.acao.type) ?? ACTION_LABELS[data.acao.type as ActionType] ?? data.acao.type);
   }
@@ -75,6 +77,8 @@ export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
           <CorpoDoGrupo dados={data} />
         ) : tipo === "whatsapp" ? (
           <CorpoDoWhatsapp dados={data} />
+        ) : tipo === "instagram" ? (
+          <CorpoDoInstagram dados={data} />
         ) : (
           <CorpoDaAcao dados={data} />
         )}

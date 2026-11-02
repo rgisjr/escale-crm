@@ -56,6 +56,8 @@ import {
   novoGrupo,
 } from "@/lib/escale/automacoes/fluxo/grupos";
 import { organizarNaHorizontal } from "@/lib/escale/automacoes/fluxo/layout";
+import { GATILHO_DE_COMENTARIO, PASSO_DO_INSTAGRAM } from "@/lib/escale/comentarios/constantes";
+import { comConfigPropria } from "@/lib/escale/comentarios/tela";
 import { paraLigacoes, paraNos } from "@/lib/escale/automacoes/fluxo/nos";
 import { rotaDoFluxo } from "@/lib/escale/automacoes/rotas";
 import { acoesQueFechamLaco, MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
@@ -94,7 +96,7 @@ export interface EstadoDoFluxo {
   selecionado: string | null;
   selecionar: (id: string | null) => void;
   problemasGerais: ProblemaDoDesenho[];
-  adicionar: (passo: ActionType | "condicoes" | "grupo", posicao?: { x: number; y: number }) => void;
+  adicionar: (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo", posicao?: { x: number; y: number }) => void;
   ligar: (c: Connection) => void;
   removerNo: (id: string) => void;
   removerLigacao: (id: string) => void;
@@ -113,7 +115,8 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   const regraGravada = useMemo(() => regraGravadaDe(regra), [regra]);
   // O desenho inicial nasce UMA vez: refetch da lista não pode atropelar edição.
   const inicial = useMemo(
-    () => organizarNaHorizontal(agrupar(desenhoDaRegra(regraGravada))),
+    // FORK ESCALE · Fase 10B: o gatilho de comentário abre com a configuração gravada na tela.
+    () => organizarNaHorizontal(agrupar(comConfigPropria(desenhoDaRegra(regraGravada), regraGravada))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -181,7 +184,12 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   );
 
   const adicionar = useCallback(
-    (passo: ActionType | "condicoes" | "grupo", posicao?: { x: number; y: number }) => {
+    (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo", posicao?: { x: number; y: number }) => {
+      // FORK ESCALE · Fase 10B: o passo Instagram só funciona com o gatilho de comentário (D9).
+      if (passo === PASSO_DO_INSTAGRAM && evento !== GATILHO_DE_COMENTARIO) {
+        toast.error(t("O passo Instagram funciona com o gatilho “Alguém comenta em um post”."));
+        return;
+      }
       if (passo === "condicoes" && desenho.caixas.some((c) => c.data.kind === "condicoes")) {
         setSelecionado(ID_DAS_CONDICOES);
         toast.info(t("As condições ficam numa caixa só. Acrescente a nova condição nela."));
@@ -211,7 +219,13 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
                 id,
                 type: "acao",
                 position: onde,
-                data: { kind: "acao", acao: defaultActionConfig(passo) as unknown as AcaoDaRegra },
+                data: {
+                  kind: "acao",
+                  acao:
+                    passo === PASSO_DO_INSTAGRAM
+                      ? { type: PASSO_DO_INSTAGRAM, config: { texto: "", botoes: [] } }
+                      : (defaultActionConfig(passo) as unknown as AcaoDaRegra),
+                },
               };
       setSelecionado(id);
       if (posicao) {

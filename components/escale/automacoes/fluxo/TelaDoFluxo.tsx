@@ -10,6 +10,7 @@ import { useT } from "@/hooks/i18n/useT";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
 import type { DadosDaCaixa } from "@/lib/automation/desenho-da-regra";
 import { ehGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
+import { GATILHO_DE_COMENTARIO, PASSO_DO_INSTAGRAM } from "@/lib/escale/comentarios/constantes";
 import type { PassoDaPaleta } from "@/lib/escale/automacoes/fluxo/paleta";
 import { ROTA_DA_LISTA_DE_AUTOMACOES, rotaDoEditor } from "@/lib/escale/automacoes/rotas";
 
@@ -19,6 +20,7 @@ import { CabecalhoDoFluxo } from "./CabecalhoDoFluxo";
 import { CanvasDoFluxo } from "./CanvasDoFluxo";
 import { InsightsDoFluxo } from "./insights/InsightsDoFluxo";
 import { MenuDoFluxo } from "./MenuDoFluxo";
+import { PainelDoInstagram } from "./comentario/PainelDoInstagram";
 import { PaletaDoFluxo } from "./PaletaDoFluxo";
 import { PainelDaAcao } from "./painel/PainelDaAcao";
 import { PainelDoGrupo } from "./painel/PainelDoGrupo";
@@ -190,6 +192,17 @@ export function TelaDoFluxo({
         />
       );
     }
+    if (dados.acao.type === PASSO_DO_INSTAGRAM) {
+      return (
+        <PainelDoInstagram
+          key={noAberto.id}
+          dados={dados}
+          aoCancelar={fechar}
+          aoSalvar={aplicarNoPainel}
+          aoMudarRascunho={setPainelSujo}
+        />
+      );
+    }
     return (
       <PainelDaAcao
         key={noAberto.id}
@@ -243,7 +256,14 @@ export function TelaDoFluxo({
               aoPedirRemover={setRemovendo}
             />
             {painel}
-            <PaletaDoFluxo aoEscolher={(passo) => escolherPasso(passo)} />
+            <PaletaDoFluxo
+              aoEscolher={(passo) => escolherPasso(passo)}
+              desligados={
+                fluxo.evento === GATILHO_DE_COMENTARIO
+                  ? {}
+                  : { [PASSO_DO_INSTAGRAM]: "O passo Instagram funciona com o gatilho “Alguém comenta em um post”." }
+              }
+            />
           </div>
         )}
 

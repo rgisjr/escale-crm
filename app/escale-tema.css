@@ -175,6 +175,9 @@ body:has([data-escale-casca]) {
   --color-casca-fluxo-gatilho-suave: #eef0fc;
   --color-casca-fluxo-whatsapp: #16a34a;
   --color-casca-fluxo-whatsapp-suave: #eaf8ee;
+  /* FORK ESCALE · Fase 10B: passo e gatilho do Instagram */
+  --color-casca-fluxo-instagram: #d62976;
+  --color-casca-fluxo-instagram-suave: #fdeef5;
   --color-casca-fluxo-canal: #2563eb;
   --color-casca-fluxo-canal-suave: #dbeafe;
   --color-casca-fluxo-acoes: #ea580c;
@@ -267,6 +270,9 @@ body:has([data-escale-casca]) {
   --color-casca-fluxo-gatilho-suave: color-mix(in oklab, #3538cd 16%, #181b26);
   --color-casca-fluxo-whatsapp: #4ade80;
   --color-casca-fluxo-whatsapp-suave: color-mix(in oklab, #16a34a 16%, #181b26);
+  /* FORK ESCALE · Fase 10B: passo e gatilho do Instagram */
+  --color-casca-fluxo-instagram: #f472b6;
+  --color-casca-fluxo-instagram-suave: color-mix(in oklab, #d62976 16%, #181b26);
   --color-casca-fluxo-canal: #60a5fa;
   --color-casca-fluxo-canal-suave: color-mix(in oklab, #2563eb 16%, #181b26);
   --color-casca-fluxo-acoes: #fb923c;

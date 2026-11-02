@@ -12,8 +12,10 @@ import { GATILHO_ETAPA_PARADA, GATILHO_SILENCIO } from "@/lib/automation/gatilho
 import { opcaoDoEvento } from "@/lib/escale/automacoes/fluxo/gatilhos";
 import { acoesDoGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { tituloDaAcaoNoFluxo } from "@/lib/escale/automacoes/fluxo/paleta";
+import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 
+import { CorpoDoComentario } from "./comentario/CorpoDoComentario";
 import { ICONE_DA_ACAO, ICONE_DO_GATILHO } from "./visual-do-fluxo";
 
 /**
@@ -65,7 +67,8 @@ export function CorpoDoGatilho({ dados }: { dados: DadosDoGatilho }) {
         <span className="text-[11px] font-semibold tracking-wide text-casca-texto-2 uppercase">{t(opcao.titulo)}</span>
         <span className="flex-1 border-t border-casca-divisoria" aria-hidden />
       </div>
-      <DetalheDoGatilho dados={dados} />
+      {/* FORK ESCALE · Fase 10B: o gatilho de comentário mostra a conta e os caminhos. */}
+      {dados.evento === GATILHO_DE_COMENTARIO ? <CorpoDoComentario dados={dados} /> : <DetalheDoGatilho dados={dados} />}
     </div>
   );
 }

@@ -105,10 +105,11 @@ describe("gatilhos", () => {
 });
 
 describe("paleta e modal Ações", () => {
-  it("7 itens na ordem", () => {
+  it("8 itens na ordem", () => {
     expect(ITENS_DA_PALETA.map((i) => i.passo)).toEqual([
       "gatilho",
       "send_whatsapp_message",
+      "send_instagram_message",
       "send_email",
       "acoes",
       "condicoes",
@@ -121,15 +122,16 @@ describe("paleta e modal Ações", () => {
     expect(filtrarPaleta("acoes", id).map((i) => i.passo)).toEqual(["acoes"]);
     expect(filtrarPaleta("FOLLOW", id).map((i) => i.passo)).toEqual(["start_message_flow"]);
     expect(filtrarPaleta("zzz", id)).toEqual([]);
-    expect(filtrarPaleta("", id)).toHaveLength(7);
-    expect(filtrarPaleta("  ", id)).toHaveLength(7);
+    expect(filtrarPaleta("", id)).toHaveLength(8);
+    expect(filtrarPaleta("  ", id)).toHaveLength(8);
     expect(filtrarPaleta("logica", id)).toEqual([]);
   });
 
   it("as abas do modal + os canais da paleta cobrem os 11 ActionType uma vez", () => {
     const doModal = ABAS_DAS_ACOES.flatMap((a) => a.cartoes.map((c) => c.tipo));
     const daPaleta = ITENS_DA_PALETA.map((i) => i.passo).filter(
-      (p) => p !== "gatilho" && p !== "acoes" && p !== "condicoes",
+      // O passo Instagram (Fase 10B) não é um dos 11 ActionType do original.
+      (p) => p !== "gatilho" && p !== "acoes" && p !== "condicoes" && p !== "send_instagram_message",
     ) as unknown as ActionType[];
     const todos = [...doModal, ...daPaleta];
     expect(new Set(todos).size).toBe(11);
@@ -141,6 +143,7 @@ describe("paleta e modal Ações", () => {
     expect(tipoDoNo({ kind: "gatilho" })).toBe("gatilho");
     expect(tipoDoNo({ kind: "condicoes" })).toBe("condicoes");
     expect(tipoDoNo({ kind: "acao", acao: { type: "send_whatsapp_message" } })).toBe("whatsapp");
+    expect(tipoDoNo({ kind: "acao", acao: { type: "send_instagram_message" } })).toBe("instagram");
     expect(tipoDoNo({ kind: "acao", acao: { type: "send_email" } })).toBe("email");
     expect(tipoDoNo({ kind: "acao", acao: { type: "send_ai_message" } })).toBe("ia");
     expect(tipoDoNo({ kind: "acao", acao: { type: "start_message_flow" } })).toBe("ia");

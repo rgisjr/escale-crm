@@ -22,6 +22,8 @@ function visualDoItem(passo: PassoDaPaleta): { visual: VisualDoNo; Icone: Visual
   if (passo === "condicoes") return { visual: VISUAL_DO_NO.condicoes, Icone: VISUAL_DO_NO.condicoes.icone };
   if (passo === "acoes") return { visual: VISUAL_DO_NO.acoes, Icone: VISUAL_DO_NO.acoes.icone };
   const visual = VISUAL_DO_NO[tipoDoNo({ kind: "acao", acao: { type: passo } })];
+  // FORK ESCALE · Fase 10B: o passo Instagram não está em `ICONE_DA_ACAO` (ele vem do desenho do tipo).
+  if (passo === "send_instagram_message") return { visual, Icone: visual.icone };
   return { visual, Icone: ICONE_DA_ACAO[passo] };
 }
 
@@ -30,13 +32,24 @@ function visualDoItem(passo: PassoDaPaleta): { visual: VisualDoNo; Icone: Visual
  * 78 px fechada (só ícones) e 344 px aberta. Clicar põe o passo logo depois do
  * selecionado; arrastar solta onde cair.
  */
-export function PaletaDoFluxo({ aoEscolher }: { aoEscolher: (passo: PassoDaPaleta) => void }) {
+export function PaletaDoFluxo({
+  aoEscolher,
+  desligados = {},
+}: {
+  aoEscolher: (passo: PassoDaPaleta) => void;
+  /** FORK ESCALE · Fase 10B: passos sem uso neste fluxo (o passo Instagram fora do gatilho de comentário), com a dica. */
+  desligados?: Partial<Record<PassoDaPaleta, string>>;
+}) {
   const t = useT();
   const [aberta, setAberta] = useState(false);
   const [busca, setBusca] = useState("");
   const itens = filtrarPaleta(busca, t);
 
   function arrastar(e: React.DragEvent, item: ItemDaPaleta) {
+    if (desligados[item.passo]) {
+      e.preventDefault();
+      return;
+    }
     e.dataTransfer.setData(DND_DA_AUTOMACAO, item.passo);
     e.dataTransfer.effectAllowed = "move";
   }
@@ -66,12 +79,16 @@ export function PaletaDoFluxo({ aoEscolher }: { aoEscolher: (passo: PassoDaPalet
                 <button
                   key={item.passo}
                   type="button"
-                  title={t(item.titulo)}
+                  title={desligados[item.passo] ? t(desligados[item.passo]!) : t(item.titulo)}
                   aria-label={t(item.titulo)}
-                  draggable
+                  aria-disabled={desligados[item.passo] ? true : undefined}
+                  draggable={!desligados[item.passo]}
                   onDragStart={(e) => arrastar(e, item)}
-                  onClick={() => aoEscolher(item.passo)}
-                  className="grid size-10 cursor-grab place-items-center rounded-lg border border-casca-divisoria hover:bg-casca-raia"
+                  onClick={() => !desligados[item.passo] && aoEscolher(item.passo)}
+                  className={cn(
+                    "grid size-10 place-items-center rounded-lg border border-casca-divisoria hover:bg-casca-raia",
+                    desligados[item.passo] ? "cursor-not-allowed opacity-50" : "cursor-grab",
+                  )}
                 >
                   <Icone size={20} className={visual.texto} aria-hidden />
                 </button>
@@ -123,10 +140,15 @@ export function PaletaDoFluxo({ aoEscolher }: { aoEscolher: (passo: PassoDaPalet
                         <button
                           key={item.passo}
                           type="button"
-                          draggable
+                          title={desligados[item.passo] ? t(desligados[item.passo]!) : undefined}
+                          aria-disabled={desligados[item.passo] ? true : undefined}
+                          draggable={!desligados[item.passo]}
                           onDragStart={(e) => arrastar(e, item)}
-                          onClick={() => aoEscolher(item.passo)}
-                          className="flex w-full cursor-grab items-center gap-3 px-6 py-2 text-left hover:bg-casca-raia"
+                          onClick={() => !desligados[item.passo] && aoEscolher(item.passo)}
+                          className={cn(
+                            "flex w-full items-center gap-3 px-6 py-2 text-left hover:bg-casca-raia",
+                            desligados[item.passo] ? "cursor-not-allowed opacity-50" : "cursor-grab",
+                          )}
                         >
                           <span className={cn("grid size-[34px] shrink-0 place-items-center rounded-md", visual.fundo)}>
                             <Icone size={18} className={visual.texto} aria-hidden />
