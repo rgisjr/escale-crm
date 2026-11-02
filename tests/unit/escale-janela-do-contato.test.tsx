@@ -27,6 +27,7 @@ vi.mock("@/components/escale/negocio/abas/AbasDeCampos", () => ({
   AbaEmpresa: () => <div>aba-empresa</div>,
 }));
 vi.mock("@/components/escale/negocio/TagsDaFicha", () => ({ TagsDoContato: () => <div>tags</div> }));
+vi.mock("@/components/escale/contatos/ficha/OrigemDoComentario", () => ({ OrigemDoComentario: () => null }));
 vi.mock("@/components/escale/negocio/abas/AbaConversas", () => ({ AbaConversas: () => <div>aba-conversas</div> }));
 vi.mock("@/components/escale/negocio/abas/AbaArquivos", () => ({ AbaArquivos: () => <div>aba-arquivos</div> }));
 vi.mock("@/components/escale/negocio/abas/AbaHistorico", () => ({ AbaHistorico: () => <div>aba-historico</div> }));

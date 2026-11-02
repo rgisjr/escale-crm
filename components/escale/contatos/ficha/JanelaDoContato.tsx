@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { FotoDaLinha } from "@/components/escale/contatos/FotoDaLinha";
+import { OrigemDoComentario } from "@/components/escale/contatos/ficha/OrigemDoComentario";
 import { TagsDoContato } from "@/components/escale/negocio/TagsDaFicha";
 import { AbaArquivos } from "@/components/escale/negocio/abas/AbaArquivos";
 import { AbaConversas } from "@/components/escale/negocio/abas/AbaConversas";
@@ -157,6 +158,7 @@ export function JanelaDoContato({
                         <span className="text-[13px] text-casca-suave">{t("Tags")}</span>
                         <TagsDoContato contatoId={contato.id} pipelineId={null} tagsDeReserva={contato.tags} />
                       </div>
+                      <OrigemDoComentario contatoId={contato.id} />
                       <ContatoEditavel contatoId={contato.id} pipeline={null} />
                     </>
                   ) : atual === "empresa" ? (
