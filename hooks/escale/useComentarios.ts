@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import { PLATAFORMAS_DE_COMENTARIO, type PlataformaDeComentario } from "@/lib/escale/comentarios/constantes";
 import type { PeriodoDosInsights } from "@/lib/escale/automacoes/insights/tipos";
+import type { ResumoDosComentarios } from "@/lib/escale/comentarios/resumo";
 import type { PublicacaoDaConta } from "@/lib/escale/comentarios/zernio";
 
 /**
@@ -59,15 +60,6 @@ export function useGarantirAssinatura() {
       (await apiClient.post<{ data: { estado: "ja_assinada" | "assinada" } }>("/api/v1/escale/comentarios/assinatura", { canal })).data
         .estado,
   });
-}
-
-export interface ResumoDosComentarios {
-  comentarios: number;
-  repetidos: number;
-  directs: number;
-  directs_com_falha: number;
-  respostas: number;
-  respostas_com_falha: number;
 }
 
 export function useResumoDosComentarios(

@@ -61,7 +61,13 @@ export function cartoesDoPainel(resumo: ResumoDaAutomacao, fuso: string): Cartao
   ];
 }
 
-const TIPOS_DE_ENVIO = new Set(["send_whatsapp_message", "send_email", "send_ai_message"]);
+// FORK ESCALE · Fase 10B: o passo Instagram também conta "Enviados / Esperando / Erro no envio".
+const TIPOS_DE_ENVIO = new Set(["send_whatsapp_message", "send_email", "send_ai_message", "send_instagram_message"]);
+
+/** FORK ESCALE · Fase 10B: o rótulo dos passos da casca que o `ACTION_LABELS` do original não conhece. */
+export const ROTULO_DO_PASSO_DA_CASCA: Readonly<Record<string, string>> = {
+  send_instagram_message: "Enviar mensagem no Instagram",
+};
 
 /** Os cartões de cada tipo de passo (I6): chave, rótulo e os resultados que o clique filtra. */
 function modeloDosCartoes(tipoDoCartao: string): { chave: string; rotulo: string; resultados: ResultadoDoPasso[] }[] {

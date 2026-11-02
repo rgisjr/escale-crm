@@ -16,6 +16,9 @@ import { SeletorDePublicacoes } from "./SeletorDePublicacoes";
 
 type Escopo = ConfigDoComentario["escopo"];
 
+/** A ordem dos cartões: todos os posts, depois posts específicos. */
+const ESCOPOS: readonly Escopo[] = ["todos", "especificos"];
+
 const caminhoUnico = (do_: CaminhoDoGatilho | undefined): CaminhoDoGatilho => ({
   id: ID_DO_CAMINHO_UNICO,
   publicacoes: [],
@@ -73,12 +76,7 @@ export function FormularioDoComentario({
       <div className="flex flex-col gap-2">
         <p className="text-[13px] font-semibold text-casca-texto">{t("Quais publicações disparam o gatilho?")}</p>
         <div className="flex gap-2">
-          {(
-            [
-              ["todos", "Todos os posts", "Um único caminho para comentários em qualquer publicação"],
-              ["especificos", "Posts específicos", "Cada publicação vira um caminho no fluxo"],
-            ] as const
-          ).map(([escopo, titulo, descricao]) => (
+          {ESCOPOS.map((escopo) => (
             <button
               key={escopo}
               type="button"
@@ -89,8 +87,14 @@ export function FormularioDoComentario({
                 config.escopo === escopo ? "border-casca-marca bg-casca-marca-suave" : "border-casca-divisoria hover:bg-casca-raia",
               )}
             >
-              <span className="block text-[13px] font-medium text-casca-texto">{t(titulo)}</span>
-              <span className="block text-[11px] text-casca-suave">{t(descricao)}</span>
+              <span className="block text-[13px] font-medium text-casca-texto">
+                {escopo === ESCOPOS[0] ? t("Todos os posts") : t("Posts específicos")}
+              </span>
+              <span className="block text-[11px] text-casca-suave">
+                {escopo === ESCOPOS[0]
+                  ? t("Um único caminho para comentários em qualquer publicação")
+                  : t("Cada publicação vira um caminho no fluxo")}
+              </span>
             </button>
           ))}
         </div>

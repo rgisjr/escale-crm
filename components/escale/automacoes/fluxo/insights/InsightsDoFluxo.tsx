@@ -1,7 +1,10 @@
 "use client";
 import { useMemo, useState } from "react";
 
+import { useResumoDosComentarios } from "@/hooks/escale/useComentarios";
 import { useResumoDaAutomacao } from "@/hooks/escale/useInsightsDaAutomacao";
+import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
+import { comConfigPropria } from "@/lib/escale/comentarios/tela";
 import { useT } from "@/hooks/i18n/useT";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
 import { desenhoDaRegra } from "@/lib/automation/desenho-da-regra";
@@ -30,8 +33,10 @@ export function InsightsDoFluxo({ regra, fuso, sujo }: { regra: AutomationRuleRo
   const [painelAberto, setPainelAberto] = useState(true);
   const [listagem, setListagem] = useState<FiltroDasExecucoes | null>(null);
   const consulta = useResumoDaAutomacao(regra.id, periodo);
+  // FORK ESCALE · Fase 10B: só o gatilho de comentário pede os números dos comentários.
+  const comentarios = useResumoDosComentarios(regra.id, periodo, regra.trigger_event === GATILHO_DE_COMENTARIO);
 
-  const desenho = useMemo(() => organizarNaHorizontal(agrupar(desenhoDaRegra(regraGravadaDe(regra)))), [regra]);
+  const desenho = useMemo(() => organizarNaHorizontal(agrupar(comConfigPropria(desenhoDaRegra(regraGravadaDe(regra)), regraGravadaDe(regra)))), [regra]);
   const acoesDosPassos = useMemo(() => acoesDeCadaPasso(desenho), [desenho]);
 
   return (
@@ -65,6 +70,7 @@ export function InsightsDoFluxo({ regra, fuso, sujo }: { regra: AutomationRuleRo
       <InsightsDoNoProvider
         valor={{
           resumo: consulta.data ?? null,
+          comentarios: comentarios.data ?? null,
           carregando: consulta.isPending,
           erro: consulta.isError && !consulta.data,
           acoesDosPassos,

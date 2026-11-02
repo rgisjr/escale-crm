@@ -2,6 +2,8 @@
 import { useT } from "@/hooks/i18n/useT";
 import { ehGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { cartaoDasCondicoes, cartoesDoPasso } from "@/lib/escale/automacoes/insights/regras";
+import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
+import { cartoesDoGatilhoDeComentario } from "@/lib/escale/comentarios/resumo";
 import { TIPO_DO_CARTAO_DO_GRUPO, type CartaoDeNumero } from "@/lib/escale/automacoes/insights/tipos";
 import type { DadosDaCaixa } from "@/lib/automation/desenho-da-regra";
 import { cn } from "@/lib/utils";
@@ -11,7 +13,9 @@ import { useInsightsDoNo } from "./contexto";
 const SEM_DADO = "—";
 
 function cartoesDoNo(id: string, dados: DadosDaCaixa, c: NonNullable<ReturnType<typeof useInsightsDoNo>>): CartaoDeNumero[] {
-  if (!c.resumo || dados.kind === "gatilho") return [];
+  // FORK ESCALE · Fase 10B: o gatilho de comentário mostra os números dos comentários.
+  if (dados.kind === "gatilho") return dados.evento === GATILHO_DE_COMENTARIO && c.comentarios ? cartoesDoGatilhoDeComentario(c.comentarios) : [];
+  if (!c.resumo) return [];
   if (dados.kind === "condicoes") return [cartaoDasCondicoes(c.resumo)];
   const acoes = c.acoesDosPassos.get(id) ?? [];
   return cartoesDoPasso(c.resumo, acoes, ehGrupo(dados) ? TIPO_DO_CARTAO_DO_GRUPO : (acoes[0]?.tipo ?? TIPO_DO_CARTAO_DO_GRUPO));
@@ -25,7 +29,9 @@ function cartoesDoNo(id: string, dados: DadosDaCaixa, c: NonNullable<ReturnType<
 export function VisaoGeralDoNo({ id, dados }: { id: string; dados: DadosDaCaixa }) {
   const t = useT();
   const insights = useInsightsDoNo();
-  if (!insights || dados.kind === "gatilho") return null;
+  if (!insights) return null;
+  const doComentario = dados.kind === "gatilho" && dados.evento === GATILHO_DE_COMENTARIO;
+  if (dados.kind === "gatilho" && !doComentario) return null;
 
   const cartoes = cartoesDoNo(id, dados, insights);
   const esqueletos = dados.kind === "condicoes" ? 1 : 3;

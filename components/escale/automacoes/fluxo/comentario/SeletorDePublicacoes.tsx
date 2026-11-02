@@ -8,6 +8,7 @@ import { InterruptorDaCasca } from "@/components/escale/ui/InterruptorDaCasca";
 import { codigoDoErro, usePublicacoesDaConta } from "@/hooks/escale/useComentarios";
 import { useT } from "@/hooks/i18n/useT";
 import { semAcento } from "@/lib/escale/automacoes/regras";
+import { dataBr } from "@/lib/escale/campanhas/apresentacao";
 import { MAXIMO_DE_CAMINHOS, MAXIMO_DE_PUBLICACOES } from "@/lib/escale/comentarios/constantes";
 import type { PublicacaoDoCaminho } from "@/lib/escale/comentarios/schema";
 import type { PublicacaoDaConta } from "@/lib/escale/comentarios/zernio";
@@ -34,10 +35,8 @@ const TIPO_DA_API: Record<string, Tipo> = {
 const ID_VALIDO = /^\d{5,40}(_\d{5,40})?$/;
 
 const tipoDe = (p: PublicacaoDaConta): Tipo | null => TIPO_DA_API[(p.tipo ?? "").toUpperCase()] ?? null;
-const dataBr = (iso: string | null): string => {
-  const quando = iso ? new Date(iso) : null;
-  return quando && !Number.isNaN(quando.getTime()) ? quando.toLocaleDateString("pt-BR") : "";
-};
+/** dd/mm/aaaa; data ausente ou ilegível → vazio. */
+const dataDaPublicacao = (iso: string | null): string => (iso && !Number.isNaN(Date.parse(iso)) ? dataBr(iso) : "");
 const daConta = (p: PublicacaoDaConta): PublicacaoDoCaminho => ({
   id: p.id,
   legenda: p.legenda ? p.legenda.slice(0, 300) : null,
@@ -297,7 +296,7 @@ function ListaDePublicacoes(props: {
                 <span className="aspect-square w-full rounded-md bg-casca-raia" aria-hidden />
               )}
               <span className="line-clamp-2 text-[12px] text-casca-texto">{p.legenda ?? t("Sem legenda")}</span>
-              <span className="text-[10px] text-casca-suave">{[dataBr(p.criadaEm), tipoDe(p) ? t(TIPOS.find((o) => o.valor === tipoDe(p))!.rotulo) : ""].filter(Boolean).join(" · ")}</span>
+              <span className="text-[10px] text-casca-suave">{[dataDaPublicacao(p.criadaEm), tipoDe(p) ? t(TIPOS.find((o) => o.valor === tipoDe(p))!.rotulo) : ""].filter(Boolean).join(" · ")}</span>
               {marcada ? <Check size={14} className="absolute top-2 right-2 rounded-full bg-casca-marca p-0.5 text-white" aria-hidden /> : null}
               {noFluxo ? <span className="absolute top-2 left-2 rounded bg-casca-raia px-1.5 text-[10px] text-casca-texto-2">{t("No fluxo")}</span> : null}
             </button>
