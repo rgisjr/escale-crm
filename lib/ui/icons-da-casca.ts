@@ -247,3 +247,6 @@ export const FolderOff = createLucideIcon("FolderOff", [
 
 // FORK ESCALE · Fase 5B: ícones dos gatilhos e das ações do fluxo de automação.
 export { Cake, MessageCircleOff, MessageCircleWarning, Trophy, UserCheck, UserRound, Webhook } from "lucide-react";
+
+// FORK ESCALE · Fase 10A: a nota do compositor da caixa de comentários.
+export { Info } from "lucide-react";
