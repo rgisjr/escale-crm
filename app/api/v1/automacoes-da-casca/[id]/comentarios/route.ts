@@ -14,6 +14,9 @@ const RESUMO_VAZIO = {
   directs_com_falha: 0,
   respostas: 0,
   respostas_com_falha: 0,
+  fora_do_publico: 0,
+  aguardando_seguir: 0,
+  ocultados: 0,
 };
 
 /** GET /api/v1/automacoes-da-casca/:id/comentarios?periodo=30d — os números do gatilho de comentário (fork Escale, Fase 10B). */

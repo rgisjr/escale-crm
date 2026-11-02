@@ -14,6 +14,7 @@ vi.mock("@/hooks/escale/useAcoesNoComentario", () => ({
   useResponderComentario: () => mutacoes.responder,
   useDirectDoComentario: () => mutacoes.direct,
   useOcultarComentario: () => mutacoes.ocultar,
+  useCurtirComentario: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => ({ curtido: true })) }),
   useApagarComentario: () => mutacoes.apagar,
 }));
 
@@ -59,6 +60,7 @@ const acoes = () => ({
   aoResponder: vi.fn(),
   aoMandarDirect: vi.fn(),
   aoOcultar: vi.fn(),
+  aoCurtir: vi.fn(async () => undefined),
   aoApagar: vi.fn(),
 });
 
@@ -265,5 +267,48 @@ describe("ComentariosDaPublicacao", () => {
     await userEvent.click(screen.getByRole("button", { name: /Enviar/ }));
     expect(toast.error).toHaveBeenCalledWith("O Instagram recusou");
     expect(screen.getByLabelText("Escreva a mensagem do direct")).toHaveValue("De novo");
+  });
+});
+
+describe("AcoesDoComentario · Curtir (10D, D15)", () => {
+  const FACE = { ...CONTA, plataforma: "facebook" as const };
+  const montar = (aoCurtir?: () => Promise<unknown>, c = comentario("c1")) => {
+    const a = acoes();
+    render(
+      <AcoesDoComentario
+        comentario={c}
+        conta={FACE}
+        aoResponder={a.aoResponder}
+        aoMandarDirect={a.aoMandarDirect}
+        aoOcultar={a.aoOcultar}
+        aoCurtir={aoCurtir}
+        aoApagar={a.aoApagar}
+      />,
+    );
+  };
+
+  it("sem aoCurtir (Instagram) não há botão", () => {
+    montar(undefined);
+    expect(screen.queryByRole("button", { name: "Curtir" })).toBeNull();
+  });
+
+  it("curtir é otimista e vira 'Descurtir' com aria-pressed", async () => {
+    const aoCurtir = vi.fn(async () => undefined);
+    montar(aoCurtir);
+    await userEvent.click(screen.getByRole("button", { name: "Curtir" }));
+    expect(aoCurtir).toHaveBeenCalledWith(true);
+    expect(screen.getByRole("button", { name: "Descurtir" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("volta e avisa quando o Zernio recusa", async () => {
+    montar(vi.fn(async () => Promise.reject(new Error("x"))));
+    await userEvent.click(screen.getByRole("button", { name: "Curtir" }));
+    expect(screen.getByRole("button", { name: "Curtir" }).getAttribute("aria-pressed")).toBe("false");
+    expect(toast.error).toHaveBeenCalledWith("Não consegui curtir o comentário.");
+  });
+
+  it("já curtido começa pressionado", () => {
+    montar(vi.fn(async () => undefined), comentario("c2", { curtido: true }));
+    expect(screen.getByRole("button", { name: "Descurtir" })).toBeTruthy();
   });
 });

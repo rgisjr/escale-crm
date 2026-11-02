@@ -10,6 +10,7 @@ const acoes = vi.hoisted(() => ({
   mandarDirectAMao: vi.fn(),
   ocultarAMao: vi.fn(),
   apagarAMao: vi.fn(),
+  curtirAMao: vi.fn(),
 }));
 const leitura = vi.hoisted(() => ({ publicacoesDaCaixa: vi.fn(), comentariosDaCaixa: vi.fn() }));
 const apoio = vi.hoisted(() => ({ requireSupportWrite: vi.fn() }));
@@ -29,6 +30,7 @@ import { GET as GET_CONTAS } from "@/app/api/v1/escale/comentarios/contas/route"
 import { DELETE as DELETE_APAGAR } from "@/app/api/v1/escale/comentarios/[comentarioId]/route";
 import { POST as POST_DIRECT } from "@/app/api/v1/escale/comentarios/[comentarioId]/direct/route";
 import { DELETE as DELETE_REEXIBIR, POST as POST_OCULTAR } from "@/app/api/v1/escale/comentarios/[comentarioId]/ocultar/route";
+import { DELETE as DELETE_DESCURTIR, POST as POST_CURTIR } from "@/app/api/v1/escale/comentarios/[comentarioId]/curtir/route";
 import { POST as POST_RESPONDER } from "@/app/api/v1/escale/comentarios/[comentarioId]/responder/route";
 import { respostaDoErroDoZernio } from "@/lib/escale/comentarios/rota-da-acao";
 import { requireRole } from "@/lib/auth/require-role";
@@ -211,5 +213,40 @@ describe("rotas de ação", () => {
     const r = await POST_RESPONDER(post("responder", { ...ALVO, texto: "oi" }), params());
     expect(r.status).toBe(500);
     expect(r.headers.get("X-Request-Id")).toBeTruthy();
+  });
+});
+
+describe("curtir à mão (10D, D15)", () => {
+  const FACEBOOK = { ...CONTA, plataforma: "facebook" };
+
+  it("sem requireSupportWrite → recusa", async () => {
+    apoio.requireSupportWrite.mockResolvedValueOnce(new Response(null, { status: 403 }));
+    expect((await POST_CURTIR(post("curtir", { ...ALVO }), params())).status).toBe(403);
+    expect(acoes.curtirAMao).not.toHaveBeenCalled();
+  });
+
+  it("conta do Instagram → 422 com o texto", async () => {
+    const r = await POST_CURTIR(post("curtir", { ...ALVO }), params());
+    expect(r.status).toBe(422);
+    expect((await r.json()).error.message).toBe("Curtir comentário só está disponível no Facebook.");
+    expect(acoes.curtirAMao).not.toHaveBeenCalled();
+  });
+
+  it("Facebook: curte (POST) e descurte (DELETE) e devolve { curtido }", async () => {
+    contaDaCaixa.mockResolvedValue(FACEBOOK);
+    acoes.curtirAMao.mockResolvedValueOnce({ ok: true, dados: { curtido: true } });
+    expect((await (await POST_CURTIR(post("curtir", { ...ALVO, autor: "u1" }), params())).json()).data).toEqual({ curtido: true });
+    expect(acoes.curtirAMao.mock.calls[0]?.slice(1)).toEqual([true, "u1"]);
+
+    acoes.curtirAMao.mockResolvedValueOnce({ ok: true, dados: { curtido: false } });
+    const r = await DELETE_DESCURTIR(json(`/api/v1/escale/comentarios/cm-1/curtir?canal=${CANAL}&publicacao=post-1&autor=u1`, "DELETE"), params());
+    expect((await r.json()).data).toEqual({ curtido: false });
+    expect(acoes.curtirAMao.mock.calls[1]?.slice(1)).toEqual([false, "u1"]);
+  });
+
+  it("erro do Zernio → 502", async () => {
+    contaDaCaixa.mockResolvedValue(FACEBOOK);
+    acoes.curtirAMao.mockResolvedValueOnce({ ok: false, status: 500, corpo: {} });
+    expect((await POST_CURTIR(post("curtir", { ...ALVO }), params())).status).toBe(502);
   });
 });

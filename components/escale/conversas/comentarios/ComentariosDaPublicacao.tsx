@@ -9,6 +9,7 @@ import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao"
 import {
   useApagarComentario,
   useDirectDoComentario,
+  useCurtirComentario,
   useOcultarComentario,
   useResponderComentario,
 } from "@/hooks/escale/useAcoesNoComentario";
@@ -73,6 +74,7 @@ export function ComentariosDaPublicacao({
   const responder = useResponderComentario(conta.id, publicacao.id);
   const direct = useDirectDoComentario(conta.id, publicacao.id);
   const ocultar = useOcultarComentario(conta.id, publicacao.id);
+  const curtir = useCurtirComentario(conta.id, publicacao.id);
   const apagar = useApagarComentario(conta.id, publicacao.id);
 
   const visiveis = useMemo(() => [...filtrarComentarios(comentarios, filtro, busca)].sort(porData), [comentarios, filtro, busca]);
@@ -175,6 +177,7 @@ export function ComentariosDaPublicacao({
                   aoResponder={(x) => mirar(x, "responder")}
                   aoMandarDirect={(x) => mirar(x, "direct")}
                   aoOcultar={(x, o) => ocultar.mutate({ comentario: x, ocultar: o })}
+                  aoCurtir={(x, c) => curtir.mutateAsync({ comentario: x, curtir: c })}
                   aoApagar={setApagando}
                 />
               ))

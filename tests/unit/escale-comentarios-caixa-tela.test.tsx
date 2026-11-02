@@ -27,7 +27,7 @@ vi.mock("@/hooks/escale/useComentarios", async (original) => ({
 }));
 vi.mock("@/hooks/escale/useAcoesNoComentario", () => {
   const mutacao = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
-  return { useResponderComentario: mutacao, useDirectDoComentario: mutacao, useOcultarComentario: mutacao, useApagarComentario: mutacao };
+  return { useResponderComentario: mutacao, useDirectDoComentario: mutacao, useOcultarComentario: mutacao, useCurtirComentario: mutacao, useApagarComentario: mutacao };
 });
 
 import { BotaoDosComentarios } from "@/components/escale/conversas/fila/BotaoDosComentarios";

@@ -22,6 +22,8 @@ export interface ItemDoComentarioProps {
   /** Põe o compositor em "Mandar direct" mirando `c`. */
   aoMandarDirect: (c: ComentarioDaCaixa) => void;
   aoOcultar: (c: ComentarioDaCaixa, ocultar: boolean) => void;
+  /** Fase 10D (D15): só em conta do Facebook; rejeita quando o Zernio recusa (o botão volta). */
+  aoCurtir: (c: ComentarioDaCaixa, curtir: boolean) => Promise<unknown>;
   /** Abre a confirmação. */
   aoApagar: (c: ComentarioDaCaixa) => void;
   /** O escolhido (o item mostra o anel em volta dele e das ações fixas). */
@@ -49,7 +51,7 @@ function Avatar({ comentario }: { comentario: ComentarioDaCaixa }) {
 
 /** O item de comentário (com as respostas aninhadas): FORK ESCALE · Fase 10A (4.4). A 10D põe o "Curtir" nas ações. */
 export function ItemDoComentario(props: ItemDoComentarioProps) {
-  const { comentario, conta, escolhido, nivel, aoEscolher, aoResponder, aoMandarDirect, aoOcultar, aoApagar } = props;
+  const { comentario, conta, escolhido, nivel, aoEscolher, aoResponder, aoMandarDirect, aoOcultar, aoCurtir, aoApagar } = props;
   const t = useT();
   const agora = props.agora ?? new Date();
   const { autor } = comentario;
@@ -115,6 +117,7 @@ export function ItemDoComentario(props: ItemDoComentarioProps) {
               aoResponder={() => aoResponder(comentario)}
               aoMandarDirect={() => aoMandarDirect(comentario)}
               aoOcultar={(o) => aoOcultar(comentario, o)}
+              aoCurtir={conta.plataforma === "facebook" ? (c) => aoCurtir(comentario, c) : undefined}
               aoApagar={() => aoApagar(comentario)}
             />
           </div>

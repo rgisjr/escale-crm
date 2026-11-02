@@ -87,3 +87,5 @@ export const MAXIMO_DE_TOQUES_NO_LIBERAR = 3;
 export const MAXIMO_DE_HORAS_DA_REPETICAO = 720;
 /** D5 */
 export const CACHE_DAS_REGRAS_DE_DIRECT_MS = 30_000;
+/** D15 */
+export const SO_NO_FACEBOOK = "Curtir comentário só está disponível no Facebook.";

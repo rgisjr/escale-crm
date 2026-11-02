@@ -335,6 +335,9 @@ export const AUDIT_ACTIONS = [
   "comment.private_replied",
   "comment.hidden",
   "comment.unhidden",
+  // FORK ESCALE · Fase 10D: curtir à mão (só Facebook).
+  "comment.liked",
+  "comment.unliked",
   "comment.deleted",
   "ai.skill_imported",
   "ai.skill_installed",

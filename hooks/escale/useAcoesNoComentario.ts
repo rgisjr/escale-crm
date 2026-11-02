@@ -122,6 +122,29 @@ export function useOcultarComentario(
   });
 }
 
+/**
+ * FORK ESCALE · Fase 10D (D15): curtir / descurtir à mão, só em conta do Facebook. O estado "curtido"
+ * mora no item (o Zernio não devolve a curtida na leitura), por isso o otimismo é do chamador.
+ */
+export function useCurtirComentario(
+  canal: string,
+  publicacao: string,
+): UseMutationResult<{ curtido: boolean }, ApiError, { comentario: ComentarioDaCaixa; curtir: boolean }> {
+  return useMutation<{ curtido: boolean }, ApiError, { comentario: ComentarioDaCaixa; curtir: boolean }>({
+    mutationFn: async ({ comentario, curtir }) => {
+      const base = `${RAIZ}/${idNaUrl(comentario)}/curtir`;
+      const autor = comentario.autor.id;
+      return (
+        curtir
+          ? await apiClient.post<{ data: { curtido: boolean } }>(base, { ...alvo(canal, publicacao), autor })
+          : await apiClient.delete<{ data: { curtido: boolean } }>(
+              `${base}?canal=${encodeURIComponent(canal)}&publicacao=${encodeURIComponent(publicacao)}&autor=${encodeURIComponent(autor)}`,
+            )
+      ).data;
+    },
+  });
+}
+
 export function useApagarComentario(
   canal: string,
   publicacao: string,
