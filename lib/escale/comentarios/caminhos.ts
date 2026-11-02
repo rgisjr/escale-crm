@@ -19,7 +19,13 @@ export const comentarioDoEventoSchema = z.object({
     comentado_em: z.string(),
     publicacao_id: z.string().min(1),
     publicacao_zernio_id: z.string().nullable(),
-    autor: z.object({ id: z.string().min(1), usuario: z.string().nullable(), nome: z.string().nullable() }),
+    autor: z.object({
+      id: z.string().min(1),
+      usuario: z.string().nullable(),
+      nome: z.string().nullable(),
+      /** FORK ESCALE · Fase 10D (D12): isFollower do Instagram; null = não informado. */
+      seguidor: z.boolean().nullable().default(null),
+    }),
   }),
   publicacao: z.object({
     legenda: z.string().nullable(),

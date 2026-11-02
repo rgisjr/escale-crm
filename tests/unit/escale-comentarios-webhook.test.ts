@@ -35,7 +35,7 @@ describe("lerComentarioDoWebhook", () => {
         publicacaoZernioId: "zpost-1",
         aoVivo: false,
       },
-      autor: { id: "u-1", usuario: "fulano", nome: "Fulano", daPropriaConta: false },
+      autor: { id: "u-1", usuario: "fulano", nome: "Fulano", daPropriaConta: false, seguidor: null },
       publicacao: { legenda: "Legenda", miniatura: "https://img/1.jpg", link: "https://instagram.com/p/1" },
     });
   });

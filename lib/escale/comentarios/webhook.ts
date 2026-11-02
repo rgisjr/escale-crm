@@ -23,6 +23,11 @@ const webhookSchema = z.object({
       username: textoOuNulo,
       name: textoOuNulo,
       isOwnAccount: z.boolean().nullish().transform((v) => v ?? false),
+      /** FORK ESCALE · Fase 10D (D12): o Instagram só informa quando quer; ausente = não informado. */
+      instagramProfile: z
+        .object({ isFollower: z.boolean().nullish().transform((v) => v ?? null) })
+        .nullish()
+        .transform((v) => v?.isFollower ?? null),
     }),
   }),
   post: z
@@ -45,7 +50,7 @@ export interface ComentarioDoWebhook {
     publicacaoZernioId: string | null;
     aoVivo: boolean;
   };
-  autor: { id: string; usuario: string | null; nome: string | null; daPropriaConta: boolean };
+  autor: { id: string; usuario: string | null; nome: string | null; daPropriaConta: boolean; seguidor: boolean | null };
   publicacao: { legenda: string | null; miniatura: string | null; link: string | null };
 }
 
@@ -72,6 +77,7 @@ export function lerComentarioDoWebhook(payload: unknown): ComentarioDoWebhook | 
       usuario: comment.author.username,
       nome: comment.author.name,
       daPropriaConta: comment.author.isOwnAccount,
+      seguidor: comment.author.instagramProfile,
     },
     publicacao: { legenda: post.content, miniatura: post.imageUrl, link: post.permalink },
   };

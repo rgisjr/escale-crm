@@ -92,7 +92,7 @@ describe("ecoDaMensagemDaAutomacao", () => {
     await ecoDaMensagemDaAutomacao(admin, { ...ENTRADA, msg: eco() });
     expect(filtrosIn).toEqual([
       ["sent_via", ["automation", "user"]],
-      ["metadata->>origem", ["comentario", "comentario_manual"]],
+      ["metadata->>origem", ["comentario", "comentario_manual", "direct"]],
     ]);
   });
 
