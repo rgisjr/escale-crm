@@ -330,6 +330,12 @@ export const AUDIT_ACTIONS = [
   "automation.run_resent",
   // FORK ESCALE · Fase 10B: a assinatura do webhook do canal ganhou `comment.received`.
   "automation.comment_subscription_ensured",
+  // FORK ESCALE · Fase 10A: as ações à mão da caixa de comentários (sem o texto no metadata).
+  "comment.replied",
+  "comment.private_replied",
+  "comment.hidden",
+  "comment.unhidden",
+  "comment.deleted",
   "ai.skill_imported",
   "ai.skill_installed",
   "ai.skill_uninstalled",

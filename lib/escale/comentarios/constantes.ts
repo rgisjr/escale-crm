@@ -21,6 +21,8 @@ export const TEXTO_PADRAO_DA_RESPOSTA = "Te respondi no direct, dá uma olhada!"
 export const ID_DO_CAMINHO_UNICO = "qualquer";
 /** Janela em que o eco do Zernio casa com a mensagem que a automação gravou (D13). */
 export const JANELA_DO_ECO_MS = 15 * 60 * 1000;
+/** FORK ESCALE · Fase 10A (D10): as origens de mensagem que o eco `message.sent` reconhece. A 10D acrescenta "direct". */
+export const ORIGENS_DO_ECO = ["comentario", "comentario_manual"] as const;
 
 /** FORK ESCALE · Fase 10A: a caixa de comentários. */
 export const MAXIMO_DO_TEXTO_A_MAO = 1000;
