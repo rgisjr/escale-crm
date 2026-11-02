@@ -14,8 +14,9 @@ import { formatarTelefone } from "@/lib/escale/contatos/regras";
 import { ROTULO_DO_STATUS_DA_EXECUCAO } from "@/lib/escale/automacoes/insights/csv";
 import { podeReenviar, primeiroPassoComProblema } from "@/lib/escale/automacoes/insights/regras";
 import type { LinhaDaExecucao } from "@/lib/escale/automacoes/insights/tipos";
+import { rotaDoContatoAberto } from "@/lib/escale/ficha-do-contato/regras";
 import { rotaDoNegocio } from "@/lib/escale/negocio/regras";
-import { Mail, MessageCircle, Send } from "@/lib/ui/icons-da-casca";
+import { ExternalLink, Mail, MessageCircle, Send } from "@/lib/ui/icons-da-casca";
 
 const SELO: Record<LinhaDaExecucao["status"], string> = {
   success: "bg-success-bg text-success-fg",
@@ -28,15 +29,18 @@ const SELO: Record<LinhaDaExecucao["status"], string> = {
  * O CARTÃO DE UMA EXECUÇÃO (07-029; fork Escale, Fase 5C; I10, I11): contato, telefone e e-mail,
  * data, selo do status, "Ver negócio" e "Reenviar". Quando não deu certo, a 2ª linha diz em que
  * passo e por quê. Diferença da Clint: cada linha é uma execução, com o status no lugar das tags.
+ * Fase 10C: nas automações de comentário, "Ver contato" e "Ver publicação" (a Clint não tem).
  */
 export function CartaoDaExecucao({
   linha,
   acoes,
   fuso,
+  comentario = false,
 }: {
   linha: LinhaDaExecucao;
   acoes: readonly { type: string }[];
   fuso: string;
+  comentario?: boolean;
 }) {
   const t = useT();
   const reenviar = useResendAutomationRun();
@@ -80,6 +84,23 @@ export function CartaoDaExecucao({
           {t(ROTULO_DO_STATUS_DA_EXECUCAO[linha.status])}
         </span>
         <div className="flex items-center gap-3 text-[13px]">
+          {comentario && contato ? (
+            <Link href={rotaDoContatoAberto(contato.id, "", "contato")} className="text-casca-texto hover:underline">
+              {t("Ver contato")}
+            </Link>
+          ) : null}
+          {comentario && linha.publicacao?.link ? (
+            <a
+              href={linha.publicacao.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={linha.publicacao.legenda ?? undefined}
+              className="inline-flex items-center gap-1 text-casca-texto hover:underline"
+            >
+              {t("Ver publicação")}
+              <ExternalLink size={12} aria-hidden />
+            </a>
+          ) : null}
           {linha.negocio ? (
             <Link href={rotaDoNegocio(linha.negocio.id)} className="text-casca-texto hover:underline">
               {t("Ver negócio")}

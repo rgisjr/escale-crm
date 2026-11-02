@@ -40,6 +40,12 @@ export interface NegocioDaExecucao {
   titulo: string;
 }
 
+/** FORK ESCALE · Fase 10C: a publicação de onde veio o comentário que disparou a execução. */
+export interface PublicacaoDaExecucao {
+  legenda: string | null;
+  link: string | null;
+}
+
 export interface LinhaDaExecucao {
   id: string;
   status: AutomationRunStatus;
@@ -48,6 +54,8 @@ export interface LinhaDaExecucao {
   resultados: AutomationRuleRunActionResult[];
   contato: ContatoDaExecucao | null;
   negocio: NegocioDaExecucao | null;
+  /** FORK ESCALE · Fase 10C: só nas automações de comentário. */
+  publicacao?: PublicacaoDaExecucao | null;
 }
 
 /** A posição de uma ação na fila do motor e o tipo dela (I5). */
