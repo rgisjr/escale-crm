@@ -8,6 +8,7 @@ import {
   precisaDeValor,
   type CondicaoDoFiltro,
   type FiltrosDeContatos,
+  type OpcaoDeComentario,
   type OpcaoDeTelefone,
   type OpDeTag,
   type Operador,
@@ -35,6 +36,7 @@ export type FiltroCompilado = {
   criado_de?: string;
   criado_ate?: string;
   telefone?: OpcaoDeTelefone;
+  comentario?: OpcaoDeComentario;
   negocio?: {
     tem: "com" | "sem";
     origens: string[];
@@ -83,6 +85,7 @@ export function compilarFiltros(entrada: FiltrosDeContatos, fuso: string): Filtr
     ...(f.criadoEm?.de ? { criado_de: f.criadoEm.de } : {}),
     ...(f.criadoEm?.ate ? { criado_ate: f.criadoEm.ate } : {}),
     ...(f.telefone ? { telefone: f.telefone } : {}),
+    ...(f.comentario ? { comentario: f.comentario } : {}),
     ...(f.negocio
       ? {
           negocio: {

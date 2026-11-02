@@ -23,6 +23,14 @@ export const ROTULO_DO_TELEFONE: Record<OpcaoDeTelefone, string> = {
   internacional: "Telefone internacional",
 };
 
+/** FORK ESCALE · Fase 10C: contato que veio (ou não) de comentário do Instagram/Facebook. */
+export const OPCOES_DE_COMENTARIO = ["com", "sem"] as const;
+export type OpcaoDeComentario = (typeof OPCOES_DE_COMENTARIO)[number];
+export const ROTULO_DO_COMENTARIO: Record<OpcaoDeComentario, string> = {
+  com: "Veio de comentário",
+  sem: "Não veio de comentário",
+};
+
 export const STATUS_DO_FILTRO = ["open", "won", "lost"] as const;
 export type StatusDoFiltro = (typeof STATUS_DO_FILTRO)[number];
 export const ROTULO_DO_STATUS: Record<StatusDoFiltro, string> = {
@@ -194,6 +202,7 @@ export const filtrosDeContatosSchema = z
   .object({
     criadoEm: z.object({ de: dia.optional(), ate: dia.optional() }).strict().optional(),
     telefone: z.enum(OPCOES_DE_TELEFONE).optional(),
+    comentario: z.enum(OPCOES_DE_COMENTARIO).optional(),
     negocio: negocioSchema.optional(),
     tags: tagsSchema.optional(),
     campos: camposDoFiltroSchema.optional(),
@@ -347,6 +356,7 @@ export function enxugarFiltros(f: FiltrosDeContatos): FiltrosDeContatos {
   return {
     ...(criadoEm ? { criadoEm } : {}),
     ...(f.telefone ? { telefone: f.telefone } : {}),
+    ...(f.comentario ? { comentario: f.comentario } : {}),
     ...(negocio ? { negocio } : {}),
     ...(tags ? { tags } : {}),
     ...(grupos.length > 0 ? { campos: { combinar: f.campos?.combinar ?? "ou", grupos } } : {}),
@@ -386,16 +396,16 @@ export const contarCondicoes = (
 
 export function contarNaSecao(f: FiltrosDeContatos, secao: SecaoDoFiltro): number {
   const e = enxugarFiltros(f);
-  if (secao === "contato") return (e.criadoEm ? 1 : 0) + (e.telefone ? 1 : 0);
+  if (secao === "contato") return (e.criadoEm ? 1 : 0) + (e.telefone ? 1 : 0) + (e.comentario ? 1 : 0);
   if (secao === "negocio") return Object.keys(e.negocio ?? {}).length;
   if (secao === "tags") return contarCondicoes(e.tags?.grupos);
   return contarCondicoes(e.campos?.grupos);
 }
 
 export function limparSecao(f: FiltrosDeContatos, secao: SecaoDoFiltro): FiltrosDeContatos {
-  const { criadoEm, telefone, negocio, tags, campos } = enxugarFiltros(f);
+  const { criadoEm, telefone, comentario, negocio, tags, campos } = enxugarFiltros(f);
   return enxugarFiltros({
-    ...(secao === "contato" ? {} : { criadoEm, telefone }),
+    ...(secao === "contato" ? {} : { criadoEm, telefone, comentario }),
     ...(secao === "negocio" ? {} : { negocio }),
     ...(secao === "tags" ? {} : { tags }),
     ...(secao === "campos" ? {} : { campos }),
@@ -406,6 +416,7 @@ export function limparSecao(f: FiltrosDeContatos, secao: SecaoDoFiltro): Filtros
 export type ChaveDoChip =
   | "criadoEm"
   | "telefone"
+  | "comentario"
   | "negocio.tem"
   | "negocio.origens"
   | "negocio.etapas"
@@ -423,6 +434,7 @@ export function chipsDosFiltros(f: FiltrosDeContatos): ChipDoFiltro[] {
   const chips: ChipDoFiltro[] = [];
   if (e.criadoEm) chips.push({ chave: "criadoEm", secao: "contato", quantidade: 1 });
   if (e.telefone) chips.push({ chave: "telefone", secao: "contato", quantidade: 1 });
+  if (e.comentario) chips.push({ chave: "comentario", secao: "contato", quantidade: 1 });
   if (e.negocio?.tem) chips.push({ chave: "negocio.tem", secao: "negocio", quantidade: 1 });
   for (const k of LISTAS_DO_NEGOCIO) {
     const lista = e.negocio?.[k];
@@ -440,6 +452,7 @@ export function removerChip(f: FiltrosDeContatos, chave: ChaveDoChip): FiltrosDe
   const e = enxugarFiltros(f);
   if (chave === "criadoEm") return enxugarFiltros({ ...e, criadoEm: undefined });
   if (chave === "telefone") return enxugarFiltros({ ...e, telefone: undefined });
+  if (chave === "comentario") return enxugarFiltros({ ...e, comentario: undefined });
   if (chave === "tags") return enxugarFiltros({ ...e, tags: undefined });
   if (chave === "campos") return enxugarFiltros({ ...e, campos: undefined });
   const parte = chave.slice("negocio.".length) as keyof NegocioDoFiltro;
