@@ -110,6 +110,44 @@ describe("reivindicarDisparos", () => {
     expect(inserts[0]).toMatchObject({ rule_id: REGRA, caminho_id: "qualquer", comentario_id: "c-1", autor_id: "u-1" });
   });
 
+  it("grava a publicação saneada no disparo e também na linha repetido", async () => {
+    const comLink = {
+      ...evento,
+      payload: {
+        ...(evento.payload as object),
+        publicacao: {
+          legenda: "  Meu reels  ",
+          miniatura: "https://scontent.cdninstagram.com/a.jpg",
+          link: "https://www.instagram.com/reel/abc/",
+        },
+      },
+    } as EventRow;
+    const { admin, inserts } = bancoFalso({
+      respostasDoInsert: [{ code: "23505", message: 'violates "uq_escale_disparos_de_comentario_pessoa"' }],
+    });
+    await reivindicarDisparos(admin, comLink, [regra([])]);
+    const esperado = {
+      publicacao_legenda: "Meu reels",
+      publicacao_miniatura: "https://scontent.cdninstagram.com/a.jpg",
+      publicacao_link: "https://www.instagram.com/reel/abc/",
+    };
+    expect(inserts[0]).toMatchObject(esperado);
+    expect(inserts[1]).toMatchObject({ repetido: true, ...esperado });
+  });
+
+  it("link http do payload grava publicacao_link null", async () => {
+    const http = {
+      ...evento,
+      payload: {
+        ...(evento.payload as object),
+        publicacao: { legenda: null, miniatura: null, link: "http://instagram.com/p/x" },
+      },
+    } as EventRow;
+    const { admin, inserts } = bancoFalso();
+    await reivindicarDisparos(admin, http, [regra([])]);
+    expect(inserts[0]).toMatchObject({ publicacao_link: null });
+  });
+
   it("23505 do índice do comentário → reentrega: sai sem gravar mais nada", async () => {
     const { admin, inserts } = bancoFalso({
       respostasDoInsert: [{ code: "23505", message: 'violates "uq_escale_disparos_de_comentario_comentario"' }],

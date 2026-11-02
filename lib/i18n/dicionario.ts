@@ -19249,6 +19249,21 @@ export const DICIONARIO: Traducoes = {
   "Conta do Instagram": { es: "Cuenta de Instagram" },
   "Como encontrar a publicação": { es: "Cómo encontrar la publicación" },
   "Palavras do filtro": { es: "Palabras del filtro" },
+  // FORK ESCALE · Fase 10C: origem do comentário na ficha, filtro de contatos e atalhos do Insights.
+  "Comentário em": { es: "Comentario en" },
+  "Abrir a publicação no Instagram": { es: "Abrir la publicación en Instagram" },
+  "Abrir a publicação no Facebook": { es: "Abrir la publicación en Facebook" },
+  "Ver os {n} comentários": { es: "Ver los {n} comentarios" },
+  "Ocultar comentários": { es: "Ocultar comentarios" },
+  "Repetido": { es: "Repetido" },
+  "A pessoa já tinha recebido esta automação.": { es: "La persona ya había recibido esta automatización." },
+  "Mostrando os 10 mais recentes de {total}.": { es: "Mostrando los 10 más recientes de {total}." },
+  "Não foi possível carregar os comentários.": { es: "No fue posible cargar los comentarios." },
+  "Comentário": { es: "Comentario" },
+  "Veio de comentário": { es: "Vino de un comentario" },
+  "Não veio de comentário": { es: "No vino de un comentario" },
+  "Com/Sem comentário": { es: "Con/Sin comentario" },
+  "Ver publicação": { es: "Ver publicación" },
 };
 
 /**

@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 import { ok } from "@/lib/api/wrappers";
 import { lerExecucoes } from "@/lib/escale/automacoes/insights/banco";
 import { comRegraDosInsights, recusaDeValidacao } from "@/lib/escale/automacoes/insights/rotas";
+import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
+import { comPublicacoes } from "@/lib/escale/comentarios/publicacoes-das-execucoes";
 import {
   POR_PAGINA_DAS_EXECUCOES,
   filtroDasExecucoesSchema,
@@ -22,6 +24,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       POR_PAGINA_DAS_EXECUCOES,
       (lido.data.pagina - 1) * POR_PAGINA_DAS_EXECUCOES,
     );
-    return ok(await lerExecucoes(c.supabase, c.regra.id, pedido), { requestId: c.requestId });
+    const lidas = await lerExecucoes(c.supabase, c.regra.id, pedido);
+    // Fase 10C (D9): nas automações de comentário, cada execução leva a publicação do disparo.
+    const linhas =
+      c.regra.trigger_event === GATILHO_DE_COMENTARIO
+        ? await comPublicacoes(c.supabase, c.regra.id, lidas.linhas)
+        : lidas.linhas;
+    return ok({ ...lidas, linhas }, { requestId: c.requestId });
   });
 }

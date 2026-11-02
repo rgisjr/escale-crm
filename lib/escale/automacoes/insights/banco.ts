@@ -14,6 +14,7 @@ export interface RegraDosInsights {
   id: string;
   name: string;
   actions: { type: string }[];
+  trigger_event: string;
 }
 
 /** `{ id, name, actions }` da regra na organização da sessão; null se não houver (rota → 404). */
@@ -24,14 +25,16 @@ export async function regraDaOrganizacao(
 ): Promise<RegraDosInsights | null> {
   const { data, error } = await supabase
     .from("automation_rules")
-    .select("id, name, actions")
+    .select("id, name, actions, trigger_event")
     .eq("organization_id", orgId)
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
-  const linha = data as { id: string; name: string; actions: unknown };
-  return { id: linha.id, name: linha.name, actions: Array.isArray(linha.actions) ? (linha.actions as { type: string }[]) : [] };
+  const linha = data as { id: string; name: string; actions: unknown; trigger_event?: string | null };
+  return { id: linha.id, name: linha.name, actions: Array.isArray(linha.actions) ? (linha.actions as { type: string }[]) : [],
+    trigger_event: String(linha.trigger_event ?? ""),
+  };
 }
 
 /** O `jsonb` pode trazer a contagem como número ou como texto. */

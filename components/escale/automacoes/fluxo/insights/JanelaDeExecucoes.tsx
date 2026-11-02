@@ -14,6 +14,7 @@ import { useT } from "@/hooks/i18n/useT";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
 import { ApiError } from "@/lib/api/types";
 import { POR_PAGINA_DAS_EXECUCOES } from "@/lib/escale/automacoes/insights/schema";
+import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
 import { selecionadosIniciais } from "@/lib/escale/automacoes/insights/regras";
 import type { FiltroDasExecucoes, PeriodoDosInsights } from "@/lib/escale/automacoes/insights/tipos";
 
@@ -118,7 +119,13 @@ export function JanelaDeExecucoes({
         ) : (
           <ul className="flex flex-col gap-3">
             {consulta.data!.linhas.map((l) => (
-              <CartaoDaExecucao key={l.id} linha={l} acoes={acoes} fuso={fuso} />
+              <CartaoDaExecucao
+                key={l.id}
+                linha={l}
+                acoes={acoes}
+                fuso={fuso}
+                comentario={regra.trigger_event === GATILHO_DE_COMENTARIO}
+              />
             ))}
           </ul>
         )}

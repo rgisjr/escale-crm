@@ -349,3 +349,37 @@ describe("o alvo empresa no filtro (Fase 2D)", () => {
     expect(campos.every((c) => c.alvo === "empresa")).toBe(true);
   });
 });
+
+describe("o filtro de comentário (Fase 10C)", () => {
+  it("lê da URL e descarta lixo", () => {
+    expect(filtrosDaUrl('{"comentario":"com"}')).toEqual({ comentario: "com" });
+    expect(filtrosDaUrl('{"comentario":"talvez"}')).toEqual({});
+  });
+
+  it("conta na seção Contato e limpa junto com o telefone", () => {
+    const f: FiltrosDeContatos = {
+      telefone: "com",
+      comentario: "sem",
+      tags: { combinar: "ou", grupos: [{ condicoes: [{ op: "tem", tag: "vip" }] }] } as never,
+    };
+    expect(contarNaSecao(f, "contato")).toBe(2);
+    const limpo = limparSecao(f, "contato");
+    expect(limpo.telefone).toBeUndefined();
+    expect(limpo.comentario).toBeUndefined();
+    expect(limpo.tags).toBeDefined();
+  });
+
+  it("põe o chip depois do telefone e remove só ele", () => {
+    const f: FiltrosDeContatos = { telefone: "com", comentario: "com" };
+    expect(chipsDosFiltros(f).map((c) => c.chave)).toEqual(["telefone", "comentario"]);
+    expect(removerChip(f, "comentario")).toEqual({ telefone: "com" });
+  });
+
+  it("compara e compila para o banco", () => {
+    expect(mesmosFiltros({ comentario: "sem" }, { comentario: "sem" })).toBe(true);
+    expect(compilarFiltros({ comentario: "com" }, "America/Sao_Paulo")).toEqual({
+      fuso: "America/Sao_Paulo",
+      comentario: "com",
+    });
+  });
+});

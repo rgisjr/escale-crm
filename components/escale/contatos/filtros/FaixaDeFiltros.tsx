@@ -7,6 +7,7 @@ import {
   DONO_COM,
   DONO_SEM,
   ROTULO_DA_OP_DE_TAG,
+  ROTULO_DO_COMENTARIO,
   ROTULO_DO_STATUS,
   ROTULO_DO_TELEFONE,
   chipsDosFiltros,
@@ -75,6 +76,11 @@ export function FaixaDeFiltros({
         return {
           titulo: t("Telefone"),
           valor: filtros.telefone ? t(ROTULO_DO_TELEFONE[filtros.telefone]) : "",
+        };
+      case "comentario":
+        return {
+          titulo: t("Comentário"),
+          valor: filtros.comentario ? t(ROTULO_DO_COMENTARIO[filtros.comentario]) : "",
         };
       case "negocio.tem":
         return {

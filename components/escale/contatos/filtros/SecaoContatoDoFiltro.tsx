@@ -7,17 +7,20 @@ import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/hooks/i18n/useT";
 import {
+  OPCOES_DE_COMENTARIO,
   OPCOES_DE_TELEFONE,
+  ROTULO_DO_COMENTARIO,
   ROTULO_DO_TELEFONE,
   textoDoPeriodo,
   type FiltrosDeContatos,
+  type OpcaoDeComentario,
 } from "@/lib/escale/contatos/filtros";
 import { Calendar } from "@/lib/ui/icons-da-casca";
 import { cn } from "@/lib/utils";
 
 import { GrupoDoFiltro } from "./PecasDoFiltro";
 
-/** Seção Contato (Clint `index-A38akjUb`): "Data de criação" e "Telefone". */
+/** Seção Contato (Clint `index-A38akjUb`): "Data de criação" e "Telefone"; "Comentário" é do fork (Fase 10C). */
 export function SecaoContatoDoFiltro({
   filtros,
   aoMudar,
@@ -67,6 +70,15 @@ export function SecaoContatoDoFiltro({
           aoMudar={(v) => aoMudar({ ...filtros, telefone: v || undefined })}
           vazio={t("Com/Sem Telefone")}
           aria-label={t("Telefone")}
+        />
+      </GrupoDoFiltro>
+      <GrupoDoFiltro rotulo={t("Comentário")}>
+        <SeletorDaCasca
+          valor={filtros.comentario ?? ""}
+          opcoes={OPCOES_DE_COMENTARIO.map((o) => ({ valor: o, rotulo: t(ROTULO_DO_COMENTARIO[o]) }))}
+          aoMudar={(v) => aoMudar({ ...filtros, comentario: (v || undefined) as OpcaoDeComentario | undefined })}
+          vazio={t("Com/Sem comentário")}
+          aria-label={t("Comentário")}
         />
       </GrupoDoFiltro>
     </>
