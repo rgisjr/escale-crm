@@ -92,7 +92,7 @@ describe("PainelDasCondicoes", () => {
     expect(screen.getByRole("combobox", { name: "Campo" })).toBeTruthy();
   });
 
-  it("a lixeira tira a linha; o + adiciona até 10 e então desabilita", async () => {
+  it("a lixeira tira a linha; 'Adicionar condição' adiciona até 10 e então desabilita", async () => {
     envolver(
       <PainelDasCondicoes
         dados={dados([{ field: "contact.tags", op: "contains", value: "a" }])}
@@ -102,7 +102,10 @@ describe("PainelDasCondicoes", () => {
       />,
     );
     const mais = screen.getByRole("button", { name: "Adicionar condição" }) as HTMLButtonElement;
-    for (let i = 0; i < 9; i += 1) await userEvent.click(mais);
+    for (let i = 0; i < 9; i += 1) {
+      await userEvent.click(mais);
+      await userEvent.click(screen.getByRole("button", { name: "Campo personalizado" }));
+    }
     expect(screen.getAllByTestId(/^condicao-/)).toHaveLength(10);
     expect(mais.disabled).toBe(true);
     await userEvent.click(screen.getAllByRole("button", { name: "Remover condição" })[0]!);

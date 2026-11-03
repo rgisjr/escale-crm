@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateConditions, resolveField } from "@/lib/automation/conditions";
+import { evaluateConditions, resolveField, usaCondicaoDeHorario } from "@/lib/automation/conditions";
 
 const ctx = {
   event: { to_stage_id: "s2", added_tags: ["vip", "novo"] },
@@ -78,4 +78,24 @@ describe("evaluateConditions", () => {
     expect(evaluateConditions([{ field: "lead.ghost", op: "eq", value: "x" }], ctx)).toBe(false));
   it("campo ausente com neq → true (ausente ≠ valor)", () =>
     expect(evaluateConditions([{ field: "lead.ghost", op: "neq", value: "x" }], ctx)).toBe(true));
+});
+
+describe("FORK ESCALE · Horário atual em evaluateConditions", () => {
+  const relogio = { agora: new Date("2026-11-03T13:30:00Z"), fuso: "America/Sao_Paulo" };
+  const entre8e18 = { field: "agora.hora", op: "entre" as const, value: JSON.stringify({ de: "08:00", ate: "18:00" }) };
+
+  it("avalia a hora com o relógio e junta com as outras em E", () => {
+    expect(evaluateConditions([entre8e18], {}, relogio)).toBe(true);
+    expect(evaluateConditions([entre8e18, { field: "lead.title", op: "eq", value: "Bia" }], ctx, relogio)).toBe(false);
+  });
+
+  it("sem relógio a condição de horário é falsa", () => {
+    expect(evaluateConditions([entre8e18], {})).toBe(false);
+  });
+
+  it("usaCondicaoDeHorario acha a linha de horário", () => {
+    expect(usaCondicaoDeHorario([entre8e18])).toBe(true);
+    expect(usaCondicaoDeHorario([{ field: "lead.title" }])).toBe(false);
+    expect(usaCondicaoDeHorario(null)).toBe(false);
+  });
 });

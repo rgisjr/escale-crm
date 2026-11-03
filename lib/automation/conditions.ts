@@ -3,7 +3,16 @@
  * Campo ausente = condição falsa (nunca erro). Coerção via String() dos dois
  * lados — o value vem sempre como string da UI.
  */
-export type ConditionOp = "eq" | "neq" | "contains";
+// FORK ESCALE · automações: a condição "Horário atual" (Hora e Data).
+import { avaliarCondicaoDeHorario, ehCampoDeHorario, type OperadorDeHorario } from "@/lib/automation/condicoes-de-horario";
+
+export type ConditionOp = "eq" | "neq" | "contains" | OperadorDeHorario;
+
+/** FORK ESCALE · automações: o relógio da condição de horário — o instante e o fuso da organização. */
+export interface RelogioDasCondicoes {
+  agora: Date;
+  fuso: string;
+}
 
 export interface RuleCondition {
   field: string;
@@ -20,7 +29,11 @@ export function resolveField(context: Record<string, unknown>, path: string): un
   return cur;
 }
 
-function matches(cond: RuleCondition, context: Record<string, unknown>): boolean {
+function matches(cond: RuleCondition, context: Record<string, unknown>, relogio?: RelogioDasCondicoes): boolean {
+  // FORK ESCALE · automações: sem relógio (quem chamou não o montou), a condição de horário é falsa.
+  if (ehCampoDeHorario(cond.field)) return relogio ? avaliarCondicaoDeHorario(cond, relogio.agora, relogio.fuso) : false;
+  // Operador de horário num campo comum não tem significado: falso, nunca "diferente".
+  if (cond.op !== "eq" && cond.op !== "neq" && cond.op !== "contains") return false;
   const raw = resolveField(context, cond.field);
   if (raw === undefined || raw === null) return cond.op === "neq";
   if (cond.op === "contains") {
@@ -45,6 +58,12 @@ function matches(cond: RuleCondition, context: Record<string, unknown>): boolean
 export function evaluateConditions(
   conditions: RuleCondition[],
   context: Record<string, unknown>,
+  relogio?: RelogioDasCondicoes,
 ): boolean {
-  return conditions.every((c) => matches(c, context));
+  return conditions.every((c) => matches(c, context, relogio));
+}
+
+/** FORK ESCALE · automações: a regra tem condição de horário (só ela paga a leitura do fuso)? */
+export function usaCondicaoDeHorario(conditions: readonly { field: string }[] | null | undefined): boolean {
+  return (conditions ?? []).some((c) => ehCampoDeHorario(c.field));
 }

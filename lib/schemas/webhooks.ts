@@ -28,6 +28,13 @@ import {
   configDaEtapaParada,
   configDoSilencio,
 } from "@/lib/automation/gatilhos-de-tempo";
+// FORK ESCALE · automações: a condição "Horário atual".
+import {
+  ehCampoDeHorario,
+  ehOperadorDeHorario,
+  OPERADORES_DE_HORARIO,
+  valorDeHorarioValido,
+} from "@/lib/automation/condicoes-de-horario";
 // FORK ESCALE · automações: o recorte do gatilho de tag e do "Negócio criado".
 import {
   configDasTagsDoGatilhoSchema,
@@ -254,11 +261,27 @@ export const TRIGGER_EVENTS_DO_ORIGINAL = TRIGGER_EVENTS.filter(
   (evento) => !(GATILHOS_SO_DA_CASCA as readonly string[]).includes(evento),
 );
 
-export const conditionSchema = z.object({
-  field: z.string().min(1).max(200),
-  op: z.enum(["eq", "neq", "contains"]),
-  value: z.string().max(500),
-});
+export const MENSAGEM_DO_HORARIO_INVALIDO = "Revise o horário da condição.";
+
+const OPERADORES_DA_CONDICAO = ["eq", "neq", "contains", ...OPERADORES_DE_HORARIO] as const;
+
+export const conditionSchema = z
+  .object({
+    field: z.string().min(1).max(200),
+    op: z.enum(OPERADORES_DA_CONDICAO),
+    value: z.string().max(500),
+  })
+  // FORK ESCALE · automações: campo de horário só com operador de horário (e vice-versa), e o valor tem que fechar.
+  .superRefine((c, ctx) => {
+    const campoDeHorario = ehCampoDeHorario(c.field);
+    if (campoDeHorario !== ehOperadorDeHorario(c.op)) {
+      ctx.addIssue({ code: "custom", path: ["op"], message: MENSAGEM_DO_HORARIO_INVALIDO });
+      return;
+    }
+    if (campoDeHorario && !valorDeHorarioValido(c.field, c.op, c.value)) {
+      ctx.addIssue({ code: "custom", path: ["value"], message: MENSAGEM_DO_HORARIO_INVALIDO });
+    }
+  });
 
 /**
  * As ações FIXAS do motor — a fonte única de "que ações existem, e com que
