@@ -24,6 +24,8 @@ import {
   GATILHO_DE_DATA_DO_FUNIL,
   configDoGatilhoDeData,
 } from "@/lib/automation/gatilho-de-data-do-funil";
+// FORK ESCALE · automações: as tags do gatilho de tag.
+import { ehGatilhoDeTag, tagsDoGatilho } from "@/lib/automation/filtro-do-gatilho";
 import {
   GATILHO_ETAPA_PARADA,
   GATILHO_SILENCIO,
@@ -61,6 +63,10 @@ export type TelaDoGatilho = {
   fonte: string | null;
   data: { pipeline_id: string; campo: string; dias: string };
   tempo: { dias: string; direcao: DirecaoDoSilencio; proteger_pela_agenda: boolean };
+  /** FORK ESCALE · automações: onde o negócio nasceu ("Negócio criado"); "" = qualquer origem/etapa. */
+  criado: { pipeline_id: string; stage_id: string };
+  /** FORK ESCALE · automações: as tags do gatilho de tag; vazio = qualquer tag. */
+  tags: string[];
   /** FORK ESCALE · Fase 10B: gatilho cuja configuração a casca monta inteira (comentário). */
   configPropria?: Record<string, unknown>;
 };
@@ -166,10 +172,9 @@ export function telaDoGatilho(config: unknown): TelaDoGatilho {
   const data = configDoGatilhoDeData(config);
   const silencio = configDoSilencio(config);
   const tempo = silencio ?? configDaEtapaParada(config);
-  const fonte =
-    config && typeof config === "object" && !Array.isArray(config)
-      ? (config as Record<string, unknown>).webhook_source_id
-      : undefined;
+  const bruto =
+    config && typeof config === "object" && !Array.isArray(config) ? (config as Record<string, unknown>) : {};
+  const fonte = bruto.webhook_source_id;
   return {
     fonte: typeof fonte === "string" ? fonte : null,
     data: data
@@ -180,7 +185,30 @@ export function telaDoGatilho(config: unknown): TelaDoGatilho {
       direcao: silencio ? silencio.direcao : "da_equipe",
       proteger_pela_agenda: tempo ? tempo.proteger_pela_agenda : false,
     },
+    criado: {
+      pipeline_id: typeof bruto.pipeline_id === "string" ? bruto.pipeline_id : "",
+      stage_id: typeof bruto.stage_id === "string" ? bruto.stage_id : "",
+    },
+    tags: tagsDoGatilho(bruto),
   };
+}
+
+/**
+ * FORK ESCALE · automações: a chave nova só é gravada vazia (null ou []) quando já estava na regra
+ * gravada do MESMO gatilho, para limpar. Sem isso, toda regra antiga ganharia `pipeline_id: null` ou
+ * `tags: []` no primeiro salvar e deixaria de voltar byte a byte.
+ */
+function semVaziosNovos(
+  config: Record<string, unknown>,
+  regraGravada: Pick<RegraGravada, "trigger_event" | "trigger_config"> | null,
+  evento: string,
+  chaves: readonly string[],
+): Record<string, unknown> {
+  const antes = regraGravada?.trigger_event === evento ? (regraGravada.trigger_config ?? {}) : {};
+  const vazio = (v: unknown) => v === null || (Array.isArray(v) && v.length === 0);
+  return Object.fromEntries(
+    Object.entries(config).filter(([chave, valor]) => !(chaves.includes(chave) && vazio(valor) && !(chave in antes))),
+  );
 }
 
 /**
@@ -220,7 +248,23 @@ export function triggerConfigDaTela(
     });
   }
   if (evento === "lead.created") {
-    return configAoSalvarDaTela({ ...base, configDaTela: { webhook_source_id: tela.fonte } });
+    // FORK ESCALE · automações: origem e etapa do "Negócio criado"; null limpa o que estava gravado.
+    return semVaziosNovos(
+      configAoSalvarDaTela({
+        ...base,
+        configDaTela: {
+          webhook_source_id: tela.fonte,
+          pipeline_id: tela.criado.pipeline_id || null,
+          stage_id: tela.criado.stage_id || null,
+        },
+      }),
+      regraGravada,
+      evento,
+      ["pipeline_id", "stage_id"],
+    );
+  }
+  if (ehGatilhoDeTag(evento)) {
+    return semVaziosNovos(configAoSalvarDaTela({ ...base, configDaTela: { tags: tela.tags } }), regraGravada, evento, ["tags"]);
   }
   return {};
 }

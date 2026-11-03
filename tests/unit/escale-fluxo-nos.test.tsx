@@ -29,6 +29,8 @@ const TELA: TelaDoGatilho = {
   fonte: null,
   data: { pipeline_id: "", campo: "", dias: "7" },
   tempo: { dias: "7", direcao: "da_equipe", proteger_pela_agenda: false },
+  criado: { pipeline_id: "", stage_id: "" },
+  tags: [],
 };
 
 function montar(id: string, data: DadosDaCaixa, over: { selected?: boolean; evento?: string } = {}) {
@@ -65,7 +67,7 @@ describe("nó do fluxo", () => {
 
   it("lead.created com fonte mostra o nome da fonte; sem evento convida a escolher", () => {
     montar("gatilho", { kind: "gatilho", evento: "lead.created", tela: { ...TELA, fonte: "f1" } });
-    expect(screen.getByText("Site")).toBeTruthy();
+    expect(screen.getByText("Qualquer origem · Site")).toBeTruthy();
   });
 
   it("gatilho sem evento", () => {

@@ -51,7 +51,7 @@ export const FONTES_DOS_GATILHOS: readonly FonteDosGatilhos[] = [
     fonte: "negocios",
     rotulo: "Negócios",
     opcoes: [
-      { evento: "lead.created", titulo: "Negócio criado pelo formulário", descricao: "Um negócio entrou por um formulário (webhook)", icone: "maleta" },
+      { evento: "lead.created", titulo: "Negócio criado", descricao: "Um negócio foi criado em uma determinada origem e etapa", icone: "maleta" },
       { evento: "lead.stage_changed", titulo: "Negócio entrou na etapa", descricao: "Um negócio mudou de etapa no funil", icone: "maleta" },
       { evento: "lead.won", titulo: "Negócio ganho", descricao: "Um negócio foi marcado como ganho", icone: "trofeu" },
       { evento: "lead.lost", titulo: "Negócio perdido", descricao: "Um negócio foi marcado como perdido", icone: "fechado" },
@@ -115,6 +115,8 @@ export const FONTES_DOS_GATILHOS: readonly FonteDosGatilhos[] = [
 
 const COM_FORMULARIO: ReadonlySet<string> = new Set([
   "lead.created",
+  "lead.tag_added",
+  "contact.tag_added",
   "lead.date_field_due",
   "lead.silent_for",
   "lead.stage_stale",

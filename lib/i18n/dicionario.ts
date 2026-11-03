@@ -19377,6 +19377,15 @@ export const DICIONARIO: Traducoes = {
   "Passaram 24 horas desde a última mensagem da pessoa. O Instagram só aceita mensagem dentro dessa janela.": { es: "Pasaron 24 horas desde el último mensaje de la persona. Instagram solo acepta mensajes dentro de esa ventana." },
   "A pessoa tocou em liberar 3 vezes sem seguir a conta. O direct não foi enviado.": { es: "La persona tocó desbloquear 3 veces sin seguir la cuenta. El mensaje directo no fue enviado." },
   "A pessoa ainda não segue a conta. Ela recebeu o pedido para seguir e o link sai quando tocar em Já estou seguindo.": { es: "La persona todavía no sigue la cuenta. Recibió el pedido para seguir y el enlace sale cuando toque Ya estoy siguiendo." },
+  "Um negócio foi criado em uma determinada origem e etapa": { es: "Se creó un negocio en un origen y etapa determinados" },
+  "O negócio foi criado na origem": { es: "El negocio se creó en el origen" },
+  "E na etapa (opcional)": { es: "Y en la etapa (opcional)" },
+  "Qualquer origem": { es: "Cualquier origen" },
+  "Origem removida": { es: "Origen eliminado" },
+  "Etapa removida": { es: "Etapa eliminada" },
+  "Sem tag escolhida, a automação inicia com qualquer tag.": { es: "Sin etiqueta elegida, la automatización inicia con cualquier etiqueta." },
+  "Escolha a origem antes da etapa.": { es: "Elija el origen antes de la etapa." },
+  "Escolha uma origem e uma etapa válidas.": { es: "Elija un origen y una etapa válidos." },
 };
 
 /**

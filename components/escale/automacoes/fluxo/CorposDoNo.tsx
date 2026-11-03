@@ -7,6 +7,7 @@ import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSes
 import { useT } from "@/hooks/i18n/useT";
 import { usePipelineStages, usePipelines, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
 import type { DadosDaAcao, DadosDasCondicoes, DadosDoGatilho } from "@/lib/automation/desenho-da-regra";
+import { ehGatilhoDeTag } from "@/lib/automation/filtro-do-gatilho";
 import { GATILHO_DE_DATA_DO_FUNIL } from "@/lib/automation/gatilho-de-data-do-funil";
 import { GATILHO_ETAPA_PARADA, GATILHO_SILENCIO } from "@/lib/automation/gatilhos-de-tempo";
 import { opcaoDoEvento } from "@/lib/escale/automacoes/fluxo/gatilhos";
@@ -30,10 +31,21 @@ function useDetalheDoGatilho(dados: DadosDoGatilho): string {
   const { data: fontes } = useWebhookSources();
   const { data: funis } = usePipelines();
   const { evento, tela } = dados;
+  // FORK ESCALE · automações: a etapa do "Negócio criado" (o hook roda sempre; sem origem, não busca).
+  const { data: quadroDoCriado } = usePipelineStages(evento === "lead.created" && tela.criado.pipeline_id ? tela.criado.pipeline_id : null);
   if (evento === "lead.created") {
-    const fonte = fontes?.data?.find((f) => f.id === tela.fonte);
-    return tela.fonte ? (fonte ? fonte.name : t("Fonte removida")) : t("Qualquer fonte");
+    const funil = funis?.data?.find((p) => p.id === tela.criado.pipeline_id);
+    const partes = [tela.criado.pipeline_id ? (funil?.name ?? t("Origem removida")) : t("Qualquer origem")];
+    if (tela.criado.stage_id) {
+      partes.push(quadroDoCriado?.data?.stages.find((s) => s.id === tela.criado.stage_id)?.name ?? t("Etapa removida"));
+    }
+    if (tela.fonte) {
+      const fonte = fontes?.data?.find((f) => f.id === tela.fonte);
+      partes.push(fonte ? fonte.name : t("Fonte removida"));
+    }
+    return partes.join(" · ");
   }
+  if (ehGatilhoDeTag(evento)) return tela.tags.length > 0 ? tela.tags.join(", ") : t("Qualquer tag");
   if (evento === GATILHO_DE_DATA_DO_FUNIL) {
     const funil = funis?.data?.find((p) => p.id === tela.data.pipeline_id);
     const campo = funil ? camposDoFunil(funil.settings ?? null).find((c) => c.key === tela.data.campo) : undefined;

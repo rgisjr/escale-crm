@@ -28,6 +28,14 @@ import {
   configDaEtapaParada,
   configDoSilencio,
 } from "@/lib/automation/gatilhos-de-tempo";
+// FORK ESCALE · automações: o recorte do gatilho de tag e do "Negócio criado".
+import {
+  configDasTagsDoGatilhoSchema,
+  configDoNegocioCriadoSchema,
+  ehGatilhoDeTag,
+  GATILHO_DE_NEGOCIO_CRIADO,
+  MAXIMO_DE_TAGS_NO_GATILHO,
+} from "@/lib/automation/filtro-do-gatilho";
 
 /**
  * Os gatilhos que o motor reconhece, e a entidade que cada um tem que trazer.
@@ -517,6 +525,7 @@ export const createAutomationRuleSchema = z
   .superRefine(exigirConfigDosGatilhosDeTempo)
   .superRefine(exigirPalavraChave)
   .superRefine(exigirIdDaFonteWebhook)
+  .superRefine(exigirRecorteDoGatilho)
   .superRefine(exigirConfigDoComentario)
   .superRefine(exigirConfigDoDirect)
   .superRefine(exigirGatilhoDoPassoDoInstagram)
@@ -535,6 +544,35 @@ function exigirIdDaFonteWebhook(
       path: ["trigger_config", "webhook_source_id"],
       message: "Escolha uma fonte de formulário válida.",
     });
+  }
+}
+
+/**
+ * FORK ESCALE · automações: as tags do gatilho de tag e a origem/etapa do "Negócio criado". Só confere o
+ * que veio; sem `trigger_config` (PATCH parcial) não há o que conferir.
+ */
+function exigirRecorteDoGatilho(
+  regra: { trigger_event?: string; trigger_config?: Record<string, unknown> },
+  ctx: z.RefinementCtx,
+): void {
+  if (!regra.trigger_event || regra.trigger_config === undefined) return;
+  if (ehGatilhoDeTag(regra.trigger_event) && !configDasTagsDoGatilhoSchema.safeParse(regra.trigger_config).success) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["trigger_config", "tags"],
+      message: `Escolha até ${MAXIMO_DE_TAGS_NO_GATILHO} tags, cada uma com até 60 caracteres.`,
+    });
+  }
+  if (regra.trigger_event === GATILHO_DE_NEGOCIO_CRIADO) {
+    const lido = configDoNegocioCriadoSchema.safeParse(regra.trigger_config);
+    if (!lido.success) {
+      const recusa = lido.error.issues[0];
+      ctx.addIssue({
+        code: "custom",
+        path: ["trigger_config"],
+        message: recusa?.code === "custom" ? recusa.message : "Escolha uma origem e uma etapa válidas.",
+      });
+    }
   }
 }
 
@@ -650,6 +688,7 @@ export const updateAutomationRuleSchema = z
     exigirConfigDoDirect(patch, ctx);
   })
   .superRefine(exigirIdDaFonteWebhook)
+  .superRefine(exigirRecorteDoGatilho)
   .superRefine(exigirGatilhoDoPassoDoInstagram)
   .superRefine(exigirAnexoSoNoDirect)
   // Só vê o laço quando o PATCH traz gatilho E ações; o PATCH parcial é

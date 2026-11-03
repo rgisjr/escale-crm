@@ -20,6 +20,8 @@ const TELA: TelaDoGatilho = {
   fonte: null,
   data: { pipeline_id: "", campo: "", dias: "" },
   tempo: { dias: "", direcao: "qualquer", proteger_pela_agenda: false },
+  criado: { pipeline_id: "", stage_id: "" },
+  tags: [],
 };
 
 const RESUMO: ResumoDaAutomacao = {
