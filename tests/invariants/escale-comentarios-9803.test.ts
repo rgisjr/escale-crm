@@ -111,7 +111,8 @@ describe("índices", () => {
     expect(indexExists("idx_escale_disparos_de_comentario_por_comentario")).toBe(true);
     expect(indexExists("idx_escale_disparos_de_comentario_por_autor")).toBe(true);
     expect(indexExists("uq_escale_disparos_de_comentario_comentario")).toBe(true);
-    expect(indexExists("uq_escale_disparos_de_comentario_pessoa")).toBe(true);
+    // 9804 trocou o índice único por pessoa pela função fn_escale_reivindicar_disparo.
+    expect(indexExists("uq_escale_disparos_de_comentario_pessoa")).toBe(false);
   });
 });
 
