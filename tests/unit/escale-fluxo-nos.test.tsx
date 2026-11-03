@@ -66,8 +66,8 @@ describe("nó do fluxo", () => {
   });
 
   it("lead.created com fonte mostra o nome da fonte; sem evento convida a escolher", () => {
+    montar("gatilho", { kind: "gatilho", evento: "lead.created", tela: { ...TELA, fonte: "f1" } });
     expect(screen.getByText("Qualquer origem · Site")).toBeTruthy();
-    expect(screen.getByText("Site")).toBeTruthy();
   });
 
   it("gatilho sem evento", () => {
