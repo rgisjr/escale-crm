@@ -18,6 +18,7 @@ import type { PassoDaPaleta } from "@/lib/escale/automacoes/fluxo/paleta";
 
 import { NoDoFluxo } from "./NoDoFluxo";
 import type { EstadoDoFluxo } from "./useFluxo";
+import { ZOOM_DO_FLUXO } from "./zoom";
 
 // Fora do componente: o React Flow remonta os nós se `nodeTypes` muda a cada render.
 export const nodeTypes: NodeTypes = { gatilho: NoDoFluxo, condicoes: NoDoFluxo, acao: NoDoFluxo };
@@ -96,10 +97,8 @@ export function CanvasDoFluxo({
         deleteKeyCode={null}
         defaultEdgeOptions={OPCOES_DA_ARESTA}
         connectionLineType={ConnectionLineType.Bezier}
-        minZoom={0.25}
-        maxZoom={1.15}
+        {...ZOOM_DO_FLUXO}
         fitView
-        fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
         proOptions={{ hideAttribution: false }}
       >
         <Controls position="bottom-left" showInteractive />

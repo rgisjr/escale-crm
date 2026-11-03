@@ -7,6 +7,7 @@ import type { Desenho } from "@/lib/automation/desenho-da-regra";
 import { paraLigacoes, paraNos } from "@/lib/escale/automacoes/fluxo/nos";
 
 import { OPCOES_DA_ARESTA, nodeTypes } from "../CanvasDoFluxo";
+import { ZOOM_DO_FLUXO } from "../zoom";
 
 /**
  * O CANVAS SÓ DE LEITURA DOS INSIGHTS (07-011, 07-012; fork Escale, Fase 5C; I2): a regra como está
@@ -33,10 +34,8 @@ export function CanvasDosInsights({ desenho, evento }: { desenho: Desenho; event
         panOnDrag
         zoomOnScroll
         deleteKeyCode={null}
-        minZoom={0.25}
-        maxZoom={1.15}
+        {...ZOOM_DO_FLUXO}
         fitView
-        fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
         proOptions={{ hideAttribution: false }}
       >
         <Controls position="bottom-left" showInteractive />
