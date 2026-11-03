@@ -28,6 +28,8 @@ import {
   ligar,
   organizar,
   percorrer,
+  telaDoGatilho,
+  triggerConfigDaTela,
   validarDesenho,
   type CaixaDoDesenho,
   type DadosDaAcao,
@@ -322,5 +324,46 @@ describe("cada problema aparece na caixa que o causou", () => {
     d.caixas.push({ id: ID_DAS_CONDICOES, type: "condicoes", position: { x: 0, y: 0 }, data: { kind: "condicoes", linhas: [] } });
     d.ligacoes.push({ id: "ligacao-9", source: "acao-1", target: ID_DAS_CONDICOES });
     expect(percorrer(d).problemas).toContainEqual({ caixa: ID_DAS_CONDICOES, mensagem: PROBLEMAS.condicoesForaDoLugar });
+  });
+});
+
+describe("FORK ESCALE · Negócio criado e tag no desenho", () => {
+  const FUNIL_A = "11111111-1111-4111-8111-111111111111";
+  const ETAPA_A = "33333333-3333-4333-8333-333333333333";
+
+  it("lê a origem, a etapa e as tags gravadas", () => {
+    const tela = telaDoGatilho({ pipeline_id: FUNIL_A, stage_id: ETAPA_A, tags: ["vip"] });
+    expect(tela.criado).toEqual({ pipeline_id: FUNIL_A, stage_id: ETAPA_A });
+    expect(tela.tags).toEqual(["vip"]);
+    expect(telaDoGatilho(null).criado).toEqual({ pipeline_id: "", stage_id: "" });
+    expect(telaDoGatilho(null).tags).toEqual([]);
+  });
+
+  it("Negócio criado grava origem e etapa; vazio não cria chave nova", () => {
+    const base = telaDoGatilho(null);
+    expect(triggerConfigDaTela("lead.created", { ...base, criado: { pipeline_id: FUNIL_A, stage_id: ETAPA_A } }, null)).toEqual({
+      webhook_source_id: null,
+      pipeline_id: FUNIL_A,
+      stage_id: ETAPA_A,
+    });
+    expect(triggerConfigDaTela("lead.created", base, null)).toEqual({ webhook_source_id: null });
+  });
+
+  it("limpar a origem que estava gravada grava null", () => {
+    const gravada = { trigger_event: "lead.created", trigger_config: { pipeline_id: FUNIL_A, stage_id: ETAPA_A } };
+    const tela = { ...telaDoGatilho(gravada.trigger_config), criado: { pipeline_id: "", stage_id: "" } };
+    expect(triggerConfigDaTela("lead.created", tela, gravada)).toEqual({
+      webhook_source_id: null,
+      pipeline_id: null,
+      stage_id: null,
+    });
+  });
+
+  it("tag grava as tags escolhidas; lista vazia sem tags gravadas não cria a chave", () => {
+    const base = telaDoGatilho(null);
+    expect(triggerConfigDaTela("contact.tag_added", { ...base, tags: ["vip"] }, null)).toEqual({ tags: ["vip"] });
+    expect(triggerConfigDaTela("lead.tag_added", base, null)).toEqual({});
+    const gravada = { trigger_event: "lead.tag_added", trigger_config: { tags: ["vip"] } };
+    expect(triggerConfigDaTela("lead.tag_added", base, gravada)).toEqual({ tags: [] });
   });
 });

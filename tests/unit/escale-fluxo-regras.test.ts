@@ -34,6 +34,8 @@ const gatilho = caixa("gatilho", {
     fonte: null,
     data: { pipeline_id: "", campo: "", dias: "7" },
     tempo: { dias: "7", direcao: "da_equipe", proteger_pela_agenda: false },
+    criado: { pipeline_id: "", stage_id: "" },
+    tags: [],
   },
 });
 const condicoes = caixa("condicoes", {
@@ -96,6 +98,7 @@ describe("gatilhos", () => {
     const comFormulario = TRIGGER_EVENTS.filter((e) => precisaDeFormulario(e));
     expect([...comFormulario].sort()).toEqual([
       "comment.received",
+      "contact.tag_added",
       "instagram.message_received",
       "instagram.story_mention",
       "instagram.story_reply",
@@ -103,6 +106,7 @@ describe("gatilhos", () => {
       "lead.date_field_due",
       "lead.silent_for",
       "lead.stage_stale",
+      "lead.tag_added",
     ]);
   });
 });

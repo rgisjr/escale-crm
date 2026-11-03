@@ -29,6 +29,8 @@ const TELA: TelaDoGatilho = {
   fonte: null,
   data: { pipeline_id: "", campo: "", dias: "7" },
   tempo: { dias: "7", direcao: "da_equipe", proteger_pela_agenda: false },
+  criado: { pipeline_id: "", stage_id: "" },
+  tags: [],
 };
 
 const RESUMO: ResumoDaAutomacao = {

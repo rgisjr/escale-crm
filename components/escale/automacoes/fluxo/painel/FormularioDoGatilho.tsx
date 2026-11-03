@@ -3,8 +3,11 @@
 import { Campo, CampoDeTexto } from "@/components/escale/origens/JanelaDaCasca";
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
+import { SeletorDeChipsDaCasca } from "@/components/escale/ui/SeletorDeChipsDaCasca";
+import { useVocabularioDeTags } from "@/hooks/escale/useVocabularioDeTags";
 import { useT } from "@/hooks/i18n/useT";
-import { usePipelines, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
+import { usePipelineStages, usePipelines, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
+import { ehGatilhoDeTag } from "@/lib/automation/filtro-do-gatilho";
 import { DIAS_MAX, DIAS_MIN, GATILHO_DE_DATA_DO_FUNIL } from "@/lib/automation/gatilho-de-data-do-funil";
 import {
   DIRECOES_DO_SILENCIO,
@@ -40,6 +43,10 @@ export function FormularioDoGatilho({
   const { data: fontesRes } = useWebhookSources();
   const funis = funisRes?.data ?? [];
   const fontes = fontesRes?.data ?? [];
+  // FORK ESCALE · automações: as etapas da origem do "Negócio criado" e as tags da organização.
+  const { data: quadroDoCriado } = usePipelineStages(evento === "lead.created" && tela.criado.pipeline_id ? tela.criado.pipeline_id : null);
+  const etapasDoCriado = quadroDoCriado?.data?.stages ?? [];
+  const { data: vocabulario = [] } = useVocabularioDeTags();
   const camposDeData = camposDoFunil(funis.find((p) => p.id === tela.data.pipeline_id)?.settings ?? null).filter(
     (c) => c.type === "date",
   );
@@ -47,23 +54,65 @@ export function FormularioDoGatilho({
   return (
     <div className="flex flex-col gap-5">
       {evento === "lead.created" ? (
-        <Campo rotulo={t("Fonte do formulário")}>
-          <SeletorDaCasca
-            aria-label={t("Fonte do formulário")}
-            aparencia="janela"
-            valor={tela.fonte ?? ""}
-            vazio={t("Qualquer fonte")}
-            aoMudar={(v) => aoMudarTela({ ...tela, fonte: v === "" ? null : v })}
-            opcoes={[
-              ...(tela.fonte && !fontes.some((f) => f.id === tela.fonte)
-                ? [{ valor: tela.fonte, rotulo: t("Fonte removida") }]
-                : []),
-              ...fontes.map((f) => ({ valor: f.id, rotulo: f.name })),
-            ]}
+        <>
+          {/* FORK ESCALE · automações: os dois campos do "Negócio criado" da Clint; a fonte do formulário fica embaixo (regras gravadas usam). */}
+          <Campo rotulo={t("O negócio foi criado na origem")}>
+            <SeletorDaCasca
+              aria-label={t("O negócio foi criado na origem")}
+              aparencia="janela"
+              valor={tela.criado.pipeline_id}
+              vazio={t("Qualquer origem")}
+              aoMudar={(v) => aoMudarTela({ ...tela, criado: { pipeline_id: v, stage_id: "" } })}
+              opcoes={[
+                ...(tela.criado.pipeline_id && !funis.some((p) => p.id === tela.criado.pipeline_id)
+                  ? [{ valor: tela.criado.pipeline_id, rotulo: t("Origem removida") }]
+                  : []),
+                ...funis.map((p) => ({ valor: p.id, rotulo: p.name })),
+              ]}
+            />
+          </Campo>
+          <Campo rotulo={t("E na etapa (opcional)")}>
+            <SeletorDaCasca
+              aria-label={t("E na etapa (opcional)")}
+              aparencia="janela"
+              valor={tela.criado.stage_id}
+              vazio={t("Qualquer etapa")}
+              desabilitado={!tela.criado.pipeline_id}
+              aoMudar={(v) => aoMudarTela({ ...tela, criado: { ...tela.criado, stage_id: v } })}
+              opcoes={etapasDoCriado.map((s) => ({ valor: s.id, rotulo: s.name }))}
+            />
+          </Campo>
+          <Campo rotulo={t("Fonte do formulário")}>
+            <SeletorDaCasca
+              aria-label={t("Fonte do formulário")}
+              aparencia="janela"
+              valor={tela.fonte ?? ""}
+              vazio={t("Qualquer fonte")}
+              aoMudar={(v) => aoMudarTela({ ...tela, fonte: v === "" ? null : v })}
+              opcoes={[
+                ...(tela.fonte && !fontes.some((f) => f.id === tela.fonte)
+                  ? [{ valor: tela.fonte, rotulo: t("Fonte removida") }]
+                  : []),
+                ...fontes.map((f) => ({ valor: f.id, rotulo: f.name })),
+              ]}
+            />
+            <p className="text-[12px] text-casca-suave">
+              {t("Escolha uma fonte para limitar esta automação a um formulário. Qualquer fonte mantém o comportamento geral.")}
+            </p>
+          </Campo>
+        </>
+      ) : null}
+
+      {ehGatilhoDeTag(evento) ? (
+        <Campo rotulo={t("Tags")}>
+          {/* FORK ESCALE · automações: sem print do formulário da Clint; provisório (ver o plano, decisão 8). */}
+          <SeletorDeChipsDaCasca
+            aria-label={t("Tags")}
+            valores={tela.tags}
+            opcoes={[...new Set([...vocabulario, ...tela.tags])]}
+            aoMudar={(tags) => aoMudarTela({ ...tela, tags })}
           />
-          <p className="text-[12px] text-casca-suave">
-            {t("Escolha uma fonte para limitar esta automação a um formulário. Qualquer fonte mantém o comportamento geral.")}
-          </p>
+          <p className="text-[12px] text-casca-suave">{t("Sem tag escolhida, a automação inicia com qualquer tag.")}</p>
         </Campo>
       ) : null}
 

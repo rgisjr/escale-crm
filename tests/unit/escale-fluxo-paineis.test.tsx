@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
+vi.mock("@/hooks/escale/useVocabularioDeTags", () => ({ useVocabularioDeTags: () => ({ data: ["vip", "cliente"] }) }));
 vi.mock("@/hooks/webhooks/useWebhookSources", () => ({
   useWebhookSources: () => ({ data: { data: [{ id: "f1", name: "Site" }, { id: "f2", name: "Landing" }] } }),
   usePipelines: () => ({ data: { data: [{ id: "p1", name: "Vendas", is_default: true, settings: null }] } }),
@@ -105,13 +106,34 @@ describe("PainelDoGatilho", () => {
     expect(screen.getByRole("checkbox", { name: "Não gerar lembrete quando o cliente tiver compromisso marcado" })).toBeTruthy();
   });
 
-  it("'Negócio criado pelo formulário' abre 'Fonte do formulário' com 'Qualquer fonte'", async () => {
-    montar(gatilho("contact.tag_added"));
+  it("'Negócio criado' abre origem, etapa (desligada sem origem) e a fonte do formulário", async () => {
+    const aoTrocar = montar(gatilho("contact.tag_added"));
     await userEvent.click(screen.getByRole("button", { name: "Trocar gatilho" }));
     await userEvent.click(screen.getByRole("button", { name: /Negócios/ }));
-    await userEvent.click(screen.getByText("Negócio criado pelo formulário"));
-    expect(screen.getByText("Fonte do formulário")).toBeTruthy();
+    expect(screen.getByText("Um negócio foi criado em uma determinada origem e etapa")).toBeTruthy();
+    await userEvent.click(screen.getByText("Negócio criado"));
+    expect(screen.getByRole("combobox", { name: "O negócio foi criado na origem" }).textContent).toContain("Qualquer origem");
+    expect(screen.getByRole("combobox", { name: "E na etapa (opcional)" }).textContent).toContain("Qualquer etapa");
     expect(screen.getByRole("combobox", { name: "Fonte do formulário" }).textContent).toContain("Qualquer fonte");
+    await userEvent.click(screen.getByRole("combobox", { name: "O negócio foi criado na origem" }));
+    await userEvent.click(screen.getByRole("option", { name: "Vendas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(aoTrocar).toHaveBeenCalledWith(
+      "lead.created",
+      expect.objectContaining({ criado: { pipeline_id: "p1", stage_id: "" } }),
+    );
+  });
+
+  it("'Tag adicionada ao contato' abre 'Tags' e guarda a escolha", async () => {
+    const aoTrocar = montar(gatilho("lead.won"));
+    await userEvent.click(screen.getByRole("button", { name: "Trocar gatilho" }));
+    await userEvent.click(screen.getByRole("button", { name: /Contatos/ }));
+    await userEvent.click(screen.getByText("Tag adicionada ao contato"));
+    expect(screen.getByText("Sem tag escolhida, a automação inicia com qualquer tag.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("combobox", { name: "Tags" }));
+    await userEvent.click(screen.getByRole("option", { name: "cliente" }));
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(aoTrocar).toHaveBeenCalledWith("contact.tag_added", expect.objectContaining({ tags: ["cliente"] }));
   });
 
   it("com condições preenchidas, trocar o evento pede confirmação antes de chamar aoTrocar", async () => {
