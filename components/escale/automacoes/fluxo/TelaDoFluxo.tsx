@@ -164,6 +164,7 @@ export function TelaDoFluxo({
           key={noAberto.id}
           dados={dados}
           evento={fluxo.evento}
+          fuso={fuso}
           aoCancelar={fechar}
           aoSalvar={aplicarNoPainel}
           aoMudarRascunho={setPainelSujo}

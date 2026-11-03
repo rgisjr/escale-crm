@@ -12,8 +12,12 @@ import {
   type DadosDasCondicoes,
   type LinhaDeCondicao,
 } from "@/lib/automation/desenho-da-regra";
+import { ehCampoDeHorario } from "@/lib/automation/condicoes-de-horario";
+import { FUSO_PADRAO } from "@/lib/tempo/fusos";
 import { Plus, Trash2 } from "@/lib/ui/icons-da-casca";
 
+import { LinhaDeHorario } from "./condicoes/LinhaDeHorario";
+import { SeletorDeCondicao, type EscolhaDaCondicao } from "./condicoes/SeletorDeCondicao";
 import { PainelDoNo, ProblemasDoPainel } from "./PainelDoNo";
 import { useRascunho } from "./useRascunho";
 
@@ -25,12 +29,15 @@ import { useRascunho } from "./useRascunho";
 export function PainelDasCondicoes({
   dados,
   evento,
+  fuso = FUSO_PADRAO,
   aoCancelar,
   aoSalvar,
   aoMudarRascunho,
 }: {
   dados: DadosDasCondicoes;
   evento: string;
+  /** O fuso da organização (o "(UTC -3)" do horário). */
+  fuso?: string;
   aoCancelar: () => void;
   aoSalvar: (dados: DadosDaCaixa) => void;
   aoMudarRascunho?: (sujo: boolean) => void;
@@ -45,6 +52,16 @@ export function PainelDasCondicoes({
   const linhas = rascunho;
   const mudar = (i: number, patch: Partial<LinhaDeCondicao>) =>
     setRascunho(linhas.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  // FORK ESCALE · automações: o "+ Adicionar condição" abre o seletor da Clint.
+  function adicionar(escolha: EscolhaDaCondicao) {
+    const nova: LinhaDeCondicao =
+      escolha.tipo === "campo"
+        ? { field: escolha.campo.value, op: escolha.campo.op, value: "" }
+        : escolha.tipo === "avancado"
+          ? { field: "", op: "eq", value: "", avancado: true }
+          : { field: escolha.campo, op: escolha.op, value: escolha.value };
+    setRascunho([...linhas, nova]);
+  }
 
   return (
     <PainelDoNo
@@ -63,6 +80,18 @@ export function PainelDasCondicoes({
           <p className="text-[12px] text-casca-suave">{t("Escolha o gatilho primeiro: cada gatilho tem os seus campos.")}</p>
         ) : null}
         {linhas.map((linha, i) => {
+          if (ehCampoDeHorario(linha.field)) {
+            return (
+              <LinhaDeHorario
+                key={i}
+                indice={i}
+                linha={linha}
+                fuso={fuso}
+                aoMudar={(op, value) => mudar(i, { op, value })}
+                aoRemover={() => setRascunho(linhas.filter((_, j) => j !== i))}
+              />
+            );
+          }
           // Linha nova começa na lista; só cai no modo avançado sozinha quando o campo gravado
           // não está na lista curada — a mesma regra do editor em lista.
           const avancado = linha.avancado ?? (linha.field !== "" && !campos.some((c) => c.value === linha.field));
@@ -137,17 +166,16 @@ export function PainelDasCondicoes({
             </div>
           );
         })}
-        <div className="flex justify-end">
+        <SeletorDeCondicao campos={campos} fuso={fuso} aoEscolher={adicionar}>
           <button
             type="button"
-            aria-label={t("Adicionar condição")}
             disabled={!evento || linhas.length >= MAXIMO_DE_CONDICOES}
-            onClick={() => setRascunho([...linhas, { field: "", op: "eq", value: "" }])}
-            className="grid size-9 place-items-center rounded-md border border-casca-divisoria text-casca-texto hover:bg-casca-raia disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-casca-divisoria text-[13px] font-medium text-casca-marca-forte hover:bg-casca-raia disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Plus size={16} aria-hidden />
+            <Plus size={14} aria-hidden />
+            {t("Adicionar condição")}
           </button>
-        </div>
+        </SeletorDeCondicao>
       </div>
       <p className="mt-3 text-[11px] text-casca-suave">
         {t("Linhas sem campo ou sem valor são descartadas ao salvar. No máximo 10.")}

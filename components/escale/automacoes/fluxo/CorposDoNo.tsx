@@ -7,9 +7,11 @@ import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSes
 import { useT } from "@/hooks/i18n/useT";
 import { usePipelineStages, usePipelines, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
 import type { DadosDaAcao, DadosDasCondicoes, DadosDoGatilho } from "@/lib/automation/desenho-da-regra";
+import { ehCampoDeHorario } from "@/lib/automation/condicoes-de-horario";
 import { ehGatilhoDeTag } from "@/lib/automation/filtro-do-gatilho";
 import { GATILHO_DE_DATA_DO_FUNIL } from "@/lib/automation/gatilho-de-data-do-funil";
 import { GATILHO_ETAPA_PARADA, GATILHO_SILENCIO } from "@/lib/automation/gatilhos-de-tempo";
+import { resumoDoHorario, textoDoResumoDoHorario } from "@/lib/escale/automacoes/fluxo/condicoes";
 import { opcaoDoEvento } from "@/lib/escale/automacoes/fluxo/gatilhos";
 import { acoesDoGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { tituloDaAcaoNoFluxo } from "@/lib/escale/automacoes/fluxo/paleta";
@@ -108,6 +110,18 @@ export function CorpoDasCondicoes({ dados, evento }: { dados: DadosDasCondicoes;
         <p className="text-[12px] text-casca-suave">{t("Nenhuma condição completa: roda em todo evento")}</p>
       ) : (
         completas.map((l, i) => {
+          if (ehCampoDeHorario(l.field)) {
+            // FORK ESCALE · automações: "Horário atual" com a frase e o intervalo da Clint.
+            const resumo = resumoDoHorario(l);
+            return (
+              <div key={i} className="rounded-lg bg-casca-raia px-3 py-2" data-testid="condicao-do-no">
+                <p>
+                  {t("Horário atual")} <u className="font-semibold">{resumo ? t(resumo.frase) : t("Revise o horário da condição.")}</u>
+                </p>
+                {resumo ? <p className="text-[12px] text-casca-texto-2">{textoDoResumoDoHorario(l.field, resumo, t)}</p> : null}
+              </div>
+            );
+          }
           const campo = campos.find((c) => c.value === l.field);
           const op = t(campo?.lista && l.op === "contains" ? "tem a tag" : OP_LABELS[l.op as Op]);
           const valor =
