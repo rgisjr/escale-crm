@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,6 +34,20 @@ const tpl = (extra: Record<string, unknown> = {}) => ({
   updated_at: "2026-10-18T10:00:00Z",
   ...extra,
 });
+/** As colunas do `Row` de uma tabela em `lib/database.types.ts` (o mesmo jeito da cerca `variaveis-colunas-existem`). */
+function colunasDoRow(tabela: string): Set<string> {
+  const tipos = readFileSync(join(process.cwd(), "lib/database.types.ts"), "utf8");
+  const inicio = tipos.indexOf(`\n      ${tabela}: {\n        Row: {`);
+  if (inicio < 0) throw new Error(`tabela ${tabela} fora de database.types.ts`);
+  const fim = tipos.indexOf("\n        }", inicio + 10);
+  return new Set([...tipos.slice(inicio, fim).matchAll(/^\s{10}(\w+)\??:/gm)].map((m) => m[1]!));
+}
+const conversaWaha = {
+  id: CV,
+  organization_id: ORG_ID,
+  channel_session_id: "cs",
+  channel_sessions: { provider: "waha", social_platform: null },
+};
 function usar(tabelas: Parameters<typeof bancoPorTabela>[0], pode: Record<string, boolean> = {}) {
   const sessao = bancoPorTabela(tabelas, {
     rpc: (nome, args) =>
@@ -240,5 +257,50 @@ describe("as da conversa", () => {
         (x) => x.id,
       ),
     ).toEqual([T1, "t2"]);
+  });
+
+  it("o embed de channel_sessions só pede colunas que existem (social_platform vem de metadata)", async () => {
+    const { sessao } = usar({
+      conversations: [conversaWaha],
+      crm_setor_da_conversa: [],
+      crm_setor_do_dispositivo: [],
+      message_templates: [tpl({ owner_user_id: null })],
+      crm_respostas_rapidas_extras: [],
+      crm_respostas_rapidas_setores: [],
+    });
+    const r = await DA_CONVERSA(req("GET", `http://x?conversation_id=${CV}`));
+    expect(r.status).toBe(200);
+    const from = sessao.db.from;
+    const i = from.mock.calls.findIndex(([t]) => t === "conversations");
+    const cadeia = from.mock.results[i]!.value as { select: { mock: { calls: unknown[][] } } };
+    const select = String(cadeia.select.mock.calls[0]![0]);
+    const embed = /channel_sessions:channel_session_id\s*\(([^)]*)\)/.exec(select)?.[1] ?? "";
+    const colunas = embed
+      .split(",")
+      .map((c) => c.trim().split(":").pop()!.split("->")[0]!.trim())
+      .filter(Boolean);
+    expect(colunas).toEqual(expect.arrayContaining(["provider", "metadata"]));
+    const existentes = colunasDoRow("channel_sessions");
+    expect(colunas.filter((c) => !existentes.has(c))).toEqual([]);
+  });
+
+  it("erro do banco ao ler a conversa vira 500, não 'Conversa não encontrada'", async () => {
+    const { sessao } = usar({
+      conversations: [conversaWaha],
+      message_templates: [],
+    });
+    const original = sessao.db.from.getMockImplementation()!;
+    sessao.db.from.mockImplementation((tabela: string) => {
+      const cadeia = original(tabela) as Record<string, unknown>;
+      if (tabela === "conversations") {
+        cadeia.maybeSingle = vi.fn(async () => ({
+          data: null,
+          error: { code: "42703", message: "column channel_sessions_1.social_platform does not exist" },
+        }));
+      }
+      return cadeia as never;
+    });
+    const r = await DA_CONVERSA(req("GET", `http://x?conversation_id=${CV}`));
+    expect(r.status).toBe(500);
   });
 });

@@ -25,14 +25,16 @@ export async function GET(req: NextRequest): Promise<Response> {
     return fail("validation_failed", "conversation_id inválido", 422, { requestId });
   const supabase = await createClient();
   try {
-    const { data: conversa } = await supabase
+    // `channel_sessions` não tem coluna `social_platform`: a rede social fica em `metadata` (igual a /conversations).
+    const { data: conversa, error: erroDaConversa } = await supabase
       .from("conversations")
       .select(
-        "id, channel_session_id, assigned_to_user_id, channel_sessions:channel_session_id ( provider, social_platform )",
+        "id, channel_session_id, assigned_to_user_id, channel_sessions:channel_session_id ( provider, social_platform:metadata->>social_platform )",
       )
       .eq("organization_id", authz.org.orgId)
       .eq("id", conversationId)
       .maybeSingle();
+    if (erroDaConversa) throw new Error(erroDaConversa.message);
     if (!conversa) return fail("not_found", "Conversa não encontrada.", 404, { requestId });
     const c = conversa as unknown as {
       id: string;
