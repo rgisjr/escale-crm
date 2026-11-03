@@ -62456,7 +62456,7 @@ create index if not exists idx_escale_disparos_de_comentario_pessoa
 -- Decide e grava o disparo de UM comentário numa regra, sem corrida entre dois
 -- comentários da mesma pessoa: a trava é por (regra, rede, autor).
 -- Devolve 'novo' | 'repetido' | 'ja_existe' (reentrega do mesmo comentário).
--- p_intervalo_horas null = "uma vez por pessoa".
+-- p_intervalo_horas null = "uma vez por pessoa" (linha `fora_do_publico` não conta: nada foi enviado).
 create or replace function public.fn_escale_reivindicar_disparo(p_linha jsonb, p_intervalo_horas integer)
 returns text
 language plpgsql
@@ -62483,7 +62483,8 @@ begin
 
   select max(d.created_at) into v_ultimo
     from public.escale_disparos_de_comentario d
-   where d.rule_id = v_rule and d.plataforma = v_plat and d.autor_id = v_autor and not d.repetido;
+   where d.rule_id = v_rule and d.plataforma = v_plat and d.autor_id = v_autor and not d.repetido
+      and d.direct <> 'fora_do_publico';
 
   v_repetido := v_ultimo is not null
     and (p_intervalo_horas is null or v_ultimo > now() - make_interval(hours => p_intervalo_horas));
@@ -62535,6 +62536,47 @@ $$;
 
 revoke all on function public.fn_escale_resumo_dos_comentarios(uuid, timestamptz) from public, anon;
 grant execute on function public.fn_escale_resumo_dos_comentarios(uuid, timestamptz) to authenticated, service_role;
+
+notify pgrst, 'reload schema';
+
+-- ---- FORK ESCALE · LGPD dos comentários (migration 9805) ----
+
+create or replace function public.fn_escale_redigir_comentarios_do_contato()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.escale_disparos_de_comentario d
+     set autor_usuario = null,
+         autor_nome = null,
+         autor_id = 'anonimizado',
+         texto = '(anonimizado)',
+         resposta_publicada = null,
+         direct_pendente = null,
+         updated_at = now()
+   where d.organization_id = new.organization_id
+     and d.contact_id = new.id;
+
+  update public.escale_acoes_no_comentario a
+     set texto = null,
+         autor_id = null,
+         updated_at = now()
+   where a.organization_id = new.organization_id
+     and a.contact_id = new.id;
+  return null;
+end;
+$$;
+
+revoke all on function public.fn_escale_redigir_comentarios_do_contato() from public, anon, authenticated;
+
+drop trigger if exists trg_escale_redigir_comentarios_ao_anonimizar on public.contacts;
+create trigger trg_escale_redigir_comentarios_ao_anonimizar
+  after update of is_anonymized on public.contacts
+  for each row
+  when (new.is_anonymized is true and old.is_anonymized is distinct from true)
+  execute function public.fn_escale_redigir_comentarios_do_contato();
 
 notify pgrst, 'reload schema';
 

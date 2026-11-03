@@ -79,7 +79,7 @@ export async function liberarDirect(
     const config = configDoComentarioSchema.safeParse((regra as { trigger_config?: unknown } | null)?.trigger_config);
     const credencial = await zernioCredsForAccountId(admin, { organizationId: e.organizationId, accountId: e.contaId });
     if (!pendente.success || !config.success || !config.data.publico || !credencial) {
-      await atualizar(admin, disparo.id, { direct: "falhou", motivo: credencial ? "config_ilegivel" : "credencial_indisponivel", direct_pendente: null });
+      await atualizar(admin, e.organizationId, disparo.id, { direct: "falhou", motivo: credencial ? "config_ilegivel" : "credencial_indisponivel", direct_pendente: null });
       return "desistiu";
     }
 
@@ -90,6 +90,16 @@ export async function liberarDirect(
       plataforma: disparo.plataforma,
     };
     const base = { conversaZernioId: e.conversaZernioId, accountId: e.contaId };
+
+    // Dois toques quase juntos leem o mesmo estado: só quem trocar a linha primeiro segue (senão o link sai em dobro).
+    const proximoToque = disparo.toques_no_liberar + 1;
+    const desiste = e.seguidor !== true && proximoToque >= MAXIMO_DE_TOQUES_NO_LIBERAR;
+    const ganhou = await reivindicar(admin, e.organizationId, disparo, e.seguidor === true
+      ? { direct: "pendente" }
+      : desiste
+        ? { direct: "falhou", motivo: "nao_seguiu", direct_pendente: null, toques_no_liberar: proximoToque }
+        : { toques_no_liberar: proximoToque });
+    if (!ganhou) return "ignorado";
 
     if (e.seguidor === true) {
       const botoes = pendente.data.botoes as BotaoDoDirect[];
@@ -104,7 +114,7 @@ export async function liberarDirect(
       const enviada = await enviarDirect(credencial.apiKey, { ...base, texto: pendente.data.texto, botoes, anexo: pendente.data.anexo });
       if (!enviada.ok) {
         const motivo = motivoDoErro(enviada.status, enviada.corpo);
-        await atualizar(admin, disparo.id, { direct: "falhou", motivo });
+        await atualizar(admin, e.organizationId, disparo.id, { direct: "falhou", motivo });
         if (linhaId) await falharDirect(admin, e.organizationId, linhaId, EXPLICACAO_DO_MOTIVO[motivo]);
         return "desistiu";
       }
@@ -134,7 +144,7 @@ export async function liberarDirect(
         commentId: disparo.comentario_id,
         accountId: e.contaId,
       });
-      await atualizar(admin, disparo.id, {
+      await atualizar(admin, e.organizationId, disparo.id, {
         direct: "enviado",
         direct_pendente: null,
         ...(messageId ? { direct_message_id: messageId } : {}),
@@ -145,11 +155,7 @@ export async function liberarDirect(
     }
 
     // Não segue (ou o Instagram não informou): pede de novo, até o limite.
-    const toques = disparo.toques_no_liberar + 1;
-    if (toques >= MAXIMO_DE_TOQUES_NO_LIBERAR) {
-      await atualizar(admin, disparo.id, { direct: "falhou", motivo: "nao_seguiu", direct_pendente: null, toques_no_liberar: toques });
-      return "desistiu";
-    }
+    if (desiste) return "desistiu";
     const { liberar } = config.data.publico;
     const botao: BotaoDoDirect = { tipo: "postback", titulo: liberar.titulo, payload: payloadDoLiberar(disparo.id) };
     const linhaId = await gravarDirectNaConversa(admin, {
@@ -168,7 +174,6 @@ export async function liberarDirect(
         await falharDirect(admin, e.organizationId, linhaId, EXPLICACAO_DO_MOTIVO[motivoDoErro(reenvio.status, reenvio.corpo)]);
       }
     }
-    await atualizar(admin, disparo.id, { toques_no_liberar: toques });
     return "pediu_de_novo";
   } catch (erro) {
     logger.error("[comentarios.liberar] liberar falhou", { erro: erro instanceof Error ? erro.message : String(erro) });
@@ -176,10 +181,38 @@ export async function liberarDirect(
   }
 }
 
-async function atualizar(admin: SupabaseClient, disparoId: string, campos: Record<string, unknown>): Promise<void> {
+/** Troca a linha só se ela ainda está como foi lida (aguardando e no mesmo toque). true = esta chamada ganhou. */
+async function reivindicar(
+  admin: SupabaseClient,
+  organizationId: string,
+  disparo: Pick<LinhaDoDisparo, "id" | "toques_no_liberar">,
+  campos: Record<string, unknown>,
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from(TABELA)
+    .update({ ...campos, updated_at: new Date().toISOString() })
+    .eq("organization_id", organizationId)
+    .eq("id", disparo.id)
+    .eq("direct", "aguardando_seguir")
+    .eq("toques_no_liberar", disparo.toques_no_liberar)
+    .select("id");
+  if (error) {
+    logger.error("[comentarios.liberar] reivindicar toque falhou", { erro: error.message });
+    return false;
+  }
+  return (data ?? []).length > 0;
+}
+
+async function atualizar(
+  admin: SupabaseClient,
+  organizationId: string,
+  disparoId: string,
+  campos: Record<string, unknown>,
+): Promise<void> {
   const { error } = await admin
     .from(TABELA)
     .update({ ...campos, updated_at: new Date().toISOString() })
+    .eq("organization_id", organizationId)
     .eq("id", disparoId);
   if (error) logger.error("[comentarios.liberar] atualizar disparo falhou", { erro: error.message });
 }

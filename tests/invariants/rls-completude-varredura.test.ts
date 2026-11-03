@@ -583,6 +583,18 @@ const PROVA_PROPRIA: readonly Excecao[] = [
   //
   // NÃO é DEBITO_CONHECIDO: há prova comportamental, escrita no mesmo PR.
   {
+    tabela: "escale_disparos_de_comentario",
+    razao:
+      "tests/invariants/escale-comentarios-9801.test.ts — a organização lê as linhas dela e não as da " +
+      "outra, anon não lê e authenticated não insere, atualiza nem apaga (só o servidor grava).",
+  },
+  {
+    tabela: "escale_acoes_no_comentario",
+    razao:
+      "tests/invariants/escale-comentarios-9803.test.ts, describe 'RLS' — o membro lê as linhas da " +
+      "organização e não as da outra, anon não lê, authenticated não escreve.",
+  },
+  {
     tabela: "ad_platform_connections",
     razao:
       "tests/invariants/credencial-de-anuncios-e-server-side.test.ts — privilégio " +

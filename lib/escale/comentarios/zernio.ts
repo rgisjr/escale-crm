@@ -42,7 +42,8 @@ export type MotivoDoDirect =
   | "provedor_indisponivel"
   | "credencial_indisponivel"
   | "janela_fechada"
-  | "nao_seguiu";
+  | "nao_seguiu"
+  | "mensagem_grande_demais";
 
 const TEMPO_LIMITE_MS = 15_000;
 
@@ -262,6 +263,8 @@ export const EXPLICACAO_DO_MOTIVO: Record<MotivoDoDirect, string> = {
   provedor_indisponivel: "O Zernio não respondeu agora. A mensagem não foi enviada.",
   janela_fechada:
     "Passaram 24 horas desde a última mensagem da pessoa. O Instagram só aceita mensagem dentro dessa janela.",
+  mensagem_grande_demais:
+    "A mensagem com os botões é grande demais para o Siga para liberar. Encurte o texto ou os links e salve de novo.",
   nao_seguiu: "A pessoa tocou em liberar 3 vezes sem seguir a conta. O direct não foi enviado.",
   credencial_indisponivel: "A chave do Zernio desta conta não está disponível. Reconecte a conta em Canais.",
 };

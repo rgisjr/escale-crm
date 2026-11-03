@@ -24,10 +24,14 @@ const webhookSchema = z.object({
       name: textoOuNulo,
       isOwnAccount: z.boolean().nullish().transform((v) => v ?? false),
       /** FORK ESCALE · Fase 10D (D12): o Instagram só informa quando quer; ausente = não informado. */
+      // Lido à parte e sem recusar: perfil fora do formato vira "não informado", não comentário perdido.
       instagramProfile: z
-        .object({ isFollower: z.boolean().nullish().transform((v) => v ?? null) })
-        .nullish()
-        .transform((v) => v?.isFollower ?? null),
+        .unknown()
+        .optional()
+        .transform((v) => {
+          const f = v && typeof v === "object" ? (v as { isFollower?: unknown }).isFollower : null;
+          return typeof f === "boolean" ? f : null;
+        }),
     }),
   }),
   post: z

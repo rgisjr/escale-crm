@@ -61,3 +61,19 @@ describe("lerComentarioDoWebhook", () => {
     expect(lerComentarioDoWebhook(sem)?.publicacao).toEqual({ legenda: null, miniatura: null, link: null });
   });
 });
+
+describe("seguidor (10D, D12)", () => {
+  const comPerfil = (instagramProfile: unknown) => {
+    const p = completo() as { comment: { author: Record<string, unknown> } };
+    p.comment.author = { ...p.comment.author, instagramProfile };
+    return p;
+  };
+  it("lê isFollower; ausente ou fora do formato = não informado, sem perder o comentário", () => {
+    expect(lerComentarioDoWebhook(comPerfil({ isFollower: true }))?.autor.seguidor).toBe(true);
+    expect(lerComentarioDoWebhook(comPerfil({ isFollower: false }))?.autor.seguidor).toBe(false);
+    expect(lerComentarioDoWebhook(comPerfil({}))?.autor.seguidor).toBeNull();
+    expect(lerComentarioDoWebhook(comPerfil(null))?.autor.seguidor).toBeNull();
+    expect(lerComentarioDoWebhook(comPerfil("lixo"))?.autor.seguidor).toBeNull();
+    expect(lerComentarioDoWebhook(comPerfil({ isFollower: "sim" }))?.autor.seguidor).toBeNull();
+  });
+});

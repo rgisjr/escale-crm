@@ -19,6 +19,11 @@ const linhas = [
     },
   },
   { id: "c2", provider: "waha", metadata: null },
+  {
+    id: "c3",
+    provider: "zernio_social",
+    metadata: { social_platform: "instagram", social_webhook_id: "wh-1", ai_test_phone_numbers: ["+5511988887777"] },
+  },
 ];
 
 vi.mock("@/lib/auth/server", () => ({
@@ -47,7 +52,14 @@ describe("GET /api/v1/channel-sessions — a lista de qualquer membro", () => {
     const res = await GET();
     expect(res.status).toBe(200);
     const corpo = (await res.json()) as { data: Array<{ id: string; metadata: unknown }> };
-    expect(corpo.data.map((c) => c.metadata)).toEqual([{ disabled: true }, { disabled: false }]);
+    expect(corpo.data.map((c) => c.metadata)).toEqual([
+      { disabled: true },
+      { disabled: false },
+      // Fork Escale: a rede do canal social passa (o seletor de conta das automações depende dela).
+      { disabled: false, social_platform: "instagram" },
+    ]);
     expect(JSON.stringify(corpo)).not.toContain("+5511999990000");
+    expect(JSON.stringify(corpo)).not.toContain("+5511988887777");
+    expect(JSON.stringify(corpo)).not.toContain("wh-1");
   });
 });

@@ -237,6 +237,16 @@ const DECISOES: Record<string, Decisao> = {
     razao: "0482 (grupos na inbox, #1647): subject é o NOME do grupo e vira null; contact_id aponta para o placeholder do grupo (contacts.kind = 'whatsapp_group'), e número, conversa e liga/desliga ficam. O que o TITULAR escreveu em grupo é redigido pelo gatilho fn_redigir_conversas_ao_anonimizar, em messages.",
   },
   // ── redigir pela virada de is_anonymized (gatilho) ────────────────────────
+  escale_disparos_de_comentario: {
+    decidida: "redigir",
+    caminho: "gatilho",
+    razao: "9805 (fork Escale, 10-I): autor (nome, usuário, id na rede), texto do comentário, a resposta que a automação escreveu e o direct guardado do 'Siga para liberar' são redigidos na virada por fn_escale_redigir_comentarios_do_contato. A LINHA fica: desfecho, motivo e datas são a trilha do que a automação fez.",
+  },
+  escale_acoes_no_comentario: {
+    decidida: "redigir",
+    caminho: "gatilho",
+    razao: "9805 (fork Escale, 10A): texto mandado à mão e id do autor viram nulos na virada, pelo mesmo gatilho. A linha (ação, status, motivo) fica como trilha.",
+  },
   ai_reply_drafts: {
     decidida: "redigir",
     caminho: "gatilho",
