@@ -19383,7 +19383,6 @@ export const DICIONARIO: Traducoes = {
   "Qualquer origem": { es: "Cualquier origen" },
   "Origem removida": { es: "Origen eliminado" },
   "Etapa removida": { es: "Etapa eliminada" },
-  "Sem tag escolhida, a automação inicia com qualquer tag.": { es: "Sin etiqueta elegida, la automatización inicia con cualquier etiqueta." },
   "Escolha a origem antes da etapa.": { es: "Elija el origen antes de la etapa." },
   "Escolha uma origem e uma etapa válidas.": { es: "Elija un origen y una etapa válidos." },
   "Recomendados": { es: "Recomendados" },
@@ -19420,6 +19419,8 @@ export const DICIONARIO: Traducoes = {
   "Sábado": { es: "Sábado" },
   "Editar condição de horário": { es: "Editar condición de horario" },
   "Revise o horário da condição.": { es: "Revise el horario de la condición." },
+  "Escolha até 20 tags, cada uma com até 60 caracteres.": { es: "Elija hasta 20 etiquetas, cada una con hasta 60 caracteres." },
+  "Adicione ou crie uma tag": { es: "Agregue o cree una etiqueta" },
 };
 
 /**

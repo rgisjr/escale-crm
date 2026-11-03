@@ -16,6 +16,7 @@
 import { z } from "zod";
 
 import { offsetEmMinutos, partesNoFuso } from "@/lib/agenda/fuso";
+import { fusoUtilizavel } from "@/lib/tempo/fusos";
 
 export const CAMPO_HORA = "agora.hora";
 export const CAMPO_DATA = "agora.data";
@@ -72,6 +73,8 @@ export function lerValorDaHora(op: string, valor: string): ValorDaHora | null {
   if (!lido.success) return null;
   if ((op === "entre") !== (lido.data.ate !== undefined)) return null;
   if (lido.data.ate === lido.data.de) return null;
+  // "Antes de 00:00" nunca é verdadeira: recusa em vez de gravar uma condição morta.
+  if (op === "antes_de" && lido.data.de === "00:00") return null;
   return lido.data;
 }
 
@@ -126,7 +129,8 @@ export function avaliarCondicaoDeHorario(
 
 /** "(UTC -3)": o deslocamento do fuso neste instante, como a Clint mostra embaixo do horário. */
 export function rotuloDoFuso(fuso: string, agora: Date = new Date()): string {
-  const total = offsetEmMinutos(agora, fuso);
+  // Fuso gravado inválido cai no padrão (a mesma régua do motor), nunca derruba a tela.
+  const total = offsetEmMinutos(agora, fusoUtilizavel(fuso));
   const sinal = total < 0 ? "-" : "+";
   const abs = Math.abs(total);
   const resto = abs % 60;

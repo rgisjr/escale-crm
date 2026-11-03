@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
-vi.mock("@/hooks/escale/useVocabularioDeTags", () => ({ useVocabularioDeTags: () => ({ data: ["vip", "cliente"] }) }));
+vi.mock("@/hooks/escale/useVocabularioDeTags", () => ({ useVocabularioDeTags: () => ({ data: [{ tag: "vip", cor: null }, { tag: "cliente", cor: null }] }) }));
 vi.mock("@/hooks/webhooks/useWebhookSources", () => ({
   useWebhookSources: () => ({ data: { data: [{ id: "f1", name: "Site" }, { id: "f2", name: "Landing" }] } }),
   usePipelines: () => ({ data: { data: [{ id: "p1", name: "Vendas", is_default: true, settings: null }] } }),
@@ -129,8 +129,7 @@ describe("PainelDoGatilho", () => {
     await userEvent.click(screen.getByRole("button", { name: "Trocar gatilho" }));
     await userEvent.click(screen.getByRole("button", { name: /Contatos/ }));
     await userEvent.click(screen.getByText("Tag adicionada ao contato"));
-    expect(screen.getByText("Sem tag escolhida, a automação inicia com qualquer tag.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("combobox", { name: "Tags" }));
+    await userEvent.click(screen.getByRole("combobox", { name: "Tag adicionada" }));
     await userEvent.click(screen.getByRole("option", { name: "cliente" }));
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
     expect(aoTrocar).toHaveBeenCalledWith("contact.tag_added", expect.objectContaining({ tags: ["cliente"] }));

@@ -377,11 +377,11 @@ export function CanvasDaAutomacao({ regra, nomeInicial, aoCriar }: Props) {
         onEvento={(novo) => {
           const dados = selecionado.data;
           if (dados.kind !== "gatilho" || novo === dados.evento) return;
-          // Trocar o gatilho limpa as condições e a fonte — o mesmo do editor em lista.
+          // Trocar o gatilho limpa as condições, a fonte e (FORK ESCALE · automações) a origem/etapa e as tags — o mesmo do editor em lista.
           setNos((atuais) =>
             atuais.map((n) => {
               if (n.id === selecionado.id && n.data.kind === "gatilho") {
-                return { ...n, data: { ...n.data, evento: novo, tela: { ...n.data.tela, fonte: novo === "lead.created" ? n.data.tela.fonte : null } } };
+                return { ...n, data: { ...n.data, evento: novo, tela: { ...n.data.tela, fonte: novo === "lead.created" ? n.data.tela.fonte : null, criado: { pipeline_id: "", stage_id: "" }, tags: [] } } };
               }
               if (n.data.kind === "condicoes") return { ...n, data: { ...n.data, linhas: [] } };
               return n;

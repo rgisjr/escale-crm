@@ -49,6 +49,7 @@ describe("Hora", () => {
     expect(lerValorDaHora("entre", JSON.stringify({ de: "08:00", ate: "08:00" }))).toBeNull();
     expect(lerValorDaHora("depois_de", JSON.stringify({ de: "8:00" }))).toBeNull();
     expect(lerValorDaHora("depois_de", "não é json")).toBeNull();
+    expect(lerValorDaHora("antes_de", JSON.stringify({ de: "00:00" }))).toBeNull();
     expect(avaliarCondicaoDeHorario({ field: "agora.hora", op: "depois_de", value: "x" }, TERCA_10H30, SP)).toBe(false);
   });
 });
@@ -73,6 +74,7 @@ describe("rótulo do fuso e validação", () => {
     expect(rotuloDoFuso(SP, TERCA_10H30)).toBe("(UTC -3)");
     expect(rotuloDoFuso("Europe/Lisbon", TERCA_10H30)).toBe("(UTC +0)");
     expect(rotuloDoFuso("Asia/Kolkata", TERCA_10H30)).toBe("(UTC +5:30)");
+    expect(rotuloDoFuso("Fuso/Inexistente", TERCA_10H30)).toBe("(UTC -3)");
   });
 
   it("valorDeHorarioValido só aceita campo e operador de horário que combinam", () => {
