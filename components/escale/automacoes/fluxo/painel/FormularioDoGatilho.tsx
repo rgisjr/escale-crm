@@ -3,7 +3,7 @@
 import { Campo, CampoDeTexto } from "@/components/escale/origens/JanelaDaCasca";
 import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
-import { SeletorDeChipsDaCasca } from "@/components/escale/ui/SeletorDeChipsDaCasca";
+import { SeletorDeTagsDaCasca } from "@/components/escale/ui/SeletorDeTagsDaCasca";
 import { useVocabularioDeTags } from "@/hooks/escale/useVocabularioDeTags";
 import { useT } from "@/hooks/i18n/useT";
 import { usePipelineStages, usePipelines, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
@@ -46,7 +46,7 @@ export function FormularioDoGatilho({
   // FORK ESCALE · automações: as etapas da origem do "Negócio criado" e as tags da organização.
   const { data: quadroDoCriado } = usePipelineStages(evento === "lead.created" && tela.criado.pipeline_id ? tela.criado.pipeline_id : null);
   const etapasDoCriado = quadroDoCriado?.data?.stages ?? [];
-  const { data: vocabulario = [] } = useVocabularioDeTags();
+  const { data: vocabulario = [] } = useVocabularioDeTags(ehGatilhoDeTag(evento));
   const camposDeData = camposDoFunil(funis.find((p) => p.id === tela.data.pipeline_id)?.settings ?? null).filter(
     (c) => c.type === "date",
   );
@@ -104,15 +104,15 @@ export function FormularioDoGatilho({
       ) : null}
 
       {ehGatilhoDeTag(evento) ? (
-        <Campo rotulo={t("Tags")}>
-          {/* FORK ESCALE · automações: sem print do formulário da Clint; provisório (ver o plano, decisão 8). */}
-          <SeletorDeChipsDaCasca
-            aria-label={t("Tags")}
+        <Campo rotulo={t("Tag adicionada")}>
+          {/* FORK ESCALE · automações: igual ao print da Clint de 03/11/2026 (Tag adicionada ao contato). */}
+          <SeletorDeTagsDaCasca
+            aria-label={t("Tag adicionada")}
+            placeholder={t("Adicione ou crie uma tag")}
             valores={tela.tags}
-            opcoes={[...new Set([...vocabulario, ...tela.tags])]}
+            opcoes={[...vocabulario, ...tela.tags.filter((v) => !vocabulario.some((o) => o.tag === v)).map((tag) => ({ tag, cor: null }))]}
             aoMudar={(tags) => aoMudarTela({ ...tela, tags })}
           />
-          <p className="text-[12px] text-casca-suave">{t("Sem tag escolhida, a automação inicia com qualquer tag.")}</p>
         </Campo>
       ) : null}
 
