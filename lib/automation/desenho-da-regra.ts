@@ -19,6 +19,7 @@
  * pela API) entra aqui como uma ação opaca: o desenho o mostra, mantém a
  * posição dele na fila e o devolve byte a byte, sem editar.
  */
+import type { OperadorDeHorario } from "@/lib/automation/condicoes-de-horario";
 import { configAoSalvarDaTela } from "@/lib/automation/config-ao-salvar";
 import {
   GATILHO_DE_DATA_DO_FUNIL,
@@ -40,7 +41,7 @@ import {
   type CreateAutomationRuleInput,
 } from "@/lib/schemas/webhooks";
 
-export type OperadorDaCondicao = "eq" | "neq" | "contains";
+export type OperadorDaCondicao = "eq" | "neq" | "contains" | OperadorDeHorario;
 
 /**
  * Uma linha do SE. `avancado` é só da tela (mostrar o caminho digitado em vez
@@ -436,6 +437,8 @@ function problemaDaRecusa(recusa: Recusa, percurso: Percurso): ProblemaDoDesenho
     return { caixa: gatilho, mensagem: recusa.code === "custom" ? recusa.message : PROBLEMAS.gatilhoInvalido };
   }
   if (raiz === "conditions") {
+    // FORK ESCALE · automações: a recusa da condição de horário já vem em português.
+    if (recusa.code === "custom") return { caixa: percurso.condicoes?.id ?? gatilho, mensagem: recusa.message };
     return {
       caixa: percurso.condicoes?.id ?? gatilho,
       mensagem: indice === undefined ? PROBLEMAS.condicoesDemais : PROBLEMAS.condicaoGrandeDemais,

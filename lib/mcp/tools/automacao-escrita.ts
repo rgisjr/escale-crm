@@ -35,7 +35,11 @@ export const crmCreateAutomationRule: McpToolDefinition<typeof criarShape> = {
     "Em send_whatsapp_message use channel_session_id='conversation' para o número da própria conversa, e " +
     "{{canal.<variavel>}} / {{atendente.nome}} no texto para dados que mudam de número para número. " +
     "No lugar de template, `passos` envia uma sequência (até 5) de {tipo:'texto'|'midia'}: midia usa asset " +
-    "(id de crm_upload_media_asset ou 'var:<chave>' para o áudio de cada número) e legenda opcional.",
+    "(id de crm_upload_media_asset ou 'var:<chave>' para o áudio de cada número) e legenda opcional." +
+    " Gatilho de tag (lead.tag_added/contact.tag_added): trigger_config.tags (vazia = qualquer tag). " +
+    "lead.created: trigger_config.pipeline_id e stage_id opcionais (onde o negócio nasceu). Condição de horário: " +
+    "field 'agora.hora' ou 'agora.data', op 'depois_de'|'antes_de'|'entre', value JSON {de, ate?, dias?} " +
+    "(hora HH:MM e dias 0=domingo…6=sábado; data AAAA-MM-DDTHH:MM) no fuso da organização.",
   inputSchema: criarShape,
   category: "write",
   requiresRole: "manager",

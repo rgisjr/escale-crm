@@ -23,7 +23,13 @@ import type { ServiceBoundary } from "@/lib/atendimento/fronteira";
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
-import { evaluateConditions, type RuleCondition } from "@/lib/automation/conditions";
+import {
+  evaluateConditions,
+  usaCondicaoDeHorario,
+  type RelogioDasCondicoes,
+  type RuleCondition,
+} from "@/lib/automation/conditions";
+import { fusoUtilizavel } from "@/lib/tempo/fusos";
 import { getAction } from "@/lib/automation/actions";
 // FORK ESCALE · automações: o recorte do gatilho de tag e do "Negócio criado".
 import { gatilhoCasaComAConfig } from "@/lib/automation/filtro-do-gatilho";
@@ -311,6 +317,21 @@ function mensagemEnviadaCasa(
   return casaComPalavraChave(msg.body ?? "", cfg.data.palavra_chave, cfg.data.modo);
 }
 
+/**
+ * FORK ESCALE · automações: o relógio da condição "Horário atual" — agora, no fuso da organização.
+ * Falha ao ler o fuso cai no padrão do produto, nomeada no log: a regra não pode calar por isso.
+ */
+async function relogioDasCondicoes(admin: SupabaseClient, organizationId: string): Promise<RelogioDasCondicoes> {
+  const { data, error } = await admin.from("organizations").select("timezone").eq("id", organizationId).maybeSingle();
+  if (error) {
+    logger.warn("[automation.engine] fuso da organização ilegível — condição de horário no fuso padrão", {
+      organization_id: organizationId,
+      error: error.message,
+    });
+  }
+  return { agora: new Date(), fuso: fusoUtilizavel((data as { timezone?: string | null } | null)?.timezone) };
+}
+
 export async function runAutomationForEvent(
   admin: SupabaseClient,
   row: EventRow,
@@ -382,6 +403,10 @@ export async function runAutomationForEvent(
     | { source_metadata?: Record<string, unknown> | null }
     | undefined;
   const webhookSourceId = lead?.source_metadata?.webhook_source_id;
+  // FORK ESCALE · automações: só a regra com condição de horário paga a leitura do fuso.
+  const relogio = matched.some((r) => usaCondicaoDeHorario(r.conditions))
+    ? await relogioDasCondicoes(admin, row.organization_id)
+    : undefined;
   const applicable = matched.filter((rule) => {
     const configuredSourceId = rule.trigger_config?.webhook_source_id;
     if (
@@ -407,7 +432,7 @@ export async function runAutomationForEvent(
     ) {
       return false;
     }
-    return evaluateConditions(rule.conditions ?? [], context);
+    return evaluateConditions(rule.conditions ?? [], context, relogio);
   });
   if (!applicable.length) {
     return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "ok", detail: "no_match" };
