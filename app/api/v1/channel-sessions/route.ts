@@ -78,7 +78,10 @@ export async function GET(): Promise<Response> {
  */
 function semConfiguracaoInterna<T extends { metadata?: unknown }>(canal: T): T {
   const m = canal.metadata as Record<string, unknown> | null | undefined;
-  return { ...canal, metadata: { disabled: m?.disabled === true } };
+  // FORK ESCALE · 10B: a rede do canal social (instagram/facebook) não é configuração interna, e sem
+  // ela o seletor de conta das automações de comentário e de direct fica sempre vazio.
+  const rede = typeof m?.social_platform === "string" ? { social_platform: m.social_platform } : {};
+  return { ...canal, metadata: { disabled: m?.disabled === true, ...rede } };
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
