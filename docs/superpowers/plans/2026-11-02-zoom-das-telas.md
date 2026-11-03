@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- REGRA DO PRODUTO: tudo idêntico à Clint (`CLAUDE.md` do projeto). Referências: `Escale IA OS\clint-documentacao\modulos\07-automacoes\imagens\07-013-editor-painel-de-gatilhos.png`, `07-026-fluxo-inteiro.png`, `07-001-lista-de-automacoes.png`.
+- REGRA DO PRODUTO: tudo idêntico à Clint (`CLAUDE.md` do projeto). Referências: capturas 07-013 (editor, painel de gatilhos), 07-026 (fluxo inteiro) e 07-001 (lista de automações), na pasta `modulos\07-automacoes\imagens` da documentação da Clint.
 - AJUSTE CIRÚRGICO: só muda o zoom. Nós, cores, textos, paleta, painéis e fluxo ficam como estão.
 - Valores da Clint (lidos em `clint-model\raw-v2\js\index-CmJ0MjJM.js.txt`, editor de automação): `minZoom: .25`, `maxZoom: 1.15`, `fitView: !0` **sem** `fitViewOptions`; o botão de reenquadrar chama `fitView({ duration: 500 })`.
 - Medida de referência: prints e conferência sempre com o navegador a **100%** (`window.devicePixelRatio` igual ao da aba da Clint; no computador do usuário, `1.25`, viewport 1536 px).
@@ -257,7 +257,7 @@ git commit -m "test(escale): conferência visual recusa escala diferente da Clin
 
 **Files:** nenhum até o resultado (só abre tarefa nova se houver diferença confirmada).
 
-- [ ] **Step 1:** Com a Task 1 feita, abrir lado a lado, na mesma janela, `app.escaleia.com/app/automacoes` e o print `07-001-lista-de-automacoes.png`; depois um fluxo com só o gatilho contra `07-013`, e um fluxo grande contra `07-026`. Conferir `devicePixelRatio` igual (Task 3).
+- [ ] **Step 1:** Com a Task 1 feita, abrir lado a lado, na mesma janela, `app.escaleia.com/app/automacoes` e a captura `07-001` (lista de automações); depois um fluxo com só o gatilho contra `07-013`, e um fluxo grande contra `07-026`. Conferir `devicePixelRatio` igual (Task 3).
 - [ ] **Step 2:** Listar por escrito cada diferença de tamanho que sobrou (elemento, Clint px, Escale px). Candidato já visto: botão "Nova automação" (Clint ~14 px / 32 px de altura; Escale 12 px / 26 px).
 - [ ] **Step 3:** Mostrar a lista ao usuário e **parar**. Cada ajuste aprovado vira uma task pequena (um componente, um valor), no mesmo molde da Task 2.
 
