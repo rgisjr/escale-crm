@@ -25,6 +25,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
 import { evaluateConditions, type RuleCondition } from "@/lib/automation/conditions";
 import { getAction } from "@/lib/automation/actions";
+// FORK ESCALE · automações: o recorte do gatilho de tag e do "Negócio criado".
+import { gatilhoCasaComAConfig } from "@/lib/automation/filtro-do-gatilho";
 import type { ActionResultDetail } from "@/lib/automation/types";
 import { audit } from "@/lib/audit";
 import { casaComPalavraChave, foiEnviadaPorPessoa } from "@/lib/automation/palavra-chave";
@@ -394,6 +396,17 @@ export async function runAutomationForEvent(
     if (row.event_type === GATILHO_DE_COMENTARIO && !caminhoDoComentario(rule.trigger_config, row.payload)) return false;
     // FORK ESCALE · Fase 10D: os gatilhos de direct do Instagram casam por conta e filtro de palavra.
     if ((GATILHOS_DE_DIRECT as readonly string[]).includes(row.event_type) && !directCasa(row.event_type, rule.trigger_config, row.payload)) return false;
+    // FORK ESCALE · automações: as tags escolhidas e a origem/etapa onde o negócio nasceu.
+    if (
+      !gatilhoCasaComAConfig(
+        row.event_type,
+        rule.trigger_config,
+        row.payload,
+        context.lead as { pipeline_id?: unknown; stage_id?: unknown } | undefined,
+      )
+    ) {
+      return false;
+    }
     return evaluateConditions(rule.conditions ?? [], context);
   });
   if (!applicable.length) {
