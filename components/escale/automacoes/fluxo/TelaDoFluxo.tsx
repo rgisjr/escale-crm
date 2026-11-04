@@ -171,6 +171,8 @@ export function TelaDoFluxo({
         />
       );
     }
+    // FORK ESCALE · 5D: o painel do Atraso entra na Tarefa 9.
+    if (dados.kind === "atraso") return null;
     if (ehGrupo(dados)) {
       return (
         <PainelDoGrupo

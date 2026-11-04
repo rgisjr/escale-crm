@@ -167,6 +167,8 @@ function DescricaoDasCondicoes({ dados, evento }: { dados: Extract<DadosDaCaixa,
  */
 export function CaixaDaAutomacao({ id, data, selected }: NodeProps<NoDaAutomacao>) {
   const t = useT();
+  // FORK ESCALE · 5D: o Atraso só existe no modo fluxo da tela nova; este designer antigo não o desenha.
+  if (data.kind === "atraso") return null;
   const problemas = data.problemas ?? [];
   const temProblema = problemas.length > 0;
   const visual =

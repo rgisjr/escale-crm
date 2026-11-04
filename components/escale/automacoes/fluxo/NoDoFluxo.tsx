@@ -21,7 +21,17 @@ import { VISUAL_DO_NO } from "./visual-do-fluxo";
  * ganha a borda da cor do tipo; com problema depois de um Salvar recusado, a
  * borda de alerta e o primeiro problema na dica.
  */
-export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
+export function NoDoFluxo(props: NodeProps<NoDaAutomacao>) {
+  // FORK ESCALE · 5D: o Atraso ganha o desenho dele na Tarefa 9; até lá o nó não é desenhado.
+  if (props.data.kind === "atraso") return null;
+  return <NoComum {...props} data={props.data} />;
+}
+
+type PropsDoNoComum = Omit<NodeProps<NoDaAutomacao>, "data"> & {
+  data: Exclude<NodeProps<NoDaAutomacao>["data"], { kind: "atraso" }>;
+};
+
+function NoComum({ id, data, selected }: PropsDoNoComum) {
   const t = useT();
   const tipo = tipoDoNo(data);
   const visual = VISUAL_DO_NO[tipo];

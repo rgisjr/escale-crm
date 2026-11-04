@@ -156,7 +156,13 @@ export function CanvasDaAutomacao({ regra, nomeInicial, aoCriar }: Props) {
   );
   const tituloDaCaixa = useCallback(
     (c: { data: DadosDaCaixa }) =>
-      c.data.kind === "gatilho" ? t("Gatilho") : c.data.kind === "condicoes" ? t("Condições") : tituloDaAcao(c.data.acao),
+      c.data.kind === "gatilho"
+        ? t("Gatilho")
+        : c.data.kind === "condicoes"
+          ? t("Condições")
+          : c.data.kind === "atraso"
+            ? t("Atraso")
+            : tituloDaAcao(c.data.acao),
     [t, tituloDaAcao],
   );
 
@@ -397,7 +403,7 @@ export function CanvasDaAutomacao({ regra, nomeInicial, aoCriar }: Props) {
         etapa={etapas.get(selecionado.id)}
         onLinhas={(linhas) => mudarDados(selecionado.id, { kind: "condicoes", linhas })}
       />
-    ) : (
+    ) : selecionado.data.kind === "atraso" ? null : (
       <PainelDaAcao
         acao={selecionado.data.acao}
         problemas={selecionado.data.problemas}
