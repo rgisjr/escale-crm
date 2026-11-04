@@ -9,6 +9,7 @@
 import { z } from "zod";
 import { webhookFormFieldsSchema } from "@/lib/webhooks/formulario";
 import { passosSchema } from "@/lib/automation/envio-de-passos";
+import { GATILHO_DE_MENSAGEM_ENVIADA, problemasDaMensagemEnviada } from "@/lib/automation/mensagem-enviada";
 // FORK ESCALE · Fase 10B: o gatilho de comentário e o passo Instagram.
 import {
   acaoDoInstagramSchema,
@@ -613,25 +614,18 @@ function exigirRecorteDoGatilho(
  * Só roda para os dois gatilhos novos; os demais seguem com `{}` e voltam
  * `true` sem custo.
  */
-/** A configuração do gatilho de mensagem enviada: o que o texto precisa conter (ou ser) e, se quiser, o número. */
-export const configDaPalavraChaveSchema = z.object({
-  palavra_chave: z.string().trim().min(1).max(200),
-  modo: z.enum(["contem", "igual"]).default("contem"),
-  channel_session_id: z.string().uuid().optional(),
-});
+/** A configuração do gatilho de mensagem enviada mora em `lib/automation/mensagem-enviada.ts`; o editor em formulário lê daqui. */
+export { configDaPalavraChaveSchema } from "@/lib/automation/mensagem-enviada";
 
-/** Sem a palavra-chave a regra dispararia em TODA mensagem da equipe: o schema recusa. */
+/** Sem palavra a regra dispararia em TODA mensagem da equipe: recusa (para isso existe "Qualquer mensagem"). */
 function exigirPalavraChave(
   regra: { trigger_event: string; trigger_config?: Record<string, unknown> },
   ctx: z.RefinementCtx,
 ): void {
-  if (regra.trigger_event !== "message.sent") return;
-  if (configDaPalavraChaveSchema.safeParse(regra.trigger_config).success) return;
-  ctx.addIssue({
-    code: "custom",
-    path: ["trigger_config"],
-    message: "Informe a palavra-chave (palavra_chave) da mensagem enviada.",
-  });
+  if (regra.trigger_event !== GATILHO_DE_MENSAGEM_ENVIADA) return;
+  for (const message of problemasDaMensagemEnviada(regra.trigger_config)) {
+    ctx.addIssue({ code: "custom", path: ["trigger_config"], message });
+  }
 }
 
 function exigirConfigDosGatilhosDeTempo(
