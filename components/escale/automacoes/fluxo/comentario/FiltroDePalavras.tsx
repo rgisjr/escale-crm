@@ -22,9 +22,12 @@ import { cn } from "@/lib/utils";
 export function FiltroDePalavras({
   filtro,
   aoMudar,
+  maximo = MAXIMO_DA_PALAVRA,
 }: {
   filtro: FiltroDoCaminho;
   aoMudar: (filtro: FiltroDoCaminho) => void;
+  /** Caracteres por palavra. O direct usa 60; a mensagem enviada pela equipe, 200. */
+  maximo?: number;
 }) {
   const t = useT();
   const lido = lerFiltroParaTela(filtro);
@@ -53,7 +56,7 @@ export function FiltroDePalavras({
             </div>
             <input
               value={c.valor}
-              maxLength={MAXIMO_DA_PALAVRA}
+              maxLength={maximo}
               onChange={(e) => mudar(i, { valor: e.target.value })}
               aria-label={t("Palavra do filtro")}
               placeholder={t("Digite a palavra")}

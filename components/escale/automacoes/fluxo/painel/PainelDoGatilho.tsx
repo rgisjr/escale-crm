@@ -9,12 +9,18 @@ import { GATILHO_DE_COMENTARIO, GATILHOS_DE_DIRECT, type GatilhoDeDirect } from 
 import { configInicialDoComentario, configInicialDoDirect, telaInicialDoGatilho } from "@/lib/escale/comentarios/tela";
 import { configDoComentarioSchema, configDoDirectSchema } from "@/lib/escale/comentarios/schema";
 import { Plus } from "@/lib/ui/icons-da-casca";
+import {
+  GATILHO_DE_MENSAGEM_ENVIADA,
+  configInicialDaMensagemEnviada,
+  lerConfigDaMensagemEnviada,
+} from "@/lib/automation/mensagem-enviada";
 
 import { DetalheDoGatilho } from "../CorposDoNo";
 import { FormularioDoComentario } from "../comentario/FormularioDoComentario";
 import { FormularioDoDirect } from "../comentario/FormularioDoDirect";
 import { ICONE_DO_GATILHO } from "../visual-do-fluxo";
 import { EscolhaDoGatilho } from "./EscolhaDoGatilho";
+import { FormularioDaMensagemEnviada } from "./FormularioDaMensagemEnviada";
 import { FormularioDoGatilho } from "./FormularioDoGatilho";
 import { PainelDoNo, ProblemasDoPainel } from "./PainelDoNo";
 
@@ -124,6 +130,11 @@ export function PainelDoGatilho({
             <FormularioDoDirect
               evento={evento}
               config={configDoDirectSchema.safeParse(tela.configPropria).data ?? configInicialDoDirect(evento as GatilhoDeDirect)}
+              aoMudar={(configPropria) => setTela({ ...tela, configPropria })}
+            />
+          ) : evento === GATILHO_DE_MENSAGEM_ENVIADA ? (
+            <FormularioDaMensagemEnviada
+              config={lerConfigDaMensagemEnviada(tela.configPropria) ?? configInicialDaMensagemEnviada()}
               aoMudar={(configPropria) => setTela({ ...tela, configPropria })}
             />
           ) : (

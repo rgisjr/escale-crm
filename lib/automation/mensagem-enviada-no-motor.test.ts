@@ -72,8 +72,9 @@ const REGRA = "77777777-7777-4777-8777-7777777777a1";
 function mundo(mensagem: Partial<Linha>, config: Record<string, unknown> = { palavra_chave: "Põe estes dados", modo: "contem" }) {
   return bancoFalso({
     messages: [
-      { id: MSG, organization_id: ORG, body: FRASE, sent_via: "user", direction: "outbound", channel_session_id: CANAL_A, conversation_id: "c1", contact_id: CONTATO, ...mensagem },
+      { id: MSG, organization_id: ORG, body: FRASE, sent_via: "user", direction: "outbound", channel_session_id: CANAL_A, conversation_id: "c1", contact_id: CONTATO, metadata: {}, ...mensagem },
     ],
+    conversations: [{ id: "c1", organization_id: ORG, is_group: false }],
     contacts: [{ id: CONTATO, organization_id: ORG, name: "Maria", is_personal: false }],
     automation_rules: [regra(REGRA, config)],
   });
@@ -130,5 +131,42 @@ describe("regra de mensagem enviada com palavra-chave", () => {
   });
   it("config sem palavra-chave nunca dispara (regra gravada por fora do schema)", async () => {
     expect(await rodou(mundo({}, {}))).toBe(false);
+  });
+  it("7. mensagem em conversa de grupo não roda, a menos que a regra peça", async () => {
+    const comGrupo = (config: Record<string, unknown>) =>
+      bancoFalso({
+        messages: [
+          { id: MSG, organization_id: ORG, body: FRASE, sent_via: "user", direction: "outbound", channel_session_id: CANAL_A, conversation_id: "c1", contact_id: CONTATO, metadata: {} },
+        ],
+        conversations: [{ id: "c1", organization_id: ORG, is_group: true }],
+        contacts: [{ id: CONTATO, organization_id: ORG, name: "Grupo", is_personal: false }],
+        automation_rules: [regra(REGRA, config)],
+      });
+    expect(await rodou(comGrupo({ palavra_chave: "Põe estes dados", modo: "contem" }))).toBe(false);
+    expect(
+      await rodou(
+        comGrupo({
+          channel_session_id: "",
+          filtro: { modo: "palavras", condicoes: [{ operador: "contem", valor: "Põe estes dados" }], combinar: "qualquer" },
+          em_grupos: true,
+          agendadas: true,
+        }),
+      ),
+    ).toBe(true);
+  });
+  it("8. mensagem agendada não roda quando a regra desliga agendadas", async () => {
+    const config = {
+      channel_session_id: "",
+      filtro: { modo: "palavras", condicoes: [{ operador: "contem", valor: "Põe estes dados" }], combinar: "qualquer" },
+      em_grupos: false,
+      agendadas: false,
+    };
+    expect(await rodou(mundo({ metadata: { agendamento_id: "a1" } }, config))).toBe(false);
+    expect(await rodou(mundo({ metadata: {} }, config))).toBe(true);
+  });
+  it("9. qualquer mensagem roda com texto qualquer, mas nunca para a automação", async () => {
+    const config = { channel_session_id: "", filtro: { modo: "qualquer" }, em_grupos: false, agendadas: true };
+    expect(await rodou(mundo({ body: "Bom dia" }, config))).toBe(true);
+    expect(await rodou(mundo({ body: "Bom dia", sent_via: "automation" }, config))).toBe(false);
   });
 });

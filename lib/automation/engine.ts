@@ -35,13 +35,12 @@ import { getAction } from "@/lib/automation/actions";
 import { gatilhoCasaComAConfig } from "@/lib/automation/filtro-do-gatilho";
 import type { ActionResultDetail } from "@/lib/automation/types";
 import { audit } from "@/lib/audit";
-import { casaComPalavraChave, foiEnviadaPorPessoa } from "@/lib/automation/palavra-chave";
+import { mensagemEnviadaCasa, type MensagemParaOGatilho } from "@/lib/automation/mensagem-enviada";
 import { canalDaConversaOuDoContato } from "@/lib/canais/canal-da-conversa";
 import { contextoDoCanal } from "@/lib/canais/variaveis";
 import { regraDoEvento } from "@/lib/automation/gatilho-de-data-do-funil";
 import {
   acoesQueFechamLaco,
-  configDaPalavraChaveSchema,
   ENTIDADE_ESPERADA_POR_GATILHO,
   GATILHOS_DO_TRIGGER_DE_LEAD,
 } from "@/lib/schemas/webhooks";
@@ -163,13 +162,23 @@ export async function buildContext(
     if (row.event_type === "message.sent") {
       const { data: mensagem } = await admin
         .from("messages")
-        .select("id, body, sent_via, sent_by_user_id, direction, channel_session_id, conversation_id, contact_id")
+        .select("id, body, sent_via, sent_by_user_id, direction, channel_session_id, conversation_id, contact_id, metadata")
         .eq("id", row.entity_id)
         .eq("organization_id", org)
         .maybeSingle();
       if (mensagem) {
         context.message = mensagem;
         contactId = contactId ?? (mensagem.contact_id as string | undefined);
+        // FORK ESCALE · automações: a regra decide se mensagem em grupo conta (padrão: não, como no Datacrazy).
+        if (mensagem.conversation_id) {
+          const { data: conversa } = await admin
+            .from("conversations")
+            .select("is_group")
+            .eq("id", mensagem.conversation_id)
+            .eq("organization_id", org)
+            .maybeSingle();
+          context.message_is_group = (conversa as { is_group?: boolean | null } | null)?.is_group === true;
+        }
       }
     }
     if (contactId) {
@@ -298,26 +307,6 @@ async function eventoEhDeContatoPessoal(
 }
 
 /**
- * `message.sent` com palavra-chave: só mensagem que uma PESSOA enviou (anti-laço: a que a própria
- * automação, a IA ou o sistema mandou nunca dispara), que não falhou, do canal escolhido (se houver)
- * e que contém/é a palavra-chave. Config ausente ou inválida nunca dispara.
- */
-function mensagemEnviadaCasa(
-  triggerConfig: Record<string, unknown> | null | undefined,
-  context: Record<string, unknown>,
-  row: EventRow,
-): boolean {
-  const cfg = configDaPalavraChaveSchema.safeParse(triggerConfig ?? {});
-  const msg = context.message as
-    | { body?: string | null; sent_via?: string | null; channel_session_id?: string | null }
-    | undefined;
-  if (!cfg.success || !msg || row.payload?.status === "failed") return false;
-  if (!foiEnviadaPorPessoa(msg.sent_via)) return false;
-  if (cfg.data.channel_session_id && cfg.data.channel_session_id !== msg.channel_session_id) return false;
-  return casaComPalavraChave(msg.body ?? "", cfg.data.palavra_chave, cfg.data.modo);
-}
-
-/**
  * FORK ESCALE · automações: o relógio da condição "Horário atual" — agora, no fuso da organização.
  * Falha ao ler o fuso cai no padrão do produto, nomeada no log: a regra não pode calar por isso.
  */
@@ -416,7 +405,17 @@ export async function runAutomationForEvent(
     ) {
       return false;
     }
-    if (row.event_type === "message.sent" && !mensagemEnviadaCasa(rule.trigger_config, context, row)) return false;
+    if (
+      row.event_type === "message.sent" &&
+      !mensagemEnviadaCasa(
+        rule.trigger_config,
+        context.message as MensagemParaOGatilho | undefined,
+        context.message_is_group === true,
+        row.payload?.status,
+      )
+    ) {
+      return false;
+    }
     // FORK ESCALE · Fase 10B: o comentário só casa com a regra que tem caminho para ele.
     if (row.event_type === GATILHO_DE_COMENTARIO && !caminhoDoComentario(rule.trigger_config, row.payload)) return false;
     // FORK ESCALE · Fase 10D: os gatilhos de direct do Instagram casam por conta e filtro de palavra.

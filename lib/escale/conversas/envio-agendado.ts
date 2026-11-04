@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
+import { CHAVE_DO_AGENDAMENTO } from "@/lib/automation/mensagem-enviada";
 import { logger } from "@/lib/logger";
 
 import { decidirEnvio, type MensagemAgendada } from "./agendadas";
@@ -39,6 +40,9 @@ export async function enviarAgendada(
     agora,
   });
   if (!decisao.ok) return { status: "falhou", erro: decisao.erro };
+  // FORK ESCALE · automações: a mensagem leva o agendamento que a enviou; o gatilho
+  // "Equipe envia uma mensagem" usa para respeitar "Considerar mensagens agendadas".
+  const metadata = { [CHAVE_DO_AGENDAMENTO]: linha.id };
   const input =
     linha.tipo === "template" && linha.template
       ? {
@@ -47,8 +51,9 @@ export async function enviarAgendada(
           template_name: linha.template.name,
           template_language: linha.template.language,
           template_values: linha.template.values,
+          metadata,
         }
-      : { conversation_id: linha.conversation_id, type: "text" as const, body: linha.corpo ?? "" };
+      : { conversation_id: linha.conversation_id, type: "text" as const, body: linha.corpo ?? "", metadata };
   try {
     const mensagem = await sendMessageHandler(
       admin,
