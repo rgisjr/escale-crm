@@ -11,6 +11,7 @@ import type { FormaDeMontar } from "@/lib/escale/automacoes/rotas";
 import type { ListaDeAutomacoes } from "@/lib/escale/automacoes/tipos";
 import type { Desenho } from "@/lib/automation/desenho-da-regra";
 import { ApiError } from "@/lib/api/types";
+import { problemasDoServidor } from "@/lib/escale/automacoes/fluxo/erros-do-publish";
 
 /**
  * OS DADOS DA LISTA DE AUTOMAÇÕES DA CASCA (fork Escale, Fase 5A). A chave leva o
@@ -195,7 +196,10 @@ export function useGravarFluxo() {
           ...(p.versao ? { versao: p.versao } : {}),
         })
       ).data,
-    onError: showApiError,
+    // FORK ESCALE · 5D: a recusa com lista de erros a tela marca nas caixas; o resto vira o toast de sempre.
+    onError: (e: unknown) => {
+      if (problemasDoServidor(e) === null) showApiError(e);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
   });
 }
