@@ -206,3 +206,25 @@ describe("validatePublish — immune_wait_too_short", () => {
     expect(codigos(r)).toContain("long_wait_needs_template");
   });
 });
+
+describe("o piso de 24 h da espera imune é do follow-up, não da automação", () => {
+  const UM_MINUTO = 60_000;
+  const grafo = {
+    nodes: [
+      { id: "t1", type: "trigger", label: "Gatilho", position: { x: 0, y: 0 }, config: {} },
+      noWait(true, UM_MINUTO),
+      { id: "a1", type: "end", label: "Fim", position: { x: 0, y: 0 }, config: { outcome: "exhausted" } },
+    ],
+    edges: [{ id: "e0", source: "t1", target: "w1", priority: 0, condition: { type: "always" as const } }, arestaSempre],
+  } as unknown as Parameters<typeof validateFlowForPublish>[0];
+
+  it("follow-up: espera imune de 1 minuto continua recusada", () => {
+    const r = validateFlowForPublish(grafo);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.errors.map((e) => e.code)).toContain("immune_wait_too_short");
+  });
+
+  it("automação: o Atraso de 1 minuto passa", () => {
+    expect(validateFlowForPublish(grafo, { surface: "crm_automation" })).toEqual({ ok: true });
+  });
+});
