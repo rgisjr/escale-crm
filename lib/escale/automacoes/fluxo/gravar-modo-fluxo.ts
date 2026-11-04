@@ -17,7 +17,7 @@ import { atualizarRegra, criarRegra } from "@/lib/automation/regras-escrita";
 import type { CorpoDaRegra, RegraGravada } from "@/lib/automation/desenho-da-regra";
 import { criarFluxo, publicarFluxo, salvarFluxo } from "@/lib/followup/escrita-de-fluxo";
 import { flowGraphSchema, type FlowGraph } from "@/lib/followup/graph-schema";
-import { createAutomationRuleSchema } from "@/lib/schemas/webhooks";
+import { createAutomationRuleSchema, MENSAGEM_DA_VERSAO_VELHA } from "@/lib/schemas/webhooks";
 
 export const PONTEIRO_DA_AUTOMACAO = (chave: string): string => `Automação ${chave}`;
 const ACAO_DO_FLUXO = "start_message_flow" as const;
@@ -128,6 +128,11 @@ export async function gravarAutomacaoEmModoFluxo(
     if (!lida) return falhaDeEscrita("not_found", "Regra não encontrada.", 404);
     regraGravada = lida.regra;
     pointerId = lida.pointerId;
+    // A versão velha se recusa ANTES de publicar: depois, o grafo velho já estaria no ar.
+    const versaoGravada = (lida.regra as unknown as { updated_at?: unknown }).updated_at;
+    if (entrada.versaoDaRegra && typeof versaoGravada === "string" && versaoGravada !== entrada.versaoDaRegra) {
+      return falhaDeEscrita("state_conflict", MENSAGEM_DA_VERSAO_VELHA, 409);
+    }
   }
 
   const recemCriado = pointerId === null;

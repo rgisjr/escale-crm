@@ -109,3 +109,14 @@ describe("gravarAutomacaoEmModoFluxo", () => {
     expect(d.criarFluxo).not.toHaveBeenCalled();
   });
 });
+
+describe("conflito de versão", () => {
+  it("versão velha recusa ANTES de criar, salvar ou publicar o fluxo", async () => {
+    const d = deps();
+    const db = dbCom({ automation_rules: { ...regraDoFluxo, updated_at: "2026-11-04T10:00:00Z" }, followup_flow_pointers: { id: PONTEIRO } });
+    const r = await gravarAutomacaoEmModoFluxo(db, db, { ...entrada(REGRA), versaoDaRegra: "2026-11-04T09:00:00Z" }, d);
+    expect(r).toMatchObject({ ok: false, status: 409, codigo: "state_conflict" });
+    expect(d.salvarFluxo).not.toHaveBeenCalled();
+    expect(d.publicarFluxo).not.toHaveBeenCalled();
+  });
+});

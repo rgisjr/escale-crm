@@ -37,7 +37,7 @@ describe("passosSchema", () => {
     expect(passosSchema.safeParse([{ tipo: "midia", asset: "var:bv1" }]).success).toBe(true);
     expect(passosSchema.safeParse([{ tipo: "midia", asset: "../x" }]).success).toBe(false);
   });
-  it("pausa curta entre mensagens: 1 a 10 s, nunca no começo, no fim ou duas seguidas, até 20 s no total", () => {
+  it("pausa curta entre mensagens: 1 a 10 s, nunca no começo, no fim ou duas seguidas, até 10 s no total", () => {
     const pausa = (segundos: number) => ({ tipo: "pausa", segundos }) as const;
     expect(passosSchema.safeParse([texto, pausa(4), texto]).success).toBe(true);
     expect(passosSchema.safeParse([pausa(4), texto]).success).toBe(false);
@@ -46,7 +46,7 @@ describe("passosSchema", () => {
     expect(passosSchema.safeParse([texto, pausa(0), texto]).success).toBe(false);
     expect(passosSchema.safeParse([texto, pausa(11), texto]).success).toBe(false);
     expect(
-      passosSchema.safeParse([texto, pausa(10), texto, pausa(10), texto, pausa(1), texto]).success,
+      passosSchema.safeParse([texto, pausa(10), texto, pausa(1), texto]).success,
     ).toBe(false);
   });
   it("a pausa não aceita outro campo (pausa_ms segue recusada)", () => {

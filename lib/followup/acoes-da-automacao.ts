@@ -59,21 +59,27 @@ export async function executarAcoesDaAutomacao(
       falhas.push(`${acao.type}:acao_nao_registrada`);
       continue;
     }
-    const resultado = await executor.execute(
+    try {
+      const resultado = await executor.execute(
       {
         admin: deps.admin,
         organizationId: item.organization_id,
         ruleId: `followup:${item.enrollment_id}`,
         ruleName: "Automação",
-        event: {} as EventRow,
+        // `payload` vazio: as ações que leem o canal do evento (responsável do canal) não estouram.
+        event: { payload: {} } as unknown as EventRow,
         context,
         requestId: `followup:${item.enrollment_id}:${indice}`,
         actionIndex: indice,
         ruleActions: item.acoes,
       },
       acao.config,
-    );
-    if (resultado.status === "failed") falhas.push(`${acao.type}:${resultado.error ?? "falhou"}`);
+      );
+      if (resultado.status === "failed") falhas.push(`${acao.type}:${resultado.error ?? "falhou"}`);
+    } catch (erro) {
+      // Uma ação que estoura não impede as seguintes do mesmo nó.
+      falhas.push(`${acao.type}:${erro instanceof Error ? erro.message : "excecao"}`);
+    }
   }
   return { ok: falhas.length === 0, falhas };
 }

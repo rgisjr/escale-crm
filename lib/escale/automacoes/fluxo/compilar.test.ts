@@ -132,3 +132,31 @@ describe("outros desenhos", () => {
     expect(deResposta.find((e) => e.condition.type === "branch" && e.condition.branch_id === "no_reply")?.target).toBe("n");
   });
 });
+
+describe("revisão da frente", () => {
+  const gat = { id: "gatilho", type: "gatilho" as const, position: p, data: { kind: "gatilho" as const, evento: "message.received", tela } };
+  const espera = { id: "e", type: "atraso" as const, position: p, data: { kind: "atraso" as const, quantidade: 1, unidade: "minutos" as const, janela: null } };
+  const msg = { id: "m", type: "acao" as const, position: p, data: { kind: "acao" as const, acao: { type: "send_whatsapp_message", config: { channel_session_id: "conversation", template: "oi" } } } };
+
+  it("Condições sem grupos no meio do fluxo: quem casa segue para a mensagem, quem não casa termina", () => {
+    const cond = { id: "c", type: "condicoes" as const, position: p, data: { kind: "condicoes" as const, linhas: [{ field: "lead.tags", op: "contains" as const, value: "vip" }] } };
+    const desenho: Desenho = { caixas: [gat, espera, cond, msg], ligacoes: [
+      { id: "1", source: "gatilho", target: "e" }, { id: "2", source: "e", target: "c" }, { id: "3", source: "c", target: "m" },
+    ] };
+    const r = compilar({ nome: "A", desenho, regraGravada: null });
+    if (!r.ok || r.modo !== "fluxo") throw new Error(JSON.stringify(r));
+    const saidas = r.grafo.edges.filter((e) => e.source === "c");
+    expect(saidas.find((e) => e.condition.type === "branch")?.target).toBe("m");
+    expect(saidas.find((e) => e.condition.type === "always")?.target).toBe("fim");
+  });
+
+  it("webhook com segredo e condição de campo do evento no meio do fluxo são recusados", () => {
+    const hook = { id: "h", type: "acao" as const, position: p, data: { kind: "acao" as const, acao: { type: "call_webhook", config: { url: "https://x.com", secret: "abc" } } } };
+    const cond = { id: "c", type: "condicoes" as const, position: p, data: { kind: "condicoes" as const, linhas: [{ field: "event.added_tags", op: "contains" as const, value: "vip" }] } };
+    const desenho: Desenho = { caixas: [gat, espera, hook, cond, msg], ligacoes: [
+      { id: "1", source: "gatilho", target: "e" }, { id: "2", source: "e", target: "h" }, { id: "3", source: "h", target: "c" }, { id: "4", source: "c", target: "m" },
+    ] };
+    const r = compilar({ nome: "A", desenho, regraGravada: null });
+    expect(!r.ok && r.problemas.map((x) => x.caixa).sort()).toEqual(["c", "h"]);
+  });
+});
