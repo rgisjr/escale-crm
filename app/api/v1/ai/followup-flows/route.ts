@@ -48,7 +48,8 @@ export async function GET(req?: NextRequest): Promise<Response> {
     .eq("organization_id", organizationId);
   const { data, error } = await (querRoteiros
     ? base.eq("surface", "atendimento")
-    : base.neq("surface", "atendimento")
+    // FORK ESCALE · 5D: o fluxo escondido de uma automação em modo fluxo não aparece como follow-up.
+    : base.neq("surface", "atendimento").neq("surface", "crm_automation")
   ).order("updated_at", { ascending: false });
   if (error) return fail("internal_error", error.message, 500, { requestId });
   return ok(data ?? [], { requestId });

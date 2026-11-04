@@ -46,6 +46,8 @@ export const crmListFollowupFlows: McpToolDefinition<typeof listarShape> = {
       .from("followup_flow_pointers")
       .select(COLUNAS_DA_LISTA)
       .eq("organization_id", ctx.organizationId)
+      // FORK ESCALE · 5D: o fluxo escondido de uma automação em modo fluxo não é um follow-up.
+      .neq("surface", "crm_automation")
       .order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
     return { fluxos: data ?? [] };

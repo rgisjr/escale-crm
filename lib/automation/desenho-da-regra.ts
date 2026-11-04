@@ -34,6 +34,8 @@ import {
   configDoSilencio,
   type DirecaoDoSilencio,
 } from "@/lib/automation/gatilhos-de-tempo";
+// FORK ESCALE · 5D: tipos do modo fluxo (Atraso, grupos de condição, saídas por botão).
+import type { DadosDoAtraso, GrupoDeCondicoes, SaidaDoNo } from "@/lib/escale/automacoes/fluxo/caixas";
 import {
   MENSAGEM_DO_LACO_DE_LEAD,
   acoesQueFechamLaco,
@@ -77,9 +79,10 @@ export type AcaoDaRegra = { type: string; config: Record<string, unknown> };
 /** Os problemas que o último "salvar" achou nesta caixa — a tela os mostra nela. */
 type ComProblemas = { problemas?: ProblemaDoDesenho[] };
 export type DadosDoGatilho = { kind: "gatilho"; evento: string; tela: TelaDoGatilho } & ComProblemas;
-export type DadosDasCondicoes = { kind: "condicoes"; linhas: LinhaDeCondicao[] } & ComProblemas;
+/** `grupos` ausente = o formato de hoje (um grupo "todas"); FORK ESCALE · 5D. */
+export type DadosDasCondicoes = { kind: "condicoes"; linhas: LinhaDeCondicao[]; grupos?: GrupoDeCondicoes[] } & ComProblemas;
 export type DadosDaAcao = { kind: "acao"; acao: AcaoDaRegra } & ComProblemas;
-export type DadosDaCaixa = DadosDoGatilho | DadosDasCondicoes | DadosDaAcao;
+export type DadosDaCaixa = DadosDoGatilho | DadosDasCondicoes | DadosDaAcao | (DadosDoAtraso & ComProblemas);
 export type TipoDeCaixa = DadosDaCaixa["kind"];
 
 /** Mesma forma de um nó do React Flow, para o canvas não precisar de tradutor. */
@@ -89,7 +92,8 @@ export type CaixaDoDesenho = {
   position: { x: number; y: number };
   data: DadosDaCaixa;
 };
-export type LigacaoDoDesenho = { id: string; source: string; target: string };
+/** `saida` ausente = "proximo" (FORK ESCALE · 5D: botão, grupo ou "Não respondeu" no modo fluxo). */
+export type LigacaoDoDesenho = { id: string; source: string; target: string; saida?: SaidaDoNo };
 export type Desenho = { caixas: CaixaDoDesenho[]; ligacoes: LigacaoDoDesenho[] };
 
 /** O que a API devolve de uma regra gravada — só os campos que o desenho lê. */
@@ -140,6 +144,7 @@ export const PROBLEMAS = {
   acaoDesconhecida: "Esta ação não existe nesta instalação. Exclua a caixa ou escolha outra ação.",
   campoGrandeDemais: "Um campo desta ação passou do tamanho permitido.",
   acaoIncompleta: "Revise os campos desta ação.",
+  passoDeFluxo: "Este passo só funciona em fluxo; salve para gravar como fluxo.",
   passoDaIaInvalido: "Este passo “a IA decide” está incompleto. Hoje ele só se corrige pela API.",
 } as const;
 
@@ -388,7 +393,11 @@ export function percorrer(desenho: Desenho): Percurso {
     fila.push(proxima);
     if (proxima.data.kind === "condicoes") problemas.push({ caixa: proxima.id, mensagem: PROBLEMAS.condicoesForaDoLugar });
     else if (proxima.data.kind === "acao") acoes.push(proxima);
-    else break;
+    else {
+      // FORK ESCALE · 5D: o Atraso só existe no modo fluxo; o salvar decide o modo antes de chegar aqui.
+      problemas.push({ caixa: proxima.id, mensagem: PROBLEMAS.passoDeFluxo });
+      break;
+    }
     ligacao = saidaDe(desenho, proxima.id);
     proxima = ligacao ? caixaDe(desenho, ligacao.target) : undefined;
   }
