@@ -20,6 +20,7 @@ export const TEXTO_DA_RECUSA_DO_PUBLISH = {
   cycle_without_wait: "Este caminho volta para trás sem um Atraso de pelo menos 5 minutos no meio.",
   long_wait_needs_template: "Depois de 24 horas de espera, o WhatsApp só aceita mensagem com modelo aprovado.",
   max_steps_exceeded: "A automação passou do número máximo de passos em sequência.",
+  missing_always_fallback: "Este passo tem uma saída sem ligação. Ligue-a a outro passo.",
 } as const satisfies Partial<Record<PublishErrorCode, string>>;
 
 const TEXTOS: Partial<Record<string, string>> = TEXTO_DA_RECUSA_DO_PUBLISH;
