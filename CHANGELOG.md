@@ -8,6 +8,95 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.82.0] — 2026-11-04
+
+### Adicionado
+
+- **Respostas rápidas agora podem levar um arquivo anexado** Ao criar ou editar uma resposta rápida, o clipe da janela passa a funcionar:
+  escolha um áudio (.ogg), imagem, vídeo MP4 ou PDF da biblioteca de mídia, envie
+  um arquivo novo do computador ou use "um arquivo que muda por número" (cada
+  número de WhatsApp preenche o seu, como o áudio de boas-vindas de cada loja).
+  No painel de respostas do atendimento, as respostas com arquivo mostram um
+  clipe; ao escolher, o arquivo aparece no campo de mensagem e sai junto com o
+  texto (legenda em imagem, vídeo e PDF; no áudio o texto vai logo depois).
+
+- **Automações ganham o gatilho "Equipe envia uma mensagem"** No editor de Automações, em Mensagens, o gatilho "Equipe envia uma mensagem" inicia a
+  automação quando alguém da equipe envia uma mensagem com as palavras escolhidas, ou
+  qualquer mensagem. Dá para escolher o número, ligar mensagens enviadas em grupos e
+  desligar as mensagens agendadas. Mensagem enviada pela IA ou por outra automação não
+  dispara. Regras antigas deste gatilho deixam de disparar em grupos; para manter, ligue
+  a opção de grupos na regra.
+
+- **Pré-voo das imagens antes de instalar ou atualizar em ARM64** Numa VPS ARM64, o kit confere antes da instalação ou atualização se as imagens
+  do CRM, a WAHA escolhida e, no modo single-server, o Supabase fixado têm variante
+  ARM64. Isso evita começar uma atualização que não poderá subir. Há também uma
+  sonda somente-leitura para a primeira transição de kit antigo. Em AMD64 nada muda.
+  Uma instalação existente continua exigindo atualização deliberada e backup, e
+  quem pede construção local (`DESKCOMM_BUILD_LOCAL=1`) não passa por esta conferência.
+
+  Crédito: @Tanderakkkj.
+
+### Alterado
+
+- **Escolher modelo de IA, chave, atendente, etapa ou agente agora tem busca** As caixas de seleção com listas longas ganharam uma barra de busca. No agente,
+  por exemplo, basta digitar parte do nome ou do identificador do modelo
+  ("sonnet", "gpt-5", "anthropic/claude") em vez de rolar a lista inteira. A busca
+  ignora acento e maiúsculas e aparece a partir de 8 opções; listas curtas
+  continuam iguais. Valem também para os modelos dos provedores e do roteador,
+  a chave de acesso do agente, "Transferir para" na conversa, a etapa do funil na
+  conversa e o filtro de agente em Uso de IA.
+
+### Corrigido
+
+- **O agente passa a gravar o que coleta nos campos do negócio** O agente de IA (o papel Conversador) agora recebe o identificador do negócio
+  (o card do funil) de cada pessoa e aprende, na abertura do turno, a usar esse
+  id — e não o do contato — nas ferramentas do CRM que pedem `lead_id`. Antes,
+  ele usava o identificador do contato, o CRM recusava a gravação e os campos do
+  negócio ficavam vazios.
+
+  Para funcionar, o funil precisa estar liberado para o agente em
+  **Agente de IA › Agentes › (seu agente) › Em que negócios ele pode mexer**.
+
+- **Automações com Atraso voltam a salvar, e o erro aponta a caixa** No editor de Automações, a caixa do Atraso aparecia vazia e todo Atraso de menos
+  de 24 horas era recusado ao salvar ("Fluxo reprovado na validação de publish").
+  Agora o Atraso aparece com o tempo e o "Próximo passo", salva de 30 segundos a
+  90 dias, e o contato que está esperando um Atraso não entra de novo na mesma
+  automação. Quando algo impede o salvar, a caixa com o problema fica marcada em
+  vermelho com o motivo, e passo solto ou caminho sem fim aparecem antes de enviar.
+
+- **Automações com "Tempo de resposta" na mensagem voltam a salvar** No editor de Automações, a caixa "Enviar mensagem" com "Tempo de resposta" e sem
+  botões não salvava: o aviso dizia que faltava a saída de escape de um passo
+  interno. Agora a automação salva e publica normalmente, e o lead que responde
+  segue pelo "Próximo passo" ou termina ali, se nada estiver ligado.
+
+- **A marca de aquecimento completo de cada número passa a ser gravada, e pela mesma régua do controle de ritmo** Cada número de WhatsApp tem uma marca de "aquecimento completo", exposta na lista de conexões da API (`is_warmup_complete`). Até aqui ela era sempre "não", em toda instalação: o início do aquecimento nunca era gravado, e sem ele a conclusão não acontecia. Agora a primeira conexão do número grava o início (numa instalação existente, é a primeira conexão depois da atualização, inclusive em números usados há meses), e a marca vira "sim" quando o controle de ritmo de envio já não põe limite de aquecimento nele — a data em "Este número é usado desde" já passou do último degrau, ou "pular o aquecimento" está ligado. Uma reconexão no mesmo dia não marca mais um número novo como aquecido.
+
+  A marca anda quando o número informa que está conectado; um número que fica conectado sem reconectar recebe a marca com atraso, para o lado seguro. Depois de marcada, ela não volta: se "pular o aquecimento" for desligado ou a data em "Este número é usado desde" for trocada por uma mais recente, a marca continua "sim" enquanto o controle de ritmo volta a limitar. Por isso nada muda no envio: o limite de mensagens por dia continua vindo do controle de ritmo. Nenhuma configuração nova, nenhum passo manual.
+
+  Contribuição de @webtecnica (#2672), a partir da issue #2432.
+
+- **O relatório de dados chama o direito do titular de "Direito exercido", e Portugal lê os termos do RGPD** No Brasil, o relatório de acesso aos dados (PDF), o e-mail que o titular recebe e o aviso de prazo ao encarregado rotulavam a citação do art. 18 da LGPD como "Base legal". O art. 18 é um direito do titular; a base legal fica nos arts. 7 e 11. Agora os três dizem "Direito exercido", como Portugal já dizia. Só essa palavra muda: prazos, dados e links continuam os mesmos, e o arquivo `data.json` brasileiro não muda.
+
+  Numa organização de Portugal, o rodapé do PDF passa a dizer "Responsável pelo tratamento" e "Encarregado da proteção de dados", em vez de "Controlador" e "Encarregado (DPO)". A política de privacidade passa a citar o RGPD e o NIPC, em vez da LGPD e do CNPJ. O `data.json` dessa organização ganha os campos `papel_controlador` e `papel_encarregado`. Os termos de Portugal foram revisados por IA, sem advogado, com a mesma ressalva da revisão anterior do RGPD.
+
+  Você não precisa fazer nada.
+
+  Contribuição de @webtecnica (#2719), a partir da issue #2344.
+
+- **A marca "sempre atendimento humano" passa a valer também no envio do link da agenda** O link de reunião enviado pela IA passa a conferir a marca "sempre atendimento
+  humano" do contato diretamente, em vez de deduzi-la da trava de passagem a
+  humano. Contato marcado não recebe o link pelo envio automático; o envio pelo
+  botão do responsável continua funcionando. A devolução do atendimento ao agente
+  confere a marca no mesmo passo em que grava: se ela estiver ligada nesse
+  momento, nada é devolvido. A atualização aplica a mudança de banco sozinha.
+
+- **Execuções de IA, uso de IA e outras telas do agente voltam a mostrar dados na instalação por VPS** Na instalação por VPS, as telas que leem dados do motor do agente apareciam
+  vazias mesmo com dados no banco: Execuções de IA, Uso de IA, a aba Execuções
+  de cada agente, os números do Jev, a fila de follow-ups, o aviso de mensagem
+  retida na conversa, a próxima ação sugerida, a reativação, as propostas, as
+  notas do lead e o estado do envio do link de reunião. Essas telas passam a ler
+  esses dados pelo servidor, sempre limitadas à empresa de quem está acessando.
+
 ### Corrigido
 
 - **Tag posta por sistema de fora (MCP) agora dispara a automação "ganhou uma tag"** A ferramenta `crm_manage_tags` gravava a tag no contato ou no negócio, mas não emitia o evento que a tela emite. Resultado: a regra "Quando um contato ganhar uma tag" (ou "Quando um lead ganhar uma tag") disparava quando a pessoa punha a tag pela tela e ficava muda quando um sistema de fora, como o n8n, punha a mesma tag pela MCP. Agora a ferramenta emite `contact.tag_added` / `lead.tag_added` com o mesmo envelope da tela: só as tags que o alvo não tinha, a lista completa e a origem do atendimento. Reenviar uma tag que já estava, ou só remover, não emite nada. Conversa continua sem esse gatilho. Sem migration e sem ação do operador.
@@ -11632,7 +11721,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.81.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.82.0...HEAD
+[1.82.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.81.0...v1.82.0
 [1.81.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.80.0...v1.81.0
 [1.80.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.79.0...v1.80.0
 [1.79.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.78.0...v1.79.0
