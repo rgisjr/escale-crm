@@ -19,6 +19,7 @@ import { itensDaConfig } from "@/lib/escale/automacoes/fluxo/sequencia";
 import { tituloDaAcaoNoFluxo } from "@/lib/escale/automacoes/fluxo/paleta";
 import { GATILHO_DE_COMENTARIO, GATILHOS_DE_DIRECT } from "@/lib/escale/comentarios/constantes";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
+import { GATILHO_DE_MENSAGEM_ENVIADA, resumoDaMensagemEnviada } from "@/lib/automation/mensagem-enviada";
 
 import { LinhaDeSaida } from "./LinhaDeSaida";
 import { CorpoDoComentario } from "./comentario/CorpoDoComentario";
@@ -51,6 +52,7 @@ function useDetalheDoGatilho(dados: DadosDoGatilho): string {
     return partes.join(" · ");
   }
   if (ehGatilhoDeTag(evento)) return tela.tags.length > 0 ? tela.tags.join(", ") : t("Qualquer tag");
+  if (evento === GATILHO_DE_MENSAGEM_ENVIADA) return resumoDaMensagemEnviada(tela.configPropria, t);
   if (evento === GATILHO_DE_DATA_DO_FUNIL) {
     const funil = funis?.data?.find((p) => p.id === tela.data.pipeline_id);
     const campo = funil ? camposDoFunil(funil.settings ?? null).find((c) => c.key === tela.data.campo) : undefined;

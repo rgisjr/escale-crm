@@ -5,6 +5,11 @@ import {
   type RegraGravada,
   type TelaDoGatilho,
 } from "@/lib/automation/desenho-da-regra";
+import {
+  GATILHO_DE_MENSAGEM_ENVIADA,
+  configInicialDaMensagemEnviada,
+  lerConfigDaMensagemEnviada,
+} from "@/lib/automation/mensagem-enviada";
 
 import {
   GATILHO_DE_COMENTARIO,
@@ -80,6 +85,8 @@ export function telaInicialDoGatilho(evento: string): TelaDoGatilho {
   const base = telaDoGatilho(null);
   if (evento === GATILHO_DE_COMENTARIO) return { ...base, configPropria: configInicialDoComentario() };
   if (ehGatilhoDeDirect(evento)) return { ...base, configPropria: configInicialDoDirect(evento) };
+  // FORK ESCALE · automações: "Equipe envia uma mensagem" monta a configuração inteira, como o direct.
+  if (evento === GATILHO_DE_MENSAGEM_ENVIADA) return { ...base, configPropria: configInicialDaMensagemEnviada() };
   return base;
 }
 
@@ -93,6 +100,9 @@ export function comConfigPropria(desenho: Desenho, regra: RegraGravada | null): 
   } else if (ehGatilhoDeDirect(regra.trigger_event)) {
     const lida = configDoDirectSchema.safeParse(regra.trigger_config);
     config = lida.success ? lida.data : configInicialDoDirect(regra.trigger_event);
+  } else if (regra.trigger_event === GATILHO_DE_MENSAGEM_ENVIADA) {
+    // A regra antiga (`palavra_chave`) abre convertida; salvar grava o formato novo, que o motor lê igual.
+    config = lerConfigDaMensagemEnviada(regra.trigger_config) ?? configInicialDaMensagemEnviada();
   } else {
     return desenho;
   }

@@ -80,10 +80,7 @@ describe("organizarNaHorizontal", () => {
 describe("gatilhos", () => {
   it("cada TRIGGER_EVENT aparece uma vez, nas 6 fontes em ordem", () => {
     const eventos = FONTES_DOS_GATILHOS.flatMap((f) => f.opcoes.map((o) => o.evento));
-    // `message.sent` exige a palavra-chave em `trigger_config`, que o fluxo ainda não sabe configurar:
-    // ele segue só no editor em formulário (lacuna registrada no PR da 5B).
-    const SEM_TELA_NO_FLUXO = ["message.sent"];
-    expect([...eventos].sort()).toEqual(TRIGGER_EVENTS.filter((e) => !SEM_TELA_NO_FLUXO.includes(e)).sort());
+    expect([...eventos].sort()).toEqual([...TRIGGER_EVENTS].sort());
     expect(new Set(eventos).size).toBe(eventos.length);
     expect(FONTES_DOS_GATILHOS.map((f) => f.fonte)).toEqual(["negocios", "contatos", "mensagens", "instagram", "agenda", "datas"]);
   });
@@ -107,6 +104,7 @@ describe("gatilhos", () => {
       "lead.silent_for",
       "lead.stage_stale",
       "lead.tag_added",
+      "message.sent",
     ]);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { desenhoDaRegra, triggerConfigDaTela, type RegraGravada } from "@/lib/automation/desenho-da-regra";
+import { configInicialDaMensagemEnviada } from "@/lib/automation/mensagem-enviada";
 import { GATILHO_DE_COMENTARIO } from "@/lib/escale/comentarios/constantes";
 import {
   caminhosDasPublicacoes,
@@ -94,5 +95,28 @@ describe("resumoDosCaminhos", () => {
       caminhos: [caminho("a", ["1", "2"]), caminho("b", ["3"])],
     };
     expect(resumoDosCaminhos(config)).toEqual({ publicacoes: 3, caminhos: 2 });
+  });
+});
+
+describe("FORK ESCALE · gatilho Equipe envia uma mensagem", () => {
+  it("nasce com a configuração inicial", () => {
+    expect(telaInicialDoGatilho("message.sent").configPropria).toEqual(configInicialDaMensagemEnviada());
+  });
+  it("regra antiga abre convertida e salva sem mexer no formato novo, que o motor lê igual", () => {
+    const regra: RegraGravada = {
+      trigger_event: "message.sent",
+      trigger_config: { palavra_chave: "Põe estes dados", modo: "contem" },
+      conditions: [],
+      actions: [],
+    };
+    const novo = comConfigPropria(desenhoDaRegra(regra), regra);
+    const gatilho = novo.caixas.find((c) => c.id === "gatilho");
+    const config = gatilho?.data.kind === "gatilho" ? triggerConfigDaTela("message.sent", gatilho.data.tela, regra) : null;
+    expect(config).toEqual({
+      channel_session_id: "",
+      filtro: { modo: "palavras", condicoes: [{ operador: "contem", valor: "Põe estes dados" }], combinar: "qualquer" },
+      em_grupos: false,
+      agendadas: true,
+    });
   });
 });

@@ -74,6 +74,7 @@ export const FONTES_DOS_GATILHOS: readonly FonteDosGatilhos[] = [
     rotulo: "Mensagens",
     opcoes: [
       { evento: "message.received", titulo: "Contato envia uma mensagem", descricao: "O contato envia uma mensagem para o WhatsApp", icone: "mensagem" },
+      { evento: "message.sent", titulo: "Equipe envia uma mensagem", descricao: "Alguém da equipe envia uma mensagem para o contato", icone: "mensagem" },
       { evento: "message.failed", titulo: "Mensagem não entregue", descricao: "Uma mensagem enviada não foi entregue", icone: "falha" },
       { evento: "lead.silent_for", titulo: "Tempo sem mensagem", descricao: "Uma conversa ficou um determinado tempo sem mensagem", icone: "silencio" },
     ],
@@ -120,6 +121,7 @@ const COM_FORMULARIO: ReadonlySet<string> = new Set([
   "lead.date_field_due",
   "lead.silent_for",
   "lead.stage_stale",
+  "message.sent",
   "comment.received",
   "instagram.message_received",
   "instagram.story_mention",
