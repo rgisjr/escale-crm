@@ -7,6 +7,7 @@ import type { ServiceBoundary } from "@/lib/atendimento/fronteira";
 import {
   CONDITION_FALSE_BRANCH_ID,
   CONDITION_TRUE_BRANCH_ID,
+  FALLBACK_BRANCH_ID,
   NO_REPLY_BRANCH_ID,
   REPEAT_BODY_BRANCH_ID,
   REPEAT_DONE_BRANCH_ID,
@@ -554,6 +555,8 @@ export function processNode(input: {
   wokeEarly?: boolean;
   /** Last inbound `messages.body` for this contact/conversation — engine loads on `match_reply` + wokeEarly. */
   lastInboundBody?: string;
+  /** FORK ESCALE · 5D: o engine avalia os grupos e passa o primeiro que casou. */
+  grupoQueCasou?: string | null;
   /** FORK ESCALE · 5D: fuso da organização — só o `wait` com janela usa. */
   fuso?: string;
   /** action occupancy guard: a `turn_enqueued` event for THIS stay on the action node already
@@ -591,6 +594,7 @@ export function processNode(input: {
     waitElapsed,
     wokeEarly,
     lastInboundBody,
+    grupoQueCasou,
     fuso,
     actionEnqueued,
     actionRecheckCount,
@@ -947,6 +951,22 @@ export function processNode(input: {
       const edge = selectEdge(edges, node.id, { type: "always" });
       if (!edge) {
         return { kind: "fail", error: `acoes_da_automacao node "${node.id}" has no outbound edge` };
+      }
+      return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
+    }
+
+    case "condicoes_da_automacao": {
+      const ramo = grupoQueCasou ?? null;
+      const edge =
+        ramo === null
+          ? selectEdge(edges, node.id, { type: "always" })
+          : selectEdge(edges, node.id, { type: "branch", branch_id: ramo });
+      if (!edge) {
+        return {
+          kind: "complete",
+          outcome: null,
+          cancel_reason: `condicoes_sem_saida:${ramo ?? FALLBACK_BRANCH_ID}`,
+        };
       }
       return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
     }

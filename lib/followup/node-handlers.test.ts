@@ -1214,6 +1214,62 @@ describe("processNode — acoes_da_automacao", () => {
   });
 });
 
+describe("processNode — condicoes_da_automacao", () => {
+  const node = {
+    id: "cond-1",
+    type: "condicoes_da_automacao",
+    label: "Condições",
+    position: { x: 0, y: 0 },
+    config: {
+      grupos: [
+        { id: "g1", modo: "todas", linhas: [{ field: "lead.tags", op: "contains", value: "vip" }] },
+        { id: "g2", modo: "todas", linhas: [{ field: "lead.tags", op: "contains", value: "quente" }] },
+      ],
+    },
+  } as unknown as FlowNode;
+  const edges = [
+    edge({ source: "cond-1", target: "n1", condition: { type: "branch", branch_id: "g1" } }),
+    edge({ source: "cond-1", target: "n2", condition: { type: "branch", branch_id: "g2" } }),
+    edge({ source: "cond-1", target: "fallback", condition: { type: "always" } }),
+  ];
+
+  it("segue a saída do grupo que casou", () => {
+    const result = processNode({
+      node,
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      grupoQueCasou: "g2",
+    });
+    expect(result).toEqual({ kind: "advance", next_node_id: "n2", next_eval_at: NOW });
+  });
+
+  it("nenhum grupo segue a saída fallback", () => {
+    const result = processNode({
+      node,
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      grupoQueCasou: null,
+    });
+    expect(result).toEqual({ kind: "advance", next_node_id: "fallback", next_eval_at: NOW });
+  });
+
+  it("saída do grupo sem ligação conclui o caminho", () => {
+    const result = processNode({
+      node,
+      edges: [],
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      grupoQueCasou: "g2",
+    });
+    expect(result).toEqual({ kind: "complete", outcome: null, cancel_reason: "condicoes_sem_saida:g2" });
+  });
+});
+
 describe("processNode — repeat", () => {
   function repeatNode(): FlowNode {
     return {

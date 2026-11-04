@@ -196,6 +196,17 @@ export const NODE_VISUALS: Record<NodeType, NodeVisual> = {
     defaultLabel: "Ações da automação",
     defaultConfig: () => ({ acoes: [{ type: "add_tag", config: { tags: [] } }] }),
   },
+  condicoes_da_automacao: {
+    type: "condicoes_da_automacao",
+    paletteLabel: "Condições",
+    icon: GitBranch,
+    chipClassName: "bg-warning-bg text-warning-fg",
+    borderClassName: "border-l-warning",
+    defaultLabel: "Condições da automação",
+    defaultConfig: () => ({
+      grupos: [{ id: "grupo-1", modo: "todas", linhas: [{ field: "tag", op: "contains", value: "" }] }],
+    }),
+  },
   end: {
     type: "end",
     paletteLabel: "Fim",
@@ -310,6 +321,10 @@ export function describeNodeConfig(
     case "acoes_da_automacao": {
       const c = config as ConfigOf<"acoes_da_automacao">;
       return `${c.acoes.length} ${c.acoes.length === 1 ? t("ação") : t("ações")} · ${t("sem mensagem ao cliente")}`;
+    }
+    case "condicoes_da_automacao": {
+      const c = config as ConfigOf<"condicoes_da_automacao">;
+      return `${c.grupos.length} ${c.grupos.length === 1 ? t("grupo") : t("grupos")} · ${t("primeira correspondência")}`;
     }
     case "end": {
       const c = config as ConfigOf<"end">;

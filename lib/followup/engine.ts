@@ -67,6 +67,7 @@ import type { PassoDeEnvio } from "@/lib/automation/envio-de-passos";
 import type { Interativo } from "@/lib/channels/interativo";
 import { fusoUtilizavel } from "@/lib/tempo/fusos";
 import { executarAcoesDaAutomacao as executarListaDeAcoes } from "@/lib/followup/acoes-da-automacao";
+import { grupoQueCasou as avaliarGruposDaAutomacao } from "@/lib/followup/condicoes-da-automacao";
 
 const MAX_STEPS = 80;
 const CLAIM_LEASE_SECONDS = 120;
@@ -225,6 +226,12 @@ export interface AdminClient {
     enrollment_id: string;
     config: Extract<FlowNode, { type: "acoes_da_automacao" }>["config"];
   }): Promise<{ ok: boolean; falhas: string[] }>;
+  /** FORK ESCALE · 5D: avalia os grupos com o contexto completo e o relógio da organização. */
+  avaliarCondicoesDaAutomacao?(item: {
+    organization_id: string;
+    contact_id: string;
+    grupos: Extract<FlowNode, { type: "condicoes_da_automacao" }>["config"]["grupos"];
+  }): Promise<string | null>;
   /**
    * Régua de recuperação de falta esgotada sem resposta — abre um item na
    * Central referenciando o COMPROMISSO. Opcional: só a produção precisa; os
@@ -1003,6 +1010,14 @@ async function processEnrollment(
     node.type === "wait" && node.config.mode === "fixed" && node.config.janela
       ? await db.lerFusoDaOrganizacao?.(enrollment.organization_id)
       : undefined;
+  const grupoQueCasou =
+    node.type === "condicoes_da_automacao"
+      ? ((await db.avaliarCondicoesDaAutomacao?.({
+          organization_id: enrollment.organization_id,
+          contact_id: enrollment.contact_id,
+          grupos: node.config.grupos,
+        })) ?? null)
+      : undefined;
 
   const result = processNode({
     node,
@@ -1013,6 +1028,7 @@ async function processEnrollment(
     waitElapsed,
     wokeEarly,
     lastInboundBody,
+    grupoQueCasou,
     fuso,
     actionEnqueued,
     actionRecheckCount,
@@ -1115,6 +1131,16 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
       ...(contact ? { contact } : {}),
     };
   };
+  const lerFusoDaOrganizacao = async (orgId: string): Promise<string> => {
+    const { data, error } = await admin.from("organizations").select("timezone").eq("id", orgId).maybeSingle();
+    if (error) {
+      logger.warn("[followup.engine] fuso da organização ilegível — janela do atraso no fuso padrão", {
+        organization_id: orgId,
+        error: error.message,
+      });
+    }
+    return fusoUtilizavel((data as { timezone?: string | null } | null)?.timezone);
+  };
   return {
     async assertServiceBoundary(enrollment) { if(!revisions.has(enrollment.id) && enrollment.revision!==undefined) revisions.set(enrollment.id,enrollment.revision); await assertServiceBoundarySupabase(admin, enrollment.service_boundary ?? null); },
     async retornoQueSeguraOFluxo(enrollment) {
@@ -1152,16 +1178,7 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
       if (!data) return null;
       return flowGraphSchema.parse(data.graph);
     },
-    async lerFusoDaOrganizacao(orgId) {
-      const { data, error } = await admin.from("organizations").select("timezone").eq("id", orgId).maybeSingle();
-      if (error) {
-        logger.warn("[followup.engine] fuso da organização ilegível — janela do atraso no fuso padrão", {
-          organization_id: orgId,
-          error: error.message,
-        });
-      }
-      return fusoUtilizavel((data as { timezone?: string | null } | null)?.timezone);
-    },
+    lerFusoDaOrganizacao,
     async loadLeadFacts(orgId, contactId) {
       const [{ data: lead, error: leadErr }, { data: contact, error: contactErr }] = await Promise.all([
         admin
@@ -1472,6 +1489,13 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
         { admin, getAction, carregarContexto: carregarContextoDaAutomacao },
         { ...item, acoes: item.config.acoes },
       );
+    },
+    async avaliarCondicoesDaAutomacao(item) {
+      const [contexto, fuso] = await Promise.all([
+        carregarContextoDaAutomacao(item.organization_id, item.contact_id),
+        lerFusoDaOrganizacao(item.organization_id),
+      ]);
+      return avaliarGruposDaAutomacao(item.grupos, contexto, { agora: new Date(), fuso });
     },
     async abrirAvisoRecuperacaoEsgotada(item) {
       // ── A GUARDA DE ANONIMIZAÇÃO DESTA PORTA (issue #701) ──

@@ -65,6 +65,7 @@ import { MoveLeadNode } from "./nodes/MoveLeadNode";
 import { EditLeadTagNode } from "./nodes/EditLeadTagNode";
 import { SkillNode } from "./nodes/SkillNode";
 import { AutomationActionsNode } from "./nodes/AutomationActionsNode";
+import { AutomationConditionsNode } from "./nodes/AutomationConditionsNode";
 
 const EMPTY_GRAPH: FlowGraph = { nodes: [], edges: [] };
 const DND_MIME = "application/x-followup-node-type";
@@ -90,6 +91,7 @@ const nodeTypes: NodeTypes = {
   move_lead: MoveLeadNode,
   edit_lead_tag: EditLeadTagNode,
   acoes_da_automacao: AutomationActionsNode,
+  condicoes_da_automacao: AutomationConditionsNode,
   end: EndNode,
   collect: CollectNode,
   skill: SkillNode,

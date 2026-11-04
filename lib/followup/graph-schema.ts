@@ -4,6 +4,29 @@ import { z } from 'zod';
 import { PRIORIDADES_DA_TAREFA } from '@/lib/tarefas/tipos';
 import { janelaDoAtrasoSchema } from '@/lib/followup/janela-do-atraso';
 import { acoesDaAutomacaoConfigSchema } from '@/lib/followup/acoes-da-automacao';
+import { condicoesDaAutomacaoConfigSchema } from '@/lib/followup/condicoes-da-automacao';
+import {
+  CONDITION_FALSE_BRANCH_ID,
+  CONDITION_TRUE_BRANCH_ID,
+  declaredBranchIdSchema,
+  edgeBranchIdSchema,
+  FALLBACK_BRANCH_ID,
+  NO_REPLY_BRANCH_ID,
+  REPEAT_BODY_BRANCH_ID,
+  REPEAT_DONE_BRANCH_ID,
+} from '@/lib/followup/ramos';
+
+export {
+  CONDITION_FALSE_BRANCH_ID,
+  CONDITION_TRUE_BRANCH_ID,
+  declaredBranchIdSchema,
+  edgeBranchIdSchema,
+  FALLBACK_BRANCH_ID,
+  NO_REPLY_BRANCH_ID,
+  REPEAT_BODY_BRANCH_ID,
+  REPEAT_DONE_BRANCH_ID,
+  RESERVED_BRANCH_IDS,
+} from '@/lib/followup/ramos';
 
 /**
  * Flow graph schema for the follow-up automation system.
@@ -33,6 +56,7 @@ export const NODE_TYPES = [
   'edit_lead_tag',
   // FORK ESCALE · 5D: ações do motor de regras dentro do fluxo da tela de Automações.
   'acoes_da_automacao',
+  'condicoes_da_automacao',
   'end',
 ] as const;
 export type NodeType = (typeof NODE_TYPES)[number];
@@ -56,46 +80,6 @@ export type NodeType = (typeof NODE_TYPES)[number];
  * Read the storage shape through `nodeBranches()` — it is the only place that
  * knows which dialect a node speaks.
  */
-
-/** The catch-all output every node has. Spelled `{ type: 'always' }` on the wire — never as a `branch`. */
-export const FALLBACK_BRANCH_ID = 'else';
-/** `ai_classify` grace timeout expired without a classification. */
-export const NO_REPLY_BRANCH_ID = 'no_reply';
-/** The two outputs of a `condition` node evaluating its checks together (`branching: 'combined'`). */
-export const CONDITION_TRUE_BRANCH_ID = 'true';
-export const CONDITION_FALSE_BRANCH_ID = 'false';
-/** Saída do `repeat` enquanto ainda faltam voltas. */
-export const REPEAT_BODY_BRANCH_ID = 'body';
-/** Saída do `repeat` quando o contador chegou a zero. */
-export const REPEAT_DONE_BRANCH_ID = 'done';
-
-/** Branch ids the contract owns — a user-declared branch may not claim one. */
-export const RESERVED_BRANCH_IDS = [
-  FALLBACK_BRANCH_ID,
-  NO_REPLY_BRANCH_ID,
-  CONDITION_TRUE_BRANCH_ID,
-  CONDITION_FALSE_BRANCH_ID,
-  REPEAT_BODY_BRANCH_ID,
-  REPEAT_DONE_BRANCH_ID,
-] as const;
-
-/** Id of a branch the user declared (a check, an AI class) — opaque, stable across renames. */
-export const declaredBranchIdSchema = z
-  .string()
-  .min(1)
-  .max(64)
-  .refine((id) => !(RESERVED_BRANCH_IDS as readonly string[]).includes(id), {
-    message: `branch id is reserved: ${RESERVED_BRANCH_IDS.join(', ')}`,
-  });
-
-/** Id an edge may reference. Excludes the fallback, which has exactly one spelling: `{ type: 'always' }`. */
-export const edgeBranchIdSchema = z
-  .string()
-  .min(1)
-  .max(64)
-  .refine((id) => id !== FALLBACK_BRANCH_ID, {
-    message: `the fallback branch "${FALLBACK_BRANCH_ID}" is spelled { type: 'always' } on an edge`,
-  });
 
 /**
  * Wait node configuration schema.
@@ -616,6 +600,16 @@ export const flowNodeSchema = z.discriminatedUnion('type', [
     }),
     config: acoesDaAutomacaoConfigSchema,
   }),
+  z.strictObject({
+    id: z.string().min(1),
+    type: z.literal('condicoes_da_automacao'),
+    label: z.string().min(1).max(60),
+    position: z.strictObject({
+      x: z.number(),
+      y: z.number(),
+    }),
+    config: condicoesDaAutomacaoConfigSchema,
+  }),
   // End node: terminal state
   z.strictObject({
     id: z.string().min(1),
@@ -857,6 +851,18 @@ function fallbackBranch(label: string): FlowBranch {
  */
 export function nodeBranches(node: BranchableNode): FlowBranch[] {
   switch (node.type) {
+    case 'condicoes_da_automacao':
+      return [
+        ...node.config.grupos.map((grupo, indice) => ({
+          id: grupo.id,
+          label: `Grupo ${indice + 1}`,
+          check: null,
+          kind: 'match' as const,
+          condition: { type: 'branch' as const, branch_id: grupo.id },
+        })),
+        fallbackBranch('Não corresponde a nenhuma condição'),
+      ];
+
     case 'condition': {
       if (node.config.branching === 'per_check') {
         const branches: FlowBranch[] = node.config.checks.flatMap((check) =>

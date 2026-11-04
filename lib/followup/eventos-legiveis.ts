@@ -143,6 +143,7 @@ const TIPO_DO_NO: Record<FlowNode["type"], string> = {
   move_lead: "Mover no funil",
   edit_lead_tag: "Editar tag",
   acoes_da_automacao: "Ações",
+  condicoes_da_automacao: "Condições",
   end: "Fim",
 };
 
@@ -224,6 +225,11 @@ export function resumoDoNo(node: FlowNode): NoDoDossie {
       return {
         ...base,
         resumo: `executa ${node.config.acoes.length} ação(ões) da automação — sem mensagem ao cliente`,
+      };
+    case "condicoes_da_automacao":
+      return {
+        ...base,
+        resumo: `avalia ${node.config.grupos.length} grupo(s) de condições e segue pela primeira correspondência`,
       };
     case "end":
       return { ...base, resumo: `encerra — ${DESFECHO[node.config.outcome] ?? node.config.outcome}` };

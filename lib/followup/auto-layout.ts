@@ -52,6 +52,7 @@ const TYPE_ORDER: Record<NodeType, number> = {
   move_lead: 8.5,
   edit_lead_tag: 8.6,
   acoes_da_automacao: 8.7,
+  condicoes_da_automacao: 2.5,
   end: 9,
 };
 

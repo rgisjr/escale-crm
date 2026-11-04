@@ -43,6 +43,7 @@ describe('graph-schema', () => {
         'move_lead',
         'edit_lead_tag',
         'acoes_da_automacao',
+        'condicoes_da_automacao',
         'end',
       ]);
     });
@@ -1398,6 +1399,28 @@ describe('graph-schema', () => {
           { id: FALLBACK_BRANCH_ID, label: 'Sempre', check: null, kind: 'fallback', condition: { type: 'always' } },
         ]);
       }
+    });
+
+    it('expõe uma saída por grupo de condições e o fallback canônico por último', () => {
+      expect(nodeBranches({
+        type: 'condicoes_da_automacao',
+        config: {
+          grupos: [
+            { id: 'grupo-vip', modo: 'todas', linhas: [{ field: 'tag', op: 'contains', value: 'vip' }] },
+            { id: 'grupo-manha', modo: 'qualquer', linhas: [{ field: 'horario_atual', op: 'antes_de', value: '12:00' }] },
+          ],
+        },
+      })).toStrictEqual([
+        { id: 'grupo-vip', label: 'Grupo 1', check: null, kind: 'match', condition: { type: 'branch', branch_id: 'grupo-vip' } },
+        { id: 'grupo-manha', label: 'Grupo 2', check: null, kind: 'match', condition: { type: 'branch', branch_id: 'grupo-manha' } },
+        {
+          id: FALLBACK_BRANCH_ID,
+          label: 'Não corresponde a nenhuma condição',
+          check: null,
+          kind: 'fallback',
+          condition: { type: 'always' },
+        },
+      ]);
     });
   });
 
