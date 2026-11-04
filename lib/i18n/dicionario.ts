@@ -13352,6 +13352,10 @@ export const DICIONARIO: Traducoes = {
   "Rascunho da IA indisponível (config).": { es: "Borrador de la IA no disponible (config)." },
   "Regra do run não encontrada.": { es: "Regla de la ejecución no encontrada." },
   "Regra não encontrada.": { es: "Regla no encontrada." },
+  // FORK ESCALE · 5D: rota do modo fluxo das automações.
+  "Este desenho se grava como regra, não como fluxo.": { es: "Este diseño se guarda como regla, no como flujo." },
+  Atraso: { es: "Retraso" },
+  "primeira correspondência": { es: "primera coincidencia" },
   "requer papel de administrador": { es: "requiere rol de administrador" },
   "requer papel de gerente ou superior": { es: "requiere rol de gerente o superior" },
   "Resposta ao caso indisponível (config).": { es: "Respuesta al caso no disponible (config)." },
