@@ -332,14 +332,18 @@ export type CaixaNaTela = {
 /** Os nós do canvas de volta ao desenho: só a regra — sem o que é de tela nem os problemas da última gravação. */
 export function desenhoDaTela(
   nos: readonly CaixaNaTela[],
-  ligacoes: readonly LigacaoDoDesenho[],
+  // FORK ESCALE · 5D: a saída vem do `saida` da ligação ou do `sourceHandle` da aresta do React Flow.
+  ligacoes: ReadonlyArray<LigacaoDoDesenho & { sourceHandle?: string | null }>,
 ): Desenho {
   return {
     caixas: nos.map((n) => {
       const { etapa: _etapa, eventoDaRegra: _eventoDaRegra, problemas: _problemas, ...data } = n.data;
       return { id: n.id, type: n.type ?? n.data.kind, position: n.position, data: data as DadosDaCaixa };
     }),
-    ligacoes: ligacoes.map((l) => ({ id: l.id, source: l.source, target: l.target })),
+    ligacoes: ligacoes.map((l) => {
+      const saida = (l.saida ?? l.sourceHandle ?? "proximo") as SaidaDoNo;
+      return { id: l.id, source: l.source, target: l.target, ...(saida === "proximo" ? {} : { saida }) };
+    }),
   };
 }
 
@@ -554,11 +558,20 @@ export function inserirDepois(desenho: Desenho, ancoraId: string | null, nova: C
 export function excluirCaixa(desenho: Desenho, id: string): Desenho {
   const caixa = caixaDe(desenho, id);
   if (!caixa || caixa.data.kind === "gatilho") return desenho;
-  const entrada = desenho.ligacoes.find((l) => l.target === id);
-  const saida = saidaDe(desenho, id);
+  const entradas = desenho.ligacoes.filter((l) => l.target === id);
+  const saidas = desenho.ligacoes.filter((l) => l.source === id);
   const ligacoes = desenho.ligacoes.filter((l) => l.source !== id && l.target !== id);
-  if (entrada && saida && entrada.source !== saida.target) {
-    ligacoes.push({ id: proximoId(desenho.ligacoes.map((l) => l.id), "ligacao"), source: entrada.source, target: saida.target });
+  // FORK ESCALE · 5D: no modo fluxo a caixa pode ter várias entradas; só fecha a fila com UMA saída.
+  const destino = saidas.length === 1 ? saidas[0]!.target : null;
+  for (const entrada of destino ? entradas : []) {
+    const repetida = ligacoes.some((l) => l.source === entrada.source && (l.saida ?? "proximo") === (entrada.saida ?? "proximo"));
+    if (entrada.source === destino || repetida) continue;
+    ligacoes.push({
+      id: proximoId([...desenho.ligacoes, ...ligacoes].map((l) => l.id), "ligacao"),
+      source: entrada.source,
+      target: destino!,
+      ...(entrada.saida ? { saida: entrada.saida } : {}),
+    });
   }
   return { caixas: desenho.caixas.filter((c) => c.id !== id), ligacoes };
 }

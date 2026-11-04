@@ -56,7 +56,7 @@ describe("gravarAutomacaoEmModoFluxo", () => {
     const d = deps();
     const db = dbCom({ automation_rules: { id: REGRA, actions: [] } });
     const r = await gravarAutomacaoEmModoFluxo(db, db, entrada(REGRA), d);
-    expect(r).toEqual({ ok: true, dado: { ruleId: REGRA, pointerId: PONTEIRO } });
+    expect(r).toEqual({ ok: true, dado: { ruleId: REGRA, pointerId: PONTEIRO, atualizadoEm: null } });
     expect(d.criarFluxo).toHaveBeenCalledOnce();
     expect(vi.mocked(d.criarFluxo).mock.calls[0]![1]).toMatchObject({ surface: "crm_automation" });
     expect(d.salvarFluxo).toHaveBeenCalledOnce();
@@ -89,7 +89,7 @@ describe("gravarAutomacaoEmModoFluxo", () => {
     const d = deps();
     const db = dbCom({});
     const r = await gravarAutomacaoEmModoFluxo(db, db, entrada(null), d);
-    expect(r).toEqual({ ok: true, dado: { ruleId: REGRA, pointerId: PONTEIRO } });
+    expect(r).toEqual({ ok: true, dado: { ruleId: REGRA, pointerId: PONTEIRO, atualizadoEm: null } });
     expect(vi.mocked(d.criarRegra).mock.calls[0]![1].dados.actions).toEqual([
       { type: "start_message_flow", config: { flow_pointer_id: PONTEIRO } },
     ]);

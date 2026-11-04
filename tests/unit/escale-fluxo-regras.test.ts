@@ -112,13 +112,14 @@ describe("gatilhos", () => {
 });
 
 describe("paleta e modal Ações", () => {
-  it("8 itens na ordem", () => {
+  it("9 itens na ordem (o Atraso entra na 5D)", () => {
     expect(ITENS_DA_PALETA.map((i) => i.passo)).toEqual([
       "gatilho",
       "send_whatsapp_message",
       "send_instagram_message",
       "send_email",
       "acoes",
+      "atraso",
       "condicoes",
       "send_ai_message",
       "start_message_flow",
@@ -129,8 +130,8 @@ describe("paleta e modal Ações", () => {
     expect(filtrarPaleta("acoes", id).map((i) => i.passo)).toEqual(["acoes"]);
     expect(filtrarPaleta("FOLLOW", id).map((i) => i.passo)).toEqual(["start_message_flow"]);
     expect(filtrarPaleta("zzz", id)).toEqual([]);
-    expect(filtrarPaleta("", id)).toHaveLength(8);
-    expect(filtrarPaleta("  ", id)).toHaveLength(8);
+    expect(filtrarPaleta("", id)).toHaveLength(9);
+    expect(filtrarPaleta("  ", id)).toHaveLength(9);
     expect(filtrarPaleta("logica", id)).toEqual([]);
   });
 
@@ -138,7 +139,7 @@ describe("paleta e modal Ações", () => {
     const doModal = ABAS_DAS_ACOES.flatMap((a) => a.cartoes.map((c) => c.tipo));
     const daPaleta = ITENS_DA_PALETA.map((i) => i.passo).filter(
       // O passo Instagram (Fase 10B) não é um dos 11 ActionType do original.
-      (p) => p !== "gatilho" && p !== "acoes" && p !== "condicoes" && p !== "send_instagram_message",
+      (p) => p !== "gatilho" && p !== "acoes" && p !== "condicoes" && p !== "atraso" && p !== "send_instagram_message",
     ) as unknown as ActionType[];
     const todos = [...doModal, ...daPaleta];
     expect(new Set(todos).size).toBe(11);

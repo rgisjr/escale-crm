@@ -3,7 +3,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useRouter } from "next/navigation";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
-import { useOrganizarAoCriar } from "@/hooks/escale/useAutomacoesDaCasca";
+import { podeSerModoFluxo, useDesenhoDoFluxo, useOrganizarAoCriar } from "@/hooks/escale/useAutomacoesDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { useAutomationRule } from "@/hooks/webhooks/useAutomationRules";
 import { ApiError } from "@/lib/api/types";
@@ -53,9 +53,11 @@ export function FluxoDaCasca({
   // 404 é "não existe"; qualquer outra falha é leitura que não deu certo.
   const falhou = isError && !(error instanceof ApiError && error.code === "not_found");
 
-  if (!nova && isPending && !isError) return <Carregando />;
-
   const regra = nova ? null : (data?.data ?? null);
+  // FORK ESCALE · 5D: uma regra com UMA ação `start_message_flow` pode ser uma automação em modo fluxo.
+  const fluxo = useDesenhoDoFluxo(podeSerModoFluxo(regra) ? regra!.id : null);
+
+  if (!nova && ((isPending && !isError) || (podeSerModoFluxo(regra) && fluxo.isPending))) return <Carregando />;
   if (!nova && !regra) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
@@ -77,6 +79,7 @@ export function FluxoDaCasca({
       <TelaDoFluxo
         key={regra?.id ?? "nova"}
         regra={regra}
+        desenhoDoFluxo={fluxo.data ?? null}
         fuso={fuso}
         nomeInicial={nomeInicial}
         aoCriar={

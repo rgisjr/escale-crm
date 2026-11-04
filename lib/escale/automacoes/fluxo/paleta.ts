@@ -13,6 +13,8 @@ export type PassoDaPaleta =
   | "send_instagram_message"
   | "send_email"
   | "acoes"
+  // FORK ESCALE · 5D: o Atraso (07-014, 07-028), só do modo fluxo.
+  | "atraso"
   | "condicoes"
   | "send_ai_message"
   | "start_message_flow";
@@ -37,6 +39,7 @@ export const ITENS_DA_PALETA: readonly ItemDaPaleta[] = [
   { passo: "send_instagram_message", secao: "canais", titulo: "Instagram", descricao: "Enviar mensagem no Instagram" },
   { passo: "send_email", secao: "canais", titulo: "E-mail", descricao: "Enviar e-mail" },
   { passo: "acoes", secao: "logica", titulo: "Ações", descricao: "Mover etapa, tags e tarefas" },
+  { passo: "atraso", secao: "logica", titulo: "Atraso", descricao: "Aguardar um período" },
   { passo: "condicoes", secao: "logica", titulo: "Condições", descricao: "Filtrar quem segue no fluxo" },
   { passo: "send_ai_message", secao: "ia", titulo: "Mensagem pela IA", descricao: "A IA escreve e envia a mensagem" },
   { passo: "start_message_flow", secao: "ia", titulo: "Iniciar follow-up", descricao: "Começa um fluxo de follow-up" },
@@ -103,13 +106,14 @@ export function tituloDaAcaoNoFluxo(tipo: string): string | null {
   return ITENS_DA_PALETA.find((i) => i.passo === tipo)?.titulo ?? null;
 }
 
-export type TipoDoNo = "gatilho" | "condicoes" | "whatsapp" | "instagram" | "email" | "acoes" | "ia";
+export type TipoDoNo = "gatilho" | "condicoes" | "atraso" | "whatsapp" | "instagram" | "email" | "acoes" | "ia";
 
 /** send_whatsapp_message → whatsapp; send_email → email; send_ai_message, start_message_flow, ai_decide → ia; o resto (e o desconhecido) → acoes. */
 export function tipoDoNo(
-  dados: { kind: "gatilho" } | { kind: "condicoes" } | { kind: "acao"; acao: { type: string } },
+  dados: { kind: "gatilho" } | { kind: "condicoes" } | { kind: "atraso" } | { kind: "acao"; acao: { type: string } },
 ): TipoDoNo {
   if (dados.kind === "gatilho") return "gatilho";
+  if (dados.kind === "atraso") return "atraso";
   if (dados.kind === "condicoes") return "condicoes";
   switch (dados.acao.type) {
     case "send_whatsapp_message":

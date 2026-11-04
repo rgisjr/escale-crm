@@ -100,7 +100,9 @@ export async function lerAutomacaoEmModoFluxo(
   return { regra: lida.regra, grafo: grafo.data, pointerId: lida.pointerId };
 }
 
-type Resultado = ResultadoDeEscrita<{ ruleId: string; pointerId: string }>;
+type Resultado = ResultadoDeEscrita<{ ruleId: string; pointerId: string; atualizadoEm: string | null }>;
+
+const quando = (regra: Record<string, unknown>): string | null => (typeof regra.updated_at === "string" ? regra.updated_at : null);
 
 export async function gravarAutomacaoEmModoFluxo(
   db: SupabaseClient,
@@ -170,7 +172,9 @@ export async function gravarAutomacaoEmModoFluxo(
       actor,
       patch: { ...conferida.data, actions: acoes, ...(entrada.versaoDaRegra ? { versao_lida: entrada.versaoDaRegra } : {}) },
     });
-    return atualizada.ok ? { ok: true, dado: { ruleId: entrada.ruleId, pointerId } } : atualizada;
+    return atualizada.ok
+      ? { ok: true, dado: { ruleId: entrada.ruleId, pointerId, atualizadoEm: quando(atualizada.dado) } }
+      : atualizada;
   }
   const criada = await deps.criarRegra(db, {
     organizationId,
@@ -178,5 +182,5 @@ export async function gravarAutomacaoEmModoFluxo(
     requestId,
     dados: { ...conferida.data, actions: acoes },
   });
-  return criada.ok ? { ok: true, dado: { ruleId: criada.dado.id, pointerId } } : criada;
+  return criada.ok ? { ok: true, dado: { ruleId: criada.dado.id, pointerId, atualizadoEm: quando(criada.dado) } } : criada;
 }

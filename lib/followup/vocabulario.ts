@@ -629,3 +629,30 @@ export const BASES_DA_PAUSA_DE_REENTRADA: Record<BaseDaPausa, string> = {
   ultima_mensagem: "Da última mensagem do cliente",
   ultimo_envio: "Do último envio deste fluxo",
 };
+
+/** FORK ESCALE · 5D: as ações do motor de regras que o nó `acoes_da_automacao` roda dentro do fluxo. */
+export const ACOES_DA_AUTOMACAO_NO_FLUXO: Record<string, string> = {
+  add_tag: "Adicionar tag",
+  remove_tag: "Remover tag",
+  create_or_move_lead: "Criar ou mover negócio",
+  assign_owner: "Atribuir dono do negócio",
+  create_task: "Tarefa interna",
+  apply_task_plan: "Plano de tarefas",
+  call_webhook: "Enviar Webhook",
+};
+
+/** FORK ESCALE · 5D: "Corresponde a todas / qualquer condição" do nó `condicoes_da_automacao`. */
+export const MODOS_DO_GRUPO_DE_CONDICOES: Record<string, string> = {
+  todas: "todas as condições",
+  qualquer: "qualquer condição",
+};
+
+/** FORK ESCALE · 5D: os operadores das linhas do nó `condicoes_da_automacao` (as mesmas do motor de regras). */
+export const OPERADORES_DA_LINHA_DO_FLUXO: Record<string, string> = {
+  eq: "é igual a",
+  neq: "é diferente de",
+  contains: "contém",
+  depois_de: "depois de",
+  antes_de: "antes de",
+  entre: "entre",
+};

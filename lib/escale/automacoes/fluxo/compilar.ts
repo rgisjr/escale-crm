@@ -23,6 +23,7 @@ import {
 } from "@/lib/automation/desenho-da-regra";
 import { passosSchema } from "@/lib/automation/envio-de-passos";
 import {
+  ATRASO_MAXIMO_MS,
   ATRASO_MINIMO_MS,
   botoesDaMensagem,
   ESPERA_SEM_LIMITE_MS,
@@ -32,6 +33,7 @@ import {
   msDoAtraso,
   msDoTempoDeResposta,
   PASSO_SO_NO_MODO_REGRA,
+  RECUSA_ATRASO_MAXIMO,
   RECUSA_ATRASO_MINIMO,
   RECUSA_CANAL_FIXO,
   RECUSA_TAMANHO_MAXIMO,
@@ -153,6 +155,7 @@ function noDaCaixa(c: CaixaDoDesenho, mapa: Mapa, problemas: ProblemaDoDesenho[]
   if (d.kind === "atraso") {
     const ms = msDoAtraso(d);
     if (ms < ATRASO_MINIMO_MS) problemas.push({ caixa: c.id, mensagem: RECUSA_ATRASO_MINIMO });
+    if (ms > ATRASO_MAXIMO_MS) problemas.push({ caixa: c.id, mensagem: RECUSA_ATRASO_MAXIMO });
     return [{ ...base, type: "wait", label: "Atraso", config: { mode: "fixed", duration_ms: ms, immune_to_reply: true, ...(d.janela ? { janela: d.janela } : {}) } }];
   }
   if (d.kind === "condicoes") {
@@ -173,7 +176,9 @@ function noDaMensagem(c: CaixaDoDesenho, d: DadosDaAcao, problemas: ProblemaDoDe
   if (typeof canal === "string" && canal !== "" && canal !== "conversation") {
     problemas.push({ caixa: c.id, mensagem: RECUSA_CANAL_FIXO });
   }
-  const passos = passosSchema.safeParse(d.acao.config.passos);
+  // Texto único (`template`, o formato de sempre) vira uma sequência de um passo só.
+  const template = typeof d.acao.config.template === "string" ? d.acao.config.template : null;
+  const passos = passosSchema.safeParse(d.acao.config.passos ?? (template ? [{ tipo: "texto", texto: template }] : undefined));
   if (!passos.success) {
     problemas.push({ caixa: c.id, mensagem: PROBLEMAS.acaoIncompleta });
     return [];

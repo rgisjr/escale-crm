@@ -65,6 +65,8 @@ export const VISUAL_DO_NO: Record<TipoDoNo, VisualDoNo> = {
   // FORK ESCALE · Fase 10B: o rosa do Instagram é cor de tipo de nó, como o verde do WhatsApp.
   instagram: { icone: InstagramLogo as IconeDoFluxo, rotulo: "Instagram", texto: "text-casca-fluxo-instagram", borda: "border-casca-fluxo-instagram", fundo: "bg-casca-fluxo-instagram-suave" },
   email: { icone: Mail, rotulo: "E-mail", texto: "text-casca-fluxo-canal", borda: "border-casca-fluxo-canal", fundo: "bg-casca-fluxo-canal-suave" },
+  // FORK ESCALE · 5D: o Atraso é vermelho na Clint (07-028).
+  atraso: { icone: Clock, rotulo: null, texto: "text-casca-fluxo-atraso", borda: "border-casca-fluxo-atraso", fundo: "bg-casca-fluxo-atraso-suave" },
   acoes: { icone: Zap, rotulo: "Ações", texto: "text-casca-fluxo-acoes", borda: "border-casca-fluxo-acoes", fundo: "bg-casca-fluxo-acoes-suave" },
   ia: { icone: Sparkles, rotulo: "Inteligência Artificial", texto: "text-casca-marca", borda: "border-casca-marca", fundo: "bg-casca-marca-suave" },
 };

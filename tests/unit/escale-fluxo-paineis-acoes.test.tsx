@@ -129,9 +129,11 @@ describe("PainelDaMensagem", () => {
     expect(screen.getByText("Enviar mensagem")).toBeTruthy();
     expect(screen.getByText("Selecione o dispositivo WhatsApp")).toBeTruthy();
     expect(screen.getByText("Configure sua mensagem")).toBeTruthy();
-    for (const ausente of ["Fora da janela", "Dentro da janela", "Adicionar botão"]) {
+    for (const ausente of ["Fora da janela", "Dentro da janela"]) {
       expect(screen.queryByText(ausente)).toBeNull();
     }
+    // FORK ESCALE · 5D: os botões entram na mensagem (decisão do usuário, 03/11/2026).
+    expect(screen.getByText("Adicionar botão")).toBeTruthy();
     await userEvent.click(screen.getByRole("combobox", { name: "Número de WhatsApp" }));
     const desligado = screen.getByRole("option", { name: /Caído/ });
     expect(desligado.getAttribute("aria-disabled")).toBe("true");
