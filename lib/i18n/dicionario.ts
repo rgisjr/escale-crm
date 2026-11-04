@@ -19071,6 +19071,7 @@ export const DICIONARIO: Traducoes = {
   "Disparar também em mensagens enviadas em grupos": { es: "Activar también con mensajes enviados en grupos" },
   "Considerar mensagens agendadas": { es: "Considerar mensajes programados" },
   "Dispara com mensagem enviada por uma pessoa da equipe, pelo sistema ou pelo celular. Mensagem enviada pela IA ou por outra automação não dispara.": { es: "Se activa con mensajes enviados por una persona del equipo, desde el sistema o desde el celular. Los mensajes enviados por la IA o por otra automatización no lo activan." },
+  "Esta regra foi configurada no editor de fluxo (Automações), com filtro, número e as opções de grupo e mensagem agendada. Edite-a lá — aqui o filtro não aparece e não pode ser alterado.": { es: "Esta regla se configuró en el editor de flujo (Automatizaciones), con filtro, número y las opciones de grupo y mensaje programado. Edítela allí — aquí el filtro no aparece y no se puede cambiar." },
   "Mover etapa, tags e tarefas": { es: "Mover etapa, etiquetas y tareas" },
   "Negócio criado pelo formulário": { es: "Negocio creado por el formulario" },
   "Negócio entrou na etapa": { es: "Negocio entró en la etapa" },

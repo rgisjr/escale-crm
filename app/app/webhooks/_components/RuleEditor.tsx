@@ -41,6 +41,7 @@ import {
   type DirecaoDoSilencio,
 } from "@/lib/automation/gatilhos-de-tempo";
 import { configAoSalvarDaTela } from "@/lib/automation/config-ao-salvar";
+import { configDaMensagemEnviadaSchema } from "@/lib/automation/mensagem-enviada";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import {
   useCreateAutomationRule,
@@ -348,6 +349,10 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
     triggerEvent === GATILHO_SILENCIO || triggerEvent === GATILHO_ETAPA_PARADA;
   const ehGatilhoDeNovoContato = triggerEvent === "lead.created";
   const ehGatilhoDeMensagemEnviada = triggerEvent === "message.sent";
+  // Regra gravada pelo editor de fluxo (filtro, grupo, agendadas): editar a palavra aqui seria
+  // descartada em silêncio (`configAoSalvarDaTela` mantém o `filtro` e ignora `palavra_chave`).
+  const mensagemEnviadaNoFormatoNovo =
+    ehGatilhoDeMensagemEnviada && configDaMensagemEnviadaSchema.safeParse(rule?.trigger_config ?? {}).success;
   const camposDeData = camposDoFunil(
     (pipelinesRes?.data ?? []).find((p) => p.id === configDaData.pipeline_id)?.settings ?? null,
   ).filter((campo) => campo.type === "date");
@@ -442,15 +447,18 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
                 },
               })
             : ehGatilhoDeMensagemEnviada
-              ? configAoSalvarDaTela({
-                  gatilhoDaRegra: rule?.trigger_event,
-                  configDaRegra: rule?.trigger_config,
-                  gatilhoDaTela: triggerEvent,
-                  configDaTela: {
-                    palavra_chave: configDaPalavra.palavra_chave,
-                    modo: configDaPalavra.modo,
-                  },
-                })
+              ? mensagemEnviadaNoFormatoNovo
+                ? // Gravada pelo editor de fluxo: esta tela não a edita, só preserva.
+                  ((rule?.trigger_config as Record<string, unknown>) ?? {})
+                : configAoSalvarDaTela({
+                    gatilhoDaRegra: rule?.trigger_event,
+                    configDaRegra: rule?.trigger_config,
+                    gatilhoDaTela: triggerEvent,
+                    configDaTela: {
+                      palavra_chave: configDaPalavra.palavra_chave,
+                      modo: configDaPalavra.modo,
+                    },
+                  })
               : {},
     };
     const parsed = createAutomationRuleSchema.safeParse(payload);
@@ -630,43 +638,53 @@ export function RuleEditor({ open, onOpenChange, rule, nomeInicial, aoCriar, daC
             ) : null}
 
             {ehGatilhoDeMensagemEnviada ? (
-              <div className="space-y-3 rounded-sm border border-border p-3">
-                <p className="text-sm text-muted-foreground">
-                  {t(
-                    "A regra roda quando alguém da equipe envia uma mensagem com esta palavra ou frase, pelo sistema ou pelo celular. Mensagens enviadas por automação ou pela IA não disparam, para a regra não repetir a si mesma.",
-                  )}
-                </p>
-                <div className="flex flex-wrap items-end gap-3">
-                  <div className="flex-1 basis-64 space-y-1">
-                    <Label htmlFor="palavra-chave-enviada">{t("Palavra-chave")}</Label>
-                    <Input
-                      id="palavra-chave-enviada"
-                      value={configDaPalavra.palavra_chave}
-                      maxLength={200}
-                      onChange={(e) =>
-                        setConfigDaPalavra((prev) => ({ ...prev, palavra_chave: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="w-52 space-y-1">
-                    <Label>{t("Comparar com")}</Label>
-                    <Select
-                      value={configDaPalavra.modo}
-                      onValueChange={(v) =>
-                        setConfigDaPalavra((prev) => ({ ...prev, modo: v as ConfigDaPalavra["modo"] }))
-                      }
-                    >
-                      <SelectTrigger aria-label={t("Comparar com")}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="contem">{t("A mensagem contém")}</SelectItem>
-                        <SelectItem value="igual">{t("A mensagem é igual a")}</SelectItem>
-                      </SelectContent>
-                    </Select>
+              mensagemEnviadaNoFormatoNovo ? (
+                <div className="space-y-1 rounded-sm border border-border p-3">
+                  <p className="text-sm text-muted-foreground">
+                    {t(
+                      "Esta regra foi configurada no editor de fluxo (Automações), com filtro, número e as opções de grupo e mensagem agendada. Edite-a lá — aqui o filtro não aparece e não pode ser alterado.",
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-sm border border-border p-3">
+                  <p className="text-sm text-muted-foreground">
+                    {t(
+                      "A regra roda quando alguém da equipe envia uma mensagem com esta palavra ou frase, pelo sistema ou pelo celular. Mensagens enviadas por automação ou pela IA não disparam, para a regra não repetir a si mesma.",
+                    )}
+                  </p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-1 basis-64 space-y-1">
+                      <Label htmlFor="palavra-chave-enviada">{t("Palavra-chave")}</Label>
+                      <Input
+                        id="palavra-chave-enviada"
+                        value={configDaPalavra.palavra_chave}
+                        maxLength={200}
+                        onChange={(e) =>
+                          setConfigDaPalavra((prev) => ({ ...prev, palavra_chave: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="w-52 space-y-1">
+                      <Label>{t("Comparar com")}</Label>
+                      <Select
+                        value={configDaPalavra.modo}
+                        onValueChange={(v) =>
+                          setConfigDaPalavra((prev) => ({ ...prev, modo: v as ConfigDaPalavra["modo"] }))
+                        }
+                      >
+                        <SelectTrigger aria-label={t("Comparar com")}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contem">{t("A mensagem contém")}</SelectItem>
+                          <SelectItem value="igual">{t("A mensagem é igual a")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )
             ) : null}
 
             {/* #1540 — os gatilhos por TEMPO: N dias, de quem é o silêncio, e a
