@@ -244,7 +244,8 @@ function arestasDaCaixa(c: CaixaDoDesenho, d: Desenho, mapa: Mapa, alvo: Alvo): 
   );
   for (const b of ligados) nova(resposta, alvoDe(`botao:${b.id}`), { type: "branch", branch_id: b.id });
   if (ligados.length === 0) nova(resposta, alvoDe("proximo"), { type: "branch", branch_id: "respondeu" });
-  else nova(resposta, alvoDe("proximo"), { type: "always" });
+  // A saída de escape é obrigatória no publish, com ou sem botões: sem ela, quem não cai em nenhuma saída fica parado.
+  nova(resposta, alvoDe("proximo"), { type: "always" });
   nova(resposta, alvoDe("nao_respondeu"), { type: "branch", branch_id: NO_REPLY_BRANCH_ID });
   return arestas;
 }

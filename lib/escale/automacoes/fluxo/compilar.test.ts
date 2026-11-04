@@ -129,8 +129,25 @@ describe("outros desenhos", () => {
     expect(resposta?.type === "match_reply" && resposta.config.branches).toEqual([{ id: "respondeu", label: "Respondeu", op: "contains", pattern: "*" }]);
     expect(resposta?.type === "match_reply" && resposta.config.grace_timeout_ms).toBe(900_000);
     const deResposta = r.grafo.edges.filter((e) => e.source === "m__resposta");
-    expect(deResposta.some((e) => e.condition.type === "always")).toBe(false);
+    const respondeu = deResposta.find((e) => e.condition.type === "branch" && e.condition.branch_id === "respondeu");
+    expect(deResposta.find((e) => e.condition.type === "always")?.target).toBe(respondeu?.target);
     expect(deResposta.find((e) => e.condition.type === "branch" && e.condition.branch_id === "no_reply")?.target).toBe("n");
+  });
+
+  it("tempo de resposta sem botões: o grafo compilado passa no publish (saída de escape ligada)", () => {
+    const nao = { id: "n", type: "acao" as const, position: p, data: { kind: "acao" as const, acao: { type: "add_tag", config: { tags: ["x"] } } } };
+    const desenho: Desenho = {
+      caixas: [gat, msg({ tempo_de_resposta: { quantidade: 15, unidade: "minutos" } }), nao],
+      ligacoes: [
+        { id: "1", source: "gatilho", target: "m" },
+        { id: "2", source: "m", target: "n" },
+        { id: "3", source: "m", target: "n", saida: "nao_respondeu" },
+      ],
+    };
+    const r = compilar({ nome: "A", desenho, regraGravada: null });
+    if (!r.ok || r.modo !== "fluxo") throw new Error(JSON.stringify(r));
+    const v = validateFlowForPublish(r.grafo, { surface: "crm_automation", exigeModeloForaDaJanela: false });
+    expect(v.ok ? [] : v.errors.map((e) => e.code)).toEqual([]);
   });
 });
 
