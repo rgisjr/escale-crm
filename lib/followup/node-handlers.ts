@@ -941,6 +941,16 @@ export function processNode(input: {
       return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
     }
 
+    case "acoes_da_automacao": {
+      // FORK ESCALE · 5D: passagem no relógio, como `edit_lead_tag`: quem roda as ações é o engine ao
+      // aplicar o `advance`, guardado pelo idempotency_key do passo (replay não roda duas vezes).
+      const edge = selectEdge(edges, node.id, { type: "always" });
+      if (!edge) {
+        return { kind: "fail", error: `acoes_da_automacao node "${node.id}" has no outbound edge` };
+      }
+      return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
+    }
+
     case "end": {
       if (node.config.outcome === "custom") {
         return { kind: "complete", outcome: null, cancel_reason: node.config.note };

@@ -66,6 +66,7 @@ import { triggerConfigSchema } from "./api-schemas";
 import type { PassoDeEnvio } from "@/lib/automation/envio-de-passos";
 import type { Interativo } from "@/lib/channels/interativo";
 import { fusoUtilizavel } from "@/lib/tempo/fusos";
+import { executarAcoesDaAutomacao as executarListaDeAcoes } from "@/lib/followup/acoes-da-automacao";
 
 const MAX_STEPS = 80;
 const CLAIM_LEASE_SECONDS = 120;
@@ -217,6 +218,13 @@ export interface AdminClient {
     enrollment_id: string;
     config: Extract<FlowNode, { type: "edit_lead_tag" }>["config"];
   }): Promise<void>;
+  /** FORK ESCALE · 5D: executa as ações da automação depois do evento idempotente do passo. */
+  executarAcoesDaAutomacao?(item: {
+    organization_id: string;
+    contact_id: string;
+    enrollment_id: string;
+    config: Extract<FlowNode, { type: "acoes_da_automacao" }>["config"];
+  }): Promise<{ ok: boolean; falhas: string[] }>;
   /**
    * Régua de recuperação de falta esgotada sem resposta — abre um item na
    * Central referenciando o COMPROMISSO. Opcional: só a produção precisa; os
@@ -594,6 +602,45 @@ async function applyResult(
         node_id: node.id,
         error: err instanceof Error ? err.message : String(err),
       });
+    }
+  }
+  if (result.kind === "advance" && !isReplay && node.type === "acoes_da_automacao") {
+    let falhas: string[] = [];
+    try {
+      const executado = await db.executarAcoesDaAutomacao?.({
+        organization_id: enrollment.organization_id,
+        contact_id: enrollment.contact_id,
+        enrollment_id: enrollment.id,
+        config: node.config,
+      });
+      if (executado?.ok === false) falhas = executado.falhas;
+    } catch (err) {
+      falhas = [err instanceof Error ? err.message : String(err)];
+    }
+    if (falhas.length > 0) {
+      logger.warn("followup_acoes_da_automacao_failed", {
+        organization_id: enrollment.organization_id,
+        enrollment_id: enrollment.id,
+        node_id: node.id,
+        falhas,
+      });
+      try {
+        await db.insertEnrollmentEvent({
+          organization_id: enrollment.organization_id,
+          enrollment_id: enrollment.id,
+          node_id: node.id,
+          event_type: "acoes_da_automacao_failed",
+          payload: { falhas },
+          idempotency_key: `${idemKey}:falha`,
+        });
+      } catch (registroErr) {
+        logger.warn("followup_acoes_da_automacao_failed_event_failed", {
+          organization_id: enrollment.organization_id,
+          enrollment_id: enrollment.id,
+          node_id: node.id,
+          error: registroErr instanceof Error ? registroErr.message : String(registroErr),
+        });
+      }
     }
   }
 
@@ -1046,6 +1093,28 @@ export async function runFollowupTick(deps: TickDeps, opts?: { limit?: number })
 /** Production adapter: `AdminClient` backed by the real Supabase service-role client. */
 export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
   const revisions=new Map<string,number>();
+  const carregarContextoDaAutomacao = async (
+    organizationId: string,
+    contactId: string,
+  ): Promise<Record<string, unknown>> => {
+    const [{ data: lead, error: leadErr }, { data: contact, error: contactErr }] = await Promise.all([
+      admin
+        .from("crm_leads")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .eq("contact_id", contactId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      admin.from("contacts").select("*").eq("organization_id", organizationId).eq("id", contactId).maybeSingle(),
+    ]);
+    if (leadErr) throw new Error(leadErr.message);
+    if (contactErr) throw new Error(contactErr.message);
+    return {
+      ...(lead ? { lead } : {}),
+      ...(contact ? { contact } : {}),
+    };
+  };
   return {
     async assertServiceBoundary(enrollment) { if(!revisions.has(enrollment.id) && enrollment.revision!==undefined) revisions.set(enrollment.id,enrollment.revision); await assertServiceBoundarySupabase(admin, enrollment.service_boundary ?? null); },
     async retornoQueSeguraOFluxo(enrollment) {
@@ -1397,6 +1466,12 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
         );
         if (tirada.status === "failed") throw new Error(tirada.error ?? "remove_tag_failed");
       }
+    },
+    async executarAcoesDaAutomacao(item) {
+      return executarListaDeAcoes(
+        { admin, getAction, carregarContexto: carregarContextoDaAutomacao },
+        { ...item, acoes: item.config.acoes },
+      );
     },
     async abrirAvisoRecuperacaoEsgotada(item) {
       // ── A GUARDA DE ANONIMIZAÇÃO DESTA PORTA (issue #701) ──

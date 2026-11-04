@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { PRIORIDADES_DA_TAREFA } from '@/lib/tarefas/tipos';
 import { janelaDoAtrasoSchema } from '@/lib/followup/janela-do-atraso';
+import { acoesDaAutomacaoConfigSchema } from '@/lib/followup/acoes-da-automacao';
 
 /**
  * Flow graph schema for the follow-up automation system.
@@ -30,6 +31,8 @@ export const NODE_TYPES = [
   // fora desta fatia e é o passo seguinte da issue.
   'move_lead',
   'edit_lead_tag',
+  // FORK ESCALE · 5D: ações do motor de regras dentro do fluxo da tela de Automações.
+  'acoes_da_automacao',
   'end',
 ] as const;
 export type NodeType = (typeof NODE_TYPES)[number];
@@ -601,6 +604,17 @@ export const flowNodeSchema = z.discriminatedUnion('type', [
       y: z.number(),
     }),
     config: editLeadTagConfigSchema,
+  }),
+  // FORK ESCALE · 5D: lista das mesmas ações do motor de regras, sem mensagem própria.
+  z.strictObject({
+    id: z.string().min(1),
+    type: z.literal('acoes_da_automacao'),
+    label: z.string().min(1).max(60),
+    position: z.strictObject({
+      x: z.number(),
+      y: z.number(),
+    }),
+    config: acoesDaAutomacaoConfigSchema,
   }),
   // End node: terminal state
   z.strictObject({

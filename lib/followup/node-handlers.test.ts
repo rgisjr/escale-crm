@@ -1188,6 +1188,32 @@ describe("match_reply — limite de ramos", () => {
   });
 });
 
+describe("processNode — acoes_da_automacao", () => {
+  const node = {
+    id: "acoes-1",
+    type: "acoes_da_automacao",
+    label: "Ações",
+    position: { x: 0, y: 0 },
+    config: { acoes: [{ type: "add_tag", config: { tags: ["vip"] } }] },
+  } as unknown as FlowNode;
+
+  it("avança pela aresta always sem enviar mensagem", () => {
+    const result = processNode({
+      node,
+      edges: [edge({ source: "acoes-1", target: "n2", condition: { type: "always" } })],
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+    });
+    expect(result).toEqual({ kind: "advance", next_node_id: "n2", next_eval_at: NOW });
+  });
+
+  it("sem saída falha de forma explícita", () => {
+    const result = processNode({ node, edges: [], enrollment: enrollment(), lead: lead(), clock });
+    expect(result).toMatchObject({ kind: "fail" });
+  });
+});
+
 describe("processNode — repeat", () => {
   function repeatNode(): FlowNode {
     return {

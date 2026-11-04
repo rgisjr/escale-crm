@@ -79,6 +79,8 @@ export function toFlowNode(n: RFNode): FlowNode {
       return { ...shared, type, config: n.data.config as ConfigOf<"move_lead"> };
     case "edit_lead_tag":
       return { ...shared, type, config: n.data.config as ConfigOf<"edit_lead_tag"> };
+    case "acoes_da_automacao":
+      return { ...shared, type, config: n.data.config as ConfigOf<"acoes_da_automacao"> };
     case "end":
       return { ...shared, type, config: n.data.config as ConfigOf<"end"> };
     case "collect":
