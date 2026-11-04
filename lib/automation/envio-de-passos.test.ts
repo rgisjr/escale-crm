@@ -26,9 +26,10 @@ function enviador(falharNo?: number): EnviadorDePassos & { chamadas: string[] } 
 
 describe("passosSchema", () => {
   const texto = { tipo: "texto", texto: "oi" } as const;
-  it("aceita de 1 a 5 passos", () => {
+  it("aceita de 1 a 8 passos", () => {
     expect(passosSchema.safeParse([texto]).success).toBe(true);
-    expect(passosSchema.safeParse(Array(6).fill(texto)).success).toBe(false);
+    expect(passosSchema.safeParse(Array(8).fill(texto)).success).toBe(true);
+    expect(passosSchema.safeParse(Array(9).fill(texto)).success).toBe(false);
     expect(passosSchema.safeParse([]).success).toBe(false);
   });
   it("mídia aceita uuid ou var:<chave> e recusa o resto", () => {
@@ -36,7 +37,19 @@ describe("passosSchema", () => {
     expect(passosSchema.safeParse([{ tipo: "midia", asset: "var:bv1" }]).success).toBe(true);
     expect(passosSchema.safeParse([{ tipo: "midia", asset: "../x" }]).success).toBe(false);
   });
-  it("não existe pausa configurável (o espaçamento anti-ban separa as mensagens)", () => {
+  it("pausa curta entre mensagens: 1 a 10 s, nunca no começo, no fim ou duas seguidas, até 20 s no total", () => {
+    const pausa = (segundos: number) => ({ tipo: "pausa", segundos }) as const;
+    expect(passosSchema.safeParse([texto, pausa(4), texto]).success).toBe(true);
+    expect(passosSchema.safeParse([pausa(4), texto]).success).toBe(false);
+    expect(passosSchema.safeParse([texto, pausa(4)]).success).toBe(false);
+    expect(passosSchema.safeParse([texto, pausa(2), pausa(2), texto]).success).toBe(false);
+    expect(passosSchema.safeParse([texto, pausa(0), texto]).success).toBe(false);
+    expect(passosSchema.safeParse([texto, pausa(11), texto]).success).toBe(false);
+    expect(
+      passosSchema.safeParse([texto, pausa(10), texto, pausa(10), texto, pausa(1), texto]).success,
+    ).toBe(false);
+  });
+  it("a pausa não aceita outro campo (pausa_ms segue recusada)", () => {
     expect(passosSchema.safeParse([{ ...texto, pausa_ms: 4000 }]).success).toBe(false);
   });
 });
@@ -88,6 +101,30 @@ describe("enviarPassos", () => {
     const e = enviador();
     const r = await enviarPassos([{ tipo: "texto", texto: "{{canal.x}}" }], { ...deps(e), renderizar: () => "  " });
     expect(r).toEqual({ ok: false, enviados: 0, erro: "texto_vazio:0" });
+  });
+
+  it("espera a pausa entre as mensagens, sem enviar nada no lugar dela", async () => {
+    const e = enviador();
+    const esperas: number[] = [];
+    const r = await enviarPassos(
+      [
+        { tipo: "texto", texto: "a" },
+        { tipo: "pausa", segundos: 4 },
+        { tipo: "texto", texto: "b" },
+      ],
+      {
+        enviador: e,
+        ativosDoCanal: {},
+        renderizar: (s) => s,
+        chaveBase: "k",
+        esperar: async (ms) => {
+          esperas.push(ms);
+        },
+      },
+    );
+    expect(r).toEqual({ ok: true, enviados: 2 });
+    expect(esperas).toEqual([4000]);
+    expect(e.chamadas).toEqual(["texto:a:k:0", "texto:b:k:2"]);
   });
 });
 
