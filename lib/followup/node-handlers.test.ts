@@ -306,6 +306,35 @@ describe("processNode — wait (fixed)", () => {
     expect(result).toEqual({ kind: "wait", next_eval_at: new Date(NOW.getTime() + 300_000) });
   });
 
+  it("empurra o fim do atraso para a próxima abertura da janela", () => {
+    const comJanela: FlowNode = {
+      id: "w1",
+      type: "wait",
+      label: "Wait 1min",
+      position: { x: 0, y: 0 },
+      config: {
+        mode: "fixed",
+        duration_ms: 60_000,
+        janela: { de: "08:00", ate: "09:00", dias: [0, 1, 2, 3, 4, 5, 6] },
+        immune_to_reply: true,
+      },
+    };
+    const result = processNode({
+      node: comJanela,
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock: () => new Date("2026-11-04T15:00:00Z"),
+      waitElapsed: false,
+      fuso: "America/Sao_Paulo",
+    });
+    expect(result).toEqual({
+      kind: "wait",
+      next_eval_at: new Date("2026-11-05T11:00:00Z"),
+      wake_status: "dormente",
+    });
+  });
+
   it("elapsed: advances via the 'always' edge", () => {
     const result = processNode({ node, edges, enrollment: enrollment(), lead: lead(), clock, waitElapsed: true });
     expect(result).toEqual({ kind: "advance", next_node_id: "n2", next_eval_at: NOW });

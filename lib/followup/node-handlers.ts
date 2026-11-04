@@ -16,6 +16,7 @@ import type { FlowEdge, FlowNode, ReplySaveTo } from "./graph-schema";
 import { parseReplyCount } from "./parse-count";
 import { clampEspera, esperaPlanejadaDe, type EsperaAdaptativa } from "./timing-plan";
 import { fraseDeConfirmacao } from "./vocabulario";
+import { instanteNaJanela } from "./janela-do-atraso";
 
 export type EnrollmentStatus =
   | "active"
@@ -553,6 +554,8 @@ export function processNode(input: {
   wokeEarly?: boolean;
   /** Last inbound `messages.body` for this contact/conversation — engine loads on `match_reply` + wokeEarly. */
   lastInboundBody?: string;
+  /** FORK ESCALE · 5D: fuso da organização — só o `wait` com janela usa. */
+  fuso?: string;
   /** action occupancy guard: a `turn_enqueued` event for THIS stay on the action node already
    *  exists (an entry/recheck happened before). Resolved by the engine via `resolveWaitPhase`
    *  — same prior-step-event check as `wait`. When true, the send turn is in flight: DON'T
@@ -588,6 +591,7 @@ export function processNode(input: {
     waitElapsed,
     wokeEarly,
     lastInboundBody,
+    fuso,
     actionEnqueued,
     actionRecheckCount,
     actionCompleted,
@@ -657,9 +661,13 @@ export function processNode(input: {
         // slot único anti-spam enquanto ela espera. Quem a acorda continua sendo
         // o `next_eval_at` abaixo, pelo mesmo claim — não há segundo agendador.
         const imune = node.config.mode === "fixed" && node.config.immune_to_reply === true;
+        const fim = new Date(clock().getTime() + durationMs);
+        // FORK ESCALE · 5D: o Atraso acaba fora do "Continuar entre"? Segue na próxima abertura.
+        const janela = node.config.mode === "fixed" ? node.config.janela : undefined;
+        const proximo = janela ? instanteNaJanela(fim, fuso ?? "America/Sao_Paulo", janela) : fim;
         return {
           kind: "wait",
-          next_eval_at: new Date(clock().getTime() + durationMs),
+          next_eval_at: proximo,
           ...(imune ? { wake_status: "dormente" as const } : {}),
         };
       }

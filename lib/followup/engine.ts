@@ -65,6 +65,7 @@ import { quandoDoRetornoVivo, reavaliarDepoisDoRetorno } from "./retorno-segura-
 import { triggerConfigSchema } from "./api-schemas";
 import type { PassoDeEnvio } from "@/lib/automation/envio-de-passos";
 import type { Interativo } from "@/lib/channels/interativo";
+import { fusoUtilizavel } from "@/lib/tempo/fusos";
 
 const MAX_STEPS = 80;
 const CLAIM_LEASE_SECONDS = 120;
@@ -137,6 +138,8 @@ export interface AdminClient {
   retornoQueSeguraOFluxo?(enrollment: EnrollmentRow): Promise<string | null>;
   claimDueEnrollments(limit: number, leaseSeconds: number): Promise<EnrollmentRow[]>;
   loadFlowGraph(orgId: string, versionId: string): Promise<FlowGraph | null>;
+  /** FORK ESCALE · 5D: fuso da organização para a janela do nó `wait`. */
+  lerFusoDaOrganizacao?(orgId: string): Promise<string>;
   loadLeadFacts(orgId: string, contactId: string): Promise<{
     lead_stage: string | null;
     tags: string[];
@@ -949,6 +952,10 @@ async function processEnrollment(
 
   const nextAlways = selectEdge(graph.edges, node.id, { type: "always" });
   const proximo = nextAlways ? (graph.nodes.find((n) => n.id === nextAlways.target) ?? null) : null;
+  const fuso =
+    node.type === "wait" && node.config.mode === "fixed" && node.config.janela
+      ? await db.lerFusoDaOrganizacao?.(enrollment.organization_id)
+      : undefined;
 
   const result = processNode({
     node,
@@ -959,6 +966,7 @@ async function processEnrollment(
     waitElapsed,
     wokeEarly,
     lastInboundBody,
+    fuso,
     actionEnqueued,
     actionRecheckCount,
     actionCompleted,
@@ -1074,6 +1082,16 @@ export function createSupabaseAdminClient(admin: SupabaseClient): AdminClient {
       if (error) throw new Error(error.message);
       if (!data) return null;
       return flowGraphSchema.parse(data.graph);
+    },
+    async lerFusoDaOrganizacao(orgId) {
+      const { data, error } = await admin.from("organizations").select("timezone").eq("id", orgId).maybeSingle();
+      if (error) {
+        logger.warn("[followup.engine] fuso da organização ilegível — janela do atraso no fuso padrão", {
+          organization_id: orgId,
+          error: error.message,
+        });
+      }
+      return fusoUtilizavel((data as { timezone?: string | null } | null)?.timezone);
     },
     async loadLeadFacts(orgId, contactId) {
       const [{ data: lead, error: leadErr }, { data: contact, error: contactErr }] = await Promise.all([

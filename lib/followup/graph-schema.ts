@@ -2,6 +2,7 @@ import { passosSchema } from '@/lib/automation/envio-de-passos';
 import { z } from 'zod';
 
 import { PRIORIDADES_DA_TAREFA } from '@/lib/tarefas/tipos';
+import { janelaDoAtrasoSchema } from '@/lib/followup/janela-do-atraso';
 
 /**
  * Flow graph schema for the follow-up automation system.
@@ -123,6 +124,8 @@ export const waitConfigSchema = z
        * do alcance da reatividade e libera o slot único anti-spam.
        */
       immune_to_reply: z.boolean().optional(),
+      /** FORK ESCALE · 5D: "Continuar entre" do Atraso da Clint (07-028). Só no fixo. */
+      janela: janelaDoAtrasoSchema.optional(),
     }),
     z.strictObject({
       mode: z.literal('smart'),
