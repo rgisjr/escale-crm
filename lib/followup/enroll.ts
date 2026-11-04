@@ -73,6 +73,31 @@ export async function enrollFollowupFlow(
     };
   }
 
+  // FORK ESCALE · 5D: o Atraso da automação deixa a inscrição `dormente`, que fica fora do índice
+  // único de inscrição viva. Sem esta conferência, cada mensagem do contato durante o Atraso abriria
+  // outra inscrição na mesma automação (boas-vindas em dobro). O follow-up não entra: lá a espera
+  // longa libera o slot de propósito.
+  if (pointer.surface === "crm_automation") {
+    const { data: esperando, error: esperandoErr } = await supabase
+      .from("followup_enrollments")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("pointer_id", pointerId)
+      .eq("contact_id", contactId)
+      .eq("status", "dormente")
+      .limit(1)
+      .maybeSingle();
+    if (esperandoErr) return { ok: false, code: "internal_error", message: esperandoErr.message, status: 500 };
+    if (esperando) {
+      return {
+        ok: false,
+        code: "conflict",
+        message: "Este contato já está nesta automação, esperando um Atraso.",
+        status: 409,
+      };
+    }
+  }
+
   const { data: contact, error: contactErr } = await supabase
     .from("contacts")
     .select("id")
