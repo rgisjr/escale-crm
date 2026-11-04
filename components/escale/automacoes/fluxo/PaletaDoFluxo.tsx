@@ -20,6 +20,7 @@ import { ICONE_DA_ACAO, VISUAL_DO_NO, type VisualDoNo } from "./visual-do-fluxo"
 function visualDoItem(passo: PassoDaPaleta): { visual: VisualDoNo; Icone: VisualDoNo["icone"] } {
   if (passo === "gatilho") return { visual: VISUAL_DO_NO.gatilho, Icone: VISUAL_DO_NO.gatilho.icone };
   if (passo === "condicoes") return { visual: VISUAL_DO_NO.condicoes, Icone: VISUAL_DO_NO.condicoes.icone };
+  if (passo === "atraso") return { visual: VISUAL_DO_NO.atraso, Icone: VISUAL_DO_NO.atraso.icone };
   if (passo === "acoes") return { visual: VISUAL_DO_NO.acoes, Icone: VISUAL_DO_NO.acoes.icone };
   const visual = VISUAL_DO_NO[tipoDoNo({ kind: "acao", acao: { type: passo } })];
   // FORK ESCALE · Fase 10B: o passo Instagram não está em `ICONE_DA_ACAO` (ele vem do desenho do tipo).

@@ -272,6 +272,8 @@
   --color-casca-fluxo-canal-suave: var(--color-info-bg);
   --color-casca-fluxo-acoes: var(--color-warning);
   --color-casca-fluxo-acoes-suave: var(--color-warning-bg);
+  --color-casca-fluxo-atraso: var(--color-error);
+  --color-casca-fluxo-atraso-suave: var(--color-error-bg);
   --color-casca-marca: var(--color-accent);
   --color-casca-marca-forte: var(--color-accent-hover);
   --color-casca-marca-suave: var(--color-accent-soft);
@@ -694,6 +696,8 @@
   --color-casca-fluxo-canal-suave: var(--color-casca-fluxo-canal-suave);
   --color-casca-fluxo-acoes: var(--color-casca-fluxo-acoes);
   --color-casca-fluxo-acoes-suave: var(--color-casca-fluxo-acoes-suave);
+  --color-casca-fluxo-atraso: var(--color-casca-fluxo-atraso);
+  --color-casca-fluxo-atraso-suave: var(--color-casca-fluxo-atraso-suave);
   --color-casca-marca: var(--color-casca-marca);
   --color-casca-marca-forte: var(--color-casca-marca-forte);
   --color-casca-marca-suave: var(--color-casca-marca-suave);

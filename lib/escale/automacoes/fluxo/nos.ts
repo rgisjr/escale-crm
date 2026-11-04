@@ -9,5 +9,6 @@ export function paraNos(desenho: Desenho): NoDaAutomacao[] {
 }
 
 export function paraLigacoes(desenho: Desenho): Edge[] {
-  return desenho.ligacoes.map((l) => ({ id: l.id, source: l.source, target: l.target }));
+  // FORK ESCALE · 5D: cada ligação sai de uma alça da caixa (`sourceHandle` = a saída).
+  return desenho.ligacoes.map((l) => ({ id: l.id, source: l.source, target: l.target, sourceHandle: l.saida ?? "proximo" }));
 }

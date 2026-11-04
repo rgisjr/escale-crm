@@ -9,6 +9,8 @@ import { apiClient } from "@/lib/api/client";
 import type { CorDaPasta, IconeDaPasta } from "@/lib/escale/automacoes/pastas";
 import type { FormaDeMontar } from "@/lib/escale/automacoes/rotas";
 import type { ListaDeAutomacoes } from "@/lib/escale/automacoes/tipos";
+import type { Desenho } from "@/lib/automation/desenho-da-regra";
+import { ApiError } from "@/lib/api/types";
 
 /**
  * OS DADOS DA LISTA DE AUTOMAÇÕES DA CASCA (fork Escale, Fase 5A). A chave leva o
@@ -153,4 +155,47 @@ export function useOrganizarAoCriar(): (
     },
     [qc, t],
   );
+}
+
+/** FORK ESCALE · 5D: a regra grava só o gatilho e UMA ação `start_message_flow`? Então pode ser uma automação em modo fluxo. */
+export function podeSerModoFluxo(regra: { actions: Array<{ type: string }> } | null): boolean {
+  return !!regra && regra.actions.length === 1 && regra.actions[0]!.type === "start_message_flow";
+}
+
+/** O desenho de uma automação em modo fluxo; `null` quando ela é só uma regra (404). */
+export function useDesenhoDoFluxo(regraId: string | null) {
+  return useQuery({
+    queryKey: ["automation-rules", "fluxo", regraId],
+    enabled: regraId !== null,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async (): Promise<Desenho | null> => {
+      try {
+        return (await apiClient.get<{ data: { desenho: Desenho } }>(`${BASE}/${regraId}/fluxo`)).data.desenho;
+      } catch (erro) {
+        if (erro instanceof ApiError && erro.code === "not_found") return null;
+        throw erro;
+      }
+    },
+  });
+}
+
+export type ResultadoDaGravacaoDoFluxo = { ruleId: string; pointerId: string; atualizadoEm: string | null };
+
+/** Salva e publica a automação em modo fluxo (o servidor compila o desenho de novo). */
+export function useGravarFluxo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id: string | null; nome: string; desenho: Desenho; versao: string | null }) =>
+      (
+        await apiClient.put<{ data: ResultadoDaGravacaoDoFluxo }>(`${BASE}/${p.id ?? "novo"}/fluxo`, {
+          nome: p.nome,
+          desenho: p.desenho,
+          ...(p.versao ? { versao: p.versao } : {}),
+        })
+      ).data,
+    onError: showApiError,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
+  });
 }

@@ -31,6 +31,10 @@ vi.mock("@/hooks/escale/useAutomacoesDaCasca", () => ({
     duplicar: { mutate: h.duplicar, isPending: false },
   }),
   useOrganizarAoCriar: () => vi.fn(),
+  // FORK ESCALE · 5D: o modo fluxo (nenhuma destas telas abre uma automação em modo fluxo).
+  podeSerModoFluxo: () => false,
+  useDesenhoDoFluxo: () => ({ data: null, isPending: false }),
+  useGravarFluxo: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock("@/hooks/webhooks/useAutomationRules", () => ({
   useCreateAutomationRule: () => ({ isPending: false, mutateAsync: vi.fn() }),

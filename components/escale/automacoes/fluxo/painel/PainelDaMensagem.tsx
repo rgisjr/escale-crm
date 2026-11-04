@@ -1,23 +1,31 @@
 "use client";
-import { useRef } from "react";
+import { useMemo } from "react";
 
-import { SeletorDeVariaveis } from "@/components/escale/variaveis/SeletorDeVariaveis";
 import { AjudaDaCasca } from "@/components/escale/ui/AjudaDaCasca";
 import { SeletorDaCasca } from "@/components/escale/ui/SeletorDaCasca";
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useT } from "@/hooks/i18n/useT";
-import { useDefaultPipeline } from "@/hooks/pipelines/useDefaultPipeline";
+import { fraseDoFluxo } from "@/lib/escale/automacoes/fluxo/frases";
 import type { DadosDaAcao, DadosDaCaixa } from "@/lib/automation/desenho-da-regra";
-import { camposDoFunil } from "@/lib/leads/campos-do-funil";
-import { Plus } from "@/lib/ui/icons-da-casca";
+import type { TempoDeResposta as Tempo } from "@/lib/escale/automacoes/fluxo/caixas";
+import {
+  configDosItens,
+  itensDaConfig,
+  problemaDaSequencia,
+  type ItemDaSequencia,
+} from "@/lib/escale/automacoes/fluxo/sequencia";
 
+import { ListaDeItens } from "./mensagem/ListaDeItens";
+import { TempoDeResposta } from "./mensagem/TempoDeResposta";
 import { PainelDoNo, ProblemasDoPainel } from "./PainelDoNo";
 import { useRascunho } from "./useRascunho";
 
+type Estado = { canal: string; itens: ItemDaSequencia[]; tempo: Tempo };
+
 /**
- * O PAINEL DA MENSAGEM DE WHATSAPP (07-027; D12): o dispositivo e a mensagem. Sem os
- * acordeões "Fora da janela"/"Dentro da janela", sem modelo e sem "Adicionar botão":
- * a ação manda texto livre e o motor respeita a janela e o limite do número.
+ * O PAINEL DA MENSAGEM DE WHATSAPP (07-027; D12): o dispositivo, a sequência (texto com botões, áudio ou arquivo, pausa
+ * curta) e "Se o contato não responder em". Os blocos "Fora da janela / Dentro da janela" e os modelos da Meta não
+ * entram: o motor respeita a janela, o horário comercial e o limite do número.
  */
 export function PainelDaMensagem({
   dados,
@@ -31,36 +39,28 @@ export function PainelDaMensagem({
   aoMudarRascunho?: (sujo: boolean) => void;
 }) {
   const t = useT();
-  const { rascunho, setRascunho, sujo } = useRascunho(dados.acao, aoMudarRascunho);
+  const inicial = useMemo<Estado>(
+    () => ({
+      canal: typeof dados.acao.config.channel_session_id === "string" ? dados.acao.config.channel_session_id : "",
+      itens: itensDaConfig(dados.acao.config),
+      tempo: (dados.acao.config.tempo_de_resposta as Tempo | undefined) ?? null,
+    }),
+    // O rascunho nasce UMA vez por painel (a tela remonta o painel por `key`).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const { rascunho, setRascunho, sujo } = useRascunho<Estado>(inicial, aoMudarRascunho);
   const { data: sessoes } = useChannelSessions();
-  const pipeline = useDefaultPipeline(true);
-  const campos = camposDoFunil(pipeline.data?.pipeline.settings ?? null).map((f) => ({ chave: f.key, rotulo: f.label }));
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const config = rascunho.config;
-  const canal = typeof config.channel_session_id === "string" ? config.channel_session_id : "";
-  const texto = typeof config.template === "string" ? config.template : "";
-  const mudar = (patch: Record<string, unknown>) => setRascunho({ ...rascunho, config: { ...config, ...patch } });
+  const lista = sessoes ?? [];
+  const problema = problemaDaSequencia(rascunho.itens, rascunho.tempo);
 
-  function inserir(token: string) {
-    const el = textareaRef.current;
-    const inicio = el?.selectionStart ?? texto.length;
-    const fim = el?.selectionEnd ?? texto.length;
-    mudar({ template: texto.slice(0, inicio) + token + texto.slice(fim) });
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(inicio + token.length, inicio + token.length);
-    });
+  function salvar() {
+    const config = configDosItens({ ...dados.acao.config, channel_session_id: rascunho.canal }, rascunho.itens, rascunho.tempo);
+    aoSalvar({ kind: "acao", acao: { type: dados.acao.type, config } });
   }
 
-  const lista = sessoes ?? [];
   return (
-    <PainelDoNo
-      tipo="whatsapp"
-      titulo={t("Enviar mensagem")}
-      aoCancelar={aoCancelar}
-      aoSalvar={() => aoSalvar({ kind: "acao", acao: rascunho })}
-      salvarDesabilitado={!sujo}
-    >
+    <PainelDoNo tipo="whatsapp" titulo={t("Enviar mensagem")} aoCancelar={aoCancelar} aoSalvar={salvar} salvarDesabilitado={!sujo || problema !== null}>
       <ProblemasDoPainel lista={dados.problemas} />
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
@@ -71,16 +71,16 @@ export function PainelDaMensagem({
           <SeletorDaCasca
             aria-label={t("Número de WhatsApp")}
             aparencia="janela"
-            valor={canal}
+            valor={rascunho.canal}
             vazio={t("Escolha o número")}
-            aoMudar={(v) => mudar({ channel_session_id: v })}
+            aoMudar={(v) => setRascunho({ ...rascunho, canal: v })}
             opcoes={[
               // O número pelo qual a conversa acontece (uma automação, N canais).
               { valor: "conversation", rotulo: t("Canal da conversa") },
               ...lista.map((s) => ({
                 valor: s.id,
                 rotulo: channelLabel(s, t) + (s.status !== "WORKING" ? ` — ${t("desconectado")}` : ""),
-                  desabilitada: s.status !== "WORKING",
+                desabilitada: s.status !== "WORKING",
               })),
             ]}
           />
@@ -96,31 +96,18 @@ export function PainelDaMensagem({
             {t("Configure sua mensagem")}
             <AjudaDaCasca texto={t("A mensagem respeita a janela de envio e o limite diário do número, em Conexões.")} />
           </p>
-          <div className="flex flex-col gap-2 rounded-lg border border-casca-divisoria p-4">
-            <SeletorDeVariaveis
-              aoEscolher={inserir}
-              adicionais={{ negocio: campos }}
-              gatilho={
-                <button type="button" className="flex w-fit items-center gap-1.5 text-[13px] font-medium text-casca-marca hover:underline">
-                  <Plus size={14} aria-hidden />
-                  {t("Adicionar variáveis")}
-                </button>
-              }
-            />
-            <textarea
-              ref={textareaRef}
-              rows={5}
-              aria-label={t("Mensagem")}
-              value={texto}
-              onChange={(e) => mudar({ template: e.target.value })}
-              placeholder="Oi [CONTACT.FIRST_NAME], tudo bem?"
-              className="w-full resize-y rounded-[4px] border-0 bg-casca-raia p-3 text-[13px] text-casca-texto outline-hidden placeholder:text-casca-meta focus:ring-2 focus:ring-casca-marca"
-            />
-          </div>
+          <ListaDeItens itens={rascunho.itens} aoMudar={(itens) => setRascunho({ ...rascunho, itens })} />
+          {sujo && problema ? (
+            <p role="alert" className="text-[12px] text-casca-alerta">
+              {fraseDoFluxo(problema, t)}
+            </p>
+          ) : null}
           <p className="text-[12px] text-casca-suave">
             {t("Respeitamos a janela de envio e o limite diário configurados para esse número em Conexões — fora da janela, a mensagem espera a próxima.")}
           </p>
         </div>
+        <hr className="border-casca-divisoria" />
+        <TempoDeResposta tempo={rascunho.tempo} aoMudar={(tempo) => setRascunho({ ...rascunho, tempo })} />
       </div>
     </PainelDoNo>
   );

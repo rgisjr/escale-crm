@@ -117,6 +117,7 @@ export function achatar(desenho: Desenho): Desenho {
     id: proximaLigacao(),
     source: ultima.get(l.source) ?? l.source,
     target: primeira.get(l.target) ?? l.target,
+    ...(l.saida ? { saida: l.saida } : {}),
   }));
   return { caixas, ligacoes: [...dentro, ...fora] };
 }
@@ -132,4 +133,43 @@ export function contarAcoes(desenho: Desenho): number {
 /** Os passos "Ações" sem nenhuma ação: a pessoa os criou e não preencheu. */
 export function gruposVazios(desenho: Desenho): CaixaDoDesenho[] {
   return desenho.caixas.filter((c) => ehGrupo(c.data) && acoesDoGrupo(c.data).length === 0);
+}
+
+/**
+ * FORK ESCALE · 5D: o `agrupar` do modo fluxo. Em vez de refazer a fila (que perderia os ramos), só junta
+ * as caixas de "Ações" SEGUIDAS (uma saída "proximo" para outra de Ações que só recebe dela) num passo só,
+ * mantendo todas as outras caixas e ligações.
+ */
+export function agruparNoFluxo(desenho: Desenho): Desenho {
+  const comum = (c: CaixaDoDesenho | undefined): c is CaixaDoDesenho =>
+    !!c && c.data.kind === "acao" && tipoDoNo(c.data) === "acoes" && !ehGrupo(c.data);
+  const porId = new Map(desenho.caixas.map((c) => [c.id, c]));
+  const absorvida = new Map<string, string>();
+  const ultimaDe = new Map<string, string>();
+  const grupos = new Map<string, AcaoDaRegra[]>();
+  for (const c of desenho.caixas) {
+    if (!comum(c) || absorvida.has(c.id)) continue;
+    const acoes = [(c.data as DadosDaAcao).acao];
+    let ultima = c;
+    for (;;) {
+      const atual: CaixaDoDesenho = ultima;
+      const saidas = desenho.ligacoes.filter((l) => l.source === atual.id);
+      const prox = saidas.length === 1 && !saidas[0]!.saida ? porId.get(saidas[0]!.target) : undefined;
+      if (!comum(prox) || absorvida.has(prox.id) || prox.id === c.id) break;
+      if (desenho.ligacoes.filter((l) => l.target === prox.id).length !== 1) break;
+      acoes.push((prox.data as DadosDaAcao).acao);
+      absorvida.set(prox.id, c.id);
+      ultima = prox;
+    }
+    grupos.set(c.id, acoes);
+    ultimaDe.set(c.id, ultima.id);
+  }
+  const caixas = desenho.caixas
+    .filter((c) => !absorvida.has(c.id))
+    .map((c) => (grupos.has(c.id) ? { ...c, data: dadosDoGrupo(grupos.get(c.id)!) } : c));
+  const dono = new Map([...ultimaDe].map(([primeira, ultima]) => [ultima, primeira]));
+  const ligacoes = desenho.ligacoes
+    .filter((l) => !absorvida.has(l.target))
+    .map((l) => ({ ...l, source: dono.get(l.source) ?? l.source }));
+  return { caixas, ligacoes };
 }

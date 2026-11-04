@@ -8,7 +8,7 @@ import { JanelaRenomearAutomacao } from "@/components/escale/automacoes/lista/Ja
 import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao";
 import { useT } from "@/hooks/i18n/useT";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
-import type { DadosDaCaixa } from "@/lib/automation/desenho-da-regra";
+import type { DadosDaCaixa, Desenho } from "@/lib/automation/desenho-da-regra";
 import { ehGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { GATILHOS_DO_PASSO_DO_INSTAGRAM, PASSO_DO_INSTAGRAM } from "@/lib/escale/comentarios/constantes";
 import type { PassoDaPaleta } from "@/lib/escale/automacoes/fluxo/paleta";
@@ -23,6 +23,7 @@ import { MenuDoFluxo } from "./MenuDoFluxo";
 import { PainelDoInstagram } from "./comentario/PainelDoInstagram";
 import { PaletaDoFluxo } from "./PaletaDoFluxo";
 import { PainelDaAcao } from "./painel/PainelDaAcao";
+import { PainelDoAtraso } from "./painel/PainelDoAtraso";
 import { PainelDoGrupo } from "./painel/PainelDoGrupo";
 import { PainelDaMensagem } from "./painel/PainelDaMensagem";
 import { PainelDasCondicoes } from "./painel/PainelDasCondicoes";
@@ -38,11 +39,14 @@ import { REENQUADRAR_O_FLUXO } from "./zoom";
  */
 export function TelaDoFluxo({
   regra,
+  desenhoDoFluxo = null,
   fuso,
   nomeInicial,
   aoCriar,
 }: {
   regra: AutomationRuleRow | null;
+  /** FORK ESCALE · 5D: o desenho de uma automação em modo fluxo (`null` = uma regra comum). */
+  desenhoDoFluxo?: Desenho | null;
   fuso: string;
   nomeInicial?: string;
   aoCriar?: (id: string) => Promise<void>;
@@ -53,7 +57,7 @@ export function TelaDoFluxo({
   const aoReorganizar = useCallback(() => {
     window.setTimeout(() => void fitView(REENQUADRAR_O_FLUXO), 0);
   }, [fitView]);
-  const fluxo = useFluxo(regra, { nomeInicial, aoCriar, aoReorganizar });
+  const fluxo = useFluxo(regra, { nomeInicial, aoCriar, aoReorganizar, desenhoDoFluxo });
   const { selecionado, sujo } = fluxo;
 
   const [aba, setAba] = useState<AbaDoFluxo>("editor");
@@ -111,7 +115,7 @@ export function TelaDoFluxo({
         setPainelSujo(false);
         if (passo === "gatilho") fluxo.selecionar("gatilho");
         else if (passo === "acoes") fluxo.adicionar("grupo", posicao);
-        else fluxo.adicionar(passo === "condicoes" ? "condicoes" : (passo as ActionType), posicao);
+        else fluxo.adicionar(passo === "condicoes" || passo === "atraso" ? passo : (passo as ActionType), posicao);
       });
     },
     [comGuarda, fluxo],
@@ -171,8 +175,17 @@ export function TelaDoFluxo({
         />
       );
     }
-    // FORK ESCALE · 5D: o painel do Atraso entra na Tarefa 9.
-    if (dados.kind === "atraso") return null;
+    if (dados.kind === "atraso") {
+      return (
+        <PainelDoAtraso
+          key={noAberto.id}
+          dados={dados}
+          aoCancelar={fechar}
+          aoSalvar={aplicarNoPainel}
+          aoMudarRascunho={setPainelSujo}
+        />
+      );
+    }
     if (ehGrupo(dados)) {
       return (
         <PainelDoGrupo

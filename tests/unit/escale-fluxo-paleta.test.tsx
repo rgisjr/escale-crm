@@ -9,11 +9,11 @@ import { PaletaDoFluxo } from "@/components/escale/automacoes/fluxo/PaletaDoFlux
 import { MENSAGEM_DO_LACO_DE_LEAD } from "@/lib/schemas/webhooks";
 
 describe("paleta do fluxo", () => {
-  it("fechada mostra 8 botões com título e o botão de abrir", () => {
+  it("fechada mostra 9 botões com título e o botão de abrir", () => {
     render(<PaletaDoFluxo aoEscolher={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Abrir paleta de passos" })).toBeTruthy();
     const botoes = within(screen.getByTestId("paleta-do-fluxo")).getAllByRole("button");
-    expect(botoes).toHaveLength(9);
+    expect(botoes).toHaveLength(10);
     expect(screen.getByTitle("WhatsApp")).toBeTruthy();
     expect(screen.getByTestId("paleta-do-fluxo").className).toContain("w-[78px]");
   });

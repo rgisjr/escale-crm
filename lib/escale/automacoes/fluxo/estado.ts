@@ -18,7 +18,7 @@ export function retratoDoFluxo(nome: string, desenho: Desenho): string {
   return JSON.stringify({
     nome,
     caixas: desenho.caixas.map((c) => [c.id, c.data]),
-    ligacoes: desenho.ligacoes.map((l) => [l.source, l.target]).sort(),
+    ligacoes: desenho.ligacoes.map((l) => [l.source, l.target, l.saida ?? "proximo"]).sort(),
   });
 }
 

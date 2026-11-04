@@ -22,6 +22,7 @@ export function SeletorMultiploDaCasca<V extends string>({
   desabilitado = false,
   exclusiva,
   dica,
+  resumir,
 }: {
   valores: readonly V[];
   opcoes: { valor: V; rotulo: string }[];
@@ -32,6 +33,8 @@ export function SeletorMultiploDaCasca<V extends string>({
   exclusiva?: V;
   /** O motivo de estar desligado (o `title` do gatilho). */
   dica?: string;
+  /** FORK ESCALE · 5D: o texto do gatilho com a seleção ("5 selecionados"); sem ele, os nomes separados por vírgula. */
+  resumir?: (nomes: string[]) => string;
 }) {
   const [aberto, setAberto] = useState(false);
   const nomes = opcoes.filter((o) => valores.includes(o.valor)).map((o) => o.rotulo);
@@ -58,7 +61,7 @@ export function SeletorMultiploDaCasca<V extends string>({
           )}
         >
           <span className="min-w-0 flex-1 truncate">
-            {nomes.length === 0 ? vazio : nomes.join(", ")}
+            {nomes.length === 0 ? vazio : resumir ? resumir(nomes) : nomes.join(", ")}
           </span>
           <ChevronDown
             size={14}

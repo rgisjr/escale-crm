@@ -4,14 +4,16 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { NoDaAutomacao } from "@/app/app/webhooks/automacoes/[id]/_components/CaixaDaAutomacao";
 import { ACTION_LABELS, type ActionType } from "@/app/app/webhooks/_components/labels";
 import { useT } from "@/hooks/i18n/useT";
+import { saidasDaCaixa } from "@/lib/escale/automacoes/fluxo/caixas";
 import { ehGrupo } from "@/lib/escale/automacoes/fluxo/grupos";
 import { tipoDoNo, tituloDaAcaoNoFluxo } from "@/lib/escale/automacoes/fluxo/paleta";
 import { cn } from "@/lib/utils";
 
 import { BarraDoNo } from "./BarraDoNo";
 import { CorpoDoInstagram } from "./comentario/CorpoDoInstagram";
-import { CorpoDaAcao, CorpoDasCondicoes, CorpoDoGatilho, CorpoDoGrupo, CorpoDoWhatsapp } from "./CorposDoNo";
+import { CorpoDaAcao, CorpoDasCondicoes, CorpoDoAtraso, CorpoDoGatilho, CorpoDoGrupo, CorpoDoWhatsapp } from "./CorposDoNo";
 import { useInsightsDoNo } from "./insights/contexto";
+import { LinhaDeSaida } from "./LinhaDeSaida";
 import { VisaoGeralDoNo } from "./insights/VisaoGeralDoNo";
 import { VISUAL_DO_NO } from "./visual-do-fluxo";
 
@@ -21,17 +23,7 @@ import { VISUAL_DO_NO } from "./visual-do-fluxo";
  * ganha a borda da cor do tipo; com problema depois de um Salvar recusado, a
  * borda de alerta e o primeiro problema na dica.
  */
-export function NoDoFluxo(props: NodeProps<NoDaAutomacao>) {
-  // FORK ESCALE · 5D: o Atraso ganha o desenho dele na Tarefa 9; até lá o nó não é desenhado.
-  if (props.data.kind === "atraso") return null;
-  return <NoComum {...props} data={props.data} />;
-}
-
-type PropsDoNoComum = Omit<NodeProps<NoDaAutomacao>, "data"> & {
-  data: Exclude<NodeProps<NoDaAutomacao>["data"], { kind: "atraso" }>;
-};
-
-function NoComum({ id, data, selected }: PropsDoNoComum) {
+export function NoDoFluxo({ id, data, selected }: NodeProps<NoDaAutomacao>) {
   const t = useT();
   const tipo = tipoDoNo(data);
   const visual = VISUAL_DO_NO[tipo];
@@ -39,6 +31,10 @@ function NoComum({ id, data, selected }: PropsDoNoComum) {
   const problemas = data.problemas ?? [];
   const temProblema = problemas.length > 0;
   const grupo = ehGrupo(data);
+  // FORK ESCALE · 5D: as saídas do rodapé; as dos botões e dos grupos ficam dentro do corpo.
+  const rodape = saidasDaCaixa({ id, type: data.kind, position: { x: 0, y: 0 }, data }).filter(
+    (s) => s === "proximo" || s === "nao_respondeu" || s === "nenhuma",
+  );
   // FORK ESCALE · Fase 5C: dentro da aba Insights o nó é só de leitura (sem barra, sem seleção, sem alerta).
   const nosInsights = useInsightsDoNo() !== null;
 
@@ -69,6 +65,8 @@ function NoComum({ id, data, selected }: PropsDoNoComum) {
         <Icone size={18} className={cn("shrink-0", visual.texto)} aria-hidden />
         {data.kind === "gatilho" ? (
           <p className={cn("text-[18px] font-semibold", visual.texto)}>{t("Iniciar quando...")}</p>
+        ) : data.kind === "atraso" ? (
+          <p className={cn("text-[18px] font-semibold", visual.texto)}>{t("Atraso")}</p>
         ) : data.kind === "condicoes" || grupo ? (
           <p className={cn("text-[18px] font-semibold", visual.texto)}>{grupo ? t("Ações") : t("Condições")}</p>
         ) : (
@@ -81,6 +79,8 @@ function NoComum({ id, data, selected }: PropsDoNoComum) {
       <div className="px-5 pb-3">
         {data.kind === "gatilho" ? (
           <CorpoDoGatilho dados={data} />
+        ) : data.kind === "atraso" ? (
+          <CorpoDoAtraso dados={data} />
         ) : data.kind === "condicoes" ? (
           <CorpoDasCondicoes dados={data} evento={data.eventoDaRegra ?? ""} />
         ) : grupo ? (
@@ -93,8 +93,26 @@ function NoComum({ id, data, selected }: PropsDoNoComum) {
           <CorpoDaAcao dados={data} />
         )}
       </div>
-      <p className="px-5 pt-1 pb-4 text-right text-[13px] text-casca-texto-2">{t("Próximo passo")}</p>
-      <Handle type="source" position={Position.Right} style={{ top: "auto", bottom: 22 }} />
+      {rodape.map((s) =>
+        s === "proximo" ? (
+          <LinhaDeSaida key={s} saida={s} className="px-5 pt-1 pb-4 text-right text-[13px] text-casca-texto-2">
+            {t("Próximo passo")}
+          </LinhaDeSaida>
+        ) : s === "nao_respondeu" ? (
+          <LinhaDeSaida key={s} saida={s} className="px-5 pb-4 text-right text-[13px] text-casca-fluxo-atraso">
+            {t("Não respondeu")}
+          </LinhaDeSaida>
+        ) : (
+          <LinhaDeSaida
+            key={s}
+            saida={s}
+            dentro
+            className="mx-5 mb-4 rounded-md bg-casca-fluxo-atraso-suave px-3 py-2 text-[12px] text-casca-fluxo-atraso"
+          >
+            {t("Não corresponde a nenhuma condição")}
+          </LinhaDeSaida>
+        ),
+      )}
     </div>
   );
 }

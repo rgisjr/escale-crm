@@ -43,12 +43,24 @@ import {
   type ProblemaDoDesenho,
   type TelaDoGatilho,
 } from "@/lib/automation/desenho-da-regra";
+import { useGravarFluxo } from "@/hooks/escale/useAutomacoesDaCasca";
+import { LIMITE_DE_NOS, RECUSA_TAMANHO_MAXIMO, type SaidaDoNo } from "@/lib/escale/automacoes/fluxo/caixas";
+import { compilar, modoDoDesenho } from "@/lib/escale/automacoes/fluxo/compilar";
+import {
+  emModoFluxo,
+  inserirNoFluxo,
+  ligarNoFluxo,
+  normalizarSaidas,
+  organizarDoModo,
+  semSaidasInvalidas,
+} from "@/lib/escale/automacoes/fluxo/edicao";
 import { copiaDaCaixa, regraGravadaDe, retratoDoFluxo, toastDaRecusa } from "@/lib/escale/automacoes/fluxo/estado";
 import {
   PROBLEMA_DO_GRUPO_VAZIO,
   achatar,
   acoesDoGrupo,
   agrupar,
+  agruparNoFluxo,
   contarAcoes,
   ehGrupo,
   gruposVazios,
@@ -75,6 +87,8 @@ export interface OpcoesDoFluxo {
   aoCriar?: (id: string) => Promise<void>;
   /** Chamado depois de reorganizar, para o canvas enquadrar. */
   aoReorganizar?: () => void;
+  /** FORK ESCALE · 5D: o desenho de uma automação em modo fluxo (o servidor devolve; `null` = é só uma regra). */
+  desenhoDoFluxo?: Desenho | null;
 }
 export type ResultadoDoSalvar = "salvo" | "criado" | "recusado" | "falhou";
 
@@ -96,7 +110,7 @@ export interface EstadoDoFluxo {
   selecionado: string | null;
   selecionar: (id: string | null) => void;
   problemasGerais: ProblemaDoDesenho[];
-  adicionar: (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo", posicao?: { x: number; y: number }) => void;
+  adicionar: (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo" | "atraso", posicao?: { x: number; y: number }) => void;
   ligar: (c: Connection) => void;
   removerNo: (id: string) => void;
   removerLigacao: (id: string) => void;
@@ -116,7 +130,10 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   // O desenho inicial nasce UMA vez: refetch da lista não pode atropelar edição.
   const inicial = useMemo(
     // FORK ESCALE · Fase 10B: o gatilho de comentário abre com a configuração gravada na tela.
-    () => organizarNaHorizontal(agrupar(comConfigPropria(desenhoDaRegra(regraGravada), regraGravada))),
+    () =>
+      opcoes.desenhoDoFluxo
+        ? normalizarSaidas(agruparNoFluxo(opcoes.desenhoDoFluxo))
+        : organizarNaHorizontal(agrupar(comConfigPropria(desenhoDaRegra(regraGravada), regraGravada))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -130,9 +147,10 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   const [versao, setVersao] = useState<string | null>(regra?.updated_at ?? null);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [problemasGerais, setProblemasGerais] = useState<ProblemaDoDesenho[]>([]);
+  const gravarFluxo = useGravarFluxo();
   const criar = useCreateAutomationRule();
   const atualizar = useUpdateAutomationRule();
-  const salvando = criar.isPending || atualizar.isPending;
+  const salvando = criar.isPending || atualizar.isPending || gravarFluxo.isPending;
   const opcoesRef = useRef(opcoes);
   useEffect(() => {
     opcoesRef.current = opcoes;
@@ -147,7 +165,8 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
 
   /** Troca o desenho inteiro, mantendo o que o React Flow já mediu de cada caixa. */
   const aplicar = useCallback(
-    (novo: Desenho) => {
+    (bruto: Desenho) => {
+      const novo = normalizarSaidas(bruto);
       setNos((atuais) =>
         novo.caixas.map((c) => {
           const antigo = atuais.find((n) => n.id === c.id);
@@ -164,7 +183,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   const reorganizarDe = useCallback(
     (base: Desenho) => {
       const alturas = new Map(nos.map((n) => [n.id, n.measured?.height ?? 0] as const).filter(([, h]) => h > 0));
-      aplicar(organizarNaHorizontal(base, alturas));
+      aplicar(organizarDoModo(base, alturas));
       opcoesRef.current.aoReorganizar?.();
     },
     [nos, aplicar],
@@ -178,35 +197,55 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
     (id: string, dados: DadosDaCaixa) => {
       // Editar uma caixa tira dela o aviso antigo: o próximo salvar confere de novo.
       const { problemas: _problemas, ...limpos } = dados;
-      setNos((atuais) => atuais.map((n) => (n.id === id ? { ...n, data: limpos as DadosDaCaixa } : n)));
+      const atuais = nos.map((n) => (n.id === id ? { ...n, data: limpos as DadosDaCaixa } : n));
+      // FORK ESCALE · 5D: apagar um botão ou um grupo apaga a ligação que saía dele.
+      const novo = semSaidasInvalidas(normalizarSaidas(desenhoDaTela(atuais, ligacoes)));
+      setNos(atuais);
+      setLigacoes(paraLigacoes(novo));
     },
-    [setNos],
+    [nos, ligacoes, setNos, setLigacoes],
   );
 
   const adicionar = useCallback(
-    (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo", posicao?: { x: number; y: number }) => {
+    (passo: ActionType | typeof PASSO_DO_INSTAGRAM | "condicoes" | "grupo" | "atraso", posicao?: { x: number; y: number }) => {
+      // FORK ESCALE · 5D: o Atraso só existe no modo fluxo; com ele (ou com ramos) o desenho vira um fluxo.
+      const modoFluxo = passo === "atraso" || emModoFluxo(achatado);
       // FORK ESCALE · Fase 10B: o passo Instagram só funciona com o gatilho de comentário (D9).
       if (passo === PASSO_DO_INSTAGRAM && !(GATILHOS_DO_PASSO_DO_INSTAGRAM as readonly string[]).includes(evento)) {
         toast.error(t("O passo Instagram funciona com os gatilhos do Instagram."));
         return;
       }
-      if (passo === "condicoes" && desenho.caixas.some((c) => c.data.kind === "condicoes")) {
+      if (modoFluxo && desenho.caixas.length >= LIMITE_DE_NOS) {
+        toast.error(t(RECUSA_TAMANHO_MAXIMO));
+        return;
+      }
+      if (passo === "condicoes" && !modoFluxo && desenho.caixas.some((c) => c.data.kind === "condicoes")) {
         setSelecionado(ID_DAS_CONDICOES);
         toast.info(t("As condições ficam numa caixa só. Acrescente a nova condição nela."));
         return;
       }
-      if (passo !== "condicoes" && passo !== "grupo" && acoesQueFechamLaco(evento, [{ type: passo }]).length > 0) {
+      if (passo !== "condicoes" && passo !== "grupo" && passo !== "atraso" && acoesQueFechamLaco(evento, [{ type: passo }]).length > 0) {
         toast.error(t(MENSAGEM_DO_LACO_DE_LEAD));
         return;
       }
-      if (passo !== "condicoes" && !posicao && contarAcoes(desenho) >= MAXIMO_DE_ACOES) {
+      if (passo !== "condicoes" && passo !== "atraso" && !modoFluxo && !posicao && contarAcoes(desenho) >= MAXIMO_DE_ACOES) {
         toast.error(t(PROBLEMAS.acoesDemais));
         return;
       }
-      const id = passo === "condicoes" ? ID_DAS_CONDICOES : proximoId(desenho.caixas.map((c) => c.id), "acao");
+      const ids = desenho.caixas.map((c) => c.id);
+      const id =
+        passo === "condicoes"
+          ? ids.includes(ID_DAS_CONDICOES)
+            ? proximoId(ids, "condicoes")
+            : ID_DAS_CONDICOES
+          : passo === "atraso"
+            ? proximoId(ids, "atraso")
+            : proximoId(ids, "acao");
       const onde = posicao ?? { x: 0, y: 0 };
       const nova: CaixaDoDesenho =
-        passo === "grupo"
+        passo === "atraso"
+          ? { id, type: "atraso", position: onde, data: { kind: "atraso", quantidade: 1, unidade: "minutos", janela: null } }
+          : passo === "grupo"
           ? novoGrupo(id, onde)
           : passo === "condicoes"
             ? {
@@ -233,13 +272,26 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         aplicar({ caixas: [...desenho.caixas, nova], ligacoes: desenho.ligacoes });
         return;
       }
-      reorganizarDe(inserirDepois(desenho, selecionado, nova));
+      reorganizarDe(modoFluxo ? inserirNoFluxo(desenho, selecionado, nova) : inserirDepois(desenho, selecionado, nova));
     },
-    [desenho, evento, selecionado, aplicar, reorganizarDe, t],
+    [desenho, achatado, evento, selecionado, aplicar, reorganizarDe, t],
   );
 
   const ligar = useCallback(
     (conexao: Connection) => {
+      const saida = (conexao.sourceHandle ?? "proximo") as SaidaDoNo;
+      const origem = desenho.caixas.find((c) => c.id === conexao.source);
+      const unico = origem?.data.kind === "condicoes" && origem.data.grupos?.length === 1 ? origem.data.grupos[0]!.id : null;
+      // FORK ESCALE · 5D: no modo regra (a fila) vale a ligação de sempre; com ramos, cada saída liga a um destino.
+      if (emModoFluxo(achatado) || (saida !== "proximo" && saida !== `grupo:${unico}`)) {
+        const f = ligarNoFluxo(desenho, conexao.source, saida, conexao.target);
+        if (!f.ok) {
+          if (f.recusa) toast.error(t(f.recusa));
+          return;
+        }
+        aplicar(f.desenho);
+        return;
+      }
       const r = ligarCaixas(desenho, conexao.source, conexao.target);
       if (!r.ok) {
         if (r.recusa) toast.error(t(r.recusa));
@@ -248,7 +300,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       aplicar(r.desenho);
       if (r.aviso) toast.info(t(r.aviso));
     },
-    [desenho, aplicar, t],
+    [desenho, achatado, aplicar, t],
   );
 
   const removerNo = useCallback(
@@ -275,10 +327,10 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         return;
       }
       const copia = copiaDaCaixa(caixa, proximoId(desenho.caixas.map((c) => c.id), "acao"));
-      reorganizarDe(inserirDepois(desenho, id, copia));
+      reorganizarDe(emModoFluxo(achatado) ? inserirNoFluxo(desenho, id, copia) : inserirDepois(desenho, id, copia));
       setSelecionado(copia.id);
     },
-    [desenho, reorganizarDe, t],
+    [desenho, achatado, reorganizarDe, t],
   );
 
   const trocarGatilho = useCallback(
@@ -289,7 +341,10 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
             return { ...n, data: { kind: "gatilho", evento: novo, tela } };
           }
           // Trocar o gatilho limpa as condições: cada gatilho tem os seus campos.
-          if (n.data.kind === "condicoes" && novo !== evento) return { ...n, data: { kind: "condicoes", linhas: [] } };
+          if (n.data.kind === "condicoes" && novo !== evento) {
+            const grupos = n.data.grupos?.map((g) => ({ ...g, linhas: [] }));
+            return { ...n, data: { kind: "condicoes", linhas: [], ...(grupos ? { grupos } : {}) } };
+          }
           return n;
         }),
       );
@@ -298,14 +353,18 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   );
 
   const salvar = useCallback(async (): Promise<ResultadoDoSalvar> => {
-    const resultado = validarDesenho({ nome, desenho: achatado, regraGravada });
+    // FORK ESCALE · 5D: com Atraso, ramos ou tempo de resposta o desenho grava como fluxo; senão, como regra de sempre.
+    const modoFluxo = modoDoDesenho(achatado) === "fluxo";
+    const resultado = modoFluxo
+      ? compilar({ nome, desenho: achatado, regraGravada })
+      : validarDesenho({ nome, desenho: achatado, regraGravada });
     // Os problemas vêm da fila do motor; cada um volta para a caixa da tela a que a ação pertence.
     const problemas: ProblemaDoDesenho[] = [];
     const juntar = (p: ProblemaDoDesenho) => {
       const caixa = p.caixa === null ? null : idNaTela(p.caixa);
       if (!problemas.some((q) => q.caixa === caixa && q.mensagem === p.mensagem)) problemas.push({ caixa, mensagem: p.mensagem });
     };
-    resultado.problemas.forEach(juntar);
+    if (!resultado.ok) resultado.problemas.forEach(juntar);
     gruposVazios(desenho).forEach((c) => juntar({ caixa: c.id, mensagem: PROBLEMA_DO_GRUPO_VAZIO }));
     const porCaixa = new Map<string, ProblemaDoDesenho[]>();
     for (const p of problemas) {
@@ -319,6 +378,18 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       return "recusado";
     }
     try {
+      if (modoFluxo) {
+        const gravado = await gravarFluxo.mutateAsync({ id: regra?.id ?? null, nome, desenho: achatado, versao });
+        setVersao(gravado.atualizadoEm);
+        setSalvo(retratoDoFluxo(nome, desenho));
+        toast.success(t("Automação salva com sucesso!"));
+        if (regra) return "salvo";
+        toast.info(t("Ela nasce pausada: ligue quando estiver pronta."));
+        await opcoesRef.current.aoCriar?.(gravado.ruleId);
+        router.replace(rotaDoFluxo(gravado.ruleId));
+        return "criado";
+      }
+      if (!resultado.ok || "modo" in resultado) return "recusado";
       if (regra) {
         const gravada = await atualizar.mutateAsync({
           id: regra.id,
@@ -345,7 +416,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       /* showApiError já mostrou o toast */
       return "falhou";
     }
-  }, [nome, desenho, achatado, regraGravada, regra, versao, atualizar, criar, router, qc, setNos, t]);
+  }, [nome, desenho, achatado, regraGravada, regra, versao, atualizar, criar, gravarFluxo, router, qc, setNos, t]);
 
   const alternarAtivo = useCallback(
     (ligarRegra: boolean) => {

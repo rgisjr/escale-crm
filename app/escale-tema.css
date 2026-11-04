@@ -182,6 +182,8 @@ body:has([data-escale-casca]) {
   --color-casca-fluxo-canal-suave: #dbeafe;
   --color-casca-fluxo-acoes: #ea580c;
   --color-casca-fluxo-acoes-suave: #ffedd5;
+  --color-casca-fluxo-atraso: #dc2626;
+  --color-casca-fluxo-atraso-suave: #fee2e2;
   --shadow-casca-painel: 0 8px 16px rgb(17 24 39 / 0.1), 0 0 1px rgb(17 24 39 / 0.3);
 }
 
@@ -277,6 +279,8 @@ body:has([data-escale-casca]) {
   --color-casca-fluxo-canal-suave: color-mix(in oklab, #2563eb 16%, #181b26);
   --color-casca-fluxo-acoes: #fb923c;
   --color-casca-fluxo-acoes-suave: color-mix(in oklab, #ea580c 16%, #181b26);
+  --color-casca-fluxo-atraso: #f87171;
+  --color-casca-fluxo-atraso-suave: color-mix(in oklab, #dc2626 16%, #181b26);
   --shadow-casca-painel: 0 8px 16px rgb(0 0 0 / 0.45), 0 0 1px rgb(0 0 0 / 0.6);
 }
 
