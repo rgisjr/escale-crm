@@ -19462,6 +19462,9 @@ export const DICIONARIO: Traducoes = {
   "No fluxo, a mensagem sai pelo número da conversa.": { es: "En el flujo, el mensaje sale por el número de la conversación." },
   "Este passo só funciona em fluxo; salve para gravar como fluxo.": { es: "Este paso solo funciona en flujo; guarda para grabar como flujo." },
   "Aguardar um período": { es: "Esperar un período" },
+  "Neste passo só valem campos do negócio e do contato.": { es: "En este paso solo valen campos del negocio y del contacto." },
+  "No fluxo, o Webhook não aceita segredo: tire o segredo ou use a automação sem Atraso.": { es: "En el flujo, el Webhook no acepta secreto: quita el secreto o usa la automatización sin Retraso." },
+  "As pausas somam no máximo 10 segundos.": { es: "Las pausas suman como máximo 10 segundos." },
 };
 
 /**

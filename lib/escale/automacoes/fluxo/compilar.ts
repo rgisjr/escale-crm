@@ -35,7 +35,9 @@ import {
   PASSO_SO_NO_MODO_REGRA,
   RECUSA_ATRASO_MAXIMO,
   RECUSA_ATRASO_MINIMO,
+  RECUSA_CAMPO_DO_EVENTO,
   RECUSA_CANAL_FIXO,
+  RECUSA_SEGREDO_NO_FLUXO,
   RECUSA_TAMANHO_MAXIMO,
   SUFIXO_DA_RESPOSTA,
   temTempoDeResposta,
@@ -62,6 +64,9 @@ type Alvo = (origem: string, saida: SaidaDoNo) => string;
 
 const ehAcaoDeFluxo = (t: string) => (TIPOS_DE_ACAO_NO_FLUXO as readonly string[]).includes(t);
 const acaoDe = (c: CaixaDoDesenho) => (c.data.kind === "acao" ? c.data.acao : null);
+/** O segredo do webhook é cifrado só no modo regra; no grafo ficaria em texto aberto. */
+const ehWebhookComSegredo = (a: { type: string; config: Record<string, unknown> }) =>
+  a.type === "call_webhook" && typeof a.config.secret === "string" && a.config.secret.trim() !== "";
 const saidaDa = (l: LigacaoDoDesenho): SaidaDoNo => l.saida ?? "proximo";
 
 /** Um grupo só com a saída do próprio grupo ligada é o mesmo que "proximo" no modo regra. */
@@ -159,11 +164,18 @@ function noDaCaixa(c: CaixaDoDesenho, mapa: Mapa, problemas: ProblemaDoDesenho[]
     return [{ ...base, type: "wait", label: "Atraso", config: { mode: "fixed", duration_ms: ms, immune_to_reply: true, ...(d.janela ? { janela: d.janela } : {}) } }];
   }
   if (d.kind === "condicoes") {
+    // Neste nó o contexto só tem o negócio e o contato: os campos do evento (`event.*`) só valem no filtro inicial.
+    if (gruposDaCaixa(c).some((g) => g.linhas.some((l) => l.field.trim().startsWith("event.")))) {
+      problemas.push({ caixa: c.id, mensagem: RECUSA_CAMPO_DO_EVENTO });
+    }
     const grupos = gruposDaCaixa(c).map((g) => ({ id: g.id, modo: g.modo, linhas: linhasValidas(g.linhas) }));
     return [{ ...base, type: "condicoes_da_automacao", label: "Condições", config: { grupos } }];
   }
   if (d.acao.type === "send_whatsapp_message") return noDaMensagem(c, d, problemas);
   if (ehAcaoDeFluxo(d.acao.type)) {
+    if ((mapa.ordem.get(c.id) ?? [c]).some((x) => ehWebhookComSegredo((x.data as DadosDaAcao).acao))) {
+      problemas.push({ caixa: c.id, mensagem: RECUSA_SEGREDO_NO_FLUXO });
+    }
     const acoes = (mapa.ordem.get(c.id) ?? [c]).map((x) => ({ type: (x.data as DadosDaAcao).acao.type, config: (x.data as DadosDaAcao).acao.config }));
     return [{ ...base, type: "acoes_da_automacao", label: "Ações", config: { acoes } }];
   }
@@ -215,8 +227,10 @@ function arestasDaCaixa(c: CaixaDoDesenho, d: Desenho, mapa: Mapa, alvo: Alvo): 
   const origem = mapa.ultimaDoGrupo.get(c.id) ?? c.id;
   const alvoDe = (s: SaidaDoNo) => alvo(origem, s);
   if (c.data.kind === "condicoes") {
-    for (const g of gruposDaCaixa(c)) nova(c.id, alvoDe(`grupo:${g.id}`), { type: "branch", branch_id: g.id });
-    nova(c.id, alvoDe(c.data.grupos ? "nenhuma" : "proximo"), { type: "always" });
+    // Caixa sem `grupos` (a de hoje) só tem a saída "proximo": é a do grupo g1, e "não corresponde" fica sem ligação.
+    const semGrupos = !c.data.grupos;
+    for (const g of gruposDaCaixa(c)) nova(c.id, alvoDe(semGrupos ? "proximo" : `grupo:${g.id}`), { type: "branch", branch_id: g.id });
+    nova(c.id, alvoDe("nenhuma"), { type: "always" });
     return arestas;
   }
   if (!mensagemTemResposta(d, c)) {

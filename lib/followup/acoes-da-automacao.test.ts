@@ -63,3 +63,20 @@ describe("executarAcoesDaAutomacao", () => {
     expect(r).toEqual({ ok: false, falhas: ["add_tag:acao_nao_registrada"] });
   });
 });
+
+describe("ação que estoura", () => {
+  it("não impede as seguintes do mesmo nó", async () => {
+    const getAction = vi.fn((type: string) => ({
+      type,
+      execute: vi.fn(async () => {
+        if (type === "assign_owner") throw new Error("boom");
+        return { type, status: "success" as const };
+      }),
+    }));
+    const r = await executarAcoesDaAutomacao(
+      { admin: {} as never, getAction, carregarContexto: async () => ({}) },
+      { organization_id: "org", contact_id: "c1", enrollment_id: "e1", acoes: [{ type: "assign_owner", config: {} }, { type: "add_tag", config: {} }] },
+    );
+    expect(r).toEqual({ ok: false, falhas: ["assign_owner:boom"] });
+  });
+});

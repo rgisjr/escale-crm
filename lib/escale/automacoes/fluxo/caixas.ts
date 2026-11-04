@@ -85,4 +85,6 @@ export const LIMITE_DE_ARESTAS = 120;
 export const RECUSA_TAMANHO_MAXIMO = "A automação passou do tamanho máximo (60 passos).";
 export const PASSO_SO_NO_MODO_REGRA =
   "Este passo não pode vir depois de um Atraso, de uma Condição com ramos ou de uma resposta do contato.";
+export const RECUSA_CAMPO_DO_EVENTO = "Neste passo só valem campos do negócio e do contato.";
+export const RECUSA_SEGREDO_NO_FLUXO = "No fluxo, o Webhook não aceita segredo: tire o segredo ou use a automação sem Atraso.";
 export const RECUSA_CANAL_FIXO = "No fluxo, a mensagem sai pelo número da conversa.";

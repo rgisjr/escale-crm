@@ -2,7 +2,7 @@
  * PASSOS DE ENVIO: uma sequência curta (até 8) de texto, mídia e — na Tarefa 7 — botões/lista, enviada
  * na ordem pela regra (`send_whatsapp_message.passos`) e pelo nó de ação do fluxo (`mode: "steps"`).
  *
- * Pausa curta (1 a 10 s, até 20 s no total) entre mensagens: é o "delay" da Clint dentro do nó de
+ * Pausa curta (1 a 10 s, até 10 s no total) entre mensagens: é o "delay" da Clint dentro do nó de
  * mensagem (decisão do usuário, 03/11/2026). Intervalo maior é um nó `wait` do fluxo. A pausa não
  * envia nada e não muda as chaves de idempotência dos outros passos (o índice é o da lista inteira).
  *
@@ -33,7 +33,7 @@ export const passoInterativoSchema = z.strictObject({
   interativo: interativoSchema,
 });
 
-export const PAUSA_MAXIMA_TOTAL_S = 20;
+export const PAUSA_MAXIMA_TOTAL_S = 10;
 export const RECUSA_PAUSA_NO_COMECO = "O primeiro item da lista não pode ser um atraso.";
 export const RECUSA_PAUSA_SEGUIDA = "Não é possível adicionar mais delay entre as mensagens.";
 
