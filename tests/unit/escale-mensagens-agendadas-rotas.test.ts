@@ -282,7 +282,7 @@ describe("enviarAgendada (o passo do cron)", () => {
         actor: { type: "user", id: USER_ID },
         requestId: "r1",
       }),
-      { conversation_id: CV, type: "text", body: "Oi" },
+      { conversation_id: CV, type: "text", body: "Oi", metadata: { agendamento_id: "a1" } },
     );
 
     const fora = await enviarAgendada(
@@ -313,6 +313,7 @@ describe("enviarAgendada (o passo do cron)", () => {
       template_name: "oi",
       template_language: "pt_BR",
       template_values: { "body:1": "Ana" },
+      metadata: { agendamento_id: "a1" },
     });
 
     const caido = await enviarAgendada(
