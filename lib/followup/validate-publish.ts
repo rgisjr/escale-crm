@@ -1,6 +1,6 @@
 import type { FlowGraph, FlowEdge, FlowNode, NodeType } from './graph-schema';
 import type { FollowupFlowSurface } from './api-schemas';
-import { branchIdForCondition, nodeBranches } from './graph-schema';
+import { branchIdForCondition, ESPERA_MINIMA_DA_RESPOSTA_MS, nodeBranches } from './graph-schema';
 import { rotuloDoRamo } from './rotulo-do-ramo';
 import type { NomesDeValor } from './vocabulario';
 import type { EtapaCitada } from './etapas-citadas';
@@ -810,11 +810,11 @@ export function validateFlowForPublish(
     if (node.type === 'match_reply' || node.type === 'repeat' || node.config.branches !== undefined) {
       cobrirRamos(node, outgoing, errors, nomes);
       if (node.type === 'repeat') continue;
-      if (node.config.grace_timeout_ms < 900_000) {
+      if (node.config.grace_timeout_ms < ESPERA_MINIMA_DA_RESPOSTA_MS) {
         errors.push({
           node_id: node.id,
           code: 'grace_too_short',
-          message: `Nó "${node.id}" tem grace_timeout_ms abaixo do mínimo de 15min.`,
+          message: "O tempo mínimo de resposta é de 1 minuto.",
         });
       }
       continue;

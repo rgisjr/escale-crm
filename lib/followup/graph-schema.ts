@@ -153,9 +153,14 @@ export const matchReplyBranchSchema = z.strictObject({
   label: z.string().min(1).max(40),
   op: z.enum(['eq', 'contains']),
   pattern: z.string().min(1).max(200),
+  /** FORK ESCALE · 5D: outros textos que valem pelo mesmo ramo (ex.: número da opção). */
+  alternativas: z.array(z.string().min(1).max(200)).max(3).optional(),
 });
 
 export type MatchReplyBranch = z.infer<typeof matchReplyBranchSchema>;
+
+/** FORK ESCALE · 5D: "Se o contato não responder em" começa em 1 minuto, como na Clint (3.9). */
+export const ESPERA_MINIMA_DA_RESPOSTA_MS = 60_000;
 
 /**
  * Where to write the contact's reply. `{{volta}}` in a custom key is replaced
@@ -184,8 +189,8 @@ export type IfExists = z.infer<typeof ifExistsSchema>;
  */
 export const matchReplyConfigSchema = z
   .strictObject({
-    branches: z.array(matchReplyBranchSchema).min(1).max(8),
-    grace_timeout_ms: z.number().int().min(900_000),
+    branches: z.array(matchReplyBranchSchema).min(1).max(12),
+    grace_timeout_ms: z.number().int().min(ESPERA_MINIMA_DA_RESPOSTA_MS),
     save_to: replySaveToSchema.optional(),
     if_exists: ifExistsSchema.optional(),
   })

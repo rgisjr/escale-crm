@@ -13,7 +13,7 @@ import {
   type EnrollmentRow,
   type LeadFacts,
 } from "./node-handlers";
-import type { FlowEdge, FlowNode } from "./graph-schema";
+import { flowGraphSchema, type FlowEdge, type FlowNode } from "./graph-schema";
 
 const NOW = new Date("2026-07-21T12:00:00.000Z");
 const clock = () => NOW;
@@ -992,6 +992,36 @@ describe("processNode — match_reply", () => {
     expect(result).toMatchObject({ kind: "advance", next_node_id: "no-preco" });
   });
 
+  it("wokeEarly: uma alternativa casa pelo mesmo ramo", () => {
+    const result = processNode({
+      node: matchNode({
+        branches: [{ id: "br_sim", label: "TV BOX", op: "eq", pattern: "TV BOX", alternativas: ["5"] }],
+      }),
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      waitElapsed: true,
+      wokeEarly: true,
+      lastInboundBody: "5",
+    });
+    expect(result).toMatchObject({ kind: "advance", next_node_id: "no-sim" });
+  });
+
+  it("wokeEarly: pattern '*' com contains casa com qualquer texto não vazio", () => {
+    const result = processNode({
+      node: matchNode({ branches: [{ id: "br_sim", label: "Respondeu", op: "contains", pattern: "*" }] }),
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      waitElapsed: true,
+      wokeEarly: true,
+      lastInboundBody: "qualquer resposta",
+    });
+    expect(result).toMatchObject({ kind: "advance", next_node_id: "no-sim" });
+  });
+
   it("wokeEarly: no match falls through always/else", () => {
     const result = processNode({
       node: matchNode(),
@@ -1129,6 +1159,32 @@ describe("processNode — match_reply", () => {
       lastInboundBody: "sim",
     });
     expect(result).toMatchObject({ kind: "advance", next_node_id: "no-sim" });
+  });
+});
+
+describe("match_reply — limite de ramos", () => {
+  const ramo = (i: number) => ({ id: `b${i}`, label: `B${i}`, op: "eq" as const, pattern: `${i}` });
+  const grafo = (quantidade: number) => ({
+    nodes: [
+      { id: "t1", type: "trigger", label: "T", position: { x: 0, y: 0 }, config: {} },
+      {
+        id: "mr1",
+        type: "match_reply",
+        label: "Resposta",
+        position: { x: 1, y: 0 },
+        config: { branches: Array.from({ length: quantidade }, (_, i) => ramo(i)), grace_timeout_ms: 60_000 },
+      },
+      { id: "e1", type: "end", label: "Fim", position: { x: 2, y: 0 }, config: { outcome: "custom" } },
+    ],
+    edges: [
+      { id: "e-t", source: "t1", target: "mr1", condition: { type: "always" } },
+      { id: "e-f", source: "mr1", target: "e1", condition: { type: "always" } },
+    ],
+  });
+
+  it("aceita 12 ramos e recusa 13", () => {
+    expect(flowGraphSchema.safeParse(grafo(12)).success).toBe(true);
+    expect(flowGraphSchema.safeParse(grafo(13)).success).toBe(false);
   });
 });
 

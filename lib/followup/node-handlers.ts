@@ -782,9 +782,12 @@ export function processNode(input: {
             node.config.save_to !== undefined
               ? undefined
               : node.config.branches.find((b) => {
-                  const needle = b.pattern.trim().toLowerCase();
-                  if (needle.length === 0) return false;
-                  return b.op === "eq" ? body === needle : body.includes(needle);
+                  return [b.pattern, ...(b.alternativas ?? [])].some((padrao) => {
+                    const needle = padrao.trim().toLowerCase();
+                    if (needle.length === 0) return false;
+                    if (b.op === "contains" && needle === "*") return body.length > 0;
+                    return b.op === "eq" ? body === needle : body.includes(needle);
+                  });
                 });
           const edge = hit
             ? selectEdge(edges, node.id, { type: "branch", branch_id: hit.id })

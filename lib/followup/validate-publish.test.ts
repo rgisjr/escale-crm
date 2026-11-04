@@ -576,13 +576,13 @@ describe('validateFlowForPublish — cobertura por ramo num match_reply', () => 
   ];
   const branch = (branchId: string): FlowEdge['condition'] => ({ type: 'branch', branch_id: branchId });
 
-  function matchV2(id: string): FlowNode {
+  function matchV2(id: string, graceTimeoutMs = 900_000): FlowNode {
     return {
       id,
       type: 'match_reply',
       label: id,
       position: pos,
-      config: { branches: RAMOS, grace_timeout_ms: 900_000 },
+      config: { branches: RAMOS, grace_timeout_ms: graceTimeoutMs },
     };
   }
 
@@ -603,6 +603,23 @@ describe('validateFlowForPublish — cobertura por ramo num match_reply', () => 
       ])
     );
     expect(result).toEqual({ ok: true });
+  });
+
+  it('aceita espera de 1 minuto e recusa 59 segundos', () => {
+    const saidas = [
+      edge('mr1', 'fim', branch('br_sim')),
+      edge('mr1', 'fim', branch('br_nao')),
+      edge('mr1', 'fim', branch('no_reply')),
+      edge('mr1', 'fim', always()),
+    ];
+    const comTempo = (ms: number) =>
+      graph([trigger('t1'), matchV2('mr1', ms), end('fim')], [edge('t1', 'mr1', always()), ...saidas]);
+
+    expect(validateFlowForPublish(comTempo(60_000))).toEqual({ ok: true });
+    const curto = validateFlowForPublish(comTempo(59_000));
+    expect(curto.ok).toBe(false);
+    if (curto.ok) return;
+    expect(curto.errors.map((e) => e.code)).toContain('grace_too_short');
   });
 
   it('reprova ramo declarado sem saída', () => {
