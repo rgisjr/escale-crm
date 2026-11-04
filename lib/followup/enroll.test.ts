@@ -21,12 +21,12 @@ const GRAPH = flowGraphSchema.parse({
 
 type Row = Record<string, unknown>;
 
-function fakeDb(pointer: Row) {
+function fakeDb(pointer: Row, inscricoes: Row[] = []) {
   const tables: Record<string, Row[]> = {
     followup_flow_pointers: [pointer],
     contacts: [{ id: CONTACT, organization_id: ORG }],
     followup_flow_versions: [{ id: VERSION, organization_id: ORG, graph: GRAPH }],
-    followup_enrollments: [],
+    followup_enrollments: [...inscricoes],
     ai_agents: [],
     ai_agent_versions: [],
   };
@@ -38,6 +38,9 @@ function fakeDb(pointer: Row) {
       let payload: Row | undefined;
       const b = {
         select() {
+          return b;
+        },
+        limit() {
           return b;
         },
         insert(obj: Row) {
@@ -122,5 +125,25 @@ describe("enrollFollowupFlow", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("flow_not_enrollable");
+  });
+
+  const esperando = { id: "enr-0", organization_id: ORG, pointer_id: POINTER, contact_id: CONTACT, status: "dormente" };
+  const entrada = { organizationId: ORG, pointerId: POINTER, contactId: CONTACT, actorUserId: null, requestId: "r1" };
+
+  it("automação: recusa o contato que já espera num Atraso desta automação", async () => {
+    const db = fakeDb({ id: POINTER, organization_id: ORG, status: "active", active_version_id: VERSION, surface: "crm_automation" }, [esperando]);
+    const result = await enrollFollowupFlow(db as never, entrada);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("conflict");
+  });
+
+  it("automação: inscreve quando não há ninguém esperando", async () => {
+    const db = fakeDb({ id: POINTER, organization_id: ORG, status: "active", active_version_id: VERSION, surface: "crm_automation" });
+    expect((await enrollFollowupFlow(db as never, entrada)).ok).toBe(true);
+  });
+
+  it("follow-up: a inscrição dormente NÃO barra (a cadência longa libera o slot de propósito)", async () => {
+    const db = fakeDb({ id: POINTER, organization_id: ORG, status: "active", active_version_id: VERSION, surface: "followup" }, [esperando]);
+    expect((await enrollFollowupFlow(db as never, entrada)).ok).toBe(true);
   });
 });

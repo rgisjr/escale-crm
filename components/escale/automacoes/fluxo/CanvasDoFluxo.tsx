@@ -21,7 +21,8 @@ import type { EstadoDoFluxo } from "./useFluxo";
 import { ZOOM_DO_FLUXO } from "./zoom";
 
 // Fora do componente: o React Flow remonta os nós se `nodeTypes` muda a cada render.
-export const nodeTypes: NodeTypes = { gatilho: NoDoFluxo, condicoes: NoDoFluxo, acao: NoDoFluxo };
+// FORK ESCALE · 5D: o Atraso também; sem ele o React Flow desenha o nó padrão (caixa vazia).
+export const nodeTypes: NodeTypes = { gatilho: NoDoFluxo, condicoes: NoDoFluxo, acao: NoDoFluxo, atraso: NoDoFluxo };
 
 export const OPCOES_DA_ARESTA = {
   type: "default",

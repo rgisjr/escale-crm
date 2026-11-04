@@ -46,6 +46,7 @@ import {
 import { useGravarFluxo } from "@/hooks/escale/useAutomacoesDaCasca";
 import { LIMITE_DE_NOS, RECUSA_TAMANHO_MAXIMO, type SaidaDoNo } from "@/lib/escale/automacoes/fluxo/caixas";
 import { compilar, modoDoDesenho } from "@/lib/escale/automacoes/fluxo/compilar";
+import { problemasAntesDoPublish, problemasDoServidor } from "@/lib/escale/automacoes/fluxo/erros-do-publish";
 import {
   emModoFluxo,
   inserirNoFluxo,
@@ -352,6 +353,19 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
     [setNos, evento],
   );
 
+  /** Marca cada problema na caixa dele (e tira os antigos); os sem caixa vão para o aviso geral. */
+  const mostrarProblemas = useCallback(
+    (problemas: readonly ProblemaDoDesenho[]) => {
+      const porCaixa = new Map<string, ProblemaDoDesenho[]>();
+      for (const p of problemas) {
+        if (p.caixa) porCaixa.set(p.caixa, [...(porCaixa.get(p.caixa) ?? []), p]);
+      }
+      setNos((atuais) => atuais.map((n) => ({ ...n, data: { ...n.data, problemas: porCaixa.get(n.id) } })));
+      setProblemasGerais(problemas.filter((p) => p.caixa === null));
+    },
+    [setNos],
+  );
+
   const salvar = useCallback(async (): Promise<ResultadoDoSalvar> => {
     // FORK ESCALE · 5D: com Atraso, ramos ou tempo de resposta o desenho grava como fluxo; senão, como regra de sempre.
     const modoFluxo = modoDoDesenho(achatado) === "fluxo";
@@ -365,13 +379,10 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       if (!problemas.some((q) => q.caixa === caixa && q.mensagem === p.mensagem)) problemas.push({ caixa, mensagem: p.mensagem });
     };
     if (!resultado.ok) resultado.problemas.forEach(juntar);
+    // FORK ESCALE · 5D: o que o publish recusaria e não depende do banco, conferido antes de enviar.
+    if (resultado.ok && "grafo" in resultado) problemasAntesDoPublish(resultado.grafo).forEach(juntar);
     gruposVazios(desenho).forEach((c) => juntar({ caixa: c.id, mensagem: PROBLEMA_DO_GRUPO_VAZIO }));
-    const porCaixa = new Map<string, ProblemaDoDesenho[]>();
-    for (const p of problemas) {
-      if (p.caixa) porCaixa.set(p.caixa, [...(porCaixa.get(p.caixa) ?? []), p]);
-    }
-    setNos((atuais) => atuais.map((n) => ({ ...n, data: { ...n.data, problemas: porCaixa.get(n.id) } })));
-    setProblemasGerais(problemas.filter((p) => p.caixa === null));
+    mostrarProblemas(problemas);
     if (!resultado.ok || problemas.length > 0) {
       setSelecionado(null);
       toast.error(t(toastDaRecusa(problemas)));
@@ -412,11 +423,16 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       await opcoesRef.current.aoCriar?.(criada.data.id); // pasta e forma, antes de trocar de tela
       router.replace(rotaDoFluxo(criada.data.id));
       return "criado";
-    } catch {
-      /* showApiError já mostrou o toast */
-      return "falhou";
+    } catch (err) {
+      // FORK ESCALE · 5D: a recusa do publish volta para as caixas. O resto, o showApiError já mostrou.
+      const doServidor = modoFluxo ? problemasDoServidor(err) : null;
+      if (!doServidor) return "falhou";
+      mostrarProblemas(doServidor);
+      setSelecionado(null);
+      toast.error(t(toastDaRecusa(doServidor)));
+      return "recusado";
     }
-  }, [nome, desenho, achatado, regraGravada, regra, versao, atualizar, criar, gravarFluxo, router, qc, setNos, t]);
+  }, [nome, desenho, achatado, regraGravada, regra, versao, atualizar, criar, gravarFluxo, router, qc, t, mostrarProblemas]);
 
   const alternarAtivo = useCallback(
     (ligarRegra: boolean) => {

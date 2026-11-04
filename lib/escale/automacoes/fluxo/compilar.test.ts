@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { corpoDoDesenho, type Desenho } from "@/lib/automation/desenho-da-regra";
 import { compilar, desenhoDoFluxo, modoDoDesenho } from "@/lib/escale/automacoes/fluxo/compilar";
+import { validateFlowForPublish } from "@/lib/followup/validate-publish";
 
 const p = { x: 0, y: 0 };
 const tela = { fonte: null, data: { pipeline_id: "", campo: "", dias: "7" }, tempo: { dias: "7", direcao: "da_equipe" as const, proteger_pela_agenda: false }, criado: { pipeline_id: "", stage_id: "" }, tags: [] };
@@ -158,5 +159,13 @@ describe("revisão da frente", () => {
     ] };
     const r = compilar({ nome: "A", desenho, regraGravada: null });
     expect(!r.ok && r.problemas.map((x) => x.caixa).sort()).toEqual(["c", "h"]);
+  });
+});
+
+describe("o grafo compilado passa no publish da automação", () => {
+  it("o Lead novo GERAL (Atraso de 30 s e de 1 min) não é recusado", () => {
+    const r = compilar({ nome: "Lead novo", desenho: leadNovo, regraGravada: null });
+    if (!r.ok || r.modo !== "fluxo") throw new Error("compilou errado");
+    expect(validateFlowForPublish(r.grafo, { surface: "crm_automation", exigeModeloForaDaJanela: false })).toEqual({ ok: true });
   });
 });

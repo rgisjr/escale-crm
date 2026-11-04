@@ -766,7 +766,9 @@ export function validateFlowForPublish(
   // no meio da conversa: ele responde, e nada no motor encurta a espera — que é
   // exatamente o que a imunidade promete, e exatamente o que ninguém quer num
   // intervalo curto. O piso é o mesmo 24h que já separa espera curta de longa.
-  for (const node of [...nodes].sort(byId)) {
+  // FORK ESCALE · 5D: na automação o Atraso é SEMPRE imune (a resposta do contato não o corta,
+  // como na Clint) e vai de 30 s a 90 dias — o compilador confere os limites. O piso é do follow-up.
+  for (const node of surface === 'crm_automation' ? [] : [...nodes].sort(byId)) {
     if (node.type !== 'wait') continue;
     const cfg = node.config;
     if (cfg.mode !== 'fixed' || cfg.immune_to_reply !== true) continue;
