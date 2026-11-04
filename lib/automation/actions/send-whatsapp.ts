@@ -21,6 +21,7 @@ function textosDosPassos(passos: readonly PassoDeEnvio[]): string[] {
   return passos.flatMap((p) => {
     if (p.tipo === "texto") return [p.texto];
     if (p.tipo === "midia") return p.legenda ? [p.legenda] : [];
+    if (p.tipo === "pausa") return [];
     const itens = p.interativo.tipo === "botoes" ? p.interativo.botoes : p.interativo.linhas;
     return [p.interativo.corpo, ...itens.map((i) => i.titulo)];
   });

@@ -142,6 +142,8 @@ const TIPO_DO_NO: Record<FlowNode["type"], string> = {
   // #2065 — as duas ações que também não falam com o cliente.
   move_lead: "Mover no funil",
   edit_lead_tag: "Editar tag",
+  acoes_da_automacao: "Ações",
+  condicoes_da_automacao: "Condições",
   end: "Fim",
 };
 
@@ -218,6 +220,16 @@ export function resumoDoNo(node: FlowNode): NoDoDossie {
       return {
         ...base,
         resumo: resumoDaEdicaoDeTag(node.config),
+      };
+    case "acoes_da_automacao":
+      return {
+        ...base,
+        resumo: `executa ${node.config.acoes.length} ação(ões) da automação — sem mensagem ao cliente`,
+      };
+    case "condicoes_da_automacao":
+      return {
+        ...base,
+        resumo: `avalia ${node.config.grupos.length} grupo(s) de condições e segue pela primeira correspondência`,
       };
     case "end":
       return { ...base, resumo: `encerra — ${DESFECHO[node.config.outcome] ?? node.config.outcome}` };
@@ -493,6 +505,12 @@ export function descreveEvento(
       return {
         titulo: "Não conseguiu mover o card para a etapa escolhida",
         detalhe: texto(p.error) ?? texto(p.codigo),
+        ...motor,
+      };
+    case "acoes_da_automacao_failed":
+      return {
+        titulo: "Uma ou mais ações da automação falharam",
+        detalhe: Array.isArray(p.falhas) ? p.falhas.map(String).join(", ") : null,
         ...motor,
       };
     case "inbound_woke":

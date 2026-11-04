@@ -1,6 +1,6 @@
 import type { FlowGraph, FlowEdge, FlowNode, NodeType } from './graph-schema';
 import type { FollowupFlowSurface } from './api-schemas';
-import { branchIdForCondition, nodeBranches } from './graph-schema';
+import { branchIdForCondition, ESPERA_MINIMA_DA_RESPOSTA_MS, nodeBranches } from './graph-schema';
 import { rotuloDoRamo } from './rotulo-do-ramo';
 import type { NomesDeValor } from './vocabulario';
 import type { EtapaCitada } from './etapas-citadas';
@@ -163,7 +163,7 @@ function cicloDoEncadeamento(
  */
 export const NOS_DA_SUPERFICIE: Record<FollowupFlowSurface, readonly NodeType[]> = {
   followup: ['trigger', 'wait', 'condition', 'ai_classify', 'match_reply', 'repeat', 'action', 'internal_task', 'move_lead', 'edit_lead_tag', 'end'],
-  crm_automation: ['trigger', 'wait', 'condition', 'ai_classify', 'match_reply', 'repeat', 'action', 'internal_task', 'move_lead', 'edit_lead_tag', 'end'],
+  crm_automation: ['trigger', 'wait', 'condition', 'ai_classify', 'match_reply', 'repeat', 'action', 'internal_task', 'move_lead', 'edit_lead_tag', 'acoes_da_automacao', 'condicoes_da_automacao', 'end'],
   atendimento: ['trigger', 'collect', 'skill', 'end'],
 };
 
@@ -810,11 +810,11 @@ export function validateFlowForPublish(
     if (node.type === 'match_reply' || node.type === 'repeat' || node.config.branches !== undefined) {
       cobrirRamos(node, outgoing, errors, nomes);
       if (node.type === 'repeat') continue;
-      if (node.config.grace_timeout_ms < 900_000) {
+      if (node.config.grace_timeout_ms < ESPERA_MINIMA_DA_RESPOSTA_MS) {
         errors.push({
           node_id: node.id,
           code: 'grace_too_short',
-          message: `Nó "${node.id}" tem grace_timeout_ms abaixo do mínimo de 15min.`,
+          message: "O tempo mínimo de resposta é de 1 minuto.",
         });
       }
       continue;

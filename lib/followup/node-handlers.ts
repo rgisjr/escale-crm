@@ -7,6 +7,7 @@ import type { ServiceBoundary } from "@/lib/atendimento/fronteira";
 import {
   CONDITION_FALSE_BRANCH_ID,
   CONDITION_TRUE_BRANCH_ID,
+  FALLBACK_BRANCH_ID,
   NO_REPLY_BRANCH_ID,
   REPEAT_BODY_BRANCH_ID,
   REPEAT_DONE_BRANCH_ID,
@@ -16,6 +17,7 @@ import type { FlowEdge, FlowNode, ReplySaveTo } from "./graph-schema";
 import { parseReplyCount } from "./parse-count";
 import { clampEspera, esperaPlanejadaDe, type EsperaAdaptativa } from "./timing-plan";
 import { fraseDeConfirmacao } from "./vocabulario";
+import { instanteNaJanela } from "./janela-do-atraso";
 
 export type EnrollmentStatus =
   | "active"
@@ -553,6 +555,10 @@ export function processNode(input: {
   wokeEarly?: boolean;
   /** Last inbound `messages.body` for this contact/conversation — engine loads on `match_reply` + wokeEarly. */
   lastInboundBody?: string;
+  /** FORK ESCALE · 5D: o engine avalia os grupos e passa o primeiro que casou. */
+  grupoQueCasou?: string | null;
+  /** FORK ESCALE · 5D: fuso da organização — só o `wait` com janela usa. */
+  fuso?: string;
   /** action occupancy guard: a `turn_enqueued` event for THIS stay on the action node already
    *  exists (an entry/recheck happened before). Resolved by the engine via `resolveWaitPhase`
    *  — same prior-step-event check as `wait`. When true, the send turn is in flight: DON'T
@@ -588,6 +594,8 @@ export function processNode(input: {
     waitElapsed,
     wokeEarly,
     lastInboundBody,
+    grupoQueCasou,
+    fuso,
     actionEnqueued,
     actionRecheckCount,
     actionCompleted,
@@ -657,9 +665,13 @@ export function processNode(input: {
         // slot único anti-spam enquanto ela espera. Quem a acorda continua sendo
         // o `next_eval_at` abaixo, pelo mesmo claim — não há segundo agendador.
         const imune = node.config.mode === "fixed" && node.config.immune_to_reply === true;
+        const fim = new Date(clock().getTime() + durationMs);
+        // FORK ESCALE · 5D: o Atraso acaba fora do "Continuar entre"? Segue na próxima abertura.
+        const janela = node.config.mode === "fixed" ? node.config.janela : undefined;
+        const proximo = janela ? instanteNaJanela(fim, fuso ?? "America/Sao_Paulo", janela) : fim;
         return {
           kind: "wait",
-          next_eval_at: new Date(clock().getTime() + durationMs),
+          next_eval_at: proximo,
           ...(imune ? { wake_status: "dormente" as const } : {}),
         };
       }
@@ -774,9 +786,12 @@ export function processNode(input: {
             node.config.save_to !== undefined
               ? undefined
               : node.config.branches.find((b) => {
-                  const needle = b.pattern.trim().toLowerCase();
-                  if (needle.length === 0) return false;
-                  return b.op === "eq" ? body === needle : body.includes(needle);
+                  return [b.pattern, ...(b.alternativas ?? [])].some((padrao) => {
+                    const needle = padrao.trim().toLowerCase();
+                    if (needle.length === 0) return false;
+                    if (b.op === "contains" && needle === "*") return body.length > 0;
+                    return b.op === "eq" ? body === needle : body.includes(needle);
+                  });
                 });
           const edge = hit
             ? selectEdge(edges, node.id, { type: "branch", branch_id: hit.id })
@@ -927,6 +942,32 @@ export function processNode(input: {
       // este nó não está em `NOS_QUE_ENVIAM`).
       const edge = selectEdge(edges, node.id, { type: "always" });
       if (!edge) return { kind: "fail", error: `edit_lead_tag node "${node.id}" has no outbound edge` };
+      return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
+    }
+
+    case "acoes_da_automacao": {
+      // FORK ESCALE · 5D: passagem no relógio, como `edit_lead_tag`: quem roda as ações é o engine ao
+      // aplicar o `advance`, guardado pelo idempotency_key do passo (replay não roda duas vezes).
+      const edge = selectEdge(edges, node.id, { type: "always" });
+      if (!edge) {
+        return { kind: "fail", error: `acoes_da_automacao node "${node.id}" has no outbound edge` };
+      }
+      return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
+    }
+
+    case "condicoes_da_automacao": {
+      const ramo = grupoQueCasou ?? null;
+      const edge =
+        ramo === null
+          ? selectEdge(edges, node.id, { type: "always" })
+          : selectEdge(edges, node.id, { type: "branch", branch_id: ramo });
+      if (!edge) {
+        return {
+          kind: "complete",
+          outcome: null,
+          cancel_reason: `condicoes_sem_saida:${ramo ?? FALLBACK_BRANCH_ID}`,
+        };
+      }
       return { kind: "advance", next_node_id: edge.target, next_eval_at: clock() };
     }
 

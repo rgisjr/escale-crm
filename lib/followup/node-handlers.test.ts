@@ -13,7 +13,7 @@ import {
   type EnrollmentRow,
   type LeadFacts,
 } from "./node-handlers";
-import type { FlowEdge, FlowNode } from "./graph-schema";
+import { flowGraphSchema, type FlowEdge, type FlowNode } from "./graph-schema";
 
 const NOW = new Date("2026-07-21T12:00:00.000Z");
 const clock = () => NOW;
@@ -304,6 +304,35 @@ describe("processNode — wait (fixed)", () => {
   it("first entry: schedules next_eval_at = now + duration_ms, stays put", () => {
     const result = processNode({ node, edges, enrollment: enrollment(), lead: lead(), clock, waitElapsed: false });
     expect(result).toEqual({ kind: "wait", next_eval_at: new Date(NOW.getTime() + 300_000) });
+  });
+
+  it("empurra o fim do atraso para a próxima abertura da janela", () => {
+    const comJanela: FlowNode = {
+      id: "w1",
+      type: "wait",
+      label: "Wait 1min",
+      position: { x: 0, y: 0 },
+      config: {
+        mode: "fixed",
+        duration_ms: 60_000,
+        janela: { de: "08:00", ate: "09:00", dias: [0, 1, 2, 3, 4, 5, 6] },
+        immune_to_reply: true,
+      },
+    };
+    const result = processNode({
+      node: comJanela,
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock: () => new Date("2026-11-04T15:00:00Z"),
+      waitElapsed: false,
+      fuso: "America/Sao_Paulo",
+    });
+    expect(result).toEqual({
+      kind: "wait",
+      next_eval_at: new Date("2026-11-05T11:00:00Z"),
+      wake_status: "dormente",
+    });
   });
 
   it("elapsed: advances via the 'always' edge", () => {
@@ -963,6 +992,36 @@ describe("processNode — match_reply", () => {
     expect(result).toMatchObject({ kind: "advance", next_node_id: "no-preco" });
   });
 
+  it("wokeEarly: uma alternativa casa pelo mesmo ramo", () => {
+    const result = processNode({
+      node: matchNode({
+        branches: [{ id: "br_sim", label: "TV BOX", op: "eq", pattern: "TV BOX", alternativas: ["5"] }],
+      }),
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      waitElapsed: true,
+      wokeEarly: true,
+      lastInboundBody: "5",
+    });
+    expect(result).toMatchObject({ kind: "advance", next_node_id: "no-sim" });
+  });
+
+  it("wokeEarly: pattern '*' com contains casa com qualquer texto não vazio", () => {
+    const result = processNode({
+      node: matchNode({ branches: [{ id: "br_sim", label: "Respondeu", op: "contains", pattern: "*" }] }),
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      waitElapsed: true,
+      wokeEarly: true,
+      lastInboundBody: "qualquer resposta",
+    });
+    expect(result).toMatchObject({ kind: "advance", next_node_id: "no-sim" });
+  });
+
   it("wokeEarly: no match falls through always/else", () => {
     const result = processNode({
       node: matchNode(),
@@ -1100,6 +1159,114 @@ describe("processNode — match_reply", () => {
       lastInboundBody: "sim",
     });
     expect(result).toMatchObject({ kind: "advance", next_node_id: "no-sim" });
+  });
+});
+
+describe("match_reply — limite de ramos", () => {
+  const ramo = (i: number) => ({ id: `b${i}`, label: `B${i}`, op: "eq" as const, pattern: `${i}` });
+  const grafo = (quantidade: number) => ({
+    nodes: [
+      { id: "t1", type: "trigger", label: "T", position: { x: 0, y: 0 }, config: {} },
+      {
+        id: "mr1",
+        type: "match_reply",
+        label: "Resposta",
+        position: { x: 1, y: 0 },
+        config: { branches: Array.from({ length: quantidade }, (_, i) => ramo(i)), grace_timeout_ms: 60_000 },
+      },
+      { id: "e1", type: "end", label: "Fim", position: { x: 2, y: 0 }, config: { outcome: "custom" } },
+    ],
+    edges: [
+      { id: "e-t", source: "t1", target: "mr1", condition: { type: "always" } },
+      { id: "e-f", source: "mr1", target: "e1", condition: { type: "always" } },
+    ],
+  });
+
+  it("aceita 12 ramos e recusa 13", () => {
+    expect(flowGraphSchema.safeParse(grafo(12)).success).toBe(true);
+    expect(flowGraphSchema.safeParse(grafo(13)).success).toBe(false);
+  });
+});
+
+describe("processNode — acoes_da_automacao", () => {
+  const node = {
+    id: "acoes-1",
+    type: "acoes_da_automacao",
+    label: "Ações",
+    position: { x: 0, y: 0 },
+    config: { acoes: [{ type: "add_tag", config: { tags: ["vip"] } }] },
+  } as unknown as FlowNode;
+
+  it("avança pela aresta always sem enviar mensagem", () => {
+    const result = processNode({
+      node,
+      edges: [edge({ source: "acoes-1", target: "n2", condition: { type: "always" } })],
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+    });
+    expect(result).toEqual({ kind: "advance", next_node_id: "n2", next_eval_at: NOW });
+  });
+
+  it("sem saída falha de forma explícita", () => {
+    const result = processNode({ node, edges: [], enrollment: enrollment(), lead: lead(), clock });
+    expect(result).toMatchObject({ kind: "fail" });
+  });
+});
+
+describe("processNode — condicoes_da_automacao", () => {
+  const node = {
+    id: "cond-1",
+    type: "condicoes_da_automacao",
+    label: "Condições",
+    position: { x: 0, y: 0 },
+    config: {
+      grupos: [
+        { id: "g1", modo: "todas", linhas: [{ field: "lead.tags", op: "contains", value: "vip" }] },
+        { id: "g2", modo: "todas", linhas: [{ field: "lead.tags", op: "contains", value: "quente" }] },
+      ],
+    },
+  } as unknown as FlowNode;
+  const edges = [
+    edge({ source: "cond-1", target: "n1", condition: { type: "branch", branch_id: "g1" } }),
+    edge({ source: "cond-1", target: "n2", condition: { type: "branch", branch_id: "g2" } }),
+    edge({ source: "cond-1", target: "fallback", condition: { type: "always" } }),
+  ];
+
+  it("segue a saída do grupo que casou", () => {
+    const result = processNode({
+      node,
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      grupoQueCasou: "g2",
+    });
+    expect(result).toEqual({ kind: "advance", next_node_id: "n2", next_eval_at: NOW });
+  });
+
+  it("nenhum grupo segue a saída fallback", () => {
+    const result = processNode({
+      node,
+      edges,
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      grupoQueCasou: null,
+    });
+    expect(result).toEqual({ kind: "advance", next_node_id: "fallback", next_eval_at: NOW });
+  });
+
+  it("saída do grupo sem ligação conclui o caminho", () => {
+    const result = processNode({
+      node,
+      edges: [],
+      enrollment: enrollment(),
+      lead: lead(),
+      clock,
+      grupoQueCasou: "g2",
+    });
+    expect(result).toEqual({ kind: "complete", outcome: null, cancel_reason: "condicoes_sem_saida:g2" });
   });
 });
 

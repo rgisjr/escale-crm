@@ -42,6 +42,8 @@ describe('graph-schema', () => {
         // #2065 — dois tipos de ação que não falam com o cliente.
         'move_lead',
         'edit_lead_tag',
+        'acoes_da_automacao',
+        'condicoes_da_automacao',
         'end',
       ]);
     });
@@ -798,18 +800,21 @@ describe('graph-schema', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects match_reply with grace below 15min', () => {
-      const result = flowNodeSchema.safeParse({
+    it('accepts match_reply from 1min and rejects below it', () => {
+      const node = {
         id: 'mr-1',
         type: 'match_reply',
         label: 'Casar texto',
         position: { x: 0, y: 0 },
         config: {
           branches: [{ id: 'br_sim', label: 'Sim', op: 'eq', pattern: 'ok' }],
-          grace_timeout_ms: 899_999,
+          grace_timeout_ms: 60_000,
         },
-      });
-      expect(result.success).toBe(false);
+      };
+      expect(flowNodeSchema.safeParse(node).success).toBe(true);
+      expect(
+        flowNodeSchema.safeParse({ ...node, config: { ...node.config, grace_timeout_ms: 59_999 } }).success,
+      ).toBe(false);
     });
 
     it('rejects match_reply reserved branch id and unknown op', () => {
@@ -1394,6 +1399,28 @@ describe('graph-schema', () => {
           { id: FALLBACK_BRANCH_ID, label: 'Sempre', check: null, kind: 'fallback', condition: { type: 'always' } },
         ]);
       }
+    });
+
+    it('expõe uma saída por grupo de condições e o fallback canônico por último', () => {
+      expect(nodeBranches({
+        type: 'condicoes_da_automacao',
+        config: {
+          grupos: [
+            { id: 'grupo-vip', modo: 'todas', linhas: [{ field: 'tag', op: 'contains', value: 'vip' }] },
+            { id: 'grupo-manha', modo: 'qualquer', linhas: [{ field: 'horario_atual', op: 'antes_de', value: '12:00' }] },
+          ],
+        },
+      })).toStrictEqual([
+        { id: 'grupo-vip', label: 'Grupo 1', check: null, kind: 'match', condition: { type: 'branch', branch_id: 'grupo-vip' } },
+        { id: 'grupo-manha', label: 'Grupo 2', check: null, kind: 'match', condition: { type: 'branch', branch_id: 'grupo-manha' } },
+        {
+          id: FALLBACK_BRANCH_ID,
+          label: 'Não corresponde a nenhuma condição',
+          check: null,
+          kind: 'fallback',
+          condition: { type: 'always' },
+        },
+      ]);
     });
   });
 
