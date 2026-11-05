@@ -93,6 +93,7 @@ describe("GET", () => {
       crm_automacoes_favoritas: [{ rule_id: R1 }],
       crm_pastas_de_automacao: [{ id: P1, nome: "Vendas", cor: "red", icone: "flag" }],
       ai_agents: [{ id: "g1", name: "Ana" }],
+      crm_rascunhos_de_automacao: [{ rule_id: R1 }],
     });
     const r = await GET();
     expect(r.status).toBe(200);
@@ -100,7 +101,7 @@ describe("GET", () => {
     const autos = data?.automacoes as Linha[];
     expect(autos[0]).toEqual({
       id: R1, nome: "A", ativa: true, atualizadaEm: "2026-10-01T00:00:00Z",
-      pastaId: P1, forma: "editor", favorita: true, agentes: ["g1"],
+      pastaId: P1, forma: "editor", favorita: true, agentes: ["g1"], rascunho: true, publicada: true,
     });
     expect(autos[0] !== undefined && "actions" in autos[0]).toBe(false);
     expect(data?.pastas).toEqual([{ id: P1, nome: "Vendas", cor: "red", icone: "flag" }]);

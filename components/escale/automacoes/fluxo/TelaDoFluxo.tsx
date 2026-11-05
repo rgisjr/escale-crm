@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ActionType } from "@/app/app/webhooks/_components/labels";
 import { JanelaRenomearAutomacao } from "@/components/escale/automacoes/lista/JanelaRenomearAutomacao";
 import { JanelaDeConfirmacao } from "@/components/escale/ui/JanelaDeConfirmacao";
+import type { RascunhoDaAutomacao } from "@/hooks/escale/useAutomacoesDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import type { AutomationRuleRow } from "@/hooks/webhooks/useAutomationRules";
 import type { DadosDaCaixa, Desenho } from "@/lib/automation/desenho-da-regra";
@@ -18,6 +19,7 @@ import type { AbaDoFluxo } from "./AbasDoFluxo";
 import { AcoesDoNoContext, type AcoesDoNo } from "./BarraDoNo";
 import { CabecalhoDoFluxo } from "./CabecalhoDoFluxo";
 import { CanvasDoFluxo } from "./CanvasDoFluxo";
+import { FaixaDoRascunho } from "./FaixaDoRascunho";
 import { InsightsDoFluxo } from "./insights/InsightsDoFluxo";
 import { MenuDoFluxo } from "./MenuDoFluxo";
 import { PainelDoInstagram } from "./comentario/PainelDoInstagram";
@@ -43,6 +45,8 @@ export function TelaDoFluxo({
   fuso,
   nomeInicial,
   aoCriar,
+  rascunho = null,
+  aoDescartarRascunho,
 }: {
   regra: AutomationRuleRow | null;
   /** FORK ESCALE · 5D: o desenho de uma automação em modo fluxo (`null` = uma regra comum). */
@@ -50,6 +54,10 @@ export function TelaDoFluxo({
   fuso: string;
   nomeInicial?: string;
   aoCriar?: (id: string) => Promise<void>;
+  /** FORK ESCALE · automações: o rascunho pendente (a tela abre nele). */
+  rascunho?: RascunhoDaAutomacao | null;
+  /** Depois de descartar o rascunho: quem monta a tela a remonta na versão publicada. */
+  aoDescartarRascunho?: () => void;
 }) {
   const t = useT();
   const router = useRouter();
@@ -57,7 +65,7 @@ export function TelaDoFluxo({
   const aoReorganizar = useCallback(() => {
     window.setTimeout(() => void fitView(REENQUADRAR_O_FLUXO), 0);
   }, [fitView]);
-  const fluxo = useFluxo(regra, { nomeInicial, aoCriar, aoReorganizar, desenhoDoFluxo });
+  const fluxo = useFluxo(regra, { nomeInicial, aoCriar, aoReorganizar, desenhoDoFluxo, rascunho });
   const { selecionado, sujo } = fluxo;
 
   const [aba, setAba] = useState<AbaDoFluxo>("editor");
@@ -66,6 +74,7 @@ export function TelaDoFluxo({
   const [saindo, setSaindo] = useState<string | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
   const [renomeando, setRenomeando] = useState(false);
+  const [descartando, setDescartando] = useState(false);
 
   // O aviso do navegador ao fechar ou recarregar a aba com alterações (D17).
   useEffect(() => {
@@ -253,6 +262,8 @@ export function TelaDoFluxo({
           aoRenomear={() => setRenomeando(true)}
           aoSalvar={() => void fluxo.salvar()}
           aoAlternarAtivo={fluxo.alternarAtivo}
+          rascunho={fluxo.rascunhoEm !== null}
+          podeLigar={fluxo.publicada}
           menu={
             <MenuDoFluxo
               id={regra?.id ?? null}
@@ -262,6 +273,15 @@ export function TelaDoFluxo({
             />
           }
         />
+        {aba === "editor" && fluxo.rascunhoEm ? (
+          <FaixaDoRascunho
+            salvoEm={fluxo.rascunhoEm}
+            publicada={fluxo.publicada}
+            fuso={fuso}
+            aoDescartar={() => setDescartando(true)}
+            emConflito={!!rascunho?.versaoBase && !!regra && rascunho.versaoBase !== regra.updated_at}
+          />
+        ) : null}
         {aba === "insights" && regra ? (
           <InsightsDoFluxo regra={regra} fuso={fuso} sujo={sujo} />
         ) : (
@@ -340,6 +360,21 @@ export function TelaDoFluxo({
               ? t("O que você preencheu neste gatilho será perdido se abrir outro item agora. Para manter, cancele e use o botão Salvar.")
               : t("O que você preencheu neste passo será perdido se abrir outro item agora. Para manter, cancele e use o botão Salvar.")}
           </p>
+        </JanelaDeConfirmacao>
+        <JanelaDeConfirmacao
+          aberta={descartando}
+          aoFechar={() => setDescartando(false)}
+          perigo
+          titulo={t("Descartar rascunho")}
+          rotuloDoConfirmar={t("Descartar rascunho")}
+          aoConfirmar={() => {
+            setDescartando(false);
+            void fluxo.descartarRascunho().then((ok) => {
+              if (ok) aoDescartarRascunho?.();
+            });
+          }}
+        >
+          <p>{t("O desenho salvo como rascunho será apagado e a tela volta para a versão publicada.")}</p>
         </JanelaDeConfirmacao>
       </div>
     </AcoesDoNoContext.Provider>

@@ -22,6 +22,7 @@
  */
 import { ApiError } from "@/lib/api/types";
 import { audit } from "@/lib/audit";
+import { MENSAGEM_DO_RASCUNHO_NAO_LIGA, semAcaoParaLigar } from "@/lib/automation/rascunho-nao-liga";
 import { autoriaDaMudanca } from "@/lib/operacao/autoria";
 import type { DepsDaOperacao } from "@/lib/operacao/entradas-automaticas";
 
@@ -82,10 +83,10 @@ export async function listarRegrasAutomaticas(
 async function regraDaOrg(
   deps: DepsDaOperacao,
   id: string,
-): Promise<{ id: string; name: string; is_active: boolean }> {
+): Promise<{ id: string; name: string; is_active: boolean; actions: unknown }> {
   const { data, error } = await deps.supabase
     .from("automation_rules")
-    .select("id, name, is_active")
+    .select("id, name, is_active, actions")
     .eq("id", id)
     .eq("organization_id", deps.organizationId)
     .maybeSingle();
@@ -93,7 +94,7 @@ async function regraDaOrg(
   if (!data) {
     throw new ApiError(404, "not_found", undefined, deps.requestId, "Essa regra não existe aqui.");
   }
-  return data as unknown as { id: string; name: string; is_active: boolean };
+  return data as unknown as { id: string; name: string; is_active: boolean; actions: unknown };
 }
 
 /** Liga ou desliga a regra. Ver o aviso do topo antes de afrouxar o risco disto. */
@@ -102,6 +103,9 @@ export async function definirRegraAtiva(
   input: { id: string; ativa: boolean },
 ): Promise<RegraVisivel> {
   const antes = await regraDaOrg(deps, input.id);
+  if (input.ativa && semAcaoParaLigar(antes.actions)) {
+    throw new ApiError(422, "validation_failed", undefined, deps.requestId, MENSAGEM_DO_RASCUNHO_NAO_LIGA);
+  }
 
   const { data: updated, error } = await deps.supabase
     .from("automation_rules")

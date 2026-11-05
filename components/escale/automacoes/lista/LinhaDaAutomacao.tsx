@@ -5,6 +5,7 @@ import { CaixaDaCasca } from "@/components/escale/ui/CaixaDaCasca";
 import { InterruptorDaCasca } from "@/components/escale/ui/InterruptorDaCasca";
 import { useAcoesDasAutomacoes } from "@/hooks/escale/useAutomacoesDaCasca";
 import { useT } from "@/hooks/i18n/useT";
+import { MENSAGEM_DO_RASCUNHO_NAO_LIGA } from "@/lib/automation/rascunho-nao-liga";
 import { rotaDeAbrir } from "@/lib/escale/automacoes/rotas";
 import type { AgenteDaLista, AutomacaoDaLista, PastaDeAutomacao } from "@/lib/escale/automacoes/tipos";
 import { dataHoraBr } from "@/lib/escale/negocio/arquivos";
@@ -43,18 +44,23 @@ export function LinhaDaAutomacao({
         <CaixaDaCasca marcada={selecionada} aoMudar={aoSelecionar} aria-label={t("Selecionar automação")} />
       </td>
       <td className="px-3">
-        <Link
-          href={rotaDeAbrir(a)}
-          onClick={(e) => {
-            if (a.forma === "editor") {
-              e.preventDefault();
-              aoEditar(a.id);
-            }
-          }}
-          className="block truncate text-[13px] font-medium text-casca-texto hover:underline"
-        >
-          {a.nome}
-        </Link>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href={rotaDeAbrir(a)}
+            onClick={(e) => {
+              if (a.forma === "editor") {
+                e.preventDefault();
+                aoEditar(a.id);
+              }
+            }}
+            className="block truncate text-[13px] font-medium text-casca-texto hover:underline"
+          >
+            {a.nome}
+          </Link>
+          {a.rascunho ? (
+            <span className="shrink-0 rounded bg-warning-bg px-1.5 py-0.5 text-[11px] text-warning-fg">{t("Rascunho")}</span>
+          ) : null}
+        </div>
       </td>
       <td className="px-3">
         <AgenteDaLinha ids={a.agentes} agentes={agentes} />
@@ -63,6 +69,8 @@ export function LinhaDaAutomacao({
         <InterruptorDaCasca
           ligado={a.ativa}
           aoMudar={(ativa) => acoes.alternar.mutate({ id: a.id, ativa })}
+          desabilitado={!a.ativa && a.publicada === false}
+          title={!a.ativa && a.publicada === false ? t(MENSAGEM_DO_RASCUNHO_NAO_LIGA) : undefined}
           aria-label={a.ativa ? `${t("Pausar")} ${a.nome}` : `${t("Ativar")} ${a.nome}`}
         />
       </td>

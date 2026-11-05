@@ -12,6 +12,7 @@ import {
   ATRASO_MINIMO_MS,
   RECUSA_ATRASO_MAXIMO,
   RECUSA_ATRASO_MINIMO,
+  RECUSA_JANELA_DO_ATRASO,
   msDoAtraso,
   type DadosDoAtraso,
   type UnidadeDoAtraso,
@@ -69,11 +70,12 @@ export function PainelDoAtraso({
   const ms = quantidade === null ? null : msDoAtraso({ quantidade, unidade: rascunho.unidade });
   const erroDoTempo = ms === null ? null : ms < ATRASO_MINIMO_MS ? RECUSA_ATRASO_MINIMO : ms > ATRASO_MAXIMO_MS ? RECUSA_ATRASO_MAXIMO : null;
   const janelaValida = !rascunho.limite || (HORA.test(rascunho.de) && HORA.test(rascunho.ate) && rascunho.dias.length > 0);
-  const podeSalvar = quantidade !== null && erroDoTempo === null && janelaValida;
+  // FORK ESCALE · automações (D9): a caixa guarda o que foi digitado; a publicação confere tempo e janela.
+  const podeSalvar = quantidade !== null;
   const mudar = (patch: Partial<Estado>) => setRascunho({ ...rascunho, ...patch });
 
   function salvar() {
-    if (quantidade === null || !podeSalvar) return;
+    if (quantidade === null) return;
     aoSalvar({
       kind: "atraso",
       quantidade,
@@ -159,6 +161,11 @@ export function PainelDoAtraso({
             resumir={(nomes) => (nomes.length > 2 ? `${nomes.length} ${t("selecionados")}` : nomes.join(", "))}
             opcoes={DIAS_NA_ORDEM.map((d) => ({ valor: String(d), rotulo: t(NOME_DO_DIA[d]) }))}
           />
+          {!janelaValida ? (
+            <p role="note" className="text-[12px] text-casca-suave">
+              {fraseDoFluxo(RECUSA_JANELA_DO_ATRASO, t)}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </PainelDoNo>

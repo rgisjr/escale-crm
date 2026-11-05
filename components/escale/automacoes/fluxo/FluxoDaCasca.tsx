@@ -1,9 +1,15 @@
 "use client";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
-import { podeSerModoFluxo, useDesenhoDoFluxo, useOrganizarAoCriar } from "@/hooks/escale/useAutomacoesDaCasca";
+import {
+  podeSerModoFluxo,
+  useDesenhoDoFluxo,
+  useOrganizarAoCriar,
+  useRascunhoDaAutomacao,
+} from "@/hooks/escale/useAutomacoesDaCasca";
 import { useT } from "@/hooks/i18n/useT";
 import { useAutomationRule } from "@/hooks/webhooks/useAutomationRules";
 import { ApiError } from "@/lib/api/types";
@@ -56,13 +62,23 @@ export function FluxoDaCasca({
   const regra = nova ? null : (data?.data ?? null);
   // FORK ESCALE · 5D: uma regra com UMA ação `start_message_flow` pode ser uma automação em modo fluxo.
   const fluxo = useDesenhoDoFluxo(podeSerModoFluxo(regra) ? regra!.id : null);
+  // FORK ESCALE · automações: o rascunho pendente, lido a cada abertura.
+  const rascunho = useRascunhoDaAutomacao(nova ? null : id);
+  // Descartar o rascunho remonta a tela na versão publicada.
+  const [geracao, setGeracao] = useState(0);
+  const falhouRascunho = !nova && rascunho.isError;
 
-  if (!nova && ((isPending && !isError) || (podeSerModoFluxo(regra) && fluxo.isPending))) return <Carregando />;
-  if (!nova && !regra) {
+  if (
+    !nova &&
+    ((isPending && !isError) || (podeSerModoFluxo(regra) && fluxo.isPending) || (rascunho.isPending && !rascunho.isError))
+  ) {
+    return <Carregando />;
+  }
+  if (!nova && (!regra || falhouRascunho)) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="max-w-md text-[13px] text-casca-suave">
-          {falhou
+          {falhou || falhouRascunho
             ? t("Não consegui carregar as automações agora. Recarregue a página; se continuar, avise quem cuida da instalação.")
             : t("Esta automação não existe mais, ou não é desta organização.")}
         </p>
@@ -77,9 +93,11 @@ export function FluxoDaCasca({
     <ReactFlowProvider>
       {/* A chave remonta a tela quando a automação nova vira gravada (o id muda). */}
       <TelaDoFluxo
-        key={regra?.id ?? "nova"}
+        key={`${regra?.id ?? "nova"}:${geracao}`}
         regra={regra}
         desenhoDoFluxo={fluxo.data ?? null}
+        rascunho={nova ? null : (rascunho.data ?? null)}
+        aoDescartarRascunho={() => setGeracao((g) => g + 1)}
         fuso={fuso}
         nomeInicial={nomeInicial}
         aoCriar={

@@ -43,7 +43,22 @@ import {
   type ProblemaDoDesenho,
   type TelaDoGatilho,
 } from "@/lib/automation/desenho-da-regra";
-import { useGravarFluxo } from "@/hooks/escale/useAutomacoesDaCasca";
+import {
+  useDescartarRascunho,
+  useGravarFluxo,
+  useSalvarRascunho,
+  type RascunhoDaAutomacao,
+} from "@/hooks/escale/useAutomacoesDaCasca";
+import { ApiError } from "@/lib/api/types";
+import { MENSAGEM_DO_RASCUNHO_NAO_LIGA } from "@/lib/automation/rascunho-nao-liga";
+import {
+  AVISO_CONFLITO_VIROU_RASCUNHO,
+  AVISO_CORRIJA_PARA_PUBLICAR,
+  RECUSA_RASCUNHO_SEM_GATILHO,
+  TOAST_RASCUNHO_COM_VERSAO_NO_AR,
+  TOAST_RASCUNHO_SALVO,
+} from "@/lib/escale/automacoes/fluxo/frases-do-rascunho";
+import { pendenciasDasCaixas } from "@/lib/escale/automacoes/fluxo/pendencias";
 import { LIMITE_DE_NOS, RECUSA_TAMANHO_MAXIMO, type SaidaDoNo } from "@/lib/escale/automacoes/fluxo/caixas";
 import { compilar, modoDoDesenho } from "@/lib/escale/automacoes/fluxo/compilar";
 import { problemasAntesDoPublish, problemasDoServidor } from "@/lib/escale/automacoes/fluxo/erros-do-publish";
@@ -55,7 +70,7 @@ import {
   organizarDoModo,
   semSaidasInvalidas,
 } from "@/lib/escale/automacoes/fluxo/edicao";
-import { copiaDaCaixa, regraGravadaDe, retratoDoFluxo, toastDaRecusa } from "@/lib/escale/automacoes/fluxo/estado";
+import { copiaDaCaixa, regraGravadaDe, retratoDoFluxo } from "@/lib/escale/automacoes/fluxo/estado";
 import {
   PROBLEMA_DO_GRUPO_VAZIO,
   achatar,
@@ -90,8 +105,10 @@ export interface OpcoesDoFluxo {
   aoReorganizar?: () => void;
   /** FORK ESCALE · 5D: o desenho de uma automação em modo fluxo (o servidor devolve; `null` = é só uma regra). */
   desenhoDoFluxo?: Desenho | null;
+  /** O rascunho salvo sem publicar: quando há, a tela abre nele (e não na versão no ar). */
+  rascunho?: RascunhoDaAutomacao | null;
 }
-export type ResultadoDoSalvar = "salvo" | "criado" | "recusado" | "falhou";
+export type ResultadoDoSalvar = "salvo" | "criado" | "rascunho" | "recusado" | "falhou";
 
 export interface EstadoDoFluxo {
   nos: NoDaAutomacao[];
@@ -121,6 +138,11 @@ export interface EstadoDoFluxo {
   reorganizar: () => void;
   salvar: () => Promise<ResultadoDoSalvar>;
   alternarAtivo: (ligar: boolean) => void;
+  /** `updated_at` do rascunho pendente; `null` quando a tela está na versão publicada. */
+  rascunhoEm: string | null;
+  /** A regra já foi publicada (tem ação). Sem isto, ligar é recusado. */
+  publicada: boolean;
+  descartarRascunho: () => Promise<boolean>;
 }
 
 export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo): EstadoDoFluxo {
@@ -131,27 +153,40 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   // O desenho inicial nasce UMA vez: refetch da lista não pode atropelar edição.
   const inicial = useMemo(
     // FORK ESCALE · Fase 10B: o gatilho de comentário abre com a configuração gravada na tela.
+    // FORK ESCALE · automações: com rascunho, a tela abre nele, como foi salvo.
     () =>
-      opcoes.desenhoDoFluxo
-        ? normalizarSaidas(agruparNoFluxo(opcoes.desenhoDoFluxo))
-        : organizarNaHorizontal(agrupar(comConfigPropria(desenhoDaRegra(regraGravada), regraGravada))),
+      opcoes.rascunho
+        ? normalizarSaidas(opcoes.rascunho.desenho)
+        : opcoes.desenhoDoFluxo
+          ? normalizarSaidas(agruparNoFluxo(opcoes.desenhoDoFluxo))
+          : organizarNaHorizontal(agrupar(comConfigPropria(desenhoDaRegra(regraGravada), regraGravada))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
   const [nos, setNos, onNodesChange] = useNodesState<NoDaAutomacao>(paraNos(inicial));
   const [ligacoes, setLigacoes, onEdgesChange] = useEdgesState<Edge>(paraLigacoes(inicial));
-  const [nome, setNome] = useState(regra?.name ?? opcoes.nomeInicial ?? "");
-  const [salvo, setSalvo] = useState(() => retratoDoFluxo(regra?.name ?? "", inicial));
+  const [nome, setNome] = useState(opcoes.rascunho ? opcoes.rascunho.nome : (regra?.name ?? opcoes.nomeInicial ?? ""));
+  const [salvo, setSalvo] = useState(() => retratoDoFluxo(opcoes.rascunho ? opcoes.rascunho.nome : (regra?.name ?? ""), inicial));
   const [ativo, setAtivo] = useState(regra?.is_active ?? false);
   // A versão do banco sobre a qual este desenho foi feito: vai em cada salvar, e
   // a rota recusa se outra tela gravou depois (em vez de apagar o que ela gravou).
-  const [versao, setVersao] = useState<string | null>(regra?.updated_at ?? null);
+  // FORK ESCALE · automações: um rascunho reaberto continua preso à versão em que foi feito. Se outra
+  // pessoa publicou depois, o publicar volta 409 (vira rascunho de novo) em vez de sobrescrever sem aviso.
+  const [versao, setVersao] = useState<string | null>(opcoes.rascunho?.versaoBase ?? regra?.updated_at ?? null);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [problemasGerais, setProblemasGerais] = useState<ProblemaDoDesenho[]>([]);
+  const [rascunhoEm, setRascunhoEm] = useState<string | null>(opcoes.rascunho?.atualizadoEm ?? null);
+  // O último rascunho que está de fato no banco (não a tela): ligar/pausar só avança a versão-base dele.
+  const ultimoRascunho = useRef<{ nome: string; desenho: Desenho } | null>(
+    opcoes.rascunho ? { nome: opcoes.rascunho.nome, desenho: opcoes.rascunho.desenho } : null,
+  );
+  const [publicada, setPublicada] = useState(() => (regra?.actions.length ?? 0) > 0);
   const gravarFluxo = useGravarFluxo();
   const criar = useCreateAutomationRule();
   const atualizar = useUpdateAutomationRule();
-  const salvando = criar.isPending || atualizar.isPending || gravarFluxo.isPending;
+  const gravarRascunho = useSalvarRascunho();
+  const apagarRascunho = useDescartarRascunho();
+  const salvando = criar.isPending || atualizar.isPending || gravarFluxo.isPending || gravarRascunho.isPending;
   const opcoesRef = useRef(opcoes);
   useEffect(() => {
     opcoesRef.current = opcoes;
@@ -366,7 +401,8 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
     [setNos],
   );
 
-  const salvar = useCallback(async (): Promise<ResultadoDoSalvar> => {
+  /** Tudo que impede PUBLICAR, já na caixa da tela. Salvar como rascunho nunca depende disto. */
+  const conferir = useCallback(() => {
     // FORK ESCALE · 5D: com Atraso, ramos ou tempo de resposta o desenho grava como fluxo; senão, como regra de sempre.
     const modoFluxo = modoDoDesenho(achatado) === "fluxo";
     const resultado = modoFluxo
@@ -382,11 +418,65 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
     // FORK ESCALE · 5D: o que o publish recusaria e não depende do banco, conferido antes de enviar.
     if (resultado.ok && "grafo" in resultado) problemasAntesDoPublish(resultado.grafo).forEach(juntar);
     gruposVazios(desenho).forEach((c) => juntar({ caixa: c.id, mensagem: PROBLEMA_DO_GRUPO_VAZIO }));
+    pendenciasDasCaixas(achatado).forEach(juntar);
+    return { modoFluxo, resultado, problemas };
+  }, [nome, desenho, achatado, regraGravada]);
+
+  // Um rascunho reaberto já mostra, nas caixas, o que falta para publicar.
+  useEffect(() => {
+    if (opcoesRef.current.rascunho) mostrarProblemas(conferir().problemas);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * FORK ESCALE · automações (decisão do usuário, 04/11/2026): salvar NUNCA perde o trabalho. O que não
+   * pode ser publicado vira rascunho; a automação no ar não muda. Só a nova sem gatilho não tem onde ficar.
+   */
+  const guardarRascunho = useCallback(
+    async (aviso: string): Promise<ResultadoDoSalvar> => {
+      if (!regra && !evento) {
+        toast.error(t(RECUSA_RASCUNHO_SEM_GATILHO));
+        return "recusado";
+      }
+      try {
+        const r = await gravarRascunho.mutateAsync({ id: regra?.id ?? null, nome, desenho, versaoBase: versao });
+        setSalvo(retratoDoFluxo(nome, desenho));
+        setRascunhoEm(r.atualizadoEm);
+        ultimoRascunho.current = { nome, desenho };
+        toast.success(t(regra && publicada ? TOAST_RASCUNHO_COM_VERSAO_NO_AR : TOAST_RASCUNHO_SALVO));
+        toast.info(t(aviso));
+        if (regra) return "rascunho";
+        await opcoesRef.current.aoCriar?.(r.ruleId); // pasta e forma, antes de trocar de tela
+        router.replace(rotaDoFluxo(r.ruleId));
+        return "criado";
+      } catch {
+        return "falhou"; // o showApiError do hook já mostrou
+      }
+    },
+    [regra, evento, gravarRascunho, nome, desenho, versao, publicada, router, t],
+  );
+
+  /** Publicou: a regra pode ligar, e o rascunho (se havia) sai — a tela só o esquece depois que o banco o apagou. */
+  const concluirPublicacao = useCallback(
+    async (ruleId: string) => {
+      setPublicada(true);
+      if (rascunhoEm === null) return;
+      try {
+        await apagarRascunho.mutateAsync(ruleId);
+        setRascunhoEm(null);
+      } catch {
+        // O showApiError do hook já avisou; o rascunho velho segue no banco e a faixa continua à vista.
+      }
+    },
+    [rascunhoEm, apagarRascunho],
+  );
+
+  const salvar = useCallback(async (): Promise<ResultadoDoSalvar> => {
+    const { modoFluxo, resultado, problemas } = conferir();
     mostrarProblemas(problemas);
     if (!resultado.ok || problemas.length > 0) {
       setSelecionado(null);
-      toast.error(t(toastDaRecusa(problemas)));
-      return "recusado";
+      return guardarRascunho(AVISO_CORRIJA_PARA_PUBLICAR);
     }
     try {
       if (modoFluxo) {
@@ -394,7 +484,10 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         setVersao(gravado.atualizadoEm);
         setSalvo(retratoDoFluxo(nome, desenho));
         toast.success(t("Automação salva com sucesso!"));
-        if (regra) return "salvo";
+        if (regra) {
+          await concluirPublicacao(regra.id);
+          return "salvo";
+        }
         toast.info(t("Ela nasce pausada: ligue quando estiver pronta."));
         await opcoesRef.current.aoCriar?.(gravado.ruleId);
         router.replace(rotaDoFluxo(gravado.ruleId));
@@ -410,6 +503,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         setVersao(gravada.data.updated_at);
         setSalvo(retratoDoFluxo(nome, desenho));
         toast.success(t("Automação salva com sucesso!"));
+        await concluirPublicacao(regra.id);
         return "salvo";
       }
       const criada = await criar.mutateAsync(resultado.corpo);
@@ -424,19 +518,58 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       router.replace(rotaDoFluxo(criada.data.id));
       return "criado";
     } catch (err) {
-      // FORK ESCALE · 5D: a recusa do publish volta para as caixas. O resto, o showApiError já mostrou.
+      // FORK ESCALE · 5D: a recusa do publish volta para as caixas — e o desenho fica salvo como rascunho.
       const doServidor = modoFluxo ? problemasDoServidor(err) : null;
-      if (!doServidor) return "falhou";
-      mostrarProblemas(doServidor);
-      setSelecionado(null);
-      toast.error(t(toastDaRecusa(doServidor)));
-      return "recusado";
+      if (doServidor) {
+        mostrarProblemas(doServidor);
+        setSelecionado(null);
+        return guardarRascunho(AVISO_CORRIJA_PARA_PUBLICAR);
+      }
+      // Outra tela salvou por cima: nada se perde, o desenho daqui vira rascunho.
+      if (err instanceof ApiError && err.code === "state_conflict") return guardarRascunho(AVISO_CONFLITO_VIROU_RASCUNHO);
+      // O servidor recusou o conteúdo (laço de lead, fonte inexistente, sem chave de cifra…): o toast já
+      // explicou, e o trabalho fica guardado como rascunho em vez de só na tela.
+      if (err instanceof ApiError && (err.status === 400 || err.status === 422)) return guardarRascunho(AVISO_CORRIJA_PARA_PUBLICAR);
+      return "falhou";
     }
-  }, [nome, desenho, achatado, regraGravada, regra, versao, atualizar, criar, gravarFluxo, router, qc, t, mostrarProblemas]);
+  }, [
+    conferir,
+    mostrarProblemas,
+    guardarRascunho,
+    concluirPublicacao,
+    nome,
+    desenho,
+    achatado,
+    regra,
+    versao,
+    atualizar,
+    criar,
+    gravarFluxo,
+    router,
+    qc,
+    t,
+  ]);
+
+  /** Apaga o rascunho; quem chama remonta a tela na versão publicada. */
+  const descartarRascunho = useCallback(async (): Promise<boolean> => {
+    if (!regra) return false;
+    try {
+      await apagarRascunho.mutateAsync(regra.id);
+      setRascunhoEm(null);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [regra, apagarRascunho]);
 
   const alternarAtivo = useCallback(
     (ligarRegra: boolean) => {
       if (!regra) return;
+      // FORK ESCALE · automações: a regra que nunca foi publicada não tem o que rodar.
+      if (ligarRegra && !publicada) {
+        toast.error(t(MENSAGEM_DO_RASCUNHO_NAO_LIGA));
+        return;
+      }
       setAtivo(ligarRegra);
       atualizar.mutate(
         { id: regra.id, is_active: ligarRegra },
@@ -445,12 +578,18 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
             // Ligar/pausar também troca a versão: sem isto, o próximo salvar daria conflito consigo mesmo.
             setVersao(gravada.data.updated_at);
             toast.success(ligarRegra ? t("Automação ligada.") : t("Automação pausada."));
+            // O rascunho pendente continua sendo da mesma regra: só a versão-base acompanha o carimbo novo.
+            if (rascunhoEm !== null && ultimoRascunho.current) {
+              void gravarRascunho
+                .mutateAsync({ id: regra.id, ...ultimoRascunho.current, versaoBase: gravada.data.updated_at })
+                .catch(() => undefined);
+            }
           },
           onError: () => setAtivo(!ligarRegra),
         },
       );
     },
-    [regra, atualizar, t],
+    [regra, publicada, atualizar, rascunhoEm, gravarRascunho, t],
   );
 
   return {
@@ -480,5 +619,8 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
     reorganizar,
     salvar,
     alternarAtivo,
+    rascunhoEm,
+    publicada,
+    descartarRascunho,
   };
 }

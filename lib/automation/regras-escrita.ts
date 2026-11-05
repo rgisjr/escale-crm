@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Actor } from "@/lib/api/handlers/types";
 import { falhaDeEscrita, type ResultadoDeEscrita } from "@/lib/api/resultado-de-escrita";
 import { audit } from "@/lib/audit";
+import { MENSAGEM_DO_RASCUNHO_NAO_LIGA, semAcaoParaLigar } from "@/lib/automation/rascunho-nao-liga";
 import { autoriaDaMudanca } from "@/lib/operacao/autoria";
 import {
   acoesQueFechamLaco,
@@ -113,6 +114,10 @@ export async function atualizarRegra(
     .maybeSingle();
   if (erroDeLeitura) return falhaDeEscrita("internal_error", erroDeLeitura.message, 500);
   if (!existente) return falhaDeEscrita("not_found", "Regra não encontrada.", 404);
+  // FORK ESCALE · automações: regra sem ação (rascunho nunca publicado) não liga.
+  if (pedido.is_active === true && semAcaoParaLigar(pedido.actions ?? (existente as { actions?: unknown }).actions)) {
+    return falhaDeEscrita("validation_failed", MENSAGEM_DO_RASCUNHO_NAO_LIGA, 422);
+  }
 
   // O PATCH parcial (só o gatilho, ou só as ações) monta o laço de #1528 pela porta do lado.
   const gravada = existente as { trigger_event: string; actions: { type: string }[] | null };

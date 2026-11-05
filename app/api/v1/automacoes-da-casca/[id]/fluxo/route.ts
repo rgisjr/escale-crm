@@ -8,6 +8,7 @@ import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import type { Desenho, RegraGravada } from "@/lib/automation/desenho-da-regra";
 import { compilar } from "@/lib/escale/automacoes/fluxo/compilar";
+import { desenhoSchema } from "@/lib/escale/automacoes/fluxo/desenho-schema";
 import { desenhoDoFluxo } from "@/lib/escale/automacoes/fluxo/descompilar";
 import { gravarAutomacaoEmModoFluxo, lerAutomacaoEmModoFluxo } from "@/lib/escale/automacoes/fluxo/gravar-modo-fluxo";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -22,22 +23,6 @@ type Contexto = { params: Promise<{ id: string }> };
 
 const idSchema = z.union([z.literal("novo"), z.string().uuid()]);
 
-const desenhoSchema = z.object({
-  caixas: z
-    .array(
-      z.object({
-        id: z.string().min(1).max(80),
-        type: z.enum(["gatilho", "condicoes", "acao", "atraso"]),
-        position: z.object({ x: z.number(), y: z.number() }),
-        data: z.looseObject({ kind: z.enum(["gatilho", "condicoes", "acao", "atraso"]) }),
-      }),
-    )
-    .min(1)
-    .max(80),
-  ligacoes: z
-    .array(z.object({ id: z.string().min(1).max(80), source: z.string().min(1), target: z.string().min(1), saida: z.string().max(80).optional() }))
-    .max(160),
-});
 const corpoSchema = z.object({
   nome: z.string().max(120),
   desenho: desenhoSchema,

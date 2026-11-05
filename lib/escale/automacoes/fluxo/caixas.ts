@@ -25,6 +25,7 @@ export const ATRASO_MINIMO_MS = 30_000;
 export const RECUSA_ATRASO_MINIMO = "O atraso mínimo é de 30 segundos.";
 export const ATRASO_MAXIMO_MS = 90 * 86_400_000;
 export const RECUSA_ATRASO_MAXIMO = "O atraso máximo é de 90 dias.";
+export const RECUSA_JANELA_DO_ATRASO = "Revise a janela de horário do Atraso: horário no formato 00:00 e pelo menos um dia.";
 
 const MS_DA_UNIDADE: Record<UnidadeDoAtraso, number> = {
   segundos: 1_000,

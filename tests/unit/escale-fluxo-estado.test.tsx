@@ -9,7 +9,14 @@ const h = vi.hoisted(() => ({
   atualizarMutate: vi.fn(),
   criar: vi.fn(),
   replace: vi.fn(),
+  gravarRascunho: vi.fn(),
   ordem: [] as string[],
+}));
+// FORK ESCALE · automações: o que não publica vira rascunho (o resto do módulo é o de verdade).
+vi.mock("@/hooks/escale/useAutomacoesDaCasca", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/escale/useAutomacoesDaCasca")>()),
+  useSalvarRascunho: () => ({ isPending: false, mutateAsync: h.gravarRascunho }),
+  useDescartarRascunho: () => ({ isPending: false, mutate: vi.fn(), mutateAsync: vi.fn() }),
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: h.replace, push: vi.fn() }) }));
@@ -167,15 +174,16 @@ describe("useFluxo", () => {
     expect(linhas()).toHaveLength(0);
   });
 
-  it("salvar sem ação é recusado, marca o problema no nó e não chama a API", async () => {
+  it("salvar sem ação não publica: marca o problema no nó e guarda como rascunho", async () => {
+    h.gravarRascunho.mockResolvedValue({ ruleId: "r1", atualizadoEm: "2026-11-04T12:00:00Z", criada: false });
     const { result } = montar(regra({ actions: [] }));
     let resultado = "";
     await act(async () => {
       resultado = await result.current.salvar();
     });
-    expect(resultado).toBe("recusado");
+    expect(resultado).toBe("rascunho");
     expect(h.atualizar).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("Para salvar a automação, conecte pelo menos uma ação ao gatilho.");
+    expect(h.gravarRascunho).toHaveBeenCalled();
     const marcados = result.current.nos.filter((n) => (n.data.problemas ?? []).length > 0);
     expect(marcados.length).toBeGreaterThan(0);
   });
@@ -224,14 +232,15 @@ describe("useFluxo", () => {
     expect(h.atualizar.mock.calls[0]![0].versao_lida).toBe("2026-10-30T12:00:00.000Z");
   });
 
-  it("passo 'Ações' vazio é recusado e marcado, sem chamar a API", async () => {
+  it("passo 'Ações' vazio é marcado e não publica (guarda como rascunho)", async () => {
+    h.gravarRascunho.mockResolvedValue({ ruleId: "r1", atualizadoEm: "2026-11-04T12:00:00Z", criada: false });
     const { result } = montar(regra());
     act(() => result.current.adicionar("grupo"));
     let resultado = "";
     await act(async () => {
       resultado = await result.current.salvar();
     });
-    expect(resultado).toBe("recusado");
+    expect(resultado).toBe("rascunho");
     expect(h.atualizar).not.toHaveBeenCalled();
     const no = result.current.nos.find((n) => n.id === "acao-2")!;
     expect(no.data.problemas?.map((p) => p.mensagem)).toEqual([PROBLEMA_DO_GRUPO_VAZIO]);
