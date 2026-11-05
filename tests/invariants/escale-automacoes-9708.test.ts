@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { GOV_AGENT_A, GOV_MANAGER, GOV_ORG, GOV_VIEWER, countAs, seedGov, sql, writeCountAs } from "./gov-helpers";
+import { GOV_AGENT_A, GOV_MANAGER, GOV_ORG, GOV_VIEWER, columnExists, countAs, seedGov, sql, writeCountAs } from "./gov-helpers";
 
 /**
  * RASCUNHO DE AUTOMAÇÃO (fork Escale, migration 9708) — prova contra Postgres real: só gerente ou acima
@@ -45,6 +45,17 @@ describe("estrutura", () => {
       sql(`select count(*) from pg_policies where tablename = 'crm_rascunhos_de_automacao' and policyname like 'support_write_%';`),
     ).not.toBe("0");
     expect(sql(`select has_table_privilege('anon', 'public.crm_rascunhos_de_automacao', 'select');`)).toBe("f");
+  });
+
+  it("guarda a versão da regra em que o rascunho se baseou, com limite de tamanho", () => {
+    expect(columnExists("crm_rascunhos_de_automacao", "versao_base")).toBe(true);
+    expect(
+      erroDe(() =>
+        sql(
+          `insert into public.crm_rascunhos_de_automacao (rule_id, organization_id, desenho, versao_base) values ('${R1}', '${GOV_ORG}', '${DESENHO}', '${"x".repeat(65)}');`,
+        ),
+      ),
+    ).toMatch(/check/i);
   });
 
   it("o desenho precisa ser um objeto", () => {
