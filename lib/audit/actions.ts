@@ -1281,6 +1281,9 @@ export const AUDIT_ACTIONS = [
   "media_asset.created",
   // FORK ESCALE · 5D: automação gravada em modo fluxo (regra + fluxo publicados juntos).
   "automation.flow_published",
+  // FORK ESCALE · automações: o rascunho salvo sem publicar (9708).
+  "automation.draft_saved",
+  "automation.draft_discarded",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */
