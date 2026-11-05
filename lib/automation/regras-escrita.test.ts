@@ -7,6 +7,7 @@ vi.mock("@/lib/webhooks/secrets", () => ({ encryptRuleActionSecrets: cifrar }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 
+import { MENSAGEM_DO_RASCUNHO_NAO_LIGA } from "@/lib/automation/rascunho-nao-liga";
 import { atualizarRegra, criarRegra } from "@/lib/automation/regras-escrita";
 import type { CreateAutomationRuleInput } from "@/lib/schemas/webhooks";
 
@@ -113,5 +114,34 @@ describe("atualizarRegra", () => {
       { ...base, patch: { name: "novo", versao_lida: "2026-01-01T00:00:00Z" } },
     );
     expect(r).toMatchObject({ ok: false, codigo: "state_conflict", status: 409 });
+  });
+
+  it("ligar regra sem ação (rascunho que nunca foi publicado) é recusado e nada é gravado", async () => {
+    const ops: Ops = { inserts: [], updates: [] };
+    const r = await atualizarRegra(
+      banco(ops, { existente: { id: "r1", trigger_event: "lead.created", actions: [] } }),
+      { ...base, patch: { is_active: true } },
+    );
+    expect(r).toMatchObject({ ok: false, codigo: "validation_failed", status: 422, mensagem: MENSAGEM_DO_RASCUNHO_NAO_LIGA });
+    expect(ops.updates).toEqual([]);
+  });
+
+  it("ligar regra com ação segue", async () => {
+    const ops: Ops = { inserts: [], updates: [] };
+    const r = await atualizarRegra(
+      banco(ops, { existente: { id: "r1", trigger_event: "lead.created", actions: [{ type: "add_tag", config: { tags: ["x"] } }] } }),
+      { ...base, patch: { is_active: true } },
+    );
+    expect(r.ok).toBe(true);
+    expect(ops.updates[0]).toMatchObject({ is_active: true });
+  });
+
+  it("pausar regra sem ação nunca é recusado", async () => {
+    const ops: Ops = { inserts: [], updates: [] };
+    const r = await atualizarRegra(
+      banco(ops, { existente: { id: "r1", trigger_event: "lead.created", actions: [] } }),
+      { ...base, patch: { is_active: false } },
+    );
+    expect(r.ok).toBe(true);
   });
 });

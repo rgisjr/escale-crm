@@ -307,7 +307,7 @@ describe("o que a leitura NÃO devolve", () => {
 
 describe("autoria da mudança de configuração", () => {
   const REGRA = [
-    { id: "r1", organization_id: ORG_ID, name: "Boas-vindas", is_active: false, actions: [], conditions: [] },
+    { id: "r1", organization_id: ORG_ID, name: "Boas-vindas", is_active: false, actions: [{ type: "add_tag", config: { tags: ["x"] } }], conditions: [] },
   ];
 
   it("⭐ regra ligada pelo AGENTE grava autoria 'ai'", async () => {
@@ -320,6 +320,15 @@ describe("autoria da mudança de configuração", () => {
       last_change_actor_kind: "ai",
     });
     expect((escrita?.patch as Record<string, unknown>).last_change_at).toEqual(expect.any(String));
+  });
+
+  it("ligar regra sem ação (rascunho) é recusado com 422, e nada é escrito", async () => {
+    const db = makeDb({
+      automationRules: [{ id: "r9", organization_id: ORG_ID, name: "Rascunho", is_active: false, actions: [], conditions: [] }],
+    });
+    const erro = await recusa(() => definirRegraAtiva(deps(db), { id: "r9", ativa: true }));
+    expect(erro.status).toBe(422);
+    expect(db.escritas).toEqual([]);
   });
 
   it("regra ligada por uma PESSOA grava autoria 'user'", async () => {
