@@ -8,6 +8,17 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.83.0] — 2026-11-05
+
+### Adicionado
+
+- **Automações sempre salvam: o que não pode ser publicado vira rascunho** No editor de Automações, o botão Salvar não perde mais o trabalho. Com tudo certo, ele publica
+  como antes. Se faltar algo (uma caixa incompleta, por exemplo), a automação é salva como
+  rascunho: as caixas com pendência ficam marcadas e a versão que já estava no ar continua
+  funcionando até você corrigir e salvar de novo. Ao reabrir, a tela mostra o rascunho, com a data
+  em que foi salvo e a opção de descartá-lo. Uma automação nova salva como rascunho fica pausada e
+  só pode ser ligada depois de publicada.
+
 ## [1.82.0] — 2026-11-04
 
 ### Adicionado
@@ -11721,7 +11732,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.82.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.83.0...HEAD
+[1.83.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.82.0...v1.83.0
 [1.82.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.81.0...v1.82.0
 [1.81.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.80.0...v1.81.0
 [1.80.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.79.0...v1.80.0
