@@ -203,3 +203,56 @@ export function useGravarFluxo() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
   });
 }
+
+/** FORK ESCALE · automações: o rascunho salvo sem publicar (9708). */
+export interface RascunhoDaAutomacao {
+  nome: string;
+  desenho: Desenho;
+  atualizadoEm: string;
+}
+
+const chaveDoRascunho = (regraId: string) => ["automation-rules", "rascunho", regraId] as const;
+
+/** O rascunho pendente da automação; `null` quando não há. Lido a cada abertura (nunca de cópia velha). */
+export function useRascunhoDaAutomacao(regraId: string | null) {
+  return useQuery({
+    queryKey: chaveDoRascunho(regraId ?? ""),
+    enabled: regraId !== null,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    queryFn: async (): Promise<RascunhoDaAutomacao | null> =>
+      (await apiClient.get<{ data: { rascunho: RascunhoDaAutomacao | null } }>(`${BASE}/${regraId}/rascunho`)).data.rascunho,
+  });
+}
+
+/** Grava o desenho como está. `id: null` = automação nova (a rota cria a regra pausada). */
+export function useSalvarRascunho() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id: string | null; nome: string; desenho: Desenho }) =>
+      (
+        await apiClient.put<{ data: { ruleId: string; atualizadoEm: string; criada: boolean } }>(`${BASE}/${p.id ?? "novo"}/rascunho`, {
+          nome: p.nome,
+          desenho: p.desenho,
+        })
+      ).data,
+    onError: (e: unknown) => showApiError(e),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CHAVE_DAS_AUTOMACOES }),
+  });
+}
+
+export function useDescartarRascunho() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (regraId: string) => {
+      await apiClient.delete(`${BASE}/${regraId}/rascunho`);
+    },
+    onError: (e: unknown) => showApiError(e),
+    onSuccess: (_dado, regraId) => {
+      qc.setQueryData(chaveDoRascunho(regraId), null);
+      void qc.invalidateQueries({ queryKey: CHAVE_DAS_AUTOMACOES });
+    },
+  });
+}
