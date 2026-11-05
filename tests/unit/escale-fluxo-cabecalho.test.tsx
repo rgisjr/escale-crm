@@ -35,6 +35,10 @@ vi.mock("@/hooks/escale/useAutomacoesDaCasca", () => ({
   podeSerModoFluxo: () => false,
   useDesenhoDoFluxo: () => ({ data: null, isPending: false }),
   useGravarFluxo: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  // FORK ESCALE · automações: nenhuma destas telas abre com rascunho.
+  useRascunhoDaAutomacao: () => ({ data: null, isPending: false, isError: false }),
+  useSalvarRascunho: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDescartarRascunho: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock("@/hooks/webhooks/useAutomationRules", () => ({
   useCreateAutomationRule: () => ({ isPending: false, mutateAsync: vi.fn() }),
@@ -202,6 +206,18 @@ describe("CabecalhoDoFluxo", () => {
     await userEvent.click(screen.getByRole("switch", { name: "Pausar automação" }));
     expect(aoRenomear).toHaveBeenCalled();
     expect(aoAlternarAtivo).toHaveBeenCalledWith(false);
+  });
+
+  it("com rascunho pendente o selo diz Rascunho", () => {
+    render(<CabecalhoDoFluxo {...base} rascunho />);
+    expect(screen.getByText("Rascunho")).toBeTruthy();
+  });
+
+  it("regra que nunca foi publicada: interruptor desligado, com a explicação", () => {
+    render(<CabecalhoDoFluxo {...base} ativo={false} podeLigar={false} />);
+    const chave = screen.getByRole("switch", { name: "Ligar automação" });
+    expect(chave.hasAttribute("disabled") || chave.getAttribute("aria-disabled") === "true").toBe(true);
+    expect(chave.getAttribute("title")).toBe("Esta automação ainda é um rascunho: corrija os pontos marcados e salve antes de ligar.");
   });
 });
 

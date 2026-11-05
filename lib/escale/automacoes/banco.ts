@@ -38,7 +38,7 @@ export async function lerListaDeAutomacoes(
   orgId: string,
   userId: string,
 ): Promise<ListaDeAutomacoes> {
-  const [regras, casca, favoritas, pastas, agentes] = await Promise.all([
+  const [regras, casca, favoritas, pastas, agentes, rascunhos] = await Promise.all([
     supabase
       .from("automation_rules")
       .select("id, name, is_active, updated_at, actions")
@@ -64,8 +64,10 @@ export async function lerListaDeAutomacoes(
       .is("archived_at", null)
       .order("name")
       .limit(LIMITE_DE_AGENTES),
+    supabase.from("crm_rascunhos_de_automacao").select("rule_id").eq("organization_id", orgId),
   ]);
-  for (const r of [regras, casca, favoritas, pastas, agentes]) lancar(r.error);
+  for (const r of [regras, casca, favoritas, pastas, agentes, rascunhos]) lancar(r.error);
+  const comRascunho = new Set((rascunhos.data ?? []).map((r) => String(r.rule_id)));
 
   const agentesDaOrg = (agentes.data ?? []).map((a) => ({ id: String(a.id), nome: String(a.name) }));
   const conhecidos = new Set(agentesDaOrg.map((a) => a.id));
@@ -90,6 +92,8 @@ export async function lerListaDeAutomacoes(
         forma: org?.forma ?? null,
         favorita: idsFavoritos.has(String(r.id)),
         agentes: agentesDaRegra(r.actions, conhecidos),
+        rascunho: comRascunho.has(String(r.id)),
+        publicada: Array.isArray(r.actions) && r.actions.length > 0,
       };
     }),
     pastas: (pastas.data ?? []).map((p) => ({

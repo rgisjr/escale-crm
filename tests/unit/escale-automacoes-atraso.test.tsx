@@ -19,7 +19,9 @@ describe("PainelDoAtraso (07-028)", () => {
     expect(screen.queryByText("Continuar entre")).toBeNull();
     await userEvent.click(screen.getByRole("checkbox", { name: "Definir tempo limite de continuação" }));
     expect(screen.getByText("Continuar entre")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Salvar" }) as HTMLButtonElement).disabled).toBe(true);
+    // Janela ainda incompleta: aviso na caixa, mas o Salvar da caixa não trava (D9).
+    expect(screen.getByRole("note").textContent).toBe("Revise a janela de horário do Atraso: horário no formato 00:00 e pelo menos um dia.");
+    expect((screen.getByRole("button", { name: "Salvar" }) as HTMLButtonElement).disabled).toBe(false);
     await userEvent.type(screen.getByRole("textbox", { name: "Hora inicial" }), "0800");
     await userEvent.type(screen.getByRole("textbox", { name: "Hora final" }), "1900");
     expect((screen.getByRole("textbox", { name: "Hora inicial" }) as HTMLInputElement).value).toBe("08:00");
@@ -40,6 +42,19 @@ describe("PainelDoAtraso (07-028)", () => {
     envolver(<PainelDoAtraso dados={{ ...atraso, quantidade: 10, unidade: "segundos" }} aoCancelar={vi.fn()} aoSalvar={vi.fn()} />);
     expect(screen.getByRole("alert").textContent).toBe("O atraso mínimo é de 30 segundos.");
     expect((screen.getByRole("button", { name: "Salvar" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("tempo abaixo do mínimo mostra o aviso e a caixa salva assim mesmo", async () => {
+    const aoSalvar = vi.fn();
+    envolver(<PainelDoAtraso dados={atraso} aoCancelar={vi.fn()} aoSalvar={aoSalvar} />);
+    await userEvent.click(screen.getByRole("combobox", { name: "Unidade" }));
+    await userEvent.click(screen.getByRole("option", { name: "Segundos" }));
+    const campo = screen.getByRole("textbox", { name: "Tempo" });
+    await userEvent.clear(campo);
+    await userEvent.type(campo, "10");
+    expect(screen.getByRole("alert").textContent).toBe("O atraso mínimo é de 30 segundos.");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(aoSalvar).toHaveBeenCalledWith(expect.objectContaining({ quantidade: 10, unidade: "segundos" }));
   });
 
   it("trocar o número e a unidade grava o novo tempo, sem janela", async () => {

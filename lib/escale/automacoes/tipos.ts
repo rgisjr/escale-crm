@@ -13,6 +13,10 @@ export interface AutomacaoDaLista {
   favorita: boolean;
   /** Ids dos agentes das ações "Mensagem pela IA", já filtrados pelos agentes conhecidos (Q1). */
   agentes: string[];
+  /** FORK ESCALE · automações: há rascunho salvo sem publicar (9708). */
+  rascunho?: boolean;
+  /** A regra tem ação (já foi publicada); sem isto o interruptor não liga. */
+  publicada?: boolean;
 }
 
 export interface PastaDeAutomacao {

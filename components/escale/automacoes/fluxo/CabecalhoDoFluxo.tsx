@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BotaoDaCasca } from "@/components/escale/ui/BotaoDaCasca";
 import { InterruptorDaCasca } from "@/components/escale/ui/InterruptorDaCasca";
 import { useT } from "@/hooks/i18n/useT";
+import { MENSAGEM_DO_RASCUNHO_NAO_LIGA } from "@/lib/automation/rascunho-nao-liga";
 import { tempoDesde } from "@/lib/escale/campanhas/apresentacao";
 import { dataHoraBr } from "@/lib/escale/negocio/arquivos";
 import { ChevronLeft, Pencil } from "@/lib/ui/icons-da-casca";
@@ -13,16 +14,18 @@ import { AbasDoFluxo, type AbaDoFluxo } from "./AbasDoFluxo";
 
 const UM_MINUTO = 60_000;
 
-/** O selo do estado: Nova, Alterações não salvas (amarelo), Ativa (verde) ou Pausada. */
-function Selo({ existe, sujo, ativo }: { existe: boolean; sujo: boolean; ativo: boolean }) {
+/** O selo do estado: Nova, Alterações não salvas (amarelo), Rascunho (amarelo), Ativa (verde) ou Pausada. */
+function Selo({ existe, sujo, ativo, rascunho }: { existe: boolean; sujo: boolean; ativo: boolean; rascunho: boolean }) {
   const t = useT();
   const [rotulo, classe] = !existe
     ? [t("Nova"), "bg-casca-raia text-casca-texto-2"]
     : sujo
       ? [t("Alterações não salvas"), "bg-warning-bg text-warning-fg"]
-      : ativo
-        ? [t("Ativa"), "bg-success-bg text-success-fg"]
-        : [t("Pausada"), "bg-casca-raia text-casca-texto-2"];
+      : rascunho
+        ? [t("Rascunho"), "bg-warning-bg text-warning-fg"]
+        : ativo
+          ? [t("Ativa"), "bg-success-bg text-success-fg"]
+          : [t("Pausada"), "bg-casca-raia text-casca-texto-2"];
   return <span className={cn("rounded px-1.5 py-0.5 text-[11px]", classe)}>{rotulo}</span>;
 }
 
@@ -47,6 +50,8 @@ export function CabecalhoDoFluxo({
   aoSalvar,
   aoAlternarAtivo,
   menu,
+  rascunho = false,
+  podeLigar = true,
 }: {
   nome: string;
   /** Já gravada no banco (a nova não tem interruptor nem "Salvo há"). */
@@ -64,6 +69,10 @@ export function CabecalhoDoFluxo({
   aoSalvar: () => void;
   aoAlternarAtivo: (ligar: boolean) => void;
   menu: ReactNode;
+  /** FORK ESCALE · automações: há rascunho pendente (selo "Rascunho"). */
+  rascunho?: boolean;
+  /** A regra já foi publicada; sem isto o interruptor não liga. */
+  podeLigar?: boolean;
 }) {
   const t = useT();
   const [agora, setAgora] = useState(() => new Date());
@@ -93,7 +102,7 @@ export function CabecalhoDoFluxo({
             >
               <Pencil size={14} aria-hidden />
             </button>
-            <Selo existe={existe} sujo={sujo} ativo={ativo} />
+            <Selo existe={existe} sujo={sujo} ativo={ativo} rascunho={rascunho} />
           </div>
           {existe && atualizadoEm ? (
             <span className="text-[10px] text-casca-suave" title={dataHoraBr(atualizadoEm, fuso)}>
@@ -121,7 +130,8 @@ export function CabecalhoDoFluxo({
               <InterruptorDaCasca
                 ligado={ativo}
                 aoMudar={aoAlternarAtivo}
-                desabilitado={salvando}
+                desabilitado={salvando || (!ativo && !podeLigar)}
+                title={!ativo && !podeLigar ? t(MENSAGEM_DO_RASCUNHO_NAO_LIGA) : undefined}
                 aria-label={ativo ? t("Pausar automação") : t("Ligar automação")}
               />
             ) : null}
