@@ -1,8 +1,18 @@
 // @vitest-environment node
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { criarEsqueleto, eventoDoRascunho, gravarRascunho, lerRascunho, rascunhoSchema } from "@/lib/escale/automacoes/rascunho";
+const cifra = vi.hoisted(() => ({ encryptRuleActionSecrets: vi.fn() }));
+vi.mock("@/lib/webhooks/secrets", () => cifra);
+
+import {
+  cifrarSegredosDoDesenho,
+  criarEsqueleto,
+  eventoDoRascunho,
+  gravarRascunho,
+  lerRascunho,
+  rascunhoSchema,
+} from "@/lib/escale/automacoes/rascunho";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 const R1 = "22222222-2222-4222-8222-222222222222";
@@ -94,5 +104,63 @@ describe("banco do rascunho", () => {
   it("erro do banco vira exceção", async () => {
     const { db } = banco({ data: null, error: { message: "boom" } });
     await expect(lerRascunho(db, ORG, R1)).rejects.toThrow("boom");
+  });
+});
+
+describe("cifrarSegredosDoDesenho: a senha do webhook nunca fica aberta no rascunho", () => {
+  const webhook = (config: Record<string, unknown>) => ({ type: "call_webhook", config });
+  const caixa = (acao: unknown) => ({ id: "acao-1", type: "acao", position: { x: 0, y: 0 }, data: { kind: "acao", acao } });
+  const desenho = (acao: unknown) => ({ caixas: [gatilho("lead.created"), caixa(acao)], ligacoes: [] });
+  const admin = {} as SupabaseClient;
+
+  beforeEach(() => {
+    cifra.encryptRuleActionSecrets.mockReset();
+  });
+
+  it("troca secret por secret_enc, igual à regra publicada", async () => {
+    cifra.encryptRuleActionSecrets.mockImplementation(async (_a: unknown, acoes: Array<{ type: string; config: Record<string, unknown> }>) =>
+      acoes.map((a) => ({ ...a, config: { url: a.config.url, secret_enc: "abc" } })),
+    );
+    const saida = await cifrarSegredosDoDesenho(admin, desenho(webhook({ url: "https://x.test", secret: "senha-aberta" })));
+    expect(JSON.stringify(saida)).not.toContain("senha-aberta");
+    expect((saida.caixas[1]!.data as { acao?: unknown }).acao).toEqual({ type: "call_webhook", config: { url: "https://x.test", secret_enc: "abc" } });
+  });
+
+  it("pega também o webhook de dentro de um passo 'Ações' (grupo)", async () => {
+    cifra.encryptRuleActionSecrets.mockImplementation(async (_a: unknown, acoes: Array<{ type: string; config: Record<string, unknown> }>) =>
+      acoes.map((a) => ({ ...a, config: { secret_enc: "abc" } })),
+    );
+    const grupo = { type: "grupo_de_acoes", config: { acoes: [webhook({ secret: "senha-aberta" })] } };
+    const saida = await cifrarSegredosDoDesenho(admin, desenho(grupo));
+    expect(JSON.stringify(saida)).not.toContain("senha-aberta");
+    expect(JSON.stringify(saida)).toContain("secret_enc");
+  });
+
+  it("sem chave de cifra descarta a senha mas guarda o resto (não perde o trabalho)", async () => {
+    cifra.encryptRuleActionSecrets.mockResolvedValue(null);
+    const saida = await cifrarSegredosDoDesenho(admin, desenho(webhook({ url: "https://x.test", secret: "senha-aberta" })));
+    expect((saida.caixas[1]!.data as { acao?: unknown }).acao).toEqual({ type: "call_webhook", config: { url: "https://x.test" } });
+  });
+
+  it("webhook sem senha e outras ações passam intactos, sem chamar a cifra", async () => {
+    const entrada = desenho(webhook({ url: "https://x.test" }));
+    expect(await cifrarSegredosDoDesenho(admin, entrada)).toEqual(entrada);
+    expect(cifra.encryptRuleActionSecrets).not.toHaveBeenCalled();
+  });
+});
+
+describe("versão-base", () => {
+  it("a leitura devolve a versão em que o rascunho se baseou (ou null)", async () => {
+    const d = { caixas: [gatilho("lead.created")], ligacoes: [] };
+    const com = banco({ data: { nome: "A", desenho: d, versao_base: "2026-11-04T10:00:00Z", updated_at: "t" }, error: null });
+    expect((await lerRascunho(com.db, ORG, R1))?.versaoBase).toBe("2026-11-04T10:00:00Z");
+    const sem = banco({ data: { nome: "A", desenho: d, versao_base: null, updated_at: "t" }, error: null });
+    expect((await lerRascunho(sem.db, ORG, R1))?.versaoBase).toBeNull();
+  });
+
+  it("gravar leva a versão-base na linha", async () => {
+    const { db, chamadas } = banco({ data: { updated_at: "t" }, error: null });
+    await gravarRascunho(db, { orgId: ORG, ruleId: R1, userId: "u1", nome: "A", desenho: { caixas: [gatilho("")], ligacoes: [] }, versaoBase: "v1" });
+    expect(args(chamadas, "upsert")[0]![0]).toMatchObject({ versao_base: "v1" });
   });
 });

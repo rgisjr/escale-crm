@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { Desenho } from "@/lib/automation/desenho-da-regra";
 import { TRIGGER_EVENTS } from "@/lib/schemas/webhooks";
+import { encryptRuleActionSecrets } from "@/lib/webhooks/secrets";
 
 import { desenhoSchema } from "./fluxo/desenho-schema";
 
@@ -13,13 +14,19 @@ import { desenhoSchema } from "./fluxo/desenho-schema";
  */
 export const NOME_SEM_NOME = "Sem nome";
 
-export const rascunhoSchema = z.object({ nome: z.string().max(120), desenho: desenhoSchema });
+export const rascunhoSchema = z.object({
+  nome: z.string().max(120),
+  desenho: desenhoSchema,
+  /** O `updated_at` da regra em que a tela se baseou: se outra pessoa publicou depois, a tela avisa. */
+  versao_base: z.string().max(64).nullish(),
+});
 export type EntradaDoRascunho = z.infer<typeof rascunhoSchema>;
 
 export interface RascunhoLido {
   nome: string;
   desenho: Desenho;
   atualizadoEm: string;
+  versaoBase: string | null;
 }
 
 type EventoDoGatilho = (typeof TRIGGER_EVENTS)[number];
@@ -30,6 +37,36 @@ export function eventoDoRascunho(desenho: { caixas: ReadonlyArray<{ data: Record
   return typeof evento === "string" && (TRIGGER_EVENTS as readonly string[]).includes(evento) ? (evento as EventoDoGatilho) : null;
 }
 
+type Objeto = Record<string, unknown>;
+const ehObjeto = (v: unknown): v is Objeto => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** A ação "Enviar Webhook" com a senha digitada ainda em texto aberto. */
+const webhookComSenha = (v: Objeto): v is Objeto & { config: Objeto } =>
+  v.type === "call_webhook" && ehObjeto(v.config) && typeof v.config.secret === "string" && v.config.secret !== "";
+
+/**
+ * A senha de um webhook NUNCA fica em texto aberto no banco: o rascunho guarda como a regra publicada
+ * (`secret` → `secret_enc`, cifrado). Sem chave de cifra a senha digitada é descartada (a pessoa digita
+ * de novo) — mas o resto do rascunho é salvo, que é o ponto: não perder o trabalho. Percorre o desenho
+ * inteiro, então pega também a ação que está dentro de um passo "Ações" (grupo).
+ */
+export async function cifrarSegredosDoDesenho<T>(admin: SupabaseClient, desenho: T): Promise<T> {
+  const percorrer = async (no: unknown): Promise<unknown> => {
+    if (Array.isArray(no)) return Promise.all(no.map(percorrer));
+    if (!ehObjeto(no)) return no;
+    if (webhookComSenha(no)) {
+      const [cifrada] = (await encryptRuleActionSecrets(admin, [no as never])) ?? [];
+      if (cifrada) return cifrada;
+      const { secret: _aberta, ...resto } = no.config;
+      return { ...no, config: resto };
+    }
+    const saida: Objeto = {};
+    for (const [chave, valor] of Object.entries(no)) saida[chave] = await percorrer(valor);
+    return saida;
+  };
+  return (await percorrer(desenho)) as T;
+}
+
 function lancar(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
 }
@@ -37,16 +74,21 @@ function lancar(error: { message: string } | null): void {
 export async function lerRascunho(db: SupabaseClient, orgId: string, ruleId: string): Promise<RascunhoLido | null> {
   const { data, error } = await db
     .from("crm_rascunhos_de_automacao")
-    .select("nome, desenho, updated_at")
+    .select("nome, desenho, versao_base, updated_at")
     .eq("organization_id", orgId)
     .eq("rule_id", ruleId)
     .maybeSingle();
   lancar(error);
   if (!data) return null;
-  const linha = data as { nome?: unknown; desenho?: unknown; updated_at?: unknown };
+  const linha = data as { nome?: unknown; desenho?: unknown; versao_base?: unknown; updated_at?: unknown };
   const desenho = desenhoSchema.safeParse(linha.desenho);
   if (!desenho.success) return null;
-  return { nome: String(linha.nome ?? ""), desenho: desenho.data as unknown as Desenho, atualizadoEm: String(linha.updated_at) };
+  return {
+    nome: String(linha.nome ?? ""),
+    desenho: desenho.data as unknown as Desenho,
+    atualizadoEm: String(linha.updated_at),
+    versaoBase: typeof linha.versao_base === "string" ? linha.versao_base : null,
+  };
 }
 
 export async function regraDaOrganizacao(db: SupabaseClient, orgId: string, ruleId: string): Promise<boolean> {
@@ -57,13 +99,28 @@ export async function regraDaOrganizacao(db: SupabaseClient, orgId: string, rule
 
 export async function gravarRascunho(
   db: SupabaseClient,
-  p: { orgId: string; ruleId: string; userId: string; nome: string; desenho: EntradaDoRascunho["desenho"] },
+  p: {
+    orgId: string;
+    ruleId: string;
+    userId: string;
+    nome: string;
+    desenho: EntradaDoRascunho["desenho"];
+    versaoBase?: string | null;
+  },
 ): Promise<string> {
   const agora = new Date().toISOString();
   const { data, error } = await db
     .from("crm_rascunhos_de_automacao")
     .upsert(
-      { rule_id: p.ruleId, organization_id: p.orgId, nome: p.nome, desenho: p.desenho, salvo_por: p.userId, updated_at: agora },
+      {
+        rule_id: p.ruleId,
+        organization_id: p.orgId,
+        nome: p.nome,
+        desenho: p.desenho,
+        versao_base: p.versaoBase ?? null,
+        salvo_por: p.userId,
+        updated_at: agora,
+      },
       { onConflict: "rule_id" },
     )
     .select("updated_at")

@@ -209,6 +209,8 @@ export interface RascunhoDaAutomacao {
   nome: string;
   desenho: Desenho;
   atualizadoEm: string;
+  /** O `updated_at` da regra em que o rascunho foi feito; `null` quando a regra ainda não existia. */
+  versaoBase?: string | null;
 }
 
 const chaveDoRascunho = (regraId: string) => ["automation-rules", "rascunho", regraId] as const;
@@ -231,11 +233,12 @@ export function useRascunhoDaAutomacao(regraId: string | null) {
 export function useSalvarRascunho() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: { id: string | null; nome: string; desenho: Desenho }) =>
+    mutationFn: async (p: { id: string | null; nome: string; desenho: Desenho; versaoBase?: string | null }) =>
       (
         await apiClient.put<{ data: { ruleId: string; atualizadoEm: string; criada: boolean } }>(`${BASE}/${p.id ?? "novo"}/rascunho`, {
           nome: p.nome,
           desenho: p.desenho,
+          ...(p.versaoBase ? { versao_base: p.versaoBase } : {}),
         })
       ).data,
     onError: (e: unknown) => showApiError(e),

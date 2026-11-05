@@ -8,6 +8,7 @@ import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { RECUSA_RASCUNHO_SEM_GATILHO } from "@/lib/escale/automacoes/fluxo/frases-do-rascunho";
 import {
+  cifrarSegredosDoDesenho,
   criarEsqueleto,
   descartarEsqueleto,
   descartarRascunho,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/escale/automacoes/rascunho";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // FORK ESCALE · automações: o rascunho de uma automação — ler (GET), salvar sem publicar (PUT) e descartar (DELETE).
@@ -71,6 +73,28 @@ export async function PUT(req: NextRequest, ctx: Contexto): Promise<Response> {
       const evento = eventoDoRascunho(lido.data.desenho);
       if (!evento) return fail("validation_failed", t(RECUSA_RASCUNHO_SEM_GATILHO), 422, { requestId });
       ruleId = await criarEsqueleto(db, { orgId, userId: authz.user.id, nome: lido.data.nome, evento });
+    } else if (!(await regraDaOrganizacao(db, orgId, id))) {
+      return fail("not_found", t("Regra não encontrada."), 404, { requestId });
+    }
+
+    let atualizadoEm: string;
+    try {
+      // A senha de webhook digitada nunca fica em texto aberto no banco (nem volta aberta no GET).
+      const desenho = await cifrarSegredosDoDesenho(createAdminClient(), lido.data.desenho);
+      atualizadoEm = await gravarRascunho(db, {
+        orgId,
+        ruleId,
+        userId: authz.user.id,
+        nome: lido.data.nome,
+        desenho,
+        versaoBase: lido.data.versao_base ?? null,
+      });
+    } catch (err) {
+      // A regra que acabou de nascer sem o rascunho ficaria vazia na lista: sai junto (só ela).
+      if (nova) await descartarEsqueleto(db, orgId, ruleId).catch(() => undefined);
+      throw err;
+    }
+    if (nova) {
       void audit({
         action: "automation.rule_created",
         actorUserId: authz.user.id,
@@ -80,17 +104,6 @@ export async function PUT(req: NextRequest, ctx: Contexto): Promise<Response> {
         requestId,
         metadata: { rascunho: true },
       });
-    } else if (!(await regraDaOrganizacao(db, orgId, id))) {
-      return fail("not_found", t("Regra não encontrada."), 404, { requestId });
-    }
-
-    let atualizadoEm: string;
-    try {
-      atualizadoEm = await gravarRascunho(db, { orgId, ruleId, userId: authz.user.id, ...lido.data });
-    } catch (err) {
-      // A regra que acabou de nascer sem o rascunho ficaria vazia na lista: sai junto (só ela).
-      if (nova) await descartarEsqueleto(db, orgId, ruleId).catch(() => undefined);
-      throw err;
     }
     void audit({
       action: "automation.draft_saved",

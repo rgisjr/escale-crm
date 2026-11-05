@@ -17425,6 +17425,7 @@ export const DICIONARIO: Traducoes = {
   "Rascunho salvo. A automação no ar continua com a última versão publicada.": { es: "Borrador guardado. La automatización activa sigue con la última versión publicada." },
   "Escolha o gatilho para salvar o rascunho.": { es: "Elija el disparador para guardar el borrador." },
   "Corrija os pontos marcados para publicar.": { es: "Corrija los puntos marcados para publicar." },
+  "Outra pessoa publicou esta automação depois deste rascunho (salvo em {data}). Publicar daqui não é possível; para usar a versão dela, descarte o rascunho.": { es: "Otra persona publicó esta automatización después de este borrador (guardado el {data}). No se puede publicar desde aquí; para usar su versión, descarte el borrador." },
   "Outra pessoa salvou esta automação depois que você abriu. As suas alterações ficaram guardadas como rascunho.": { es: "Otra persona guardó esta automatización después de que usted la abrió. Sus cambios quedaron guardados como borrador." },
   "Esta automação ainda é um rascunho: corrija os pontos marcados e salve antes de ligar.": { es: "Esta automatización todavía es un borrador: corrija los puntos marcados y guarde antes de activarla." },
   "Rascunho não publicado, salvo em {data}. A automação no ar segue a última versão publicada até você salvar sem pendências.": { es: "Borrador no publicado, guardado el {data}. La automatización activa sigue la última versión publicada hasta que guarde sin pendientes." },

@@ -62587,6 +62587,7 @@ create table if not exists public.crm_rascunhos_de_automacao (
   organization_id uuid not null references public.organizations(id) on delete cascade,
   nome text not null default '' check (char_length(nome) <= 120),
   desenho jsonb not null check (jsonb_typeof(desenho) = 'object' and octet_length(desenho::text) <= 1048576),
+  versao_base text check (versao_base is null or char_length(versao_base) <= 64),
   salvo_por uuid default auth.uid() references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

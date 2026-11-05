@@ -274,7 +274,13 @@ export function TelaDoFluxo({
           }
         />
         {aba === "editor" && fluxo.rascunhoEm ? (
-          <FaixaDoRascunho salvoEm={fluxo.rascunhoEm} publicada={fluxo.publicada} fuso={fuso} aoDescartar={() => setDescartando(true)} />
+          <FaixaDoRascunho
+            salvoEm={fluxo.rascunhoEm}
+            publicada={fluxo.publicada}
+            fuso={fuso}
+            aoDescartar={() => setDescartando(true)}
+            emConflito={!!rascunho?.versaoBase && !!regra && rascunho.versaoBase !== regra.updated_at}
+          />
         ) : null}
         {aba === "insights" && regra ? (
           <InsightsDoFluxo regra={regra} fuso={fuso} sujo={sujo} />

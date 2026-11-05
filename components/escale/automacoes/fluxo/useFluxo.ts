@@ -170,10 +170,16 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
   const [ativo, setAtivo] = useState(regra?.is_active ?? false);
   // A versão do banco sobre a qual este desenho foi feito: vai em cada salvar, e
   // a rota recusa se outra tela gravou depois (em vez de apagar o que ela gravou).
-  const [versao, setVersao] = useState<string | null>(regra?.updated_at ?? null);
+  // FORK ESCALE · automações: um rascunho reaberto continua preso à versão em que foi feito. Se outra
+  // pessoa publicou depois, o publicar volta 409 (vira rascunho de novo) em vez de sobrescrever sem aviso.
+  const [versao, setVersao] = useState<string | null>(opcoes.rascunho?.versaoBase ?? regra?.updated_at ?? null);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [problemasGerais, setProblemasGerais] = useState<ProblemaDoDesenho[]>([]);
   const [rascunhoEm, setRascunhoEm] = useState<string | null>(opcoes.rascunho?.atualizadoEm ?? null);
+  // O último rascunho que está de fato no banco (não a tela): ligar/pausar só avança a versão-base dele.
+  const ultimoRascunho = useRef<{ nome: string; desenho: Desenho } | null>(
+    opcoes.rascunho ? { nome: opcoes.rascunho.nome, desenho: opcoes.rascunho.desenho } : null,
+  );
   const [publicada, setPublicada] = useState(() => (regra?.actions.length ?? 0) > 0);
   const gravarFluxo = useGravarFluxo();
   const criar = useCreateAutomationRule();
@@ -433,9 +439,10 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         return "recusado";
       }
       try {
-        const r = await gravarRascunho.mutateAsync({ id: regra?.id ?? null, nome, desenho });
+        const r = await gravarRascunho.mutateAsync({ id: regra?.id ?? null, nome, desenho, versaoBase: versao });
         setSalvo(retratoDoFluxo(nome, desenho));
         setRascunhoEm(r.atualizadoEm);
+        ultimoRascunho.current = { nome, desenho };
         toast.success(t(regra && publicada ? TOAST_RASCUNHO_COM_VERSAO_NO_AR : TOAST_RASCUNHO_SALVO));
         toast.info(t(aviso));
         if (regra) return "rascunho";
@@ -446,16 +453,20 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         return "falhou"; // o showApiError do hook já mostrou
       }
     },
-    [regra, evento, gravarRascunho, nome, desenho, publicada, router, t],
+    [regra, evento, gravarRascunho, nome, desenho, versao, publicada, router, t],
   );
 
-  /** Publicou: a regra pode ligar, e o rascunho (se havia) sai. */
+  /** Publicou: a regra pode ligar, e o rascunho (se havia) sai — a tela só o esquece depois que o banco o apagou. */
   const concluirPublicacao = useCallback(
-    (ruleId: string) => {
+    async (ruleId: string) => {
       setPublicada(true);
       if (rascunhoEm === null) return;
-      setRascunhoEm(null);
-      apagarRascunho.mutate(ruleId);
+      try {
+        await apagarRascunho.mutateAsync(ruleId);
+        setRascunhoEm(null);
+      } catch {
+        // O showApiError do hook já avisou; o rascunho velho segue no banco e a faixa continua à vista.
+      }
     },
     [rascunhoEm, apagarRascunho],
   );
@@ -474,7 +485,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         setSalvo(retratoDoFluxo(nome, desenho));
         toast.success(t("Automação salva com sucesso!"));
         if (regra) {
-          concluirPublicacao(regra.id);
+          await concluirPublicacao(regra.id);
           return "salvo";
         }
         toast.info(t("Ela nasce pausada: ligue quando estiver pronta."));
@@ -492,7 +503,7 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
         setVersao(gravada.data.updated_at);
         setSalvo(retratoDoFluxo(nome, desenho));
         toast.success(t("Automação salva com sucesso!"));
-        concluirPublicacao(regra.id);
+        await concluirPublicacao(regra.id);
         return "salvo";
       }
       const criada = await criar.mutateAsync(resultado.corpo);
@@ -516,6 +527,9 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
       }
       // Outra tela salvou por cima: nada se perde, o desenho daqui vira rascunho.
       if (err instanceof ApiError && err.code === "state_conflict") return guardarRascunho(AVISO_CONFLITO_VIROU_RASCUNHO);
+      // O servidor recusou o conteúdo (laço de lead, fonte inexistente, sem chave de cifra…): o toast já
+      // explicou, e o trabalho fica guardado como rascunho em vez de só na tela.
+      if (err instanceof ApiError && (err.status === 400 || err.status === 422)) return guardarRascunho(AVISO_CORRIJA_PARA_PUBLICAR);
       return "falhou";
     }
   }, [
@@ -564,12 +578,18 @@ export function useFluxo(regra: AutomationRuleRow | null, opcoes: OpcoesDoFluxo)
             // Ligar/pausar também troca a versão: sem isto, o próximo salvar daria conflito consigo mesmo.
             setVersao(gravada.data.updated_at);
             toast.success(ligarRegra ? t("Automação ligada.") : t("Automação pausada."));
+            // O rascunho pendente continua sendo da mesma regra: só a versão-base acompanha o carimbo novo.
+            if (rascunhoEm !== null && ultimoRascunho.current) {
+              void gravarRascunho
+                .mutateAsync({ id: regra.id, ...ultimoRascunho.current, versaoBase: gravada.data.updated_at })
+                .catch(() => undefined);
+            }
           },
           onError: () => setAtivo(!ligarRegra),
         },
       );
     },
-    [regra, publicada, atualizar, t],
+    [regra, publicada, atualizar, rascunhoEm, gravarRascunho, t],
   );
 
   return {

@@ -168,3 +168,69 @@ describe("ligar", () => {
     expect(h.alternar).toHaveBeenCalledWith({ id: ID, is_active: true }, expect.anything());
   });
 });
+
+describe("rascunho reaberto, recusas do servidor e ligar/pausar", () => {
+  const rascunhoDe = (r: AutomationRuleRow, versaoBase: string | null) => ({
+    nome: "Regra",
+    desenho: desenhoDaRegra(regraGravadaDe(r)),
+    atualizadoEm: "2026-11-04T09:00:00Z",
+    versaoBase,
+  });
+
+  it("publica preso à versão em que o rascunho foi feito (se outra pessoa publicou, dá 409 e não sobrescreve)", async () => {
+    const r0 = regra([TAG]);
+    const { result } = montar(r0, { rascunho: rascunhoDe(r0, "2026-11-03T08:00:00Z") });
+    await act(async () => {
+      await result.current.salvar();
+    });
+    expect(h.atualizar).toHaveBeenCalledWith(expect.objectContaining({ versao_lida: "2026-11-03T08:00:00Z" }));
+  });
+
+  it("recusa do servidor no modo regra (422) também guarda o trabalho como rascunho", async () => {
+    h.atualizar.mockRejectedValue(new ApiError(422, "validation_failed", undefined, "r", "recusado"));
+    const { result } = montar(regra([TAG]));
+    let r: string | undefined;
+    await act(async () => {
+      r = await result.current.salvar();
+    });
+    expect(r).toBe("rascunho");
+    expect(h.gravarRascunho).toHaveBeenCalled();
+  });
+
+  it("erro de rede (sem status de recusa) não vira rascunho: falha como antes", async () => {
+    h.atualizar.mockRejectedValue(new Error("rede"));
+    const { result } = montar(regra([TAG]));
+    let r: string | undefined;
+    await act(async () => {
+      r = await result.current.salvar();
+    });
+    expect(r).toBe("falhou");
+    expect(h.gravarRascunho).not.toHaveBeenCalled();
+  });
+
+  it("se apagar o rascunho falhar depois de publicar, a tela continua marcada como rascunho", async () => {
+    h.apagarRascunho.mockRejectedValue(new Error("rede"));
+    const r0 = regra([TAG]);
+    const { result } = montar(r0, { rascunho: rascunhoDe(r0, "2026-11-04T10:00:00Z") });
+    await act(async () => {
+      await result.current.salvar();
+    });
+    expect(h.atualizar).toHaveBeenCalled();
+    expect(result.current.rascunhoEm).toBe("2026-11-04T09:00:00Z");
+  });
+
+  it("ligar com rascunho pendente regrava o MESMO rascunho com a versão nova da regra", async () => {
+    const r0 = regra([TAG]);
+    const base = rascunhoDe(r0, "2026-11-04T10:00:00Z");
+    const { result } = montar(r0, { rascunho: base });
+    act(() => result.current.alternarAtivo(true));
+    const opcoesDaMutacao = h.alternar.mock.calls[0]![1] as { onSuccess: (g: unknown) => void };
+    act(() => opcoesDaMutacao.onSuccess({ data: { updated_at: "2026-11-04T13:00:00Z" } }));
+    expect(h.gravarRascunho).toHaveBeenCalledWith({
+      id: ID,
+      nome: "Regra",
+      desenho: base.desenho,
+      versaoBase: "2026-11-04T13:00:00Z",
+    });
+  });
+});

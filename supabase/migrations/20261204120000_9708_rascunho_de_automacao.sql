@@ -1,10 +1,11 @@
--- manifest: **Rascunho de automação (fork Escale).** Tabela nova `crm_rascunhos_de_automacao`: uma linha por regra (`rule_id` PK, FK cascade para `automation_rules`) com o nome e o desenho da tela (jsonb objeto, até 1 MB) que a pessoa salvou sem conseguir publicar. O motor nunca lê esta tabela: a regra no ar segue a última versão publicada. O gatilho `fn_escale_automacao_da_mesma_org` (9701) recusa linha de outra organização. RLS: só gerente ou acima da organização lê e grava; anon sem acesso; travas de suporte aplicadas. `automation_rules` não muda.
+-- manifest: **Rascunho de automação (fork Escale).** Tabela nova `crm_rascunhos_de_automacao`: uma linha por regra (`rule_id` PK, FK cascade para `automation_rules`) com o nome, o desenho da tela (jsonb objeto, até 1 MB) e a versão da regra em que ele se baseou (`versao_base`) que a pessoa salvou sem conseguir publicar. O motor nunca lê esta tabela: a regra no ar segue a última versão publicada. O gatilho `fn_escale_automacao_da_mesma_org` (9701) recusa linha de outra organização. RLS: só gerente ou acima da organização lê e grava; anon sem acesso; travas de suporte aplicadas. `automation_rules` não muda.
 
 create table if not exists public.crm_rascunhos_de_automacao (
   rule_id uuid primary key references public.automation_rules(id) on delete cascade,
   organization_id uuid not null references public.organizations(id) on delete cascade,
   nome text not null default '' check (char_length(nome) <= 120),
   desenho jsonb not null check (jsonb_typeof(desenho) = 'object' and octet_length(desenho::text) <= 1048576),
+  versao_base text check (versao_base is null or char_length(versao_base) <= 64),
   salvo_por uuid default auth.uid() references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

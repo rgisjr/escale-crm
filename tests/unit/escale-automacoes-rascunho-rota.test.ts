@@ -5,8 +5,10 @@ vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({})) }));
 vi.mock("@/lib/impersonate/support", () => ({ requireSupportWrite: vi.fn(async () => null) }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({})) }));
 vi.mock("@/lib/escale/automacoes/rascunho", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/escale/automacoes/rascunho")>()),
+  cifrarSegredosDoDesenho: vi.fn(async (_admin: unknown, desenho: unknown) => desenho),
   lerRascunho: vi.fn(),
   gravarRascunho: vi.fn(),
   descartarRascunho: vi.fn(),
@@ -21,6 +23,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { roleAtLeast, type Role } from "@/lib/auth/types";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import {
+  cifrarSegredosDoDesenho,
   criarEsqueleto,
   descartarEsqueleto,
   descartarRascunho,
@@ -63,7 +66,7 @@ describe("GET rascunho", () => {
   });
 
   it("gerente lê o rascunho da própria organização", async () => {
-    vi.mocked(lerRascunho).mockResolvedValue({ nome: "A", desenho: desenho("lead.created") as never, atualizadoEm: "t" });
+    vi.mocked(lerRascunho).mockResolvedValue({ nome: "A", desenho: desenho("lead.created") as never, atualizadoEm: "t", versaoBase: null });
     const r = await GET(req("GET"), ctx(R1));
     expect(r.status).toBe(200);
     expect((await corpo(r)).data?.rascunho).toMatchObject({ nome: "A", atualizadoEm: "t" });
@@ -94,11 +97,29 @@ describe("PUT rascunho", () => {
     expect(acoesAuditadas()).toEqual(["automation.rule_created", "automation.draft_saved"]);
   });
 
-  it("se o rascunho da nova falha, o esqueleto recém-criado sai", async () => {
+  it("se o rascunho da nova falha, o esqueleto recém-criado sai, sem auditar a criação", async () => {
     vi.mocked(criarEsqueleto).mockResolvedValue(NOVA);
     vi.mocked(gravarRascunho).mockRejectedValue(new Error("boom"));
     expect((await PUT(req("PUT", { nome: "Nova", desenho: desenho("lead.created") }), ctx("novo"))).status).toBe(500);
     expect(descartarEsqueleto).toHaveBeenCalledWith(expect.anything(), ORG, NOVA);
+    expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("a senha do webhook passa pela cifra ANTES de gravar: o que vai ao banco é o desenho cifrado", async () => {
+    const cifrado = { caixas: [], ligacoes: [], marca: "cifrado" };
+    vi.mocked(cifrarSegredosDoDesenho).mockResolvedValue(cifrado as never);
+    vi.mocked(regraDaOrganizacao).mockResolvedValue(true);
+    vi.mocked(gravarRascunho).mockResolvedValue("t3");
+    expect((await PUT(req("PUT", { nome: "A", desenho: desenho("lead.created") }), ctx(R1))).status).toBe(200);
+    expect(cifrarSegredosDoDesenho).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(gravarRascunho).mock.calls[0]![1].desenho).toBe(cifrado);
+  });
+
+  it("repassa a versão em que a tela se baseou", async () => {
+    vi.mocked(regraDaOrganizacao).mockResolvedValue(true);
+    vi.mocked(gravarRascunho).mockResolvedValue("t4");
+    await PUT(req("PUT", { nome: "A", desenho: desenho("lead.created"), versao_base: "2026-11-04T10:00:00Z" }), ctx(R1));
+    expect(gravarRascunho).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ versaoBase: "2026-11-04T10:00:00Z" }));
   });
 
   it("regra de outra organização: 404 e nada é gravado", async () => {
