@@ -6,7 +6,12 @@ import { criarEsqueleto, eventoDoRascunho, gravarRascunho, lerRascunho, rascunho
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 const R1 = "22222222-2222-4222-8222-222222222222";
-const gatilho = (evento: string) => ({ id: "gatilho", type: "gatilho", position: { x: 0, y: 0 }, data: { kind: "gatilho", evento, tela: {} } });
+const gatilho = (evento: string) => ({
+  id: "gatilho",
+  type: "gatilho" as const,
+  position: { x: 0, y: 0 },
+  data: { kind: "gatilho" as const, evento, tela: {} },
+});
 
 type Chamada = { metodo: string; args: unknown[] };
 

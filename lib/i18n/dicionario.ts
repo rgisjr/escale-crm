@@ -17422,7 +17422,6 @@ export const DICIONARIO: Traducoes = {
   "Ver como o cliente recebe": {"es": "Ver como lo recibe el cliente"},
   "Não foi possível gerar a prévia agora.": {"es": "No fue posible generar la vista previa ahora."},
   "Descartar rascunho": {"es": "Descartar borrador"},
-  "Rascunho": { es: "Borrador" },
   "Rascunho salvo. A automação no ar continua com a última versão publicada.": { es: "Borrador guardado. La automatización activa sigue con la última versión publicada." },
   "Escolha o gatilho para salvar o rascunho.": { es: "Elija el disparador para guardar el borrador." },
   "Corrija os pontos marcados para publicar.": { es: "Corrija los puntos marcados para publicar." },
