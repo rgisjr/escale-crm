@@ -152,6 +152,10 @@ export function CompositorDaCasca({
       void enviarComAnexo(anexoDaResposta, body);
       return;
     }
+    // O campo limpa na hora, como no WhatsApp: a bolha já aparece pelo envio otimista, e esperar o
+    // servidor deixava o texto parado no campo, parecendo que não tinha saído.
+    setTexto("");
+    aoCancelarResposta();
     enviar.mutate(
       {
         conversation_id: conversationId,
@@ -160,11 +164,8 @@ export function CompositorDaCasca({
         ...(respondendo ? { reply_to_message_id: respondendo.id } : {}),
       },
       {
-        onSuccess: () => {
-          // Só limpa se o campo ainda é o que foi enviado: o que se digitou depois do Enter fica.
-          setTexto((atual) => (atual.trim() === body ? "" : atual));
-          aoCancelarResposta();
-        },
+        // Falhou: o texto volta para o campo, a menos que a pessoa já tenha digitado outra coisa.
+        onError: () => setTexto((atual) => (atual.trim() ? atual : body)),
       },
     );
   };
