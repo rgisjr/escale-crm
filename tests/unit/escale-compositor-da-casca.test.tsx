@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -243,6 +243,47 @@ describe("CompositorDaCasca (c02)", () => {
     expect((campo as HTMLTextAreaElement).value).toContain("😀");
     fireEvent.change(campo, { target: { value: "/oi" } });
     expect(await screen.findByText("/oi", { selector: "span" })).toBeInTheDocument();
+  });
+  it("limpa o campo na hora do Enter, sem esperar o servidor; se o envio falha, o texto volta", () => {
+    wrap(
+      <CompositorDaCasca
+        conversationId="c1"
+        conversa={conversa()}
+        modo="livre"
+        bloqueio={null}
+        respondendo={null}
+        aoCancelarResposta={vi.fn()}
+        aoAgendar={vi.fn()}
+      />,
+    );
+    const campo = screen.getByPlaceholderText("Mensagem") as HTMLTextAreaElement;
+    fireEvent.change(campo, { target: { value: "Oi, tudo bem?" } });
+    fireEvent.keyDown(campo, { key: "Enter" });
+    // O mock não chama onSuccess: o servidor ainda não respondeu, e o campo já está vazio.
+    expect(campo.value).toBe("");
+    const opcoes = enviar.mock.calls[0]![1] as { onError: (e: unknown) => void };
+    act(() => opcoes.onError(new Error("falhou")));
+    expect(campo.value).toBe("Oi, tudo bem?");
+  });
+  it("falha não apaga o que a pessoa já digitou depois do Enter", () => {
+    wrap(
+      <CompositorDaCasca
+        conversationId="c1"
+        conversa={conversa()}
+        modo="livre"
+        bloqueio={null}
+        respondendo={null}
+        aoCancelarResposta={vi.fn()}
+        aoAgendar={vi.fn()}
+      />,
+    );
+    const campo = screen.getByPlaceholderText("Mensagem") as HTMLTextAreaElement;
+    fireEvent.change(campo, { target: { value: "Primeira" } });
+    fireEvent.keyDown(campo, { key: "Enter" });
+    fireEvent.change(campo, { target: { value: "Segunda" } });
+    const opcoes = enviar.mock.calls[0]![1] as { onError: (e: unknown) => void };
+    act(() => opcoes.onError(new Error("falhou")));
+    expect(campo.value).toBe("Segunda");
   });
   it("com bloqueio mostra o motivo no lugar do campo; fechada mostra 'Reabra o atendimento…'", () => {
     const { rerender } = wrap(
